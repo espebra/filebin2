@@ -12,8 +12,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - .:/app:delegated
-      - ./schema:/docker-entrypoint-initdb.d:delegated
+      - .:/docker-entrypoint-initdb.d:delegated
 
   filebin:
     build: .
