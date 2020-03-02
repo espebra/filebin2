@@ -1,4 +1,4 @@
-module github.com/espebra/filebin-ng
+module github.com/espebra/filebin2
 
 go 1.14
 

@@ -3,7 +3,7 @@ package dbl
 import (
 	"errors"
 	"fmt"
-	"github.com/espebra/filebin-ng/ds"
+	"github.com/espebra/filebin2/ds"
 	"testing"
 )
 
@@ -136,10 +136,10 @@ func TestUpdateBin(t *testing.T) {
 		t.Error(err)
 	}
 
-	updatedBin, err := dao.Bin().GetById(bin.Id)
-	if err != nil {
-		t.Error(err)
-	}
+	//updatedBin, err := dao.Bin().GetById(bin.Id)
+	//if err != nil {
+	//	t.Error(err)
+	//}
 	//if updatedBin.Foo != "bar" {
 	//	t.Errorf("Was expecting the updated bin hostname %s, got %s instead.", "bar", updatedBin.Foo)
 	//}

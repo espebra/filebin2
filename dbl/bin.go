@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/dustin/go-humanize"
-	"github.com/espebra/filebin-ng/ds"
+	"github.com/espebra/filebin2/ds"
 	"time"
 )
 
@@ -44,12 +44,12 @@ func (d *BinDao) GetAll() ([]ds.Bin, error) {
 func (d *BinDao) GetById(id int) (ds.Bin, error) {
 	var bin ds.Bin
 
-	// Get router info
+	// Get bin info
 	sqlStatement := "SELECT id, bid, updated, created FROM bin WHERE id = $1 LIMIT 1"
 	err := d.db.QueryRow(sqlStatement, id).Scan(&bin.Id, &bin.Bid, &bin.Updated, &bin.Created)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return router, errors.New(fmt.Sprintf("No bin found with id %d", id))
+			return bin, errors.New(fmt.Sprintf("No bin found with id %d", id))
 		}
 	}
 	// https://github.com/lib/pq/issues/329
@@ -63,9 +63,9 @@ func (d *BinDao) GetById(id int) (ds.Bin, error) {
 }
 
 func (d *BinDao) GetByBid(bid string) (ds.Bin, error) {
-	var router ds.Bin
+	var bin ds.Bin
 
-	// Get router info
+	// Get bin info
 	sqlStatement := "SELECT id, bid, updated, created FROM bin WHERE bid = $1 LIMIT 1"
 	err := d.db.QueryRow(sqlStatement, bid).Scan(&bin.Id, &bin.Bid, &bin.Updated, &bin.Created)
 	if err != nil {

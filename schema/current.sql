@@ -11,6 +11,7 @@ CREATE TABLE file (
 	bin_id		INTEGER REFERENCES bin(id) ON DELETE CASCADE,
 	filename	VARCHAR(128) NOT NULL,
 	size		INT NOT NULL,
+	checksum	VARCHAR(128) NOT NULL,
 	updated		TIMESTAMP NOT NULL,
 	created		TIMESTAMP NOT NULL,
 	UNIQUE(bin_id, filename)
