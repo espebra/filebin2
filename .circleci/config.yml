@@ -6,4 +6,4 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker
-      - run: docker-compose up
+      - run: docker-compose up --abort-on-container-exit
