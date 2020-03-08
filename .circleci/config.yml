@@ -5,4 +5,4 @@ jobs:
       image: true
     steps:
       - checkout
-      - run: docker-compose up
+      - run: docker-compose up --abort-on-container-exit
