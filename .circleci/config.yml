@@ -10,4 +10,5 @@ jobs:
           - POSTGRES_PASSWORD=changeme
     steps:
       - checkout
+      - setup_remote_docker
       - run: go test dbl/* -mod=vendor -v -cover
