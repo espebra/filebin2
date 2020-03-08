@@ -9,6 +9,8 @@ jobs:
       - store_artifacts:
           path: out/
           destination: /
+      - store_test_results:
+          path: out/tests.xml
 workflows:
   version: 2
   build:
