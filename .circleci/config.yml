@@ -3,7 +3,7 @@ jobs:
   build:
     docker:
       - image: circleci/golang:1.14
-      - image: circleci/postgres:12.0
+      - image: circleci/postgres:12.0-alpine
         environment:
           - POSTGRES_DB=db
           - POSTGRES_USER=username
@@ -11,4 +11,5 @@ jobs:
     steps:
       - checkout
       - run: ls
+      - run: ps -afx
       - run: echo "A first hello"
