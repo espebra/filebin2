@@ -2,12 +2,12 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/golang
-      - image: circleci/postgres
-    environment:
-      - POSTGRES_DB=db
-      - POSTGRES_USER=username
-      - POSTGRES_PASSWORD=changeme
+      - image: circleci/golang:1.14
+      - image: circleci/postgres:12.0
+        environment:
+          - POSTGRES_DB=db
+          - POSTGRES_USER=username
+          - POSTGRES_PASSWORD=changeme
     steps:
       - checkout
       - run: ls
