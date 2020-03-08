@@ -5,8 +5,9 @@ jobs:
       image: true
     steps:
       - checkout
-      - name: Docker compose
-        run: docker-compose up --abort-on-container-exit
+      - run:
+          name: Docker compose
+          command: docker-compose up --abort-on-container-exit
 workflows:
   version: 2
   build:
