@@ -8,7 +8,7 @@ const (
 	testDbName     = "db"
 	testDbUser     = "username"
 	testDbPassword = "changeme"
-	testDbHost     = "db"
+	testDbHost     = "localhost"
 	testDbPort     = 5432
 )
 

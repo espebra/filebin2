@@ -10,5 +10,4 @@ jobs:
           - POSTGRES_PASSWORD=changeme
     steps:
       - checkout
-      - run: echo "127.0.0.1 db" > /etc/hosts
       - run: go test dbl/* -mod=vendor -v -cover
