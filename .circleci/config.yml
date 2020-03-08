@@ -7,7 +7,7 @@ jobs:
       - checkout
       - run: docker-compose up --abort-on-container-exit
       - store_artifacts:
-          path: out/
+          path: artifacts/
           destination: /
       - store_test_results:
           path: tests/
