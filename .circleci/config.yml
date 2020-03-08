@@ -1,0 +1,12 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: postgres
+    environment:
+      - POSTGRES_DB=db
+      - POSTGRES_USER=username
+      - POSTGRES_PASSWORD=changeme
+    steps:
+      - checkout
+      - run: echo "A first hello"
