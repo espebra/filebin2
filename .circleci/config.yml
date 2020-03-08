@@ -3,6 +3,7 @@ jobs:
   build:
     docker:
       - image: circleci/golang:latest
+    working_directory: ~/project
     steps:
       - checkout
       - setup_remote_docker
