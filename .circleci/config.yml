@@ -5,4 +5,4 @@ jobs:
       image: true
     steps:
       - checkout
-      - run: ls
+      - run: docker-compose up
