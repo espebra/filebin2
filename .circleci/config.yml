@@ -10,7 +10,7 @@ jobs:
           path: out/
           destination: /
       - store_test_results:
-          path: out/tests.xml
+          path: tests/
 workflows:
   version: 2
   build:
