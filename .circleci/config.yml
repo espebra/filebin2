@@ -6,3 +6,8 @@ jobs:
     steps:
       - checkout
       - run: docker-compose up --abort-on-container-exit
+workflows:
+  version: 2
+  build:
+    jobs:
+      - build
