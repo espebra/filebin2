@@ -2,7 +2,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: alpine:latest
+      - image: circleci/golang:latest
     steps:
       - checkout
       - setup_remote_docker
