@@ -1,14 +1,8 @@
 version: 2
 jobs:
   build:
-    docker:
-      - image: circleci/golang:1.14
-      - image: circleci/postgres:12.0
-        environment:
-          - POSTGRES_DB=db
-          - POSTGRES_USER=username
-          - POSTGRES_PASSWORD=changeme
+    machine:
+      image: true
     steps:
       - checkout
-      - run: ls
-      - run: echo "A first hello"
+      - run: docker-compose up --abort-on-container-exit
