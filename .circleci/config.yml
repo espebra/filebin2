@@ -6,6 +6,9 @@ jobs:
     steps:
       - checkout
       - run: docker-compose up --abort-on-container-exit
+      - store_artifacts:
+          path: out/
+          destination: /
 workflows:
   version: 2
   build:
