@@ -2,13 +2,8 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/golang:1.14
-      - image: circleci/postgres:12.0-alpine
-        environment:
-          - POSTGRES_DB=db
-          - POSTGRES_USER=username
-          - POSTGRES_PASSWORD=changeme
+      - image: alpine:latest
     steps:
       - checkout
       - setup_remote_docker
-      - run: go test dbl/* -mod=vendor -v -cover
+      - run: docker-compose up
