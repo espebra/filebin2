@@ -18,3 +18,6 @@
 #
 #install: prepare
 #	go install -mod=vendor -ldflags "-X main.githash=${HASH}"
+
+default:
+	go test -mod=vendor -cover -v dbl/*

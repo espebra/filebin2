@@ -25,5 +25,5 @@ services:
       - .:/app:delegated
     depends_on:
       - db
-#    entrypoint: ["sh", "-c", "sleep 2073600"]
+    entrypoint: ["make"]
 
