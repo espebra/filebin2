@@ -10,6 +10,4 @@ jobs:
           - POSTGRES_PASSWORD=changeme
     steps:
       - checkout
-      - run: ls
-      - run: ps -afx
-      - run: echo "A first hello"
+      - run: go test dbl/* -mod=vendor -v -cover
