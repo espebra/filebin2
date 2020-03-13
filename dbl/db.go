@@ -50,17 +50,7 @@ func (dao DAO) Close() error {
 }
 
 func (dao DAO) CreateSchema() error {
-	//for _, model := range []interface{}{&ds.Tag{}, &ds.Router{}, &ds.Endpoint{}} {
-	//	err := dao.db.CreateTable(model, &orm.CreateTableOptions{
-	//		Temp:          false,
-	//		FKConstraints: true,
-	//	})
-
-	//	if err != nil {
-	//		return err
-	//	}
-	//}
-
+	// Not implemented
 	return nil
 }
 
