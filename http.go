@@ -2,26 +2,29 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
-	"html/template"
 	//"strings"
 	//"path/filepath"
 	//"encoding/json"
+	"github.com/espebra/filebin2/dbl"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/espebra/filebin2/dbl"
 	//"github.com/espebra/filebin2/ds"
+	"github.com/GeertJohan/go.rice"
 )
 
 type funcHandler func(http.ResponseWriter, *http.Request)
 
 type HTTP struct {
-	httpPort      int
-	httpHost      string
-	router        *mux.Router
-	templates     *template.Template
-	dao           *dbl.DAO
+	httpPort    int
+	httpHost    string
+	router      *mux.Router
+	templateBox *rice.Box
+	staticBox   *rice.Box
+	templates   *template.Template
+	dao         *dbl.DAO
 }
 
 func (h *HTTP) Init() (err error) {
@@ -29,6 +32,7 @@ func (h *HTTP) Init() (err error) {
 	h.templates = h.ParseTemplates()
 
 	h.router.HandleFunc("/", h.Index).Methods(http.MethodGet, http.MethodHead)
+	h.router.Handle("/static/{path:.*}", http.StripPrefix("/static/", http.FileServer(h.staticBox.HTTPBox()))).Methods("GET", "HEAD")
 	return err
 }
 
@@ -47,20 +51,20 @@ func (h *HTTP) ParseTemplates() *template.Template {
 	var fns = template.FuncMap{}
 
 	templ := template.New("").Funcs(fns)
-//	err := filepath.Walk(*templateDirFlag, func(path string, info os.FileInfo, err error) error {
-//		if strings.HasSuffix(path, ".html") {
-//			_, err = templ.ParseFiles(path)
-//			if err != nil {
-//				log.Println(err)
-//			}
-//		}
-//
-//		return err
-//	})
-//
-//	if err != nil {
-//		log.Fatal(err)
-//	}
+	//err := filepath.Walk(*templateDirFlag, func(path string, info os.FileInfo, err error) error {
+	//	if strings.HasSuffix(path, ".html") {
+	//		_, err = templ.ParseFiles(path)
+	//		if err != nil {
+	//			log.Println(err)
+	//		}
+	//	}
+
+	//	return err
+	//})
+
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
 
 	return templ
 }

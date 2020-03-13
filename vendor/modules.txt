@@ -1,3 +1,10 @@
+# github.com/GeertJohan/go.rice v1.0.0
+## explicit
+github.com/GeertJohan/go.rice
+github.com/GeertJohan/go.rice/embedded
+# github.com/daaku/go.zipexe v1.0.1
+## explicit
+github.com/daaku/go.zipexe
 # github.com/dustin/go-humanize v1.0.0
 ## explicit
 github.com/dustin/go-humanize
@@ -14,3 +21,7 @@ github.com/gorilla/mux
 github.com/lib/pq
 github.com/lib/pq/oid
 github.com/lib/pq/scram
+# github.com/nkovacs/streamquote v1.0.0
+## explicit
+# github.com/valyala/fasttemplate v1.1.0
+## explicit

@@ -18,9 +18,9 @@ services:
     build: .
     restart: "no"
     environment:
-      - DB_NAME=db
-      - DB_USERNAME=username
-      - DB_PASSWORD=changeme
+      - DATABASE_NAME=db
+      - DATABASB_USERNAME=username
+      - DATABASB_PASSWORD=changeme
     expose:
       - "8888"
     ports:
