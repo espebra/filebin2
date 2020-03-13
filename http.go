@@ -5,14 +5,14 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	//"strings"
-	//"path/filepath"
+	"os"
+	"path"
+	"strings"
 	//"encoding/json"
+	"github.com/GeertJohan/go.rice"
 	"github.com/espebra/filebin2/dbl"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	//"github.com/espebra/filebin2/ds"
-	"github.com/GeertJohan/go.rice"
 )
 
 type funcHandler func(http.ResponseWriter, *http.Request)
@@ -51,20 +51,25 @@ func (h *HTTP) ParseTemplates() *template.Template {
 	var fns = template.FuncMap{}
 
 	templ := template.New("").Funcs(fns)
-	//err := filepath.Walk(*templateDirFlag, func(path string, info os.FileInfo, err error) error {
-	//	if strings.HasSuffix(path, ".html") {
-	//		_, err = templ.ParseFiles(path)
-	//		if err != nil {
-	//			log.Println(err)
-	//		}
-	//	}
-
-	//	return err
-	//})
-
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-
+	err := h.templateBox.Walk("/", func(filepath string, info os.FileInfo, err error) error {
+		if strings.HasSuffix(filepath, ".html") {
+			// Read the template
+			f := path.Base(filepath)
+			//log.Println("Loading template: " + f)
+			content, err := h.templateBox.String(f)
+			if err != nil {
+				log.Fatal(err)
+			}
+			// Parse the template
+			_, err = templ.Parse(content)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+		return err
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
 	return templ
 }
