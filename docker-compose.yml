@@ -1,5 +1,17 @@
 version: "3"
 services:
+  s3:
+    image: "minio/minio"
+    restart: "no"
+    environment:
+      - MINIO_ACCESS_KEY=s3accesskey
+      - MINIO_SECRET_KEY=s3secretkey
+    expose:
+      - "9000"
+    ports:
+      - "9000:9000"
+    entrypoint: ["minio", "server", "/data"]
+
   db:
     image: "postgres"
     restart: "no"
@@ -14,13 +26,15 @@ services:
     volumes:
       - .:/docker-entrypoint-initdb.d:delegated
 
-  filebin:
+  app:
     build: .
     restart: "no"
     environment:
       - DATABASE_NAME=db
       - DATABASB_USERNAME=username
       - DATABASB_PASSWORD=changeme
+      - S3_ACCESS_KEY=s3accesskey
+      - S3_SECRET_KEY=s3secretkey
     expose:
       - "8888"
     ports:
