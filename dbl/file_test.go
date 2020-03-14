@@ -18,7 +18,7 @@ func TestGetFileById(t *testing.T) {
 
 	// Create bin first
 	bin := &ds.Bin{}
-	bin.Bid = "1234567890"
+	bin.Id = "1234567890"
 	err = dao.Bin().Insert(bin)
 
 	if err != nil {
@@ -72,7 +72,7 @@ func TestInsertDuplicatedFile(t *testing.T) {
 
 	// Create bin first
 	bin := &ds.Bin{}
-	bin.Bid = "1234567890"
+	bin.Id = "1234567890"
 	err = dao.Bin().Insert(bin)
 
 	if err != nil {
@@ -115,7 +115,7 @@ func TestGetAllFiles(t *testing.T) {
 
 	// Create bin first
 	bin := &ds.Bin{}
-	bin.Bid = "1234567890"
+	bin.Id = "1234567890"
 	err = dao.Bin().Insert(bin)
 
 	if err != nil {
@@ -160,7 +160,7 @@ func TestDeleteFile(t *testing.T) {
 
 	// Create bin first
 	bin := &ds.Bin{}
-	bin.Bid = "1234567890"
+	bin.Id = "1234567890"
 	err = dao.Bin().Insert(bin)
 
 	if err != nil {
@@ -207,7 +207,7 @@ func TestUpdateFile(t *testing.T) {
 
 	// Create bin first
 	bin := &ds.Bin{}
-	bin.Bid = "1234567890"
+	bin.Id = "1234567890"
 	err = dao.Bin().Insert(bin)
 	if err != nil {
 		t.Error(err)
@@ -288,7 +288,7 @@ func TestGetFilesByBinId(t *testing.T) {
 
 	// Create bin first
 	bin := &ds.Bin{}
-	bin.Bid = "1234567890"
+	bin.Id = "1234567890"
 	err = dao.Bin().Insert(bin)
 	if err != nil {
 		t.Error(err)
@@ -323,7 +323,7 @@ func TestGetFilesByBinId(t *testing.T) {
 		t.Errorf("Was expecting two files, got %d instead.", len(files))
 	}
 
-	files, err = dao.File().GetByBinId(-1)
+	files, err = dao.File().GetByBinId("-1")
 	if err != nil {
 		t.Error("Did not expect an error even though we asked for a bin id that does not exist")
 	}

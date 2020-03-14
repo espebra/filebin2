@@ -16,14 +16,14 @@ type BinDao struct {
 func (d *BinDao) GetAll() ([]ds.Bin, error) {
 	bins := []ds.Bin{}
 
-	sqlStatement := "SELECT bin.id AS id, bin.bid AS bid, bin.updated AS updated, bin.created AS created FROM bin ORDER BY updated ASC"
+	sqlStatement := "SELECT bin.id AS id, bin.updated AS updated, bin.created AS created FROM bin ORDER BY updated ASC"
 	rows, err := d.db.Query(sqlStatement)
 	if err != nil {
 		return bins, err
 	}
 	for rows.Next() {
 		var bin ds.Bin
-		err = rows.Scan(&bin.Id, &bin.Bid, &bin.Updated, &bin.Created)
+		err = rows.Scan(&bin.Id, &bin.Updated, &bin.Created)
 		if err != nil {
 			return bins, err
 		}
@@ -41,15 +41,15 @@ func (d *BinDao) GetAll() ([]ds.Bin, error) {
 	return bins, nil
 }
 
-func (d *BinDao) GetById(id int) (ds.Bin, error) {
+func (d *BinDao) GetById(id string) (ds.Bin, error) {
 	var bin ds.Bin
 
 	// Get bin info
-	sqlStatement := "SELECT id, bid, updated, created FROM bin WHERE id = $1 LIMIT 1"
-	err := d.db.QueryRow(sqlStatement, id).Scan(&bin.Id, &bin.Bid, &bin.Updated, &bin.Created)
+	sqlStatement := "SELECT id, updated, created FROM bin WHERE id = $1 LIMIT 1"
+	err := d.db.QueryRow(sqlStatement, id).Scan(&bin.Id, &bin.Updated, &bin.Created)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return bin, errors.New(fmt.Sprintf("No bin found with id %d", id))
+			return bin, errors.New(fmt.Sprintf("No bin found with id %s", id))
 		}
 	}
 	// https://github.com/lib/pq/issues/329
@@ -62,31 +62,35 @@ func (d *BinDao) GetById(id int) (ds.Bin, error) {
 	return bin, err
 }
 
-func (d *BinDao) GetByBid(bid string) (ds.Bin, error) {
-	var bin ds.Bin
-
-	// Get bin info
-	sqlStatement := "SELECT id, bid, updated, created FROM bin WHERE bid = $1 LIMIT 1"
-	err := d.db.QueryRow(sqlStatement, bid).Scan(&bin.Id, &bin.Bid, &bin.Updated, &bin.Created)
+func (d *BinDao) Upsert(bin *ds.Bin) error {
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	sqlStatement := "SELECT id, updated, created FROM bin WHERE id = $1 LIMIT 1"
+	err := d.db.QueryRow(sqlStatement, bin.Id).Scan(&bin.Id, &bin.Updated, &bin.Created)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return bin, errors.New(fmt.Sprintf("No bin found with bid %s", bid))
+			sqlStatement := "INSERT INTO bin (id, updated, created) VALUES ($1, $2, $3) RETURNING id"
+			err := d.db.QueryRow(sqlStatement, bin.Id, now, now).Scan(&bin.Id)
+			if err != nil {
+				return err
+			}
+			bin.Updated = now
+			bin.Created = now
+		} else {
+			return err
 		}
 	}
 	// https://github.com/lib/pq/issues/329
 	bin.Updated = bin.Updated.UTC()
 	bin.Created = bin.Created.UTC()
-
 	bin.UpdatedRelative = humanize.Time(bin.Updated)
 	bin.CreatedRelative = humanize.Time(bin.Created)
-
-	return bin, err
+	return nil
 }
 
 func (d *BinDao) Insert(bin *ds.Bin) error {
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "INSERT INTO bin (bid, updated, created) VALUES ($1, $2, $3) RETURNING id"
-	err := d.db.QueryRow(sqlStatement, bin.Bid, now, now).Scan(&bin.Id)
+	sqlStatement := "INSERT INTO bin (id, updated, created) VALUES ($1, $2, $3) RETURNING id"
+	err := d.db.QueryRow(sqlStatement, bin.Id, now, now).Scan(&bin.Id)
 	if err != nil {
 		return err
 	}

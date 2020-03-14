@@ -1,7 +1,7 @@
 package dbl
 
 import (
-	"errors"
+	//"errors"
 	"fmt"
 	"github.com/espebra/filebin2/ds"
 	"testing"
@@ -14,23 +14,23 @@ func TestGetBinById(t *testing.T) {
 	}
 	defer tearDown(dao)
 
-	bid := "1234567890"
+	id := "1234567890"
 	bin := &ds.Bin{}
-	bin.Bid = bid
+	bin.Id = id
 	err = dao.Bin().Insert(bin)
 	if err != nil {
 		t.Error(err)
 	}
-	if bin.Id == 0 {
-		t.Error(errors.New("Expected id > 0"))
+	if bin.Id != id {
+		t.Errorf("Was expecting bin id %s, got %s instead.", id, bin.Id)
 	}
 
-	dbBin, err := dao.Bin().GetByBid(bid)
+	dbBin, err := dao.Bin().GetById(id)
 	if err != nil {
 		t.Error(err)
 	}
-	if dbBin.Bid != bid {
-		t.Errorf("Was expecting bid %s, got %s instead.", bid, dbBin.Bid)
+	if dbBin.Id != id {
+		t.Errorf("Was expecting bin id %s, got %s instead.", id, dbBin.Id)
 	}
 }
 
@@ -42,7 +42,7 @@ func TestInsertDuplicatedBin(t *testing.T) {
 	defer tearDown(dao)
 
 	bin := &ds.Bin{}
-	bin.Bid = "1234567890"
+	bin.Id = "1234567890"
 	err = dao.Bin().Insert(bin)
 	if err != nil {
 		t.Error(err)
@@ -64,7 +64,7 @@ func TestGetAllBins(t *testing.T) {
 	count := 50
 	for i := 0; i < count; i++ {
 		bin := &ds.Bin{}
-		bin.Bid = fmt.Sprintf("bid-%d", i)
+		bin.Id = fmt.Sprintf("bid-%d", i)
 		err = dao.Bin().Insert(bin)
 		if err != nil {
 			t.Error(err)
@@ -90,13 +90,13 @@ func TestDeleteBin(t *testing.T) {
 	defer tearDown(dao)
 
 	bin := &ds.Bin{}
-	bin.Bid = "1234567890"
+	bin.Id = "1234567890"
 	err = dao.Bin().Insert(bin)
 	if err != nil {
 		t.Error(err)
 	}
 
-	dbBin, err := dao.Bin().GetByBid(bin.Bid)
+	dbBin, err := dao.Bin().GetById(bin.Id)
 	if err != nil {
 		t.Error(err)
 	}
@@ -106,7 +106,7 @@ func TestDeleteBin(t *testing.T) {
 		t.Error(err)
 	}
 
-	_, err = dao.Bin().GetByBid(bin.Bid)
+	_, err = dao.Bin().GetById(bin.Id)
 	if err == nil {
 		t.Errorf("Was expecting an error here, the bin was deleted earlier.")
 	}
@@ -120,7 +120,7 @@ func TestUpdateBin(t *testing.T) {
 	defer tearDown(dao)
 
 	bin := &ds.Bin{}
-	bin.Bid = "1234567890"
+	bin.Id = "1234567890"
 	err = dao.Bin().Insert(bin)
 	if err != nil {
 		t.Error(err)
@@ -153,8 +153,7 @@ func TestUpdateNonExistingBin(t *testing.T) {
 	defer tearDown(dao)
 
 	bin := &ds.Bin{}
-	bin.Id = 5
-	bin.Bid = "1234567890"
+	bin.Id = "1234567890"
 	err = dao.Bin().Update(bin)
 	if err == nil {
 		t.Errorf("Was expecting an error here, bin %v does not exist.", bin)
@@ -169,8 +168,7 @@ func TestDeleteNonExistingBin(t *testing.T) {
 	defer tearDown(dao)
 
 	bin := &ds.Bin{}
-	bin.Id = 10
-	bin.Bid = "1234567890"
+	bin.Id = "1234567890"
 	err = dao.Bin().Delete(bin)
 	if err == nil {
 		t.Errorf("Was expecting an error here, bin %v does not exist.", bin)

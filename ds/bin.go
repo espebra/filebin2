@@ -5,8 +5,7 @@ import (
 )
 
 type Bin struct {
-	Id              int       `json:"id"`
-	Bid             string    `json:"bid"`
+	Id              string    `json:"id"`
 	Updated         time.Time `json:"updated"`
 	UpdatedRelative string    `json:"updated_relative"`
 	Created         time.Time `json:"created"`

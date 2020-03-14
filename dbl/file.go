@@ -111,6 +111,33 @@ func (d *FileDao) GetById(id int) (ds.File, error) {
 	return file, err
 }
 
+func (d *FileDao) Upsert(file *ds.File) error {
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	sqlStatement := "SELECT id, bin_id, filename, size, checksum, updated, created FROM file WHERE bin_id = $1 AND filename = $2 LIMIT 1"
+	err := d.db.QueryRow(sqlStatement, file.BinId, file.Filename).Scan(&file.Id, &file.BinId, &file.Filename, &file.Size, &file.Checksum, &file.Updated, &file.Created)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			sqlStatement := "INSERT INTO file (bin_id, filename, size, checksum, updated, created) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id"
+			err := d.db.QueryRow(sqlStatement, file.BinId, file.Filename, file.Size, file.Checksum, now, now).Scan(&file.Id)
+			if err != nil {
+				return err
+			}
+			file.Updated = now
+			file.Created = now
+		} else {
+			return err
+		}
+	}
+
+	// https://github.com/lib/pq/issues/329
+	file.Updated = file.Updated.UTC()
+	file.Created = file.Created.UTC()
+
+	file.UpdatedRelative = humanize.Time(file.Updated)
+	file.CreatedRelative = humanize.Time(file.Created)
+	return nil
+}
+
 func (d *FileDao) Insert(file *ds.File) error {
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	sqlStatement := "INSERT INTO file (bin_id, filename, size, checksum, updated, created) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id"
@@ -125,7 +152,7 @@ func (d *FileDao) Insert(file *ds.File) error {
 	return nil
 }
 
-func (d *FileDao) GetByBinId(id int) ([]ds.File, error) {
+func (d *FileDao) GetByBinId(id string) ([]ds.File, error) {
 	var files []ds.File
 	sqlStatement := "SELECT id, bin_id, filename, size, checksum, updated, created FROM file WHERE bin_id = $1 ORDER BY filename ASC"
 	rows, err := d.db.Query(sqlStatement, id)

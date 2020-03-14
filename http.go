@@ -32,6 +32,7 @@ func (h *HTTP) Init() (err error) {
 	h.templates = h.ParseTemplates()
 
 	h.router.HandleFunc("/", h.Index).Methods(http.MethodGet, http.MethodHead)
+	h.router.HandleFunc("/", h.Upload).Methods(http.MethodPost)
 	h.router.Handle("/static/{path:.*}", http.StripPrefix("/static/", http.FileServer(h.staticBox.HTTPBox()))).Methods("GET", "HEAD")
 	return err
 }
