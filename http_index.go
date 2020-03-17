@@ -1,11 +1,23 @@
 package main
 
 import (
-	"github.com/dustin/go-humanize"
-	"github.com/espebra/filebin2/ds"
+	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+	"time"
+	//"path"
 	"strconv"
+
+	"github.com/espebra/filebin2/ds"
+
+	//"github.com/aws/aws-sdk-go/aws"
+	//"github.com/aws/aws-sdk-go/aws/credentials"
+	//"github.com/aws/aws-sdk-go/aws/session"
+	//"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/dustin/go-humanize"
 )
 
 func (h *HTTP) Index(w http.ResponseWriter, r *http.Request) {
@@ -24,13 +36,15 @@ func (h *HTTP) Index(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+
 	inputBin := r.Header.Get("bin")
 	if inputBin == "" {
 		// TODO: Generate random bin
 	}
 	// TODO: Input validation (inputBin)
 
-	inputFilename := r.Header.Get("inputFilename")
+	inputFilename := r.Header.Get("filename")
 	// TODO: Input sanitize (inputFilename)
 	inputBytes, err := strconv.Atoi(r.Header.Get("content-length"))
 	if err != nil {
@@ -62,7 +76,29 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Println("Found file: ", file)
-	// Does bin exist?
-	// No, create
-	// Yes, allowed to write?
+
+	fp, err := ioutil.TempFile(os.TempDir(), "filebin")
+	// Defer removal of the tempfile to clean up partially uploaded files.
+	defer os.Remove(fp.Name())
+	defer fp.Close()
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	nBytes, err := io.Copy(fp, r.Body)
+	if err != nil {
+		log.Println("Error occurred during io.Copy: " + err.Error())
+		return
+	}
+	fp.Seek(0, 0)
+
+	log.Printf("Buffered %s to %s in %s\n", humanize.Bytes(uint64(nBytes)), fp.Name(), time.Since(start))
+
+	err = h.s3.PutObject(file.Filename, fp, nBytes)
+	if err != nil {
+		fmt.Printf("%s\n", err.Error())
+	}
+	log.Printf("Uploaded %s bytes to S3 in %s\n", humanize.Bytes(uint64(nBytes)), time.Since(start))
 }

@@ -1,13 +1,13 @@
 package main
 
 import (
-	"log"
-	"os"
-	//"fmt"
 	"flag"
+	"fmt"
+	"os"
 	//"github.com/espebra/filebin2/ds"
 	"github.com/GeertJohan/go.rice"
 	"github.com/espebra/filebin2/dbl"
+	"github.com/espebra/filebin2/s3"
 )
 
 var (
@@ -21,6 +21,13 @@ var (
 	dbNameFlag     = flag.String("db-name", os.Getenv("DATABASE_NAME"), "Name of the database")
 	dbUsernameFlag = flag.String("db-username", os.Getenv("DATABASE_USERNAME"), "Database username")
 	dbPasswordFlag = flag.String("db-password", os.Getenv("DATABASE_PASSWORD"), "Database password")
+
+	// S3
+	s3EndpointFlag  = flag.String("s3-endpoint", os.Getenv("S3_ENDPOINT"), "S3 endpoint")
+	s3BucketFlag    = flag.String("s3-bucket", os.Getenv("S3_BUCKET"), "S3 bucket")
+	s3RegionFlag    = flag.String("s3-region", os.Getenv("S3_REGION"), "S3 region")
+	s3AccessKeyFlag = flag.String("s3-access-key", os.Getenv("S3_ACCESS_KEY"), "S3 access key")
+	s3SecretKeyFlag = flag.String("s3-secret-key", os.Getenv("S3_SECRET_KEY"), "S3 secret key")
 )
 
 func main() {
@@ -28,11 +35,16 @@ func main() {
 
 	daoconn, err := dbl.Init(*dbHostFlag, *dbPortFlag, *dbNameFlag, *dbUsernameFlag, *dbPasswordFlag)
 	if err != nil {
-		log.Fatal("Unable to connect to the database: ", err)
+		fmt.Errorf("Unable to connect to the database: %s\n", err.Error())
 	}
 
 	if err := daoconn.CreateSchema(); err != nil {
-		log.Fatal("Unable to create Schema:", err)
+		fmt.Errorf("Unable to create Schema: %s\n", err.Error())
+	}
+
+	s3conn, err := s3.Init(*s3EndpointFlag, *s3BucketFlag, *s3RegionFlag, *s3AccessKeyFlag, *s3SecretKeyFlag)
+	if err != nil {
+		fmt.Errorf("Unable to connect to S3: %s\n", err.Error())
 	}
 
 	staticBox := rice.MustFindBox("static")
@@ -44,10 +56,11 @@ func main() {
 		staticBox:   staticBox,
 		templateBox: templateBox,
 		dao:         &daoconn,
+		s3:          &s3conn,
 	}
 
 	if err := h.Init(); err != nil {
-		log.Fatal("Unable to start the HTTP server:", err)
+		fmt.Errorf("Unable to start the HTTP server: %s\n", err.Error())
 	}
 
 	h.Run()

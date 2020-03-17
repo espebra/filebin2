@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"html/template"
-	"log"
 	"net/http"
 	"os"
 	"path"
@@ -11,6 +10,7 @@ import (
 	//"encoding/json"
 	"github.com/GeertJohan/go.rice"
 	"github.com/espebra/filebin2/dbl"
+	"github.com/espebra/filebin2/s3"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
@@ -25,6 +25,7 @@ type HTTP struct {
 	staticBox   *rice.Box
 	templates   *template.Template
 	dao         *dbl.DAO
+	s3          *s3.S3AO
 }
 
 func (h *HTTP) Init() (err error) {
@@ -38,10 +39,10 @@ func (h *HTTP) Init() (err error) {
 }
 
 func (h *HTTP) Run() {
-	log.Println("Starting HTTP server on " + h.httpHost + ":" + fmt.Sprintf("%d", h.httpPort))
+	fmt.Printf("Starting HTTP server on %s:%d\n", h.httpHost, h.httpPort)
 	err := http.ListenAndServe(fmt.Sprintf("%s:%d", h.httpHost, h.httpPort), handlers.CompressHandler(h.router))
 	if err != nil {
-		log.Fatal("Failed to start HTTP server:", err)
+		fmt.Errorf("Failed to start HTTP server: %s", err.Error())
 	}
 }
 
@@ -59,18 +60,18 @@ func (h *HTTP) ParseTemplates() *template.Template {
 			//log.Println("Loading template: " + f)
 			content, err := h.templateBox.String(f)
 			if err != nil {
-				log.Fatal(err)
+				fmt.Errorf("%s", err.Error())
 			}
 			// Parse the template
 			_, err = templ.Parse(content)
 			if err != nil {
-				log.Fatal(err)
+				fmt.Errorf("%s", err.Error())
 			}
 		}
 		return err
 	})
 	if err != nil {
-		log.Fatal(err)
+		fmt.Errorf("%s", err.Error())
 	}
 	return templ
 }
