@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"time"
+	"path"
 	//"github.com/dustin/go-humanize"
 	"github.com/minio/minio-go/v6"
 )
@@ -27,7 +28,7 @@ func Init(endpoint, bucket, region, accessKey, secretKey string) (S3AO, error) {
 	s3ao.client = minioClient
 	s3ao.bucket = bucket
 
-	fmt.Printf("Connected to S3AO at %s\n", endpoint)
+	fmt.Printf("Established session to S3AO at %s\n", endpoint)
 
 	// Ensure that the bucket exists
 	found, err := s3ao.client.BucketExists(bucket)
@@ -47,23 +48,30 @@ func Init(endpoint, bucket, region, accessKey, secretKey string) (S3AO, error) {
 	return s3ao, nil
 }
 
-func (s S3AO) PutObject(name string, data io.Reader, size int64) error {
+func (s S3AO) PutObject(bin string, filename string, data io.Reader, size int64) error {
 	t0 := time.Now()
-	n, err := s.client.PutObject(s.bucket, name, data, size, minio.PutObjectOptions{ContentType: "application/octet-stream"})
+	key := path.Join(bin, filename)
+	n, err := s.client.PutObject(s.bucket, key, data, size, minio.PutObjectOptions{ContentType: "application/octet-stream"})
 	if err != nil {
 		fmt.Printf("Unable to put object: %s\n", err.Error())
 	}
-	fmt.Printf("Uploaded object: %s (%d bytes) in %.3fs\n", name, n, time.Since(t0).Seconds())
+	fmt.Printf("Uploaded object: %s (%d bytes) in %.3fs\n", key, n, time.Since(t0).Seconds())
 	return nil
 }
 
-func (s S3AO) RemoveObject(name string) error {
+func (s S3AO) RemoveObject(bin string, filename string) error {
+	key := path.Join(bin, filename)
+	err := s.RemoveKey(key)
+	return err
+}
+
+func (s S3AO) RemoveKey(key string) error {
 	t0 := time.Now()
-	err := s.client.RemoveObject(s.bucket, name)
+	err := s.client.RemoveObject(s.bucket, key)
 	if err != nil {
 		fmt.Printf("Unable to remove object: %s\n", err.Error())
 	}
-	fmt.Printf("Removed object: %s in %.3fs\n", name, time.Since(t0).Seconds())
+	fmt.Printf("Removed object: %s in %.3fs\n", key, time.Since(t0).Seconds())
 	return nil
 }
 
@@ -94,7 +102,7 @@ func (s S3AO) RemoveBucket() error {
 
 	// ReoveObject on all objects
 	for _, object := range objects {
-		if err := s.RemoveObject(object); err != nil {
+		if err := s.RemoveKey(object); err != nil {
 			return err
 		}
 	}
@@ -108,8 +116,9 @@ func (s S3AO) RemoveBucket() error {
 	return nil
 }
 
-func (s S3AO) GetObject(name string) (io.Reader, error) {
-	object, err := s.client.GetObject(s.bucket, name, minio.GetObjectOptions{})
+func (s S3AO) GetObject(bin string, filename string) (io.Reader, error) {
+	key := path.Join(bin, filename)
+	object, err := s.client.GetObject(s.bucket, key, minio.GetObjectOptions{})
 	if err != nil {
 		return object, err
 	}

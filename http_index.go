@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"time"
@@ -23,13 +22,11 @@ import (
 func (h *HTTP) Index(w http.ResponseWriter, r *http.Request) {
 
 	type Data struct {
-		Filename string `json:"filename"`
 	}
-
 	var data Data
 
 	if err := h.templates.ExecuteTemplate(w, "index", data); err != nil {
-		log.Printf("Failed to execute template: %s\n", err.Error())
+		fmt.Printf("Failed to execute template: %s\n", err.Error())
 		http.Error(w, "Errno 1", http.StatusInternalServerError)
 		return
 	}
@@ -46,36 +43,36 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 
 	inputFilename := r.Header.Get("filename")
 	// TODO: Input sanitize (inputFilename)
+
 	inputBytes, err := strconv.Atoi(r.Header.Get("content-length"))
 	if err != nil {
-		log.Println("Unable to parse the content-length request header: ", err)
+		fmt.Printf("Unable to parse the content-length request header: %s\n", err.Error())
 	}
+	// TODO: Input validation on content-length. Between min:max.
 
-	log.Println("Uploading " + humanize.Bytes(uint64(inputBytes)) + " to filename " + inputFilename + " in bin " + inputBin)
+	// TODO: Check if bin exists and is writable
 
+	// If bin does not exist, create it
 	bin := &ds.Bin{}
 	bin.Id = inputBin
-
 	if err := h.dao.Bin().Upsert(bin); err != nil {
-		log.Printf("Unable to load bin %s: %s\n", inputBin, err.Error())
+		fmt.Printf("Unable to load bin %s: %s\n", inputBin, err.Error())
 		http.Error(w, "Errno 2", http.StatusInternalServerError)
 		return
 	}
 
-	log.Println("Found bin: ", bin)
-
+	// TODO: Can files be overwritten?
 	file := &ds.File{}
-	file.BinId = bin.Id
+	file.Bin = bin.Id
 	file.Filename = inputFilename
 	file.Size = inputBytes
-
 	if err := h.dao.File().Upsert(file); err != nil {
-		log.Printf("Unable to load file %s: %s\n", inputBin, err.Error())
+		fmt.Printf("Unable to load file %s: %s\n", inputBin, err.Error())
 		http.Error(w, "Errno 3", http.StatusInternalServerError)
 		return
 	}
 
-	log.Println("Found file: ", file)
+	fmt.Printf("Uploading filename %s (%s) to bin %s\n", inputFilename, humanize.Bytes(uint64(inputBytes)), inputBin)
 
 	fp, err := ioutil.TempFile(os.TempDir(), "filebin")
 	// Defer removal of the tempfile to clean up partially uploaded files.
@@ -83,22 +80,25 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	defer fp.Close()
 
 	if err != nil {
-		log.Println(err)
+		fmt.Printf("%s\n", err.Error())
 		return
 	}
 
 	nBytes, err := io.Copy(fp, r.Body)
 	if err != nil {
-		log.Println("Error occurred during io.Copy: " + err.Error())
+		fmt.Printf("Error occurred during io.Copy: %s\n", err.Error())
 		return
 	}
+	d1 := time.Since(start)
 	fp.Seek(0, 0)
 
-	log.Printf("Buffered %s to %s in %s\n", humanize.Bytes(uint64(nBytes)), fp.Name(), time.Since(start))
+	//fmt.Printf("Buffered %s to %s in %.3fs\n", humanize.Bytes(uint64(nBytes)), fp.Name(), time.Since(start).Seconds())
 
-	err = h.s3.PutObject(file.Filename, fp, nBytes)
+	err = h.s3.PutObject(file.Bin, file.Filename, fp, nBytes)
 	if err != nil {
 		fmt.Printf("%s\n", err.Error())
 	}
-	log.Printf("Uploaded %s bytes to S3 in %s\n", humanize.Bytes(uint64(nBytes)), time.Since(start))
+	d2 := time.Since(start)
+	//fmt.Printf("Uploaded %s to S3 in %.3fs\n", humanize.Bytes(uint64(nBytes)), time.Since(start).Seconds())
+	fmt.Printf("Uploaded filename %s (%s) to bin %s (buffered in %.3fs, stored in %.3fs)\n", inputFilename, humanize.Bytes(uint64(inputBytes)), inputBin, d1.Seconds(), d2.Seconds())
 }

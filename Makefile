@@ -4,6 +4,7 @@ default:
 	# Bundle templates and static files into the build
 	rm -f templates.rice-box.go
 	rm -f static.rice-box.go
+	rm -f rice-box.go
 	rice embed-go -v -i .
 
 	mkdir -p tests artifacts

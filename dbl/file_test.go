@@ -28,7 +28,7 @@ func TestGetFileById(t *testing.T) {
 	// Create file
 	file := &ds.File{}
 	file.Filename = "testfile.txt"
-	file.BinId = bin.Id // Foreign key
+	file.Bin = bin.Id // Foreign key
 	file.Size = 1
 	file.Checksum = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
@@ -81,7 +81,7 @@ func TestInsertDuplicatedFile(t *testing.T) {
 
 	file := &ds.File{}
 	file.Filename = "testfile.txt"
-	file.BinId = bin.Id
+	file.Bin = bin.Id
 	file.Size = 1
 	file.Checksum = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
@@ -127,7 +127,7 @@ func TestGetAllFiles(t *testing.T) {
 	for i := 0; i < count; i++ {
 		file := &ds.File{}
 		file.Filename = fmt.Sprintf("File-%d", i)
-		file.BinId = bin.Id
+		file.Bin = bin.Id
 		file.Size = 1
 		file.Checksum = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 		err = dao.File().Insert(file)
@@ -169,7 +169,7 @@ func TestDeleteFile(t *testing.T) {
 
 	file := &ds.File{}
 	file.Filename = "testfile.txt"
-	file.BinId = bin.Id
+	file.Bin = bin.Id
 	file.Size = 1
 	file.Checksum = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
@@ -214,7 +214,7 @@ func TestUpdateFile(t *testing.T) {
 	}
 
 	file := &ds.File{}
-	file.BinId = bin.Id
+	file.Bin = bin.Id
 	file.Filename = "testfile.txt"
 	file.Size = 1
 	file.Checksum = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -279,7 +279,7 @@ func TestDeleteNonExistingFile(t *testing.T) {
 	}
 }
 
-func TestGetFilesByBinId(t *testing.T) {
+func TestGetFilesByBin(t *testing.T) {
 	dao, err := tearUp()
 	if err != nil {
 		t.Error(err)
@@ -297,7 +297,7 @@ func TestGetFilesByBinId(t *testing.T) {
 	// Create files
 	file1 := &ds.File{}
 	file1.Filename = "file1.txt"
-	file1.BinId = bin.Id // Foreign key
+	file1.Bin = bin.Id // Foreign key
 	file1.Size = 1
 	file1.Checksum = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	err = dao.File().Insert(file1)
@@ -307,7 +307,7 @@ func TestGetFilesByBinId(t *testing.T) {
 
 	file2 := &ds.File{}
 	file2.Filename = "file2.txt"
-	file2.BinId = bin.Id // Foreign key
+	file2.Bin = bin.Id // Foreign key
 	file2.Size = 2
 	file2.Checksum = "ff0350c8a7fea1087c5300e9ae922a7ab453648b1c156d5c58437d9f4565244b"
 	err = dao.File().Insert(file2)
@@ -315,7 +315,7 @@ func TestGetFilesByBinId(t *testing.T) {
 		t.Error(err)
 	}
 
-	files, err := dao.File().GetByBinId(bin.Id)
+	files, err := dao.File().GetByBin(bin.Id)
 	if err != nil {
 		t.Error(err)
 	}
@@ -323,7 +323,7 @@ func TestGetFilesByBinId(t *testing.T) {
 		t.Errorf("Was expecting two files, got %d instead.", len(files))
 	}
 
-	files, err = dao.File().GetByBinId("-1")
+	files, err = dao.File().GetByBin("-1")
 	if err != nil {
 		t.Error("Did not expect an error even though we asked for a bin id that does not exist")
 	}

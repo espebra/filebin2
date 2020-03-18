@@ -5,8 +5,8 @@ import (
 )
 
 type File struct {
-	Id              int       `json:"id"`
-	BinId           string    `json:"bin_id"`
+	Id              int       `json:"-"`
+	Bin             string    `json:"bin"`
 	Filename        string    `json:"filename"`
 	Size            int       `json:"size"`
 	Checksum        string    `json:"checksum"`

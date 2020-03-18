@@ -55,9 +55,10 @@ func TestPutObject(t *testing.T) {
 	}
 	defer tearDown(s3ao)
 
-	name := "testobject"
+	filename := "testobject"
+	bin := "testbin"
 	content := "content"
-	err = s3ao.PutObject(name, strings.NewReader(content), int64(len(content)))
+	err = s3ao.PutObject(bin, filename, strings.NewReader(content), int64(len(content)))
 	if err != nil {
 		t.Errorf("Unable to put file: %s\n", err.Error())
 	}
@@ -70,13 +71,14 @@ func TestRemoveObject(t *testing.T) {
 	}
 	defer tearDown(s3ao)
 
-	name := "testobject2"
+	filename := "testobject2"
+	bin := "testbin2"
 	content := "content2"
-	if err := s3ao.PutObject(name, strings.NewReader(content), int64(len(content))); err != nil {
+	if err := s3ao.PutObject(bin, filename, strings.NewReader(content), int64(len(content))); err != nil {
 		t.Errorf("Unable to put object: %s\n", err.Error())
 	}
 
-	if err := s3ao.RemoveObject(name); err != nil {
+	if err := s3ao.RemoveObject(bin, filename); err != nil {
 		t.Errorf("Unable to remove object: %s\n", err.Error())
 	}
 }
@@ -88,13 +90,14 @@ func TestGetObject(t *testing.T) {
 	}
 	defer tearDown(s3ao)
 
-	name := "testobject"
+	filename := "testobject"
+	bin := "testbin"
 	content := "content"
-	if err := s3ao.PutObject(name, strings.NewReader(content), int64(len(content))); err != nil {
+	if err := s3ao.PutObject(bin, filename, strings.NewReader(content), int64(len(content))); err != nil {
 		t.Errorf("Unable to put object: %s\n", err.Error())
 	}
 
-	fp, err := s3ao.GetObject(name)
+	fp, err := s3ao.GetObject(bin, filename)
 	if err != nil {
 		t.Errorf("Unable to get object: %s\n", err.Error())
 	}
@@ -114,8 +117,9 @@ func TestUnknownObject(t *testing.T) {
 	}
 	defer tearDown(s3ao)
 
-	name := "testobject"
-	fp, err := s3ao.GetObject(name)
+	filename := "testobject"
+	bin := "testbin"
+	fp, err := s3ao.GetObject(bin, filename)
 	if err != nil {
 		// This is strange behaviour. The library should return an error
 		// if the object does not exist.
@@ -131,7 +135,7 @@ func TestUnknownObject(t *testing.T) {
 		t.Errorf("Expected empty response, but got %s\n", s)
 	}
 
-	err = s3ao.RemoveObject(name)
+	err = s3ao.RemoveObject(bin, filename)
 	if err != nil {
 		// This is strange behaviour. The library should return an error
 		// if the object does not exist.
