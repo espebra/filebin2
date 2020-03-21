@@ -9,10 +9,11 @@ CREATE TABLE file (
 	id		SERIAL NOT NULL PRIMARY KEY,
 	bin_id		VARCHAR(64) REFERENCES bin(id) ON DELETE CASCADE,
 	filename	VARCHAR(128) NOT NULL,
-	size		BIGINT NOT NULL,
+	mime		VARCHAR(128) NOT NULL,
+	bytes		BIGINT NOT NULL,
 	checksum	VARCHAR(128) NOT NULL,
+	downloads	BIGINT NOT NULL,
 	updated		TIMESTAMP NOT NULL,
 	created		TIMESTAMP NOT NULL,
-	downloads	BIGINT NOT NULL,
 	UNIQUE(bin_id, filename)
 );

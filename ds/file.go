@@ -6,9 +6,10 @@ import (
 
 type File struct {
 	Id              int       `json:"-"`
-	Bin             string    `json:"bin"`
+	Bin             string    `json:"-"`
 	Filename        string    `json:"filename"`
-	Size            uint64    `json:"size"`
+	Mime            string    `json:"content-type"`
+	Bytes           uint64    `json:"bytes"`
 	Checksum        string    `json:"checksum"`
 	Downloads       uint64    `json:"-"`
 	Updated         time.Time `json:"updated"`

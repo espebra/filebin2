@@ -21,10 +21,18 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 	}
 	var data Data
 
+	_, err := h.dao.Bin().GetById(inputBin)
+	if err != nil {
+		fmt.Printf("Unable to GetById(%s): %s\n", inputBin, err.Error())
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+
 	files, err := h.dao.File().GetByBin(inputBin)
 	if err != nil {
 		fmt.Printf("Unable to GetByBin(%s): %s\n", inputBin, err.Error())
-		http.Error(w, "Errno 1", http.StatusInternalServerError)
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
 	}
 	data.Files = files
 

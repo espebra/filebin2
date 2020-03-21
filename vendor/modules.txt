@@ -12,6 +12,9 @@ github.com/daaku/go.zipexe
 github.com/dustin/go-humanize
 # github.com/gabriel-vasile/mimetype v1.0.4
 ## explicit
+github.com/gabriel-vasile/mimetype
+github.com/gabriel-vasile/mimetype/internal/json
+github.com/gabriel-vasile/mimetype/internal/matchers
 # github.com/gorilla/handlers v1.4.2
 ## explicit
 github.com/gorilla/handlers
