@@ -99,6 +99,12 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := h.dao.Bin().Update(bin); err != nil {
+		fmt.Printf("Unable to update bin %s: %s\n", inputBin, err.Error())
+		http.Error(w, "Errno 5", http.StatusInternalServerError)
+		return
+	}
+
 	// TODO: Can files be overwritten?
 	file := &ds.File{}
 	file.Bin = bin.Id

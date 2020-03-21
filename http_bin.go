@@ -17,16 +17,18 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 	// TODO: Input validation (inputBin)
 
 	type Data struct {
+		Bin   ds.Bin    `json:"bin"`
 		Files []ds.File `json:"files"`
 	}
 	var data Data
 
-	_, err := h.dao.Bin().GetById(inputBin)
+	bin, err := h.dao.Bin().GetById(inputBin)
 	if err != nil {
 		fmt.Printf("Unable to GetById(%s): %s\n", inputBin, err.Error())
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
 	}
+	data.Bin = bin
 
 	files, err := h.dao.File().GetByBin(inputBin)
 	if err != nil {

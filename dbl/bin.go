@@ -16,14 +16,14 @@ type BinDao struct {
 func (d *BinDao) GetAll() ([]ds.Bin, error) {
 	bins := []ds.Bin{}
 
-	sqlStatement := "SELECT bin.id AS id, bin.updated AS updated, bin.created AS created FROM bin ORDER BY updated ASC"
+	sqlStatement := "SELECT id, downloads, updated, created FROM bin ORDER BY updated ASC"
 	rows, err := d.db.Query(sqlStatement)
 	if err != nil {
 		return bins, err
 	}
 	for rows.Next() {
 		var bin ds.Bin
-		err = rows.Scan(&bin.Id, &bin.Updated, &bin.Created)
+		err = rows.Scan(&bin.Id, &bin.Downloads, &bin.Updated, &bin.Created)
 		if err != nil {
 			return bins, err
 		}
@@ -45,8 +45,8 @@ func (d *BinDao) GetById(id string) (ds.Bin, error) {
 	var bin ds.Bin
 
 	// Get bin info
-	sqlStatement := "SELECT id, updated, created FROM bin WHERE id = $1 LIMIT 1"
-	err := d.db.QueryRow(sqlStatement, id).Scan(&bin.Id, &bin.Updated, &bin.Created)
+	sqlStatement := "SELECT id, downloads, updated, created FROM bin WHERE id = $1 LIMIT 1"
+	err := d.db.QueryRow(sqlStatement, id).Scan(&bin.Id, &bin.Downloads, &bin.Updated, &bin.Created)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return bin, errors.New(fmt.Sprintf("No bin found with id %s", id))
@@ -64,8 +64,8 @@ func (d *BinDao) GetById(id string) (ds.Bin, error) {
 
 func (d *BinDao) Upsert(bin *ds.Bin) error {
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "SELECT id, updated, created FROM bin WHERE id = $1 LIMIT 1"
-	err := d.db.QueryRow(sqlStatement, bin.Id).Scan(&bin.Id, &bin.Updated, &bin.Created)
+	sqlStatement := "SELECT id, downloads, updated, created FROM bin WHERE id = $1 LIMIT 1"
+	err := d.db.QueryRow(sqlStatement, bin.Id).Scan(&bin.Id, &bin.Downloads, &bin.Updated, &bin.Created)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			sqlStatement := "INSERT INTO bin (id, downloads, updated, created) VALUES ($1, 0, $2, $3) RETURNING id"
@@ -102,7 +102,7 @@ func (d *BinDao) Insert(bin *ds.Bin) error {
 }
 
 func (d *BinDao) Update(bin *ds.Bin) error {
-	var id int
+	var id string
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	sqlStatement := "UPDATE bin SET updated = $1 WHERE id = $2 RETURNING id"
 	err := d.db.QueryRow(sqlStatement, now, bin.Id).Scan(&id)
