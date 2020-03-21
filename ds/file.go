@@ -8,8 +8,9 @@ type File struct {
 	Id              int       `json:"-"`
 	Bin             string    `json:"bin"`
 	Filename        string    `json:"filename"`
-	Size            int       `json:"size"`
+	Size            uint64    `json:"size"`
 	Checksum        string    `json:"checksum"`
+	Downloads       uint64    `json:"-"`
 	Updated         time.Time `json:"updated"`
 	UpdatedRelative string    `json:"updated_relative"`
 	Created         time.Time `json:"created"`

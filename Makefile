@@ -1,3 +1,8 @@
+fmt:
+	gofmt -w *.go
+	gofmt -w ds/*.go
+	gofmt -w dbl/*.go
+
 default:
 	go version
 

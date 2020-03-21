@@ -32,6 +32,14 @@ func TestGetBinById(t *testing.T) {
 	if dbBin.Id != id {
 		t.Errorf("Was expecting bin id %s, got %s instead.", id, dbBin.Id)
 	}
+
+	err = dao.Bin().RegisterDownload(bin)
+	if err != nil {
+		t.Error(err)
+	}
+	if bin.Downloads != 1 {
+		t.Errorf("Was expecting the number of downloads to be 1, not %d\n", bin.Downloads)
+	}
 }
 
 func TestInsertDuplicatedBin(t *testing.T) {

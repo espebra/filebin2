@@ -68,7 +68,7 @@ func (d *BinDao) Upsert(bin *ds.Bin) error {
 	err := d.db.QueryRow(sqlStatement, bin.Id).Scan(&bin.Id, &bin.Updated, &bin.Created)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			sqlStatement := "INSERT INTO bin (id, updated, created) VALUES ($1, $2, $3) RETURNING id"
+			sqlStatement := "INSERT INTO bin (id, downloads, updated, created) VALUES ($1, 0, $2, $3) RETURNING id"
 			err := d.db.QueryRow(sqlStatement, bin.Id, now, now).Scan(&bin.Id)
 			if err != nil {
 				return err
@@ -89,7 +89,7 @@ func (d *BinDao) Upsert(bin *ds.Bin) error {
 
 func (d *BinDao) Insert(bin *ds.Bin) error {
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "INSERT INTO bin (id, updated, created) VALUES ($1, $2, $3) RETURNING id"
+	sqlStatement := "INSERT INTO bin (id, downloads, updated, created) VALUES ($1, 0, $2, $3) RETURNING id"
 	err := d.db.QueryRow(sqlStatement, bin.Id, now, now).Scan(&bin.Id)
 	if err != nil {
 		return err
@@ -131,4 +131,13 @@ func (d *BinDao) Delete(bin *ds.Bin) error {
 	} else {
 		return nil
 	}
+}
+
+func (d *BinDao) RegisterDownload(bin *ds.Bin) error {
+	sqlStatement := "UPDATE bin SET downloads = downloads + 1 WHERE id = $1 RETURNING downloads"
+	err := d.db.QueryRow(sqlStatement, bin.Id).Scan(&bin.Downloads)
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -330,4 +330,12 @@ func TestGetFilesByBin(t *testing.T) {
 	if len(files) != 0 {
 		t.Errorf("Was expecting zero files matching the non existent bin id, got %d instead.", len(files))
 	}
+
+	err = dao.File().RegisterDownload(file1)
+	if err != nil {
+		t.Error(err)
+	}
+	if file1.Downloads != 1 {
+		t.Errorf("Was expecting the number of downloads to be 1, not %d\n", file1.Downloads)
+	}
 }

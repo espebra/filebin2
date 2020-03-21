@@ -1,10 +1,10 @@
 package main
 
 import (
-	"io"
-	"fmt"
-	"net/http"
 	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
 
 	"github.com/espebra/filebin2/ds"
 	"github.com/gorilla/mux"
@@ -12,26 +12,26 @@ import (
 )
 
 func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
-        params := mux.Vars(r)
-        inputBin := params["bin"]
-        // TODO: Input validation (inputBin)
+	params := mux.Vars(r)
+	inputBin := params["bin"]
+	// TODO: Input validation (inputBin)
 
 	type Data struct {
 		Files []ds.File `json:"files"`
 	}
 	var data Data
 
-        files, err := h.dao.File().GetByBin(inputBin)
-        if err != nil {
-                fmt.Printf("Unable to GetByBin(%s): %s\n", inputBin, err.Error())
-                http.Error(w, "Errno 1", http.StatusInternalServerError)
-        }
+	files, err := h.dao.File().GetByBin(inputBin)
+	if err != nil {
+		fmt.Printf("Unable to GetByBin(%s): %s\n", inputBin, err.Error())
+		http.Error(w, "Errno 1", http.StatusInternalServerError)
+	}
 	data.Files = files
 
 	if r.Header.Get("accept") == "application/json" {
 		w.Header().Set("Content-Type", "application/json")
 		out, err := json.MarshalIndent(data, "", "    ")
-	        if err != nil {
+		if err != nil {
 			fmt.Printf("Failed to parse json: %s\n", err.Error())
 			http.Error(w, "Errno 2", http.StatusInternalServerError)
 			return

@@ -7,6 +7,7 @@ require (
 	github.com/aws/aws-sdk-go v1.29.24 // indirect
 	github.com/daaku/go.zipexe v1.0.1 // indirect
 	github.com/dustin/go-humanize v1.0.0
+	github.com/gabriel-vasile/mimetype v1.0.4 // indirect
 	github.com/gorilla/handlers v1.4.2
 	github.com/gorilla/mux v1.7.4
 	github.com/jstemmer/go-junit-report v0.9.1 // indirect

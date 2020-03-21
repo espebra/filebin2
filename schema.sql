@@ -1,7 +1,8 @@
  CREATE TABLE bin (
 	id		VARCHAR(64) NOT NULL PRIMARY KEY,
 	updated		TIMESTAMP NOT NULL,
-	created		TIMESTAMP NOT NULL
+	created		TIMESTAMP NOT NULL,
+	downloads	BIGINT NOT NULL
 );
 
 CREATE TABLE file (
@@ -12,5 +13,6 @@ CREATE TABLE file (
 	checksum	VARCHAR(128) NOT NULL,
 	updated		TIMESTAMP NOT NULL,
 	created		TIMESTAMP NOT NULL,
+	downloads	BIGINT NOT NULL,
 	UNIQUE(bin_id, filename)
 );

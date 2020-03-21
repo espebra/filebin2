@@ -137,7 +137,7 @@ func (d *FileDao) Upsert(file *ds.File) error {
 	err := d.db.QueryRow(sqlStatement, file.Bin, file.Filename).Scan(&file.Id, &file.Bin, &file.Filename, &file.Size, &file.Checksum, &file.Updated, &file.Created)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			sqlStatement := "INSERT INTO file (bin_id, filename, size, checksum, updated, created) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id"
+			sqlStatement := "INSERT INTO file (bin_id, filename, size, checksum, downloads, updated, created) VALUES ($1, $2, $3, $4, 0, $5, $6) RETURNING id"
 			err := d.db.QueryRow(sqlStatement, file.Bin, file.Filename, file.Size, file.Checksum, now, now).Scan(&file.Id)
 			if err != nil {
 				return err
@@ -160,7 +160,7 @@ func (d *FileDao) Upsert(file *ds.File) error {
 
 func (d *FileDao) Insert(file *ds.File) error {
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "INSERT INTO file (bin_id, filename, size, checksum, updated, created) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id"
+	sqlStatement := "INSERT INTO file (bin_id, filename, size, checksum, downloads, updated, created) VALUES ($1, $2, $3, $4, 0, $5, $6) RETURNING id"
 	err := d.db.QueryRow(sqlStatement, file.Bin, file.Filename, file.Size, file.Checksum, now, now).Scan(&file.Id)
 	if err != nil {
 		return err
@@ -258,4 +258,13 @@ func (d *FileDao) Delete(file *ds.File) error {
 	} else {
 		return nil
 	}
+}
+
+func (d *FileDao) RegisterDownload(file *ds.File) error {
+	sqlStatement := "UPDATE file SET downloads = downloads + 1 WHERE id = $1 RETURNING downloads"
+	err := d.db.QueryRow(sqlStatement, file.Id).Scan(&file.Downloads)
+	if err != nil {
+		return err
+	}
+	return nil
 }
