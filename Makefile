@@ -1,8 +1,4 @@
-fmt:
-	gofmt -w *.go
-	gofmt -w ds/*.go
-	gofmt -w dbl/*.go
-
+.PHONY: default
 default:
 	go version
 
@@ -25,3 +21,8 @@ default:
 
 	GOOS=darwin GOARCH=amd64 go build -o artifacts/filebin-darwin-amd64
 	GOOS=linux GOARCH=amd64 go build -o artifacts/filebin-linux-amd64
+
+fmt:
+	gofmt -w *.go
+	gofmt -w ds/*.go
+	gofmt -w dbl/*.go

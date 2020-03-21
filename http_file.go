@@ -55,7 +55,7 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("Unable to update file %s in bin %s: %s\n", inputFilename, inputBin, err.Error())
 	}
 
-	fmt.Printf("Fetched file %s (%s) from bin %s in %.3fs (%d downloads)\n", inputFilename, humanize.Bytes(file.Size), inputBin, time.Since(t0).Seconds(), file.Downloads)
+	fmt.Printf("Downloaded file %s (%s) from bin %s in %.3fs (%d downloads)\n", inputFilename, humanize.Bytes(file.Size), inputBin, time.Since(t0).Seconds(), file.Downloads)
 
 	//buf := new(bytes.Buffer)
 	//buf.ReadFrom(fp)
