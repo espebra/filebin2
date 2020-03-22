@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"time"
+	"strings"
 
 	"github.com/espebra/filebin2/ds"
 
@@ -50,10 +51,15 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", file.Mime)
 	}
 
-	if _, err = io.Copy(w, fp); err != nil {
-		fmt.Printf("The client cancelled the download: %s\n", err.Error())
-		//http.Error(w, "Errno 4", http.StatusInternalServerError)
-		return
+	// Handling of specific content-types
+	if strings.HasPrefix(file.Mime, "video") {
+		// Do nothing
+	} else if strings.HasPrefix(file.Mime, "image") {
+		// Do nothing
+	} else if strings.HasPrefix(file.Mime, "text/plain") {
+		// Do nothing
+	} else {
+		w.Header().Set("Content-Disposition", "attachment")
 	}
 
 	if err := h.dao.File().RegisterDownload(&file); err != nil {
@@ -61,6 +67,12 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Printf("Downloaded file %s (%s) from bin %s in %.3fs (%d downloads)\n", inputFilename, humanize.Bytes(file.Bytes), inputBin, time.Since(t0).Seconds(), file.Downloads)
+
+	if _, err = io.Copy(w, fp); err != nil {
+		fmt.Printf("The client cancelled the download: %s\n", err.Error())
+		//http.Error(w, "Errno 4", http.StatusInternalServerError)
+		return
+	}
 
 	//buf := new(bytes.Buffer)
 	//buf.ReadFrom(fp)
