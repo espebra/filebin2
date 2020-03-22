@@ -51,8 +51,8 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if _, err = io.Copy(w, fp); err != nil {
-		fmt.Println("Error during copy: %s\n", err.Error())
-		http.Error(w, "Errno 4", http.StatusInternalServerError)
+		fmt.Printf("The client cancelled the download: %s\n", err.Error())
+		//http.Error(w, "Errno 4", http.StatusInternalServerError)
 		return
 	}
 
