@@ -25,4 +25,5 @@ default:
 fmt:
 	gofmt -w *.go
 	gofmt -w ds/*.go
+	gofmt -w s3/*.go
 	gofmt -w dbl/*.go

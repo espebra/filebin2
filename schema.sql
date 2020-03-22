@@ -13,6 +13,7 @@ CREATE TABLE file (
 	bytes		BIGINT NOT NULL,
 	checksum	VARCHAR(128) NOT NULL,
 	downloads	BIGINT NOT NULL,
+	nonce		VARCHAR(128) NOT NULL,
 	updated		TIMESTAMP NOT NULL,
 	created		TIMESTAMP NOT NULL,
 	UNIQUE(bin_id, filename)

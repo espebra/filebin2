@@ -7,3 +7,4 @@ export S3_REGION="us-east-1"
 export S3_BUCKET="filebin"
 export S3_ACCESS_KEY=s3accesskey
 export S3_SECRET_KEY=s3secretkey
+export S3_ENCRYPTION_KEY=s3encryptionkey

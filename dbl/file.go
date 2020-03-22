@@ -133,12 +133,12 @@ func (d *FileDao) GetByName(bin string, filename string) (ds.File, error) {
 
 func (d *FileDao) Upsert(file *ds.File) error {
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "SELECT id, bin_id, filename, mime, bytes, checksum, downloads, updated, created FROM file WHERE bin_id = $1 AND filename = $2 LIMIT 1"
-	err := d.db.QueryRow(sqlStatement, file.Bin, file.Filename).Scan(&file.Id, &file.Bin, &file.Filename, &file.Mime, &file.Bytes, &file.Checksum, &file.Downloads, &file.Updated, &file.Created)
+	sqlStatement := "SELECT id, bin_id, filename, mime, bytes, checksum, downloads, nonce, updated, created FROM file WHERE bin_id = $1 AND filename = $2 LIMIT 1"
+	err := d.db.QueryRow(sqlStatement, file.Bin, file.Filename).Scan(&file.Id, &file.Bin, &file.Filename, &file.Mime, &file.Bytes, &file.Checksum, &file.Downloads, &file.Nonce, &file.Updated, &file.Created)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			sqlStatement := "INSERT INTO file (bin_id, filename, mime, bytes, checksum, downloads, updated, created) VALUES ($1, $2, $3, $4, $5, 0, $6, $7) RETURNING id"
-			err := d.db.QueryRow(sqlStatement, file.Bin, file.Filename, file.Mime, file.Bytes, file.Checksum, now, now).Scan(&file.Id)
+			sqlStatement := "INSERT INTO file (bin_id, filename, mime, bytes, checksum, downloads, nonce, updated, created) VALUES ($1, $2, $3, $4, $5, 0, $6, $7, $8) RETURNING id"
+			err := d.db.QueryRow(sqlStatement, file.Bin, file.Filename, file.Mime, file.Bytes, file.Checksum, file.Nonce, now, now).Scan(&file.Id)
 			if err != nil {
 				return err
 			}
@@ -160,8 +160,8 @@ func (d *FileDao) Upsert(file *ds.File) error {
 
 func (d *FileDao) Insert(file *ds.File) error {
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "INSERT INTO file (bin_id, filename, mime, bytes, checksum, downloads, updated, created) VALUES ($1, $2, $3, $4, $5, 0, $6, $7) RETURNING id"
-	err := d.db.QueryRow(sqlStatement, file.Bin, file.Filename, file.Mime, file.Bytes, file.Checksum, now, now).Scan(&file.Id)
+	sqlStatement := "INSERT INTO file (bin_id, filename, mime, bytes, checksum, downloads, nonce, updated, created) VALUES ($1, $2, $3, $4, $5, 0, $6, $7, $8) RETURNING id"
+	err := d.db.QueryRow(sqlStatement, file.Bin, file.Filename, file.Mime, file.Bytes, file.Checksum, file.Nonce, now, now).Scan(&file.Id)
 	if err != nil {
 		return err
 	}
@@ -174,14 +174,14 @@ func (d *FileDao) Insert(file *ds.File) error {
 
 func (d *FileDao) GetByBin(id string) ([]ds.File, error) {
 	var files []ds.File
-	sqlStatement := "SELECT id, bin_id, filename, mime, bytes, checksum, downloads, updated, created FROM file WHERE bin_id = $1 ORDER BY filename ASC"
+	sqlStatement := "SELECT id, bin_id, filename, mime, bytes, checksum, downloads, nonce, updated, created FROM file WHERE bin_id = $1 ORDER BY filename ASC"
 	rows, err := d.db.Query(sqlStatement, id)
 	if err != nil {
 		return files, err
 	}
 	for rows.Next() {
 		var file ds.File
-		err = rows.Scan(&file.Id, &file.Bin, &file.Filename, &file.Mime, &file.Bytes, &file.Checksum, &file.Downloads, &file.Updated, &file.Created)
+		err = rows.Scan(&file.Id, &file.Bin, &file.Filename, &file.Mime, &file.Bytes, &file.Checksum, &file.Downloads, &file.Nonce, &file.Updated, &file.Created)
 		if err != nil {
 			return files, err
 		}
@@ -201,14 +201,14 @@ func (d *FileDao) GetByBin(id string) ([]ds.File, error) {
 
 func (d *FileDao) GetAll() ([]ds.File, error) {
 	var files []ds.File
-	sqlStatement := "SELECT id, bin_id, filename, mime, bytes, checksum, downloads, updated, created FROM file"
+	sqlStatement := "SELECT id, bin_id, filename, mime, bytes, checksum, downloads, nonce, updated, created FROM file"
 	rows, err := d.db.Query(sqlStatement)
 	if err != nil {
 		return files, err
 	}
 	for rows.Next() {
 		var file ds.File
-		err = rows.Scan(&file.Id, &file.Bin, &file.Filename, &file.Mime, &file.Bytes, &file.Checksum, &file.Downloads, &file.Updated, &file.Created)
+		err = rows.Scan(&file.Id, &file.Bin, &file.Filename, &file.Mime, &file.Bytes, &file.Checksum, &file.Downloads, &file.Nonce, &file.Updated, &file.Created)
 		if err != nil {
 			return files, err
 		}
@@ -228,8 +228,8 @@ func (d *FileDao) GetAll() ([]ds.File, error) {
 func (d *FileDao) Update(file *ds.File) error {
 	var id int
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "UPDATE file SET filename = $1, mime = $2, bytes = $3, checksum = $4, updated = $5 WHERE id = $6 RETURNING id"
-	err := d.db.QueryRow(sqlStatement, file.Filename, file.Mime, file.Bytes, file.Checksum, now, file.Id).Scan(&id)
+	sqlStatement := "UPDATE file SET filename = $1, mime = $2, bytes = $3, checksum = $4, nonce = $5, updated = $6 WHERE id = $7 RETURNING id"
+	err := d.db.QueryRow(sqlStatement, file.Filename, file.Mime, file.Bytes, file.Checksum, file.Nonce, now, file.Id).Scan(&id)
 	if err != nil {
 		//if err == sql.ErrNoRows {
 		//	return errors.New(fmt.Sprintf("Unable to update file id %d", file.Id))

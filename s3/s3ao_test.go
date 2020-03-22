@@ -7,15 +7,16 @@ import (
 )
 
 const (
-	ENDPOINT   = "s3:9000"
-	REGION     = "us-east-1"
-	BUCKET     = "filebin-test"
-	ACCESS_KEY = "s3accesskey"
-	SECRET_KEY = "s3secretkey"
+	ENDPOINT       = "s3:9000"
+	REGION         = "us-east-1"
+	BUCKET         = "filebin-test"
+	ACCESS_KEY     = "s3accesskey"
+	SECRET_KEY     = "s3secretkey"
+	ENCRYPTION_KEY = "s3encryptionkey"
 )
 
 func tearUp() (S3AO, error) {
-	s3ao, err := Init(ENDPOINT, BUCKET, REGION, ACCESS_KEY, SECRET_KEY)
+	s3ao, err := Init(ENDPOINT, BUCKET, REGION, ACCESS_KEY, SECRET_KEY, ENCRYPTION_KEY)
 	if err != nil {
 		return s3ao, err
 	}
@@ -42,7 +43,7 @@ func TestInit(t *testing.T) {
 }
 
 func TestFailingInit(t *testing.T) {
-	_, err := Init("", "", "", "", "")
+	_, err := Init("", "", "", "", "", "")
 	if err == nil {
 		t.Error("Was expecting to fail here, invalid user and db name were provided.")
 	}
@@ -58,7 +59,7 @@ func TestPutObject(t *testing.T) {
 	filename := "testobject"
 	bin := "testbin"
 	content := "content"
-	err = s3ao.PutObject(bin, filename, strings.NewReader(content), int64(len(content)))
+	_, err = s3ao.PutObject(bin, filename, strings.NewReader(content), int64(len(content)))
 	if err != nil {
 		t.Errorf("Unable to put file: %s\n", err.Error())
 	}
@@ -74,7 +75,8 @@ func TestRemoveObject(t *testing.T) {
 	filename := "testobject2"
 	bin := "testbin2"
 	content := "content2"
-	if err := s3ao.PutObject(bin, filename, strings.NewReader(content), int64(len(content))); err != nil {
+	_, err = s3ao.PutObject(bin, filename, strings.NewReader(content), int64(len(content)))
+	if err != nil {
 		t.Errorf("Unable to put object: %s\n", err.Error())
 	}
 
@@ -93,11 +95,12 @@ func TestGetObject(t *testing.T) {
 	filename := "testobject"
 	bin := "testbin"
 	content := "content"
-	if err := s3ao.PutObject(bin, filename, strings.NewReader(content), int64(len(content))); err != nil {
+	nonce, err := s3ao.PutObject(bin, filename, strings.NewReader(content), int64(len(content)))
+	if err != nil {
 		t.Errorf("Unable to put object: %s\n", err.Error())
 	}
 
-	fp, err := s3ao.GetObject(bin, filename)
+	fp, err := s3ao.GetObject(bin, filename, nonce)
 	if err != nil {
 		t.Errorf("Unable to get object: %s\n", err.Error())
 	}
@@ -119,7 +122,8 @@ func TestUnknownObject(t *testing.T) {
 
 	filename := "testobject"
 	bin := "testbin"
-	fp, err := s3ao.GetObject(bin, filename)
+	nonce := s3ao.GenerateNonce()
+	fp, err := s3ao.GetObject(bin, filename, nonce)
 	if err != nil {
 		// This is strange behaviour. The library should return an error
 		// if the object does not exist.

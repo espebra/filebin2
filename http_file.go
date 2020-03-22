@@ -33,7 +33,7 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fp, err := h.s3.GetObject(inputBin, inputFilename)
+	fp, err := h.s3.GetObject(inputBin, inputFilename, file.Nonce)
 	if err != nil {
 		fmt.Printf("Unable to get object: %s\n", err.Error())
 		http.Error(w, "Errno 5", http.StatusGone)
@@ -153,21 +153,22 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	file.Mime = mime.String()
 	fp.Seek(0, 0)
 
+	t2 := time.Now()
+
+	//fmt.Printf("Buffered %s to %s in %.3fs\n", humanize.Bytes(nBytes), fp.Name(), time.Since(start).Seconds())
+
+	nonce, err := h.s3.PutObject(file.Bin, file.Filename, fp, nBytes)
+	if err != nil {
+		fmt.Printf("%s\n", err.Error())
+	}
+	t3 := time.Now()
+
+	file.Nonce = nonce
 	if err := h.dao.File().Update(file); err != nil {
 		fmt.Printf("Unable to update file %s in bin %s: %s\n", inputFilename, inputBin, err.Error())
 		http.Error(w, "Errno 3", http.StatusInternalServerError)
 		return
 	}
-
-	t2 := time.Now()
-
-	//fmt.Printf("Buffered %s to %s in %.3fs\n", humanize.Bytes(nBytes), fp.Name(), time.Since(start).Seconds())
-
-	err = h.s3.PutObject(file.Bin, file.Filename, fp, nBytes)
-	if err != nil {
-		fmt.Printf("%s\n", err.Error())
-	}
-	t3 := time.Now()
 
 	//fmt.Printf("Uploaded %s to S3 in %.3fs\n", humanize.Bytes(nBytes), time.Since(start).Seconds())
 	fmt.Printf("Uploaded filename %s (%s) to bin %s (buffered in %.3fs, checksum in %.3fs, stored in %.3fs)\n", inputFilename, humanize.Bytes(inputBytes), inputBin, t1.Sub(t0).Seconds(), t2.Sub(t1).Seconds(), t3.Sub(t2).Seconds())

@@ -38,6 +38,9 @@ github.com/minio/minio-go/v6/pkg/s3utils
 github.com/minio/minio-go/v6/pkg/set
 # github.com/minio/sha256-simd v0.1.1
 github.com/minio/sha256-simd
+# github.com/minio/sio v0.2.0
+## explicit
+github.com/minio/sio
 # github.com/mitchellh/go-homedir v1.1.0
 github.com/mitchellh/go-homedir
 # github.com/nkovacs/streamquote v1.0.0
@@ -45,8 +48,14 @@ github.com/mitchellh/go-homedir
 # github.com/valyala/fasttemplate v1.1.0
 ## explicit
 # golang.org/x/crypto v0.0.0-20190513172903-22d7a77e9e5f
+## explicit
 golang.org/x/crypto/argon2
 golang.org/x/crypto/blake2b
+golang.org/x/crypto/chacha20poly1305
+golang.org/x/crypto/hkdf
+golang.org/x/crypto/internal/chacha20
+golang.org/x/crypto/internal/subtle
+golang.org/x/crypto/poly1305
 # golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 golang.org/x/net/http/httpguts
 golang.org/x/net/idna

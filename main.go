@@ -23,11 +23,12 @@ var (
 	dbPasswordFlag = flag.String("db-password", os.Getenv("DATABASE_PASSWORD"), "Database password")
 
 	// S3
-	s3EndpointFlag  = flag.String("s3-endpoint", os.Getenv("S3_ENDPOINT"), "S3 endpoint")
-	s3BucketFlag    = flag.String("s3-bucket", os.Getenv("S3_BUCKET"), "S3 bucket")
-	s3RegionFlag    = flag.String("s3-region", os.Getenv("S3_REGION"), "S3 region")
-	s3AccessKeyFlag = flag.String("s3-access-key", os.Getenv("S3_ACCESS_KEY"), "S3 access key")
-	s3SecretKeyFlag = flag.String("s3-secret-key", os.Getenv("S3_SECRET_KEY"), "S3 secret key")
+	s3EndpointFlag      = flag.String("s3-endpoint", os.Getenv("S3_ENDPOINT"), "S3 endpoint")
+	s3BucketFlag        = flag.String("s3-bucket", os.Getenv("S3_BUCKET"), "S3 bucket")
+	s3RegionFlag        = flag.String("s3-region", os.Getenv("S3_REGION"), "S3 region")
+	s3AccessKeyFlag     = flag.String("s3-access-key", os.Getenv("S3_ACCESS_KEY"), "S3 access key")
+	s3SecretKeyFlag     = flag.String("s3-secret-key", os.Getenv("S3_SECRET_KEY"), "S3 secret key")
+	s3EncryptionKeyFlag = flag.String("s3-encryption-key", os.Getenv("S3_ENCRYPTION_KEY"), "S3 encryption key")
 )
 
 func main() {
@@ -42,7 +43,7 @@ func main() {
 		fmt.Errorf("Unable to create Schema: %s\n", err.Error())
 	}
 
-	s3conn, err := s3.Init(*s3EndpointFlag, *s3BucketFlag, *s3RegionFlag, *s3AccessKeyFlag, *s3SecretKeyFlag)
+	s3conn, err := s3.Init(*s3EndpointFlag, *s3BucketFlag, *s3RegionFlag, *s3AccessKeyFlag, *s3SecretKeyFlag, *s3EncryptionKeyFlag)
 	if err != nil {
 		fmt.Errorf("Unable to connect to S3: %s\n", err.Error())
 	}

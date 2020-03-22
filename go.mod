@@ -13,6 +13,8 @@ require (
 	github.com/jstemmer/go-junit-report v0.9.1 // indirect
 	github.com/lib/pq v1.3.0
 	github.com/minio/minio-go/v6 v6.0.50
+	github.com/minio/sio v0.2.0
 	github.com/nkovacs/streamquote v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.1.0 // indirect
+	golang.org/x/crypto v0.0.0-20190513172903-22d7a77e9e5f
 )
