@@ -30,7 +30,7 @@ func TestGetFileById(t *testing.T) {
 	file.Filename = "testfile.txt"
 	file.Bin = bin.Id // Foreign key
 	file.Bytes = 1
-	file.Checksum = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	file.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
 	err = dao.File().Insert(file)
 
@@ -56,8 +56,8 @@ func TestGetFileById(t *testing.T) {
 		t.Errorf("Was expecting bytes 1, got %d instead.", dbFile.Bytes)
 	}
 
-	if dbFile.Checksum != "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" {
-		t.Errorf("Was expecting checksum e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, got %s instead.", dbFile.Checksum)
+	if dbFile.SHA256 != "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" {
+		t.Errorf("Was expecting checksum e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, got %s instead.", dbFile.SHA256)
 	}
 }
 
@@ -83,7 +83,7 @@ func TestInsertDuplicatedFile(t *testing.T) {
 	file.Filename = "testfile.txt"
 	file.Bin = bin.Id
 	file.Bytes = 1
-	file.Checksum = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	file.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
 	err = dao.File().Insert(file)
 
@@ -129,7 +129,7 @@ func TestGetAllFiles(t *testing.T) {
 		file.Filename = fmt.Sprintf("File-%d", i)
 		file.Bin = bin.Id
 		file.Bytes = 1
-		file.Checksum = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+		file.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 		err = dao.File().Insert(file)
 
 		if err != nil {
@@ -171,7 +171,7 @@ func TestDeleteFile(t *testing.T) {
 	file.Filename = "testfile.txt"
 	file.Bin = bin.Id
 	file.Bytes = 1
-	file.Checksum = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	file.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
 	err = dao.File().Insert(file)
 
@@ -217,7 +217,7 @@ func TestUpdateFile(t *testing.T) {
 	file.Bin = bin.Id
 	file.Filename = "testfile.txt"
 	file.Bytes = 1
-	file.Checksum = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	file.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	err = dao.File().Insert(file)
 	if err != nil {
 		t.Error(err)
@@ -229,7 +229,7 @@ func TestUpdateFile(t *testing.T) {
 	}
 
 	dbFile.Bytes = 2
-	dbFile.Checksum = "ff0350c8a7fea1087c5300e9ae922a7ab453648b1c156d5c58437d9f4565244b"
+	dbFile.SHA256 = "ff0350c8a7fea1087c5300e9ae922a7ab453648b1c156d5c58437d9f4565244b"
 	err = dao.File().Update(&dbFile)
 	if err != nil {
 		t.Error(err)
@@ -242,8 +242,8 @@ func TestUpdateFile(t *testing.T) {
 	if updatedFile.Bytes != 2 {
 		t.Errorf("Was expecting the updated file bytes 2, got %d instead.", updatedFile.Bytes)
 	}
-	if updatedFile.Checksum != "ff0350c8a7fea1087c5300e9ae922a7ab453648b1c156d5c58437d9f4565244b" {
-		t.Errorf("Was expecting the updated file checksum ff0350c8a7fea1087c5300e9ae922a7ab453648b1c156d5c58437d9f4565244b, got %s instead.", updatedFile.Checksum)
+	if updatedFile.SHA256 != "ff0350c8a7fea1087c5300e9ae922a7ab453648b1c156d5c58437d9f4565244b" {
+		t.Errorf("Was expecting the updated file checksum ff0350c8a7fea1087c5300e9ae922a7ab453648b1c156d5c58437d9f4565244b, got %s instead.", updatedFile.SHA256)
 	}
 }
 
@@ -299,7 +299,7 @@ func TestGetFilesByBin(t *testing.T) {
 	file1.Filename = "file1.txt"
 	file1.Bin = bin.Id // Foreign key
 	file1.Bytes = 1
-	file1.Checksum = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	file1.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	err = dao.File().Insert(file1)
 	if err != nil {
 		t.Error(err)
@@ -309,7 +309,7 @@ func TestGetFilesByBin(t *testing.T) {
 	file2.Filename = "file2.txt"
 	file2.Bin = bin.Id // Foreign key
 	file2.Bytes = 2
-	file2.Checksum = "ff0350c8a7fea1087c5300e9ae922a7ab453648b1c156d5c58437d9f4565244b"
+	file2.SHA256 = "ff0350c8a7fea1087c5300e9ae922a7ab453648b1c156d5c58437d9f4565244b"
 	err = dao.File().Insert(file2)
 	if err != nil {
 		t.Error(err)

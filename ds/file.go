@@ -10,7 +10,8 @@ type File struct {
 	Filename        string    `json:"filename"`
 	Mime            string    `json:"content-type"`
 	Bytes           uint64    `json:"bytes"`
-	Checksum        string    `json:"checksum"`
+	MD5	        string    `json:"md5"`
+	SHA256	        string    `json:"sha256"`
 	Downloads       uint64    `json:"-"`
 	Nonce           []byte    `json:"-"`
 	Updated         time.Time `json:"updated"`

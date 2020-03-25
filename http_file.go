@@ -5,12 +5,13 @@ import (
 	"io"
 	"net/http"
 	//"encoding/json"
+	"crypto/md5"
 	"crypto/sha256"
 	"io/ioutil"
 	"os"
 	"strconv"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/espebra/filebin2/ds"
 
@@ -43,8 +44,12 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", file.Bytes))
 
-	if file.Checksum != "" {
-		w.Header().Set("Content-SHA256", file.Checksum)
+	if file.MD5 != "" {
+		w.Header().Set("Content-MD5", file.MD5)
+	}
+
+	if file.SHA256 != "" {
+		w.Header().Set("Content-SHA256", file.SHA256)
 	}
 
 	if file.Mime != "" {
@@ -148,12 +153,20 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 
 	t1 := time.Now()
 
-	checksum := sha256.New()
+	checksum := md5.New()
 	if _, err := io.Copy(checksum, fp); err != nil {
 		fmt.Printf("Error during checksum: %s\n", err.Error())
 		return
 	}
-	file.Checksum = fmt.Sprintf("%x", checksum.Sum(nil))
+	file.MD5 = fmt.Sprintf("%x", checksum.Sum(nil))
+	fp.Seek(0, 0)
+
+	checksum = sha256.New()
+	if _, err := io.Copy(checksum, fp); err != nil {
+		fmt.Printf("Error during checksum: %s\n", err.Error())
+		return
+	}
+	file.SHA256 = fmt.Sprintf("%x", checksum.Sum(nil))
 	fp.Seek(0, 0)
 
 	mime, err := mimetype.DetectReader(fp)
