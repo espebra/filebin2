@@ -69,6 +69,8 @@ func (d *FileDao) Upsert(file *ds.File) error {
 			if err != nil {
 				return err
 			}
+			file.Downloads = uint64(downloads)
+			file.Updates = uint64(updates)
 			file.Updated = now
 			file.Created = now
 		} else {
@@ -89,11 +91,14 @@ func (d *FileDao) Upsert(file *ds.File) error {
 func (d *FileDao) Insert(file *ds.File) error {
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	downloads := 0
-	sqlStatement := "INSERT INTO file (bin_id, filename, mime, bytes, md5, sha256, downloads, nonce, updated, created) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id"
-	err := d.db.QueryRow(sqlStatement, file.Bin, file.Filename, file.Mime, file.Bytes, file.MD5, file.SHA256, downloads, file.Nonce, now, now).Scan(&file.Id)
+	updates := 0
+	sqlStatement := "INSERT INTO file (bin_id, filename, mime, bytes, md5, sha256, downloads, updates, nonce, updated, created) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id"
+	err := d.db.QueryRow(sqlStatement, file.Bin, file.Filename, file.Mime, file.Bytes, file.MD5, file.SHA256, downloads, updates, file.Nonce, now, now).Scan(&file.Id)
 	if err != nil {
 		return err
 	}
+	file.Downloads = uint64(downloads)
+	file.Updates = uint64(updates)
 	file.Updated = now
 	file.Created = now
 	file.UpdatedRelative = humanize.Time(file.Updated)
