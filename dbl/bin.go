@@ -16,14 +16,14 @@ type BinDao struct {
 func (d *BinDao) GetAll() ([]ds.Bin, error) {
 	bins := []ds.Bin{}
 
-	sqlStatement := "SELECT id, downloads, updated, created FROM bin ORDER BY updated ASC"
+	sqlStatement := "SELECT id, downloads, updated, created, expiration FROM bin ORDER BY updated ASC"
 	rows, err := d.db.Query(sqlStatement)
 	if err != nil {
 		return bins, err
 	}
 	for rows.Next() {
 		var bin ds.Bin
-		err = rows.Scan(&bin.Id, &bin.Downloads, &bin.Updated, &bin.Created)
+		err = rows.Scan(&bin.Id, &bin.Downloads, &bin.Updated, &bin.Created, &bin.Expiration)
 		if err != nil {
 			return bins, err
 		}
@@ -31,9 +31,11 @@ func (d *BinDao) GetAll() ([]ds.Bin, error) {
 		// https://github.com/lib/pq/issues/329
 		bin.Updated = bin.Updated.UTC()
 		bin.Created = bin.Created.UTC()
+		bin.Expiration = bin.Expiration.UTC()
 
 		bin.UpdatedRelative = humanize.Time(bin.Updated)
 		bin.CreatedRelative = humanize.Time(bin.Created)
+		bin.ExpirationRelative = humanize.Time(bin.Expiration)
 
 		bins = append(bins, bin)
 	}
@@ -45,8 +47,8 @@ func (d *BinDao) GetById(id string) (ds.Bin, error) {
 	var bin ds.Bin
 
 	// Get bin info
-	sqlStatement := "SELECT id, downloads, updated, created FROM bin WHERE id = $1 LIMIT 1"
-	err := d.db.QueryRow(sqlStatement, id).Scan(&bin.Id, &bin.Downloads, &bin.Updated, &bin.Created)
+	sqlStatement := "SELECT id, downloads, updated, created, expiration FROM bin WHERE id = $1 LIMIT 1"
+	err := d.db.QueryRow(sqlStatement, id).Scan(&bin.Id, &bin.Downloads, &bin.Updated, &bin.Created, &bin.Expiration)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return bin, errors.New(fmt.Sprintf("No bin found with id %s", id))
@@ -55,26 +57,30 @@ func (d *BinDao) GetById(id string) (ds.Bin, error) {
 	// https://github.com/lib/pq/issues/329
 	bin.Updated = bin.Updated.UTC()
 	bin.Created = bin.Created.UTC()
+	bin.Expiration = bin.Expiration.UTC()
 
 	bin.UpdatedRelative = humanize.Time(bin.Updated)
 	bin.CreatedRelative = humanize.Time(bin.Created)
+	bin.ExpirationRelative = humanize.Time(bin.Expiration)
 
 	return bin, err
 }
 
 func (d *BinDao) Upsert(bin *ds.Bin) error {
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "SELECT id, downloads, updated, created FROM bin WHERE id = $1 LIMIT 1"
-	err := d.db.QueryRow(sqlStatement, bin.Id).Scan(&bin.Id, &bin.Downloads, &bin.Updated, &bin.Created)
+	sqlStatement := "SELECT id, downloads, updated, created, expiration FROM bin WHERE id = $1 LIMIT 1"
+	err := d.db.QueryRow(sqlStatement, bin.Id).Scan(&bin.Id, &bin.Downloads, &bin.Updated, &bin.Created, &bin.Expiration)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			sqlStatement := "INSERT INTO bin (id, downloads, updated, created) VALUES ($1, 0, $2, $3) RETURNING id"
-			err := d.db.QueryRow(sqlStatement, bin.Id, now, now).Scan(&bin.Id)
+			expiration := now.Add(time.Hour * 24 * 7)
+			sqlStatement := "INSERT INTO bin (id, downloads, updated, created, expiration) VALUES ($1, 0, $2, $3, $4) RETURNING id"
+			err := d.db.QueryRow(sqlStatement, bin.Id, now, now, expiration).Scan(&bin.Id)
 			if err != nil {
 				return err
 			}
 			bin.Updated = now
 			bin.Created = now
+			bin.Expiration = expiration
 		} else {
 			return err
 		}
@@ -82,22 +88,27 @@ func (d *BinDao) Upsert(bin *ds.Bin) error {
 	// https://github.com/lib/pq/issues/329
 	bin.Updated = bin.Updated.UTC()
 	bin.Created = bin.Created.UTC()
+	bin.Expiration = bin.Expiration.UTC()
 	bin.UpdatedRelative = humanize.Time(bin.Updated)
 	bin.CreatedRelative = humanize.Time(bin.Created)
+	bin.ExpirationRelative = humanize.Time(bin.Expiration)
 	return nil
 }
 
 func (d *BinDao) Insert(bin *ds.Bin) error {
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "INSERT INTO bin (id, downloads, updated, created) VALUES ($1, 0, $2, $3) RETURNING id"
-	err := d.db.QueryRow(sqlStatement, bin.Id, now, now).Scan(&bin.Id)
+	expiration := now.Add(time.Hour * 24 * 7)
+	sqlStatement := "INSERT INTO bin (id, downloads, updated, created, expiration) VALUES ($1, 0, $2, $3, $4) RETURNING id"
+	err := d.db.QueryRow(sqlStatement, bin.Id, now, now, expiration).Scan(&bin.Id)
 	if err != nil {
 		return err
 	}
 	bin.Updated = now
 	bin.Created = now
+	bin.Expiration = expiration
 	bin.UpdatedRelative = humanize.Time(bin.Updated)
 	bin.CreatedRelative = humanize.Time(bin.Created)
+	bin.ExpirationRelative = humanize.Time(bin.Expiration)
 	return nil
 }
 

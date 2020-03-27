@@ -28,6 +28,13 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 	inputFilename := params["filename"]
 	// TODO: Input validation (inputFilename)
 
+	bin, err := h.dao.Bin().GetById(inputBin)
+	if err != nil {
+		fmt.Printf("Unable to GetById(%s): %s\n", inputBin, err.Error())
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+
 	file, err := h.dao.File().GetByName(inputBin, inputFilename)
 	if err != nil {
 		fmt.Printf("Unable to GetByName(%s, %s): %s\n", inputBin, inputFilename, err.Error())
@@ -41,6 +48,12 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Errno 5", http.StatusGone)
 		return
 	}
+
+	w.Header().Set("Expires", bin.Expiration.Format(http.TimeFormat))
+	w.Header().Set("Last-Modified", file.Updated.Format(http.TimeFormat))
+	w.Header().Set("Bin", file.Bin)
+	w.Header().Set("Filebin", file.Filename)
+	//w.Header().Set("Cache-Control", "s-maxage=1")
 
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", file.Bytes))
 
@@ -58,13 +71,14 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 
 	// Handling of specific content-types
 	if strings.HasPrefix(file.Mime, "video") {
-		// Do nothing
+		w.Header().Set("Content-Disposition", "inline")
 	} else if strings.HasPrefix(file.Mime, "image") {
-		// Do nothing
+		w.Header().Set("Content-Disposition", "inline")
 	} else if strings.HasPrefix(file.Mime, "text/plain") {
-		// Do nothing
+		w.Header().Set("Content-Disposition", "inline")
 	} else {
-		w.Header().Set("Content-Disposition", "attachment")
+		// Tell the client to tread any other content types as attachment
+		w.Header().Set("Content-Disposition", "attachment; filename=\""+file.Filename+"\"")
 	}
 
 	if err := h.dao.File().RegisterDownload(&file); err != nil {
