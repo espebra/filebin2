@@ -78,6 +78,7 @@ func (s S3AO) PutObject(bin string, filename string, data io.Reader, size int64)
 	//	fmt.Printf("Cannot decode hex key: %v", err) // add error handling
 	//	return err
 	//}
+	// TODO: Should this be hex?
 	masterkey := []byte(s.encryptionKey)
 
 	// generate a random nonce to derive an encryption key from the master key
@@ -109,7 +110,7 @@ func (s S3AO) PutObject(bin string, filename string, data io.Reader, size int64)
 	if err != nil {
 		fmt.Printf("Unable to put object: %s\n", err.Error())
 	}
-	fmt.Printf("Uploaded object: %s (%d bytes) in %.3fs\n", objectKey, n, time.Since(t0).Seconds())
+	fmt.Printf("Stored object: %s (%d bytes) in %.3fs\n", objectKey, n, time.Since(t0).Seconds())
 	return nonce, nil
 }
 
@@ -171,6 +172,7 @@ func (s S3AO) RemoveBucket() error {
 }
 
 func (s S3AO) GetObject(bin string, filename string, nonce []byte) (io.Reader, error) {
+	t0 := time.Now()
 
 	// Hash the path in S3
 	b := sha256.New()
@@ -186,6 +188,7 @@ func (s S3AO) GetObject(bin string, filename string, nonce []byte) (io.Reader, e
 	//	fmt.Printf("Cannot decode hex key: %v", err) // add error handling
 	//	return object, err
 	//}
+	// TODO: Should this be hex?
 	masterkey := []byte(s.encryptionKey)
 
 	// derive the encryption key from the master key and the nonce
@@ -210,5 +213,6 @@ func (s S3AO) GetObject(bin string, filename string, nonce []byte) (io.Reader, e
 		fmt.Printf("Failed to decrypt data: %v", err) // add error handling
 		return object, err
 	}
+	fmt.Printf("Fetched object: %s in %.3fs\n", objectKey, time.Since(t0).Seconds())
 	return decryptedObject, err
 }

@@ -40,6 +40,10 @@ func TestGetBinById(t *testing.T) {
 	if bin.Downloads != 1 {
 		t.Errorf("Was expecting the number of downloads to be 1, not %d\n", bin.Downloads)
 	}
+
+	if bin.Bytes != 0 {
+		t.Errorf("Was expecting bytes to be 0, not %d\n", bin.Bytes)
+	}
 }
 
 func TestInsertDuplicatedBin(t *testing.T) {

@@ -43,7 +43,6 @@ func TestGetFileById(t *testing.T) {
 	}
 
 	dbFile, err := dao.File().GetById(file.Id)
-
 	if err != nil {
 		t.Error(err)
 	}
@@ -58,6 +57,17 @@ func TestGetFileById(t *testing.T) {
 
 	if dbFile.SHA256 != "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" {
 		t.Errorf("Was expecting checksum e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, got %s instead.", dbFile.SHA256)
+	}
+
+	dbBin, err := dao.Bin().GetById(dbFile.Bin)
+	if err != nil {
+		t.Error(err)
+	}
+	if dbBin.Bytes != dbFile.Bytes {
+		t.Errorf("Expecting the same size in bin (%d) and file (%d)", dbBin.Bytes, dbFile.Bytes)
+	}
+	if dbBin.BytesReadable == "" {
+		t.Errorf("Expected to get human readable bytes")
 	}
 }
 
@@ -139,13 +149,20 @@ func TestGetAllFiles(t *testing.T) {
 	}
 
 	files, err := dao.File().GetAll()
-
 	if err != nil {
 		t.Error(err)
 	}
 
 	if len(files) != count {
 		t.Errorf("Was expecting to find %d files, got %d instead.", count, len(files))
+	}
+
+	dbBin, err := dao.Bin().GetById(bin.Id)
+	if err != nil {
+		t.Error(err)
+	}
+	if dbBin.Bytes != 50 {
+		t.Errorf("Was expecting to get 50 bytes, got %d.", dbBin.Bytes)
 	}
 }
 

@@ -16,14 +16,14 @@ type BinDao struct {
 func (d *BinDao) GetAll() ([]ds.Bin, error) {
 	bins := []ds.Bin{}
 
-	sqlStatement := "SELECT id, downloads, updated, created, expiration FROM bin ORDER BY updated ASC"
+	sqlStatement := "SELECT bin.id, bin.downloads, COALESCE(SUM(file.bytes), 0), bin.updated, bin.created, bin.expiration FROM bin LEFT JOIN file ON bin.id = file.bin_id GROUP BY bin.id"
 	rows, err := d.db.Query(sqlStatement)
 	if err != nil {
 		return bins, err
 	}
 	for rows.Next() {
 		var bin ds.Bin
-		err = rows.Scan(&bin.Id, &bin.Downloads, &bin.Updated, &bin.Created, &bin.Expiration)
+		err = rows.Scan(&bin.Id, &bin.Downloads, &bin.Bytes, &bin.Updated, &bin.Created, &bin.Expiration)
 		if err != nil {
 			return bins, err
 		}
@@ -36,6 +36,7 @@ func (d *BinDao) GetAll() ([]ds.Bin, error) {
 		bin.UpdatedRelative = humanize.Time(bin.Updated)
 		bin.CreatedRelative = humanize.Time(bin.Created)
 		bin.ExpirationRelative = humanize.Time(bin.Expiration)
+		bin.BytesReadable = humanize.Bytes(bin.Bytes)
 
 		bins = append(bins, bin)
 	}
@@ -47,18 +48,22 @@ func (d *BinDao) GetById(id string) (ds.Bin, error) {
 	var bin ds.Bin
 
 	// Get bin info
-	sqlStatement := "SELECT id, downloads, updated, created, expiration FROM bin WHERE id = $1 LIMIT 1"
-	err := d.db.QueryRow(sqlStatement, id).Scan(&bin.Id, &bin.Downloads, &bin.Updated, &bin.Created, &bin.Expiration)
+	sqlStatement := "SELECT bin.id, bin.downloads, COALESCE(SUM(file.bytes), 0), bin.updated, bin.created, bin.expiration FROM bin LEFT JOIN file ON bin.id = file.bin_id WHERE bin.id = $1 GROUP BY bin.id LIMIT 1"
+	err := d.db.QueryRow(sqlStatement, id).Scan(&bin.Id, &bin.Downloads, &bin.Bytes, &bin.Updated, &bin.Created, &bin.Expiration)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return bin, errors.New(fmt.Sprintf("No bin found with id %s", id))
+		} else {
+			fmt.Printf("Unable to query the database: %s\n", err.Error())
 		}
 	}
+
 	// https://github.com/lib/pq/issues/329
 	bin.Updated = bin.Updated.UTC()
 	bin.Created = bin.Created.UTC()
 	bin.Expiration = bin.Expiration.UTC()
 
+	bin.BytesReadable = humanize.Bytes(bin.Bytes)
 	bin.UpdatedRelative = humanize.Time(bin.Updated)
 	bin.CreatedRelative = humanize.Time(bin.Created)
 	bin.ExpirationRelative = humanize.Time(bin.Expiration)
@@ -68,8 +73,8 @@ func (d *BinDao) GetById(id string) (ds.Bin, error) {
 
 func (d *BinDao) Upsert(bin *ds.Bin) error {
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "SELECT id, downloads, updated, created, expiration FROM bin WHERE id = $1 LIMIT 1"
-	err := d.db.QueryRow(sqlStatement, bin.Id).Scan(&bin.Id, &bin.Downloads, &bin.Updated, &bin.Created, &bin.Expiration)
+	sqlStatement := "SELECT bin.id, bin.downloads, COALESCE(SUM(file.bytes), 0), bin.updated, bin.created, bin.expiration FROM bin LEFT JOIN file ON bin.id = file.bin_id WHERE bin.id = $1 GROUP BY bin.id LIMIT 1"
+	err := d.db.QueryRow(sqlStatement, bin.Id).Scan(&bin.Id, &bin.Downloads, &bin.Bytes, &bin.Updated, &bin.Created, &bin.Expiration)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			expiration := now.Add(time.Hour * 24 * 7)
@@ -92,6 +97,7 @@ func (d *BinDao) Upsert(bin *ds.Bin) error {
 	bin.UpdatedRelative = humanize.Time(bin.Updated)
 	bin.CreatedRelative = humanize.Time(bin.Created)
 	bin.ExpirationRelative = humanize.Time(bin.Expiration)
+	bin.BytesReadable = humanize.Bytes(bin.Bytes)
 	return nil
 }
 
