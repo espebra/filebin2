@@ -8,6 +8,8 @@ import (
 	"github.com/GeertJohan/go.rice"
 	"github.com/espebra/filebin2/dbl"
 	"github.com/espebra/filebin2/s3"
+	"math/rand"
+	"time"
 )
 
 var (
@@ -32,20 +34,23 @@ var (
 )
 
 func main() {
+	rand.Seed(time.Now().UTC().UnixNano())
 	flag.Parse()
 
 	daoconn, err := dbl.Init(*dbHostFlag, *dbPortFlag, *dbNameFlag, *dbUsernameFlag, *dbPasswordFlag)
 	if err != nil {
-		fmt.Errorf("Unable to connect to the database: %s\n", err.Error())
+		fmt.Printf("Unable to connect to the database: %s\n", err.Error())
+		os.Exit(2)
 	}
 
 	if err := daoconn.CreateSchema(); err != nil {
-		fmt.Errorf("Unable to create Schema: %s\n", err.Error())
+		fmt.Printf("Unable to create Schema: %s\n", err.Error())
 	}
 
 	s3conn, err := s3.Init(*s3EndpointFlag, *s3BucketFlag, *s3RegionFlag, *s3AccessKeyFlag, *s3SecretKeyFlag, *s3EncryptionKeyFlag)
 	if err != nil {
-		fmt.Errorf("Unable to connect to S3: %s\n", err.Error())
+		fmt.Printf("Unable to connect to S3: %s\n", err.Error())
+		os.Exit(2)
 	}
 
 	staticBox := rice.MustFindBox("static")
@@ -61,7 +66,7 @@ func main() {
 	}
 
 	if err := h.Init(); err != nil {
-		fmt.Errorf("Unable to start the HTTP server: %s\n", err.Error())
+		fmt.Printf("Unable to start the HTTP server: %s\n", err.Error())
 	}
 
 	h.Run()

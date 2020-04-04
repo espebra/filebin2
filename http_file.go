@@ -52,7 +52,7 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Expires", bin.Expiration.Format(http.TimeFormat))
 	w.Header().Set("Last-Modified", file.Updated.Format(http.TimeFormat))
 	w.Header().Set("Bin", file.Bin)
-	w.Header().Set("Filebin", file.Filename)
+	w.Header().Set("Filename", file.Filename)
 	//w.Header().Set("Cache-Control", "s-maxage=1")
 
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", file.Bytes))
@@ -158,6 +158,8 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	t1 := time.Now()
+
 	nBytes, err := io.Copy(fp, r.Body)
 	if err != nil {
 		fmt.Printf("Error occurred during io.Copy: %s\n", err.Error())
@@ -165,7 +167,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 	fp.Seek(0, 0)
 
-	t1 := time.Now()
+	t2 := time.Now()
 
 	checksum := md5.New()
 	if _, err := io.Copy(checksum, fp); err != nil {
@@ -192,7 +194,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	file.Mime = mime.String()
 	fp.Seek(0, 0)
 
-	t2 := time.Now()
+	t3 := time.Now()
 
 	//fmt.Printf("Buffered %s to %s in %.3fs\n", humanize.Bytes(nBytes), fp.Name(), time.Since(start).Seconds())
 
@@ -200,7 +202,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Printf("%s\n", err.Error())
 	}
-	t3 := time.Now()
+	t4 := time.Now()
 
 	file.Nonce = nonce
 	if err := h.dao.File().Update(file); err != nil {
@@ -210,5 +212,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//fmt.Printf("Uploaded %s to S3 in %.3fs\n", humanize.Bytes(nBytes), time.Since(start).Seconds())
-	fmt.Printf("Uploaded filename %s (%s) to bin %s (buffered in %.3fs, checksum in %.3fs, stored in %.3fs)\n", inputFilename, humanize.Bytes(inputBytes), inputBin, t1.Sub(t0).Seconds(), t2.Sub(t1).Seconds(), t3.Sub(t2).Seconds())
+	fmt.Printf("Uploaded filename %s (%s) to bin %s (db in %.3fs, buffered in %.3fs, checksum in %.3fs, stored in %.3fs, total %.3fs)\n", inputFilename, humanize.Bytes(inputBytes), inputBin, t1.Sub(t0).Seconds(), t2.Sub(t1).Seconds(), t3.Sub(t2).Seconds(), t4.Sub(t3).Seconds(), t4.Sub(t0).Seconds())
+
+	w.WriteHeader(http.StatusCreated)
 }

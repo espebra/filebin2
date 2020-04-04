@@ -6,11 +6,24 @@ import (
 	"fmt"
 	"github.com/dustin/go-humanize"
 	"github.com/espebra/filebin2/ds"
+	"math/rand"
 	"time"
 )
 
 type BinDao struct {
 	db *sql.DB
+}
+
+func (d *BinDao) GenerateId() string {
+	// TODO: Make sure the ID is unique
+	characters := []rune("abcdefghijklmnopqrstuvwxyz1234567890")
+	length := 10
+
+	id := make([]rune, length)
+	for i := range id {
+		id[i] = characters[rand.Intn(len(characters))]
+	}
+	return string(id)
 }
 
 func (d *BinDao) GetAll() ([]ds.Bin, error) {
@@ -73,6 +86,11 @@ func (d *BinDao) GetById(id string) (ds.Bin, error) {
 
 func (d *BinDao) Upsert(bin *ds.Bin) error {
 	now := time.Now().UTC().Truncate(time.Microsecond)
+
+	if bin.Id == "" {
+		bin.Id = d.GenerateId()
+	}
+
 	sqlStatement := "SELECT bin.id, bin.downloads, COALESCE(SUM(file.bytes), 0), bin.updated, bin.created, bin.expiration FROM bin LEFT JOIN file ON bin.id = file.bin_id WHERE bin.id = $1 GROUP BY bin.id LIMIT 1"
 	err := d.db.QueryRow(sqlStatement, bin.Id).Scan(&bin.Id, &bin.Downloads, &bin.Bytes, &bin.Updated, &bin.Created, &bin.Expiration)
 	if err != nil {
@@ -104,6 +122,11 @@ func (d *BinDao) Upsert(bin *ds.Bin) error {
 func (d *BinDao) Insert(bin *ds.Bin) error {
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	expiration := now.Add(time.Hour * 24 * 7)
+
+	if bin.Id == "" {
+		bin.Id = d.GenerateId()
+	}
+
 	sqlStatement := "INSERT INTO bin (id, downloads, updated, created, expiration) VALUES ($1, 0, $2, $3, $4) RETURNING id"
 	err := d.db.QueryRow(sqlStatement, bin.Id, now, now, expiration).Scan(&bin.Id)
 	if err != nil {

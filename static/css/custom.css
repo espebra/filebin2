@@ -1,0 +1,39 @@
+.nav-pills>li+li {
+  margin-left: 10px; // 2px by default
+} 
+
+.thumbnails {
+    margin-top: 10px;
+}
+
+.table {
+    margin-top: 10px;
+}
+
+.thumb {
+    padding: 1px 1px 1px 1px;
+}
+
+.dark-background {
+    background-color: #BBBBBB;
+}
+
+.progress {
+    margin-bottom: 0 !important;
+}
+
+.fileUpload {
+    position: relative;
+    overflow: hidden;
+}
+.fileUpload input.upload {
+    position: absolute;
+    top: 0;
+    right: 0;
+    margin: 0;
+    padding: 0;
+    font-size: 20px;
+    cursor: pointer;
+    opacity: 0;
+    filter: alpha(opacity=0);
+}

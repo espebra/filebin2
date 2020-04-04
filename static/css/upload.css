@@ -1,0 +1,54 @@
+html, body {
+    margin: 0;
+    height: 100%;
+}
+
+.hide {
+    display: none;
+    position: relative;
+}
+
+#fileCount {
+    display: none;
+    position: relative;
+}
+
+#files {
+    margin-top: 30px;
+    min-height: 30px;
+}
+
+#files {
+    -moz-box-shadow: 0 0 20px #ccc;
+}
+
+#fileList {
+    list-style: none;
+    padding: 0;
+    margin-bottom: 30px;
+    margin-left: 0px;
+}
+
+#fileList li {
+    margin: 0;
+    padding-top: 15px;
+    overflow: auto;
+    position: relative;
+}
+
+
+.loader {
+    position: absolute;
+    bottom: 10px;
+    right: 0;
+    color: orange;
+}
+
+.loadingIndicator {
+    width: 0%;
+    height: 2px;
+    background-color: #c09853;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+}
