@@ -4,12 +4,12 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"math/rand"
-	"time"
-	"strings"
-	"regexp"
 	"github.com/dustin/go-humanize"
 	"github.com/espebra/filebin2/ds"
+	"math/rand"
+	"regexp"
+	"strings"
+	"time"
 )
 
 var invalidBin = regexp.MustCompile("[^A-Za-z0-9-_.]")
@@ -25,20 +25,20 @@ func (d *BinDao) validateInput(bin *ds.Bin) error {
 	}
 
 	// Reject invalid bins
-        if invalidBin.MatchString(bin.Id) {
-                return errors.New("The bin contains invalid characters.")
-        }
+	if invalidBin.MatchString(bin.Id) {
+		return errors.New("The bin contains invalid characters.")
+	}
 
 	// Ensure decent length
-        if len(bin.Id) < 8 {
-                return errors.New("The bin is too short.")
-        }
+	if len(bin.Id) < 8 {
+		return errors.New("The bin is too short.")
+	}
 
 	// Do not allow the bin to start with .
-        if strings.HasPrefix(bin.Id, ".") {
-                return errors.New("Invalid bin specified.")
-        }
-        return nil
+	if strings.HasPrefix(bin.Id, ".") {
+		return errors.New("Invalid bin specified.")
+	}
+	return nil
 }
 
 func (d *BinDao) GenerateId() string {
@@ -112,9 +112,9 @@ func (d *BinDao) GetById(id string) (ds.Bin, error) {
 }
 
 func (d *BinDao) Upsert(bin *ds.Bin) error {
-        if err := d.validateInput(bin); err != nil {
-                return err
-        }
+	if err := d.validateInput(bin); err != nil {
+		return err
+	}
 
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	sqlStatement := "SELECT bin.id, bin.downloads, COALESCE(SUM(file.bytes), 0), bin.updated, bin.created, bin.expiration FROM bin LEFT JOIN file ON bin.id = file.bin_id WHERE bin.id = $1 GROUP BY bin.id LIMIT 1"
@@ -146,9 +146,9 @@ func (d *BinDao) Upsert(bin *ds.Bin) error {
 }
 
 func (d *BinDao) Insert(bin *ds.Bin) error {
-        if err := d.validateInput(bin); err != nil {
-                return err
-        }
+	if err := d.validateInput(bin); err != nil {
+		return err
+	}
 
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	expiration := now.Add(time.Hour * 24 * 7)
