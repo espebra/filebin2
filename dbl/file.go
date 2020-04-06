@@ -4,14 +4,35 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"regexp"
+	"path"
+	"strings"
+	"time"
 	"github.com/dustin/go-humanize"
 	"github.com/espebra/filebin2/ds"
-	"path"
-	"time"
 )
+
+var invalidFilename = regexp.MustCompile("[^A-Za-z0-9-_=+,.]")
 
 type FileDao struct {
 	db *sql.DB
+}
+
+func (d *FileDao) validateInput(file *ds.File) error {
+	// Replace all invalid characters with _
+        file.Filename = invalidFilename.ReplaceAllString(file.Filename, "_")
+
+	// . is not allowed as the first character
+        if strings.HasPrefix(file.Filename, ".") {
+                file.Filename = strings.Replace(file.Filename, ".", "_", 1)
+        }
+
+	// If the filename is empty, set it to _
+        if len(file.Filename) == 0 {
+                return errors.New("Filename not specified")
+        }
+
+	return nil
 }
 
 func (d *FileDao) GetById(id int) (ds.File, error) {
@@ -57,6 +78,10 @@ func (d *FileDao) GetByName(bin string, filename string) (ds.File, error) {
 }
 
 func (d *FileDao) Upsert(file *ds.File) error {
+        if err := d.validateInput(file); err != nil {
+                return err
+        }
+
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	sqlStatement := "SELECT id, bin_id, filename, mime, bytes, md5, sha256, downloads, updates, nonce, updated, created FROM file WHERE bin_id = $1 AND filename = $2 LIMIT 1"
 	err := d.db.QueryRow(sqlStatement, file.Bin, file.Filename).Scan(&file.Id, &file.Bin, &file.Filename, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updates, &file.Nonce, &file.Updated, &file.Created)
@@ -89,6 +114,10 @@ func (d *FileDao) Upsert(file *ds.File) error {
 }
 
 func (d *FileDao) Insert(file *ds.File) error {
+        if err := d.validateInput(file); err != nil {
+                return err
+        }
+
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	downloads := 0
 	updates := 0

@@ -76,7 +76,7 @@ func TestGetAllBins(t *testing.T) {
 	count := 50
 	for i := 0; i < count; i++ {
 		bin := &ds.Bin{}
-		bin.Id = fmt.Sprintf("bid-%d", i)
+		bin.Id = fmt.Sprintf("somebin-%d", i)
 		err = dao.Bin().Insert(bin)
 		if err != nil {
 			t.Error(err)
@@ -185,4 +185,31 @@ func TestDeleteNonExistingBin(t *testing.T) {
 	if err == nil {
 		t.Errorf("Was expecting an error here, bin %v does not exist.", bin)
 	}
+}
+
+func TestInvalidBinInput(t *testing.T) {
+        dao, err := tearUp()
+        if err != nil {
+                t.Error(err)
+        }
+        defer tearDown(dao)
+
+        bin := &ds.Bin{}
+        bin.Id = "12345"
+        err = dao.Bin().Insert(bin)
+        if err == nil {
+                t.Error("Expected an error since bin is too short")
+        }
+
+        bin.Id = "..."
+        err = dao.Bin().Insert(bin)
+        if err == nil {
+                t.Error("Expected an error since bin is invalid")
+        }
+
+        bin.Id = "%&/()"
+        err = dao.Bin().Insert(bin)
+        if err == nil {
+                t.Error("Expected an error since bin contains invalid characters")
+        }
 }

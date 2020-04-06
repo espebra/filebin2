@@ -4,14 +4,41 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/dustin/go-humanize"
-	"github.com/espebra/filebin2/ds"
 	"math/rand"
 	"time"
+	"strings"
+	"regexp"
+	"github.com/dustin/go-humanize"
+	"github.com/espebra/filebin2/ds"
 )
+
+var invalidBin = regexp.MustCompile("[^A-Za-z0-9-_.]")
 
 type BinDao struct {
 	db *sql.DB
+}
+
+func (d *BinDao) validateInput(bin *ds.Bin) error {
+	// Generate the bin if it is not set
+	if bin.Id == "" {
+		bin.Id = d.GenerateId()
+	}
+
+	// Reject invalid bins
+        if invalidBin.MatchString(bin.Id) {
+                return errors.New("The bin contains invalid characters.")
+        }
+
+	// Ensure decent length
+        if len(bin.Id) < 8 {
+                return errors.New("The bin is too short.")
+        }
+
+	// Do not allow the bin to start with .
+        if strings.HasPrefix(bin.Id, ".") {
+                return errors.New("Invalid bin specified.")
+        }
+        return nil
 }
 
 func (d *BinDao) GenerateId() string {
@@ -85,12 +112,11 @@ func (d *BinDao) GetById(id string) (ds.Bin, error) {
 }
 
 func (d *BinDao) Upsert(bin *ds.Bin) error {
+        if err := d.validateInput(bin); err != nil {
+                return err
+        }
+
 	now := time.Now().UTC().Truncate(time.Microsecond)
-
-	if bin.Id == "" {
-		bin.Id = d.GenerateId()
-	}
-
 	sqlStatement := "SELECT bin.id, bin.downloads, COALESCE(SUM(file.bytes), 0), bin.updated, bin.created, bin.expiration FROM bin LEFT JOIN file ON bin.id = file.bin_id WHERE bin.id = $1 GROUP BY bin.id LIMIT 1"
 	err := d.db.QueryRow(sqlStatement, bin.Id).Scan(&bin.Id, &bin.Downloads, &bin.Bytes, &bin.Updated, &bin.Created, &bin.Expiration)
 	if err != nil {
@@ -120,13 +146,12 @@ func (d *BinDao) Upsert(bin *ds.Bin) error {
 }
 
 func (d *BinDao) Insert(bin *ds.Bin) error {
+        if err := d.validateInput(bin); err != nil {
+                return err
+        }
+
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	expiration := now.Add(time.Hour * 24 * 7)
-
-	if bin.Id == "" {
-		bin.Id = d.GenerateId()
-	}
-
 	sqlStatement := "INSERT INTO bin (id, downloads, updated, created, expiration) VALUES ($1, 0, $2, $3, $4) RETURNING id"
 	err := d.db.QueryRow(sqlStatement, bin.Id, now, now, expiration).Scan(&bin.Id)
 	if err != nil {

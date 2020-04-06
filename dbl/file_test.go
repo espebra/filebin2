@@ -356,3 +356,29 @@ func TestGetFilesByBin(t *testing.T) {
 		t.Errorf("Was expecting the number of downloads to be 1, not %d\n", file1.Downloads)
 	}
 }
+
+func TestInvalidFileInput(t *testing.T) {
+	dao, err := tearUp()
+	if err != nil {
+		t.Error(err)
+	}
+	defer tearDown(dao)
+
+	// Create bin first
+	bin := &ds.Bin{}
+	bin.Id = "1234567890"
+	err = dao.Bin().Insert(bin)
+	if err != nil {
+		t.Error(err)
+	}
+
+	file := &ds.File{}
+	file.Bin = bin.Id
+	file.Filename = ""
+	file.Bytes = 1
+	file.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	err = dao.File().Insert(file)
+	if err == nil {
+		t.Error("Expected an error since filename is not set")
+	}
+}
