@@ -65,11 +65,11 @@
             {{ end }}
             
             and it expires {{ .Bin.ExpirationRelative }}.
-            It contains {{ .Files | len }} file
+            It contains {{ .Files | len }}
 
-            {{- if gt $numfiles 1 -}}s{{ end }}
-
-            at {{ .Bin.BytesReadable }}.
+            {{ if eq $numfiles 0 }}files.{{ end }}
+            {{ if eq $numfiles 1 }}file at {{ .Bin.BytesReadable }}.{{ end }}
+            {{ if gt $numfiles 1 }}files at {{ .Bin.BytesReadable }}.{{ end }}
         </p>
         
         {{ if .Files }}
