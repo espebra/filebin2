@@ -12,9 +12,29 @@ function FileAPI (c, t, d, f, bin, uploadURL, binURL) {
         fileQueue = new Array(),
         preview = null;
 
+    function showDropZone() {
+        dropZone.style.visibility = "visible";
+        console.log("Show drop zone");
+    }
+    function hideDropZone() {
+        dropZone.style.visibility = "hidden";
+        console.log("Hide drop zone");
+    }
+    function allowDrag(e) {
+        if (true) {  // Test that the item being dragged is a valid one
+            e.dataTransfer.dropEffect = 'copy';
+            e.preventDefault();
+        }
+    }
+
+    window.addEventListener('dragenter', function(e) {
+        showDropZone();
+    });
 
     this.init = function () {
-        fileField.onchange = this.addFiles;
+        if (fileField) {
+            fileField.onchange = this.addFiles;
+        }
         dropZone.addEventListener("dragenter",  this.stopProp, false);
         dropZone.addEventListener("dragleave",  this.dragExit, false);
         dropZone.addEventListener("dragover",  this.dragOver, false);
@@ -28,7 +48,7 @@ function FileAPI (c, t, d, f, bin, uploadURL, binURL) {
     function updateFileCount() {
 	var box = document.getElementById('fileCount');
 
-        // XXX: Make this less messy
+        // TODO: Make this less messy
         var text = counter_completed + " of " + counter_queue + " file";
         if (counter_queue != 1){
             text = text + "s";
@@ -53,10 +73,11 @@ function FileAPI (c, t, d, f, bin, uploadURL, binURL) {
         fileCount.textContent = text;
 	box.style.display = 'block';
     }
+
     this.showDroppedFiles = function (ev) {
         ev.stopPropagation();
         ev.preventDefault();
-        dropZone.style["backgroundColor"] = "#FFFFFF";
+        hideDropZone();
         var files = ev.dataTransfer.files;
         addFileListItems(files);
     }
@@ -64,17 +85,19 @@ function FileAPI (c, t, d, f, bin, uploadURL, binURL) {
     this.dragOver = function (ev) {
         ev.stopPropagation();
         ev.preventDefault();
-        this.style["backgroundColor"] = "#EEEEEE";
+        showDropZone();
     }
 
     this.dragExit = function (ev) {
         ev.stopPropagation();
         ev.preventDefault();
-        dropZone.style["backgroundColor"] = "#FFFFFF";
+        hideDropZone();
     }
+
     this.stopProp = function (ev) {
         ev.stopPropagation();
         ev.preventDefault();
+        showDropZone();
     }
 
     this.uploadQueue = function (ev) {
@@ -256,6 +279,7 @@ function FileAPI (c, t, d, f, bin, uploadURL, binURL) {
                 updateFileCount();
             };
 
+            console.log("Uploading filename " + file.name + " (" + file.size + " bytes) to bin " + bin + " at " + uploadURL);
             xhr.open(
                 "POST",
                 uploadURL

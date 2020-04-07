@@ -5,13 +5,55 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
         <link rel="stylesheet" href="/static/css/bootstrap.min.css"/>
         <link rel="stylesheet" href="/static/css/fontawesome.all.min.css"/>
+        <link rel="stylesheet" href="/static/css/upload.css"/>
+        <link rel="stylesheet" href="/static/css/custom.css"/>
         <title>Filebin | {{ .Bin.Id }}</title>
+        <script src="/static/js/upload.js"></script>
+        <script>
+            window.onload = function () {
+                if (typeof FileReader == "undefined") alert ("Your browser \
+                    is not supported. You will need to use a \
+                    browser with File API support to upload files.");
+                var fileCount = document.getElementById("fileCount");
+                var fileList = document.getElementById("fileList");
+                var fileDrop = document.getElementById("fileDrop");
+                var fileField = document.getElementById("fileField");
+                var bin = "{{ .Bin.Id }}";
+                var uploadURL = "/";
+                var binURL = "/{{ .Bin.Id }}";
+                FileAPI = new FileAPI(
+                    fileCount,
+                    fileList,
+                    fileDrop,
+                    fileField,
+                    bin,
+                    uploadURL,
+                    binURL
+                );
+                FileAPI.init();
+                // Automatically start upload when using the drop zone
+                fileDrop.ondrop = FileAPI.uploadQueue;
+                // Automatically start upload when selecting files
+                if (fileField) {
+                    fileField.addEventListener("change", FileAPI.uploadQueue)
+                }
+            }
+        </script>
     </head>
     <body class="container">
 
         {{template "topbar" .}}
 
         <h1>Filebin</h1>
+
+        <!-- Drop zone -->
+        <div id="fileDrop">Drop files to upload</div>
+
+        <!-- Upload queue -->
+        <div id="fileList"></div>
+
+        <!-- Upload status -->
+        <div id="fileCount"></div>
 
 	{{ $numfiles := .Files | len }}
         
@@ -31,25 +73,36 @@
         </p>
         
         {{ if .Files }}
-            <table class="table table-sm">
-                <thead>
-                    <tr>
-                        <th>Filename</th>
-                        <th>Size</th>
-                        <th>Uploaded</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
+            <div class="row">
+<!--
+                <div class="col-5 col-sm-7 col-md-8"><strong>Filename</strong></div>
+                <div class="col-2 col-sm-2 col-md-1"><strong>Size</strong></div>
+                <div class="col-2 col-sm-2 col-md-2"><strong>Uploaded</strong></div>
+                <div class="col-1 col-sm-1 col-md-1"></div>
+-->
+                <div class="col-5 col-sm-6"><strong>Filename</strong></div>
+                <div class="col"><strong>Size</strong></div>
+                <div class="col"><strong>Uploaded</strong></div>
+                <div class="col"></div>
+            </div>
                     {{ range .Files }}
-                        <tr>
-                            <td>
+                        <hr class="mt-1 mb-1"/>
+                        <div class="row">
+<!--
+                            <div class="col-5 col-sm-7 col-md-8">
+-->
+                            <div class="col-5 col-sm-6">
                                 <i class="far fa-fw fa-file"></i>
                                 <a href="{{ .URL }}">{{ .Filename }}</a>
-                            </td>
-                            <td>{{ .BytesReadable }}</td>
-                            <td>{{ .UpdatedRelative }}</td>
-                            <td>
+                            </div>
+<!--
+                            <div class="col-2 col-sm-2 col-md-1">{{ .BytesReadable }}</div>
+                            <div class="col-2 col-sm-2 col-md-2">{{ .UpdatedRelative }}</div>
+                            <div class="col-1 col-sm-1 col-md-1">
+-->
+                            <div class="col">{{ .BytesReadable }}</div>
+                            <div class="col">{{ .UpdatedRelative }}</div>
+                            <div class="col">
                                 <div class="dropdown">
                                     <a class="dropdown-toggle small" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                         More
@@ -64,11 +117,9 @@
                                         </a>
                                     </div>
                                 </div>
-                            </td>
-                        </tr>
+                            </div>
+                        </div>
                     {{ end }}
-                </tbody>
-            </table>
         {{ end }}
 
         <script src="/static/js/jquery-3.4.1.slim.min.js"></script>
