@@ -27,7 +27,12 @@ function FileAPI (c, t, d, f, bin, uploadURL, binURL) {
         }
     }
 
+    // https://stackoverflow.com/questions/19841859/full-page-drag-and-drop-files-website
     window.addEventListener('dragenter', function(e) {
+        showDropZone();
+    });
+
+    window.addEventListener('dragover', function(e) {
         showDropZone();
     });
 
@@ -35,10 +40,10 @@ function FileAPI (c, t, d, f, bin, uploadURL, binURL) {
         if (fileField) {
             fileField.onchange = this.addFiles;
         }
-        dropZone.addEventListener("dragenter",  this.stopProp, false);
+        dropZone.addEventListener("dragenter",  this.stopProp, allowDrag);
         dropZone.addEventListener("dragleave",  this.dragExit, false);
-        dropZone.addEventListener("dragover",  this.dragOver, false);
-        dropZone.addEventListener("drop",  this.showDroppedFiles, false);
+        dropZone.addEventListener("dragover",  this.dragOver, allowDrag);
+        dropZone.addEventListener("drop",  this.showDroppedFiles);
     }
 
     this.addFiles = function () {

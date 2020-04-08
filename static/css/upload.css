@@ -19,6 +19,7 @@ html, body {
     opacity: 0.95;
     border: 5px dashed #000000;
     visibility: hidden;
+    font-family: Impact;
 }
 
 #fileList {

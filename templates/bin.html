@@ -45,15 +45,14 @@
         {{template "topbar" .}}
 
         <h1>Filebin</h1>
-
         <!-- Drop zone -->
-        <div id="fileDrop">Drop files to upload</div>
+        <span id="fileDrop">Drop files to upload</span>
 
         <!-- Upload queue -->
-        <div id="fileList"></div>
+        <span id="fileList"></span>
 
         <!-- Upload status -->
-        <div id="fileCount"></div>
+        <span id="fileCount"></span>
 
 	{{ $numfiles := .Files | len }}
         
@@ -109,7 +108,7 @@
                                     </a>
                                     <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuButton">
                                         <a class="dropdown-item" href="#">
-                                            <i class="fas fa-info-circle text-primary"></i> File properties
+                                            <i class="fas fa-fw fa-info-circle text-primary"></i> File properties
                                         </a>
                                         <div class="dropdown-divider"></div>
                                         <a class="dropdown-item" href="" data-toggle="modal" data-target="#delete">
