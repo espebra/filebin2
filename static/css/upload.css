@@ -4,7 +4,6 @@ html, body {
 }
 
 #fileDrop {
-    border: "5px dashed";
     background: #EEEEEE;
     position: fixed;
     top: 0;
@@ -16,8 +15,8 @@ html, body {
     justify-content: center;
     display: flex;
     font-size: 3em;
-    opacity: 0.95;
-    border: 5px dashed #000000;
+    opacity: 0.9;
+    border: 7px dashed #000000;
     visibility: hidden;
     font-family: Impact;
 }

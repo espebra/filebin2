@@ -324,9 +324,9 @@ function deleteURL (url, messageBoxID) {
             console.log("Deleted successfully");
             box.textContent = "Delete operation completed successfully.";
             box.className = "alert alert-success";
-        } else if (xhr.status  == 404 && xhr.readyState == 4) {
-            box.textContent = "Not found.";
-            box.className = "alert alert-warning";
+        } else if (xhr.status  == 410 && xhr.readyState == 4) {
+            box.textContent = "The bin is already deleted.";
+            box.className = "alert alert-success";
         } else {
             console.log("Failed to delete");
             box.textContent = "Error " + xhr.status + ". Unable to verify the operation.";

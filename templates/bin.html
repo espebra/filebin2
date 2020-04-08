@@ -3,6 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <link rel="icon" href="/static/img/favicon.png">
         <link rel="stylesheet" href="/static/css/bootstrap.min.css"/>
         <link rel="stylesheet" href="/static/css/fontawesome.all.min.css"/>
         <link rel="stylesheet" href="/static/css/upload.css"/>
@@ -40,7 +41,7 @@
             }
         </script>
     </head>
-    <body class="container">
+    <body class="container-xl">
 
         {{template "topbar" .}}
 
@@ -54,7 +55,7 @@
         <!-- Upload status -->
         <span id="fileCount"></span>
 
-	{{ $numfiles := .Files | len }}
+        {{ $numfiles := .Files | len }}
         
         <p class="lead">
             The bin <a href="/{{ .Bin.Id }}">{{ .Bin.Id }}</a> was created {{ .Bin.CreatedRelative }}
@@ -70,15 +71,37 @@
             {{ if eq $numfiles 1 }}file at {{ .Bin.BytesReadable }}.{{ end }}
             {{ if gt $numfiles 1 }}files at {{ .Bin.BytesReadable }}.{{ end }}
         </p>
-        
+
+        <p>
+            <ul class="nav nav-pills">
+                {{ if gt $numfiles 0 }}
+                    <li class="nav-item mr-3">
+                        <a class="nav-link btn btn-primary" href="" data-toggle="modal" data-target="#modalArchive">
+                            <i class="fas fa-fw fa-cloud-download-alt"></i> Download files
+                        </a>
+                    </li>
+                {{ end }}
+                <li class="nav-item">
+                    <div class="dropdown">
+                            <a class="nav-link btn btn-primary dropdown-toggle text-white" id="dropdownBinMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                More
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownBinMenuButton">
+                                <a class="dropdown-item" href="" data-toggle="modal" data-target="#modalBinProperties" aria-haspopup="true" aria-expanded="false">
+                                    <i class="fas fa-fw fa-info-circle text-primary"></i> Bin properties
+                                </a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="" data-toggle="modal" data-target="#modalDeleteBin">
+                                    <i class="far fa-fw fa-trash-alt text-danger"></i> Delete bin
+                                </a>
+                            </div>
+                    </div>
+                </li>
+            </ul>
+        </p>
+
         {{ if .Files }}
             <div class="row">
-<!--
-                <div class="col-5 col-sm-7 col-md-8"><strong>Filename</strong></div>
-                <div class="col-2 col-sm-2 col-md-1"><strong>Size</strong></div>
-                <div class="col-2 col-sm-2 col-md-2"><strong>Uploaded</strong></div>
-                <div class="col-1 col-sm-1 col-md-1"></div>
--->
                 <div class="col-5 col-sm-6"><strong>Filename</strong></div>
                 <div class="col"><strong>Size</strong></div>
                 <div class="col"><strong>Uploaded</strong></div>
@@ -87,31 +110,23 @@
                     {{ range .Files }}
                         <hr class="mt-1 mb-1"/>
                         <div class="row">
-<!--
-                            <div class="col-5 col-sm-7 col-md-8">
--->
                             <div class="col-5 col-sm-6">
                                 <i class="far fa-fw fa-file"></i>
                                 <a href="{{ .URL }}">{{ .Filename }}</a>
                             </div>
-<!--
-                            <div class="col-2 col-sm-2 col-md-1">{{ .BytesReadable }}</div>
-                            <div class="col-2 col-sm-2 col-md-2">{{ .UpdatedRelative }}</div>
-                            <div class="col-1 col-sm-1 col-md-1">
--->
                             <div class="col">{{ .BytesReadable }}</div>
                             <div class="col">{{ .UpdatedRelative }}</div>
                             <div class="col">
                                 <div class="dropdown">
-                                    <a class="dropdown-toggle small" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    <a class="dropdown-toggle small" id="dropdownFileMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                         More
                                     </a>
-                                    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuButton">
+                                    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownFileMenuButton">
                                         <a class="dropdown-item" href="#">
                                             <i class="fas fa-fw fa-info-circle text-primary"></i> File properties
                                         </a>
                                         <div class="dropdown-divider"></div>
-                                        <a class="dropdown-item" href="" data-toggle="modal" data-target="#delete">
+                                        <a class="dropdown-item" href="" data-toggle="modal" data-target="#deleteFile">
                                             <i class="far fa-fw fa-trash-alt text-danger"></i> Delete file
                                         </a>
                                     </div>
@@ -120,6 +135,89 @@
                         </div>
                     {{ end }}
         {{ end }}
+
+        <!-- Download archive modal start -->
+        <div class="modal fade" id="modalArchive" tabindex="-1" role="dialog" aria-labelledby="modalArchiveTitle" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modelArchiveTitle">Download files</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <p>
+                            The files in this bin can be downloaded as a single file archive. The default filename of the archive is <code>{{ .Bin.Id }}</code> and the full size is {{ .Bin.BytesReadable }}.
+                        </p>
+
+                        <p class="lead">Select archive format to download:</p>
+
+                        <ul class="nav nav-pills">
+                            <li class="nav-item mr-3">
+                                <a class="nav-link btn-primary" href="/archive/{{ $.Bin.Id }}/tar"><i class="fas fa-fw fa-file-archive"></i> Tar</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link btn-primary" href="/archive/{{ $.Bin.Id }}/zip"><i class="fas fa-fw fa-file-archive"></i> Zip</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Download archive modal end -->
+
+        <!-- Delete bin modal start -->
+        <div class="modal fade" id="modalDeleteBin" tabindex="-1" role="dialog" aria-labelledby="modalDeleteBinTitle" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modelDeleteBinTitle">Delete bin</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <p>You are free to delete this bin. However you are encouraged to delete your own bins only, or bins that are being used to share obvious malicious or illegal content. This action is not reversible.</p>
+
+                        <p class="lead">Delete all the files in bin <a href="/{{ $.Bin.Id }}">{{ $.Bin.Id }}</a>?</p>
+
+                        <div id="deleteStatus"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <div class="pull-left">
+                        <button type="button" class="btn btn-danger" id="deleteButton" onclick="deleteURL('/{{ $.Bin.Id }}','deleteStatus')"><i class="fa fa-trash-o"></i> Confirm</button>
+                        </div>
+                        <a href="/{{ $.Bin.Id }}" class="btn btn-secondary"><i class="fa fa-close"></i> Close</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Delete bin modal end -->
+
+        <!-- Bin properties modal start -->
+        <div class="modal fade" id="modalBinProperties" tabindex="-1" role="dialog" aria-labelledby="modalBinPropertiesTitle" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modelBinPropertiesTitle">Bin properties</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+properties
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Bin properties modal end -->
 
         <script src="/static/js/jquery-3.4.1.slim.min.js"></script>
         <script src="/static/js/popper.min.js"></script>

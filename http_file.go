@@ -130,6 +130,20 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Reject uploads to deleted bins
+	if bin.Status > 0 {
+		fmt.Printf("Rejected upload of filename %s to deleted bin %s\n", inputFilename, inputBin)
+		http.Error(w, "Unable to upload file to bin that is no longer available", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Reject uploads to readonly bins
+	if bin.Readonly == true {
+		fmt.Printf("Rejected upload of filename %s to readonly bin %s\n", inputFilename, inputBin)
+		http.Error(w, "Unable to upload file to bin that is set to readonly", http.StatusMethodNotAllowed)
+		return
+	}
+
 	if err := h.dao.Bin().Update(bin); err != nil {
 		fmt.Printf("Unable to update bin %s: %s\n", inputBin, err.Error())
 		http.Error(w, "Errno 5", http.StatusInternalServerError)

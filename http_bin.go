@@ -14,7 +14,6 @@ import (
 func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	inputBin := params["bin"]
-	// TODO: Input validation (inputBin)
 
 	type Data struct {
 		Bin   ds.Bin    `json:"bin"`
@@ -29,6 +28,11 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	data.Bin = bin
+
+	if bin.Status != 0 {
+		http.Error(w, "This bin is no longer available", http.StatusGone)
+		return
+	}
 
 	files, err := h.dao.File().GetByBin(inputBin)
 	if err != nil {
@@ -55,4 +59,32 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+}
+
+func (h *HTTP) DeleteBin(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	inputBin := params["bin"]
+
+	bin, err := h.dao.Bin().GetById(inputBin)
+	if err != nil {
+		fmt.Printf("Unable to GetById(%s): %s\n", inputBin, err.Error())
+		http.Error(w, "Bin not found", http.StatusNotFound)
+		return
+	}
+
+	// No need to delete the bin twice
+	if bin.Status > 0 {
+		http.Error(w, "This bin is no longer available", http.StatusGone)
+		return
+	}
+
+	// Set status to pending delete
+	bin.Status = 1
+	if err := h.dao.Bin().Update(&bin); err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	http.Error(w, "Bin deleted successfully ", http.StatusOK)
+	return
 }
