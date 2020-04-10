@@ -3,7 +3,7 @@ package dbl
 import (
 	"database/sql"
 	"errors"
-	"fmt"
+	//"fmt"
 	"github.com/dustin/go-humanize"
 	"github.com/espebra/filebin2/ds"
 	"math/rand"
@@ -84,7 +84,7 @@ func (d *BinDao) GetAll() ([]ds.Bin, error) {
 	return bins, nil
 }
 
-func (d *BinDao) GetById(id string) (ds.Bin, error) {
+func (d *BinDao) GetById(id string) (ds.Bin, bool, error) {
 	var bin ds.Bin
 
 	// Get bin info
@@ -92,9 +92,9 @@ func (d *BinDao) GetById(id string) (ds.Bin, error) {
 	err := d.db.QueryRow(sqlStatement, id).Scan(&bin.Id, &bin.Readonly, &bin.Deleted, &bin.Downloads, &bin.Bytes, &bin.Updated, &bin.Created, &bin.Expiration)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return bin, errors.New(fmt.Sprintf("No bin found with id %s", id))
+			return bin, false, nil
 		} else {
-			fmt.Printf("Unable to query the database: %s\n", err.Error())
+			return bin, false, err
 		}
 	}
 
@@ -108,7 +108,7 @@ func (d *BinDao) GetById(id string) (ds.Bin, error) {
 	bin.CreatedRelative = humanize.Time(bin.Created)
 	bin.ExpirationRelative = humanize.Time(bin.Expiration)
 
-	return bin, err
+	return bin, true, nil
 }
 
 func (d *BinDao) Upsert(bin *ds.Bin) error {

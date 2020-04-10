@@ -21,10 +21,14 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 	}
 	var data Data
 
-	bin, err := h.dao.Bin().GetById(inputBin)
+	bin, found, err := h.dao.Bin().GetById(inputBin)
 	if err != nil {
 		fmt.Printf("Unable to GetById(%s): %s\n", inputBin, err.Error())
-		http.Error(w, "Not found", http.StatusNotFound)
+		http.Error(w, "Errno 1", http.StatusInternalServerError)
+		return
+	}
+	if found == false {
+		http.Error(w, "Bin does not exist", http.StatusNotFound)
 		return
 	}
 	data.Bin = bin
@@ -65,10 +69,14 @@ func (h *HTTP) DeleteBin(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	inputBin := params["bin"]
 
-	bin, err := h.dao.Bin().GetById(inputBin)
+	bin, found, err := h.dao.Bin().GetById(inputBin)
 	if err != nil {
 		fmt.Printf("Unable to GetById(%s): %s\n", inputBin, err.Error())
-		http.Error(w, "Bin not found", http.StatusNotFound)
+		http.Error(w, "Errno 2", http.StatusInternalServerError)
+		return
+	}
+	if found == false {
+		http.Error(w, "Bin does not exist", http.StatusNotFound)
 		return
 	}
 
@@ -93,10 +101,19 @@ func (h *HTTP) LockBin(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	inputBin := params["bin"]
 
-	bin, err := h.dao.Bin().GetById(inputBin)
+	bin, found, err := h.dao.Bin().GetById(inputBin)
 	if err != nil {
 		fmt.Printf("Unable to GetById(%s): %s\n", inputBin, err.Error())
-		http.Error(w, "Bin not found", http.StatusNotFound)
+		http.Error(w, "Errno 3", http.StatusInternalServerError)
+		return
+	}
+	if found == false {
+		http.Error(w, "Bin does not exist", http.StatusNotFound)
+		return
+	}
+
+	if bin.Deleted > 0 {
+		http.Error(w, "This bin is no longer available", http.StatusGone)
 		return
 	}
 

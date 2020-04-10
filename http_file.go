@@ -28,17 +28,33 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 	inputFilename := params["filename"]
 	// TODO: Input validation (inputFilename)
 
-	bin, err := h.dao.Bin().GetById(inputBin)
+	bin, found, err := h.dao.Bin().GetById(inputBin)
 	if err != nil {
 		fmt.Printf("Unable to GetById(%s): %s\n", inputBin, err.Error())
-		http.Error(w, "Not found", http.StatusNotFound)
+		http.Error(w, "Errno 3", http.StatusInternalServerError)
+		return
+	}
+	if found == false {
+		http.Error(w, "The bin does not exist", http.StatusNotFound)
+		return
+	}
+	if bin.Deleted > 0 {
+		http.Error(w, "The bin is no longer available", http.StatusGone)
 		return
 	}
 
-	file, err := h.dao.File().GetByName(inputBin, inputFilename)
+	file, found, err := h.dao.File().GetByName(inputBin, inputFilename)
 	if err != nil {
 		fmt.Printf("Unable to GetByName(%s, %s): %s\n", inputBin, inputFilename, err.Error())
-		http.Error(w, "Not found", http.StatusNotFound)
+		http.Error(w, "Errno 4", http.StatusInternalServerError)
+		return
+	}
+	if found == false {
+		http.Error(w, "The file does not exist", http.StatusNotFound)
+		return
+	}
+	if file.Deleted > 0 {
+		http.Error(w, "The file is no longer available", http.StatusGone)
 		return
 	}
 
@@ -232,43 +248,52 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HTTP) DeleteFile(w http.ResponseWriter, r *http.Request) {
-        params := mux.Vars(r)
-        inputBin := params["bin"]
+	params := mux.Vars(r)
+	inputBin := params["bin"]
 	inputFilename := params["filename"]
 
-        bin, err := h.dao.Bin().GetById(inputBin)
-        if err != nil {
-                fmt.Printf("Unable to GetById(%s): %s\n", inputBin, err.Error())
-                http.Error(w, "Bin not found", http.StatusNotFound)
-                return
-        }
-
-        // No need to delete the bin twice
-        if bin.Deleted > 0 {
-                http.Error(w, "This bin is no longer available", http.StatusGone)
-                return
-        }
-
-	file, err := h.dao.File().GetByName(inputBin, inputFilename)
+	bin, found, err := h.dao.Bin().GetById(inputBin)
 	if err != nil {
-		fmt.Printf("Unable to GetByName(%s, %s): %s\n", inputBin, inputFilename, err.Error())
-		http.Error(w, "Not found", http.StatusNotFound)
+		fmt.Printf("Unable to GetById(%s): %s\n", inputBin, err.Error())
+		http.Error(w, "Errno 5", http.StatusInternalServerError)
+		return
+	}
+	if found == false {
+		http.Error(w, "The file does not exist", http.StatusNotFound)
 		return
 	}
 
-        // No need to delete the file twice
-        if file.Deleted > 0 {
-                http.Error(w, "This file is no longer available", http.StatusGone)
-                return
-        }
+	// No need to delete the file if the bin is already deleted
+	if bin.Deleted > 0 {
+		http.Error(w, "This bin is no longer available", http.StatusGone)
+		return
+	}
 
-        // Set to pending delete
-        file.Deleted = 1
-        if err := h.dao.File().Update(&file); err != nil {
-                http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-                return
-        }
+	file, found, err := h.dao.File().GetByName(inputBin, inputFilename)
+	if err != nil {
+		fmt.Printf("Unable to GetByName(%s, %s): %s\n", inputBin, inputFilename, err.Error())
+		http.Error(w, "Errno 6", http.StatusInternalServerError)
+		return
+	}
+	if found == false {
+		http.Error(w, "The file does not exist", http.StatusNotFound)
+		return
+	}
 
-        http.Error(w, "File deleted successfully ", http.StatusOK)
-        return
+	// No need to delete the file twice
+	if file.Deleted > 0 {
+		http.Error(w, "This file is no longer available", http.StatusGone)
+		return
+	}
+
+	// Set to pending delete
+	file.Deleted = 1
+	if err := h.dao.File().Update(&file); err != nil {
+		fmt.Printf("Unable to update the file (%s, %s): %s\n", inputBin, inputFilename, err.Error())
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	http.Error(w, "File deleted successfully ", http.StatusOK)
+	return
 }

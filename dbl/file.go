@@ -3,7 +3,7 @@ package dbl
 import (
 	"database/sql"
 	"errors"
-	"fmt"
+	//"fmt"
 	"github.com/dustin/go-humanize"
 	"github.com/espebra/filebin2/ds"
 	"path"
@@ -35,13 +35,15 @@ func (d *FileDao) validateInput(file *ds.File) error {
 	return nil
 }
 
-func (d *FileDao) GetById(id int) (ds.File, error) {
+func (d *FileDao) GetById(id int) (ds.File, bool, error) {
 	var file ds.File
 	sqlStatement := "SELECT id, bin_id, filename, deleted, mime, bytes, md5, sha256, downloads, updated, created FROM file WHERE id = $1 LIMIT 1"
 	err := d.db.QueryRow(sqlStatement, id).Scan(&file.Id, &file.Bin, &file.Filename, &file.Deleted, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updated, &file.Created)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return file, errors.New(fmt.Sprintf("No file found with id %d", id))
+			return file, false, nil
+		} else {
+			return file, false, err
 		}
 	}
 
@@ -53,16 +55,18 @@ func (d *FileDao) GetById(id int) (ds.File, error) {
 	file.CreatedRelative = humanize.Time(file.Created)
 	file.BytesReadable = humanize.Bytes(file.Bytes)
 
-	return file, err
+	return file, true, nil
 }
 
-func (d *FileDao) GetByName(bin string, filename string) (ds.File, error) {
+func (d *FileDao) GetByName(bin string, filename string) (ds.File, bool, error) {
 	var file ds.File
 	sqlStatement := "SELECT id, bin_id, filename, deleted, mime, bytes, md5, sha256, downloads, updated, created FROM file WHERE bin_id = $1 AND filename = $2 LIMIT 1"
 	err := d.db.QueryRow(sqlStatement, bin, filename).Scan(&file.Id, &file.Bin, &file.Filename, &file.Deleted, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updated, &file.Created)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return file, errors.New(fmt.Sprintf("No file found with filename %s in bin %s", filename, bin))
+			return file, false, nil
+		} else {
+			return file, false, err
 		}
 	}
 
@@ -74,7 +78,7 @@ func (d *FileDao) GetByName(bin string, filename string) (ds.File, error) {
 	file.CreatedRelative = humanize.Time(file.Created)
 	file.BytesReadable = humanize.Bytes(file.Bytes)
 
-	return file, err
+	return file, true, nil
 }
 
 func (d *FileDao) Upsert(file *ds.File) error {
@@ -200,7 +204,7 @@ func (d *FileDao) GetAll() ([]ds.File, error) {
 func (d *FileDao) Update(file *ds.File) error {
 	var id int
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "UPDATE file SET filename = $1, deleted = $2, mime = $3, bytes = $4, md5 = $5, sha256 = $6, nonce = $7, updates = $8, updated = $9 WHERE id = $9 RETURNING id"
+	sqlStatement := "UPDATE file SET filename = $1, deleted = $2, mime = $3, bytes = $4, md5 = $5, sha256 = $6, nonce = $7, updates = $8, updated = $9 WHERE id = $10 RETURNING id"
 	err := d.db.QueryRow(sqlStatement, file.Filename, file.Deleted, file.Mime, file.Bytes, file.MD5, file.SHA256, file.Nonce, file.Updates, now, file.Id).Scan(&id)
 	if err != nil {
 		//if err == sql.ErrNoRows {

@@ -25,9 +25,12 @@ func TestGetBinById(t *testing.T) {
 		t.Errorf("Was expecting bin id %s, got %s instead.", id, bin.Id)
 	}
 
-	dbBin, err := dao.Bin().GetById(id)
+	dbBin, found, err := dao.Bin().GetById(id)
 	if err != nil {
 		t.Error(err)
+	}
+	if found == false {
+		t.Errorf("Expected found to be true as the bin exists.")
 	}
 	if dbBin.Id != id {
 		t.Errorf("Was expecting bin id %s, got %s instead.", id, dbBin.Id)
@@ -108,7 +111,7 @@ func TestDeleteBin(t *testing.T) {
 		t.Error(err)
 	}
 
-	dbBin, err := dao.Bin().GetById(bin.Id)
+	dbBin, _, err := dao.Bin().GetById(bin.Id)
 	if err != nil {
 		t.Error(err)
 	}
@@ -118,9 +121,12 @@ func TestDeleteBin(t *testing.T) {
 		t.Error(err)
 	}
 
-	_, err = dao.Bin().GetById(bin.Id)
-	if err == nil {
-		t.Errorf("Was expecting an error here, the bin was deleted earlier.")
+	_, found, err := dao.Bin().GetById(bin.Id)
+	if err != nil {
+		t.Errorf("Did not expect an error even though the bin was deleted earlier: " + err.Error())
+	}
+	if found == true {
+		t.Errorf("Expected found to be false as the bin was deleted earlier.")
 	}
 }
 
@@ -138,7 +144,7 @@ func TestUpdateBin(t *testing.T) {
 		t.Error(err)
 	}
 
-	dbBin, err := dao.Bin().GetById(bin.Id)
+	dbBin, _, err := dao.Bin().GetById(bin.Id)
 	if err != nil {
 		t.Error(err)
 	}

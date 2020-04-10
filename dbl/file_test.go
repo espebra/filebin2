@@ -42,9 +42,13 @@ func TestGetFileById(t *testing.T) {
 		t.Error(errors.New("Expected id > 0"))
 	}
 
-	dbFile, err := dao.File().GetById(file.Id)
+	dbFile, found, err := dao.File().GetById(file.Id)
 	if err != nil {
 		t.Error(err)
+	}
+
+	if found == false {
+		t.Errorf("Expected found to be true")
 	}
 
 	if dbFile.Filename != "testfile.txt" {
@@ -59,9 +63,12 @@ func TestGetFileById(t *testing.T) {
 		t.Errorf("Was expecting checksum e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, got %s instead.", dbFile.SHA256)
 	}
 
-	dbBin, err := dao.Bin().GetById(dbFile.Bin)
+	dbBin, found, err := dao.Bin().GetById(dbFile.Bin)
 	if err != nil {
 		t.Error(err)
+	}
+	if found == false {
+		t.Errorf("Expected found to be true")
 	}
 	if dbBin.Bytes != dbFile.Bytes {
 		t.Errorf("Expecting the same size in bin (%d) and file (%d)", dbBin.Bytes, dbFile.Bytes)
@@ -101,7 +108,7 @@ func TestInsertDuplicatedFile(t *testing.T) {
 		t.Error(err)
 	}
 
-	_, err = dao.File().GetById(file.Id)
+	_, _, err = dao.File().GetById(file.Id)
 
 	if err != nil {
 		t.Error(err)
@@ -116,7 +123,6 @@ func TestInsertDuplicatedFile(t *testing.T) {
 
 func TestGetAllFiles(t *testing.T) {
 	dao, err := tearUp()
-
 	if err != nil {
 		t.Error(err)
 	}
@@ -157,7 +163,7 @@ func TestGetAllFiles(t *testing.T) {
 		t.Errorf("Was expecting to find %d files, got %d instead.", count, len(files))
 	}
 
-	dbBin, err := dao.Bin().GetById(bin.Id)
+	dbBin, _, err := dao.Bin().GetById(bin.Id)
 	if err != nil {
 		t.Error(err)
 	}
@@ -196,7 +202,7 @@ func TestDeleteFile(t *testing.T) {
 		t.Error(err)
 	}
 
-	dbFile, err := dao.File().GetById(file.Id)
+	dbFile, _, err := dao.File().GetById(file.Id)
 
 	if err != nil {
 		t.Error(err)
@@ -208,10 +214,12 @@ func TestDeleteFile(t *testing.T) {
 		t.Error(err)
 	}
 
-	_, err = dao.File().GetById(file.Id)
-
-	if err == nil {
-		t.Errorf("Was expecting an error here, the file was deleted earlier.")
+	_, found, err := dao.File().GetById(file.Id)
+	if err != nil {
+		t.Errorf("Did not expect an error even though the file was deleted: " + err.Error())
+	}
+	if found == true {
+		t.Errorf("expected found to be false as the file was deleted earlier.")
 	}
 }
 
@@ -240,7 +248,7 @@ func TestUpdateFile(t *testing.T) {
 		t.Error(err)
 	}
 
-	dbFile, err := dao.File().GetById(file.Id)
+	dbFile, _, err := dao.File().GetById(file.Id)
 	if err != nil {
 		t.Error(err)
 	}
@@ -252,7 +260,7 @@ func TestUpdateFile(t *testing.T) {
 		t.Error(err)
 	}
 
-	updatedFile, err := dao.File().GetById(file.Id)
+	updatedFile, _, err := dao.File().GetById(file.Id)
 	if err != nil {
 		t.Error(err)
 	}
