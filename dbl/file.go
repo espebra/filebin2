@@ -35,10 +35,9 @@ func (d *FileDao) validateInput(file *ds.File) error {
 	return nil
 }
 
-func (d *FileDao) GetById(id int) (ds.File, bool, error) {
-	var file ds.File
+func (d *FileDao) GetById(id int) (file ds.File, found bool, err error) {
 	sqlStatement := "SELECT id, bin_id, filename, deleted, mime, bytes, md5, sha256, downloads, updated, created FROM file WHERE id = $1 LIMIT 1"
-	err := d.db.QueryRow(sqlStatement, id).Scan(&file.Id, &file.Bin, &file.Filename, &file.Deleted, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updated, &file.Created)
+	err = d.db.QueryRow(sqlStatement, id).Scan(&file.Id, &file.Bin, &file.Filename, &file.Deleted, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updated, &file.Created)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return file, false, nil
@@ -46,22 +45,18 @@ func (d *FileDao) GetById(id int) (ds.File, bool, error) {
 			return file, false, err
 		}
 	}
-
 	// https://github.com/lib/pq/issues/329
 	file.Updated = file.Updated.UTC()
 	file.Created = file.Created.UTC()
-
 	file.UpdatedRelative = humanize.Time(file.Updated)
 	file.CreatedRelative = humanize.Time(file.Created)
 	file.BytesReadable = humanize.Bytes(file.Bytes)
-
 	return file, true, nil
 }
 
-func (d *FileDao) GetByName(bin string, filename string) (ds.File, bool, error) {
-	var file ds.File
+func (d *FileDao) GetByName(bin string, filename string) (file ds.File, found bool, err error) {
 	sqlStatement := "SELECT id, bin_id, filename, deleted, mime, bytes, md5, sha256, downloads, updated, created FROM file WHERE bin_id = $1 AND filename = $2 LIMIT 1"
-	err := d.db.QueryRow(sqlStatement, bin, filename).Scan(&file.Id, &file.Bin, &file.Filename, &file.Deleted, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updated, &file.Created)
+	err = d.db.QueryRow(sqlStatement, bin, filename).Scan(&file.Id, &file.Bin, &file.Filename, &file.Deleted, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updated, &file.Created)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return file, false, nil
@@ -69,26 +64,22 @@ func (d *FileDao) GetByName(bin string, filename string) (ds.File, bool, error) 
 			return file, false, err
 		}
 	}
-
 	// https://github.com/lib/pq/issues/329
 	file.Updated = file.Updated.UTC()
 	file.Created = file.Created.UTC()
-
 	file.UpdatedRelative = humanize.Time(file.Updated)
 	file.CreatedRelative = humanize.Time(file.Created)
 	file.BytesReadable = humanize.Bytes(file.Bytes)
-
 	return file, true, nil
 }
 
-func (d *FileDao) Upsert(file *ds.File) error {
+func (d *FileDao) Upsert(file *ds.File) (err error) {
 	if err := d.validateInput(file); err != nil {
 		return err
 	}
-
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	sqlStatement := "SELECT id, bin_id, filename, deleted, mime, bytes, md5, sha256, downloads, updates, nonce, updated, created FROM file WHERE bin_id = $1 AND filename = $2 LIMIT 1"
-	err := d.db.QueryRow(sqlStatement, file.Bin, file.Filename).Scan(&file.Id, &file.Bin, &file.Filename, &file.Deleted, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updates, &file.Nonce, &file.Updated, &file.Created)
+	err = d.db.QueryRow(sqlStatement, file.Bin, file.Filename).Scan(&file.Id, &file.Bin, &file.Filename, &file.Deleted, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updates, &file.Nonce, &file.Updated, &file.Created)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			deleted := 0
@@ -108,7 +99,6 @@ func (d *FileDao) Upsert(file *ds.File) error {
 			return err
 		}
 	}
-
 	// https://github.com/lib/pq/issues/329
 	file.Updated = file.Updated.UTC()
 	file.Created = file.Created.UTC()
@@ -119,17 +109,16 @@ func (d *FileDao) Upsert(file *ds.File) error {
 	return nil
 }
 
-func (d *FileDao) Insert(file *ds.File) error {
+func (d *FileDao) Insert(file *ds.File) (err error) {
 	if err := d.validateInput(file); err != nil {
 		return err
 	}
-
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	deleted := 0
 	downloads := 0
 	updates := 0
 	sqlStatement := "INSERT INTO file (bin_id, filename, deleted, mime, bytes, md5, sha256, downloads, updates, nonce, updated, created) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id"
-	err := d.db.QueryRow(sqlStatement, file.Bin, file.Filename, file.Deleted, file.Mime, file.Bytes, file.MD5, file.SHA256, downloads, updates, file.Nonce, now, now).Scan(&file.Id)
+	err = d.db.QueryRow(sqlStatement, file.Bin, file.Filename, file.Deleted, file.Mime, file.Bytes, file.MD5, file.SHA256, downloads, updates, file.Nonce, now, now).Scan(&file.Id)
 	if err != nil {
 		return err
 	}
@@ -144,8 +133,7 @@ func (d *FileDao) Insert(file *ds.File) error {
 	return nil
 }
 
-func (d *FileDao) GetByBin(id string) ([]ds.File, error) {
-	var files []ds.File
+func (d *FileDao) GetByBin(id string) (files []ds.File, err error) {
 	sqlStatement := "SELECT id, bin_id, filename, deleted, mime, bytes, md5, sha256, downloads, updates, nonce, updated, created FROM file WHERE bin_id = $1 ORDER BY filename ASC"
 	rows, err := d.db.Query(sqlStatement, id)
 	if err != nil {
@@ -157,25 +145,19 @@ func (d *FileDao) GetByBin(id string) ([]ds.File, error) {
 		if err != nil {
 			return files, err
 		}
-
 		// https://github.com/lib/pq/issues/329
 		file.Updated = file.Updated.UTC()
 		file.Created = file.Created.UTC()
-
 		file.UpdatedRelative = humanize.Time(file.Updated)
 		file.CreatedRelative = humanize.Time(file.Created)
 		file.BytesReadable = humanize.Bytes(file.Bytes)
-
 		file.URL = path.Join(file.Bin, file.Filename)
-
 		files = append(files, file)
 	}
-
-	return files, err
+	return files, nil
 }
 
-func (d *FileDao) GetAll() ([]ds.File, error) {
-	var files []ds.File
+func (d *FileDao) GetAll() (files []ds.File, err error) {
 	sqlStatement := "SELECT id, bin_id, filename, deleted, mime, bytes, md5, sha256, downloads, updates, nonce, updated, created FROM file"
 	rows, err := d.db.Query(sqlStatement)
 	if err != nil {
@@ -187,29 +169,23 @@ func (d *FileDao) GetAll() ([]ds.File, error) {
 		if err != nil {
 			return files, err
 		}
-
 		// https://github.com/lib/pq/issues/329
 		file.Updated = file.Updated.UTC()
 		file.Created = file.Created.UTC()
-
 		file.UpdatedRelative = humanize.Time(file.Updated)
 		file.CreatedRelative = humanize.Time(file.Created)
 		file.BytesReadable = humanize.Bytes(file.Bytes)
-
 		files = append(files, file)
 	}
-	return files, err
+	return files, nil
 }
 
-func (d *FileDao) Update(file *ds.File) error {
+func (d *FileDao) Update(file *ds.File) (err error) {
 	var id int
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	sqlStatement := "UPDATE file SET filename = $1, deleted = $2, mime = $3, bytes = $4, md5 = $5, sha256 = $6, nonce = $7, updates = $8, updated = $9 WHERE id = $10 RETURNING id"
-	err := d.db.QueryRow(sqlStatement, file.Filename, file.Deleted, file.Mime, file.Bytes, file.MD5, file.SHA256, file.Nonce, file.Updates, now, file.Id).Scan(&id)
+	err = d.db.QueryRow(sqlStatement, file.Filename, file.Deleted, file.Mime, file.Bytes, file.MD5, file.SHA256, file.Nonce, file.Updates, now, file.Id).Scan(&id)
 	if err != nil {
-		//if err == sql.ErrNoRows {
-		//	return errors.New(fmt.Sprintf("Unable to update file id %d", file.Id))
-		//}
 		return err
 	}
 	file.Updated = now
@@ -218,18 +194,16 @@ func (d *FileDao) Update(file *ds.File) error {
 	return nil
 }
 
-func (d *FileDao) Delete(file *ds.File) error {
+func (d *FileDao) Delete(file *ds.File) (err error) {
 	sqlStatement := "DELETE FROM file WHERE id = $1"
 	res, err := d.db.Exec(sqlStatement, file.Id)
 	if err != nil {
 		return err
 	}
-
 	count, err := res.RowsAffected()
 	if err != nil {
 		return err
 	}
-
 	if count == 0 {
 		return errors.New("File does not exist")
 	} else {
@@ -237,9 +211,9 @@ func (d *FileDao) Delete(file *ds.File) error {
 	}
 }
 
-func (d *FileDao) RegisterDownload(file *ds.File) error {
+func (d *FileDao) RegisterDownload(file *ds.File) (err error) {
 	sqlStatement := "UPDATE file SET downloads = downloads + 1 WHERE id = $1 RETURNING downloads"
-	err := d.db.QueryRow(sqlStatement, file.Id).Scan(&file.Downloads)
+	err = d.db.QueryRow(sqlStatement, file.Id).Scan(&file.Downloads)
 	if err != nil {
 		return err
 	}

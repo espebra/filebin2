@@ -294,6 +294,6 @@ func (h *HTTP) DeleteFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Error(w, "File deleted successfully ", http.StatusOK)
+	http.Error(w, "File deleted successfully", http.StatusOK)
 	return
 }
