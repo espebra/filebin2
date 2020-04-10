@@ -198,9 +198,10 @@ func (d *FileDao) GetAll() ([]ds.File, error) {
 }
 
 func (d *FileDao) Update(file *ds.File) error {
+	var id int
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "UPDATE file SET filename = $1, deleted = $2, mime = $3, bytes = $4, md5 = $5, sha256 = $6, nonce = $7, updated = $8, updates = updates + 1 WHERE id = $9 RETURNING updates"
-	err := d.db.QueryRow(sqlStatement, file.Filename, file.Deleted, file.Mime, file.Bytes, file.MD5, file.SHA256, file.Nonce, now, file.Id).Scan(&file.Updates)
+	sqlStatement := "UPDATE file SET filename = $1, deleted = $2, mime = $3, bytes = $4, md5 = $5, sha256 = $6, nonce = $7, updates = $8, updated = $9 WHERE id = $9 RETURNING id"
+	err := d.db.QueryRow(sqlStatement, file.Filename, file.Deleted, file.Mime, file.Bytes, file.MD5, file.SHA256, file.Nonce, file.Updates, now, file.Id).Scan(&id)
 	if err != nil {
 		//if err == sql.ErrNoRows {
 		//	return errors.New(fmt.Sprintf("Unable to update file id %d", file.Id))
