@@ -131,7 +131,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Reject uploads to deleted bins
-	if bin.Status > 0 {
+	if bin.Deleted > 0 {
 		fmt.Printf("Rejected upload of filename %s to deleted bin %s\n", inputFilename, inputBin)
 		http.Error(w, "Unable to upload file to bin that is no longer available", http.StatusMethodNotAllowed)
 		return
@@ -229,4 +229,46 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Uploaded filename %s (%s) to bin %s (db in %.3fs, buffered in %.3fs, checksum in %.3fs, stored in %.3fs, total %.3fs)\n", inputFilename, humanize.Bytes(inputBytes), inputBin, t1.Sub(t0).Seconds(), t2.Sub(t1).Seconds(), t3.Sub(t2).Seconds(), t4.Sub(t3).Seconds(), t4.Sub(t0).Seconds())
 
 	w.WriteHeader(http.StatusCreated)
+}
+
+func (h *HTTP) DeleteFile(w http.ResponseWriter, r *http.Request) {
+        params := mux.Vars(r)
+        inputBin := params["bin"]
+	inputFilename := params["filename"]
+
+        bin, err := h.dao.Bin().GetById(inputBin)
+        if err != nil {
+                fmt.Printf("Unable to GetById(%s): %s\n", inputBin, err.Error())
+                http.Error(w, "Bin not found", http.StatusNotFound)
+                return
+        }
+
+        // No need to delete the bin twice
+        if bin.Deleted > 0 {
+                http.Error(w, "This bin is no longer available", http.StatusGone)
+                return
+        }
+
+	file, err := h.dao.File().GetByName(inputBin, inputFilename)
+	if err != nil {
+		fmt.Printf("Unable to GetByName(%s, %s): %s\n", inputBin, inputFilename, err.Error())
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+
+        // No need to delete the file twice
+        if file.Deleted > 0 {
+                http.Error(w, "This file is no longer available", http.StatusGone)
+                return
+        }
+
+        // Set to pending delete
+        file.Deleted = 1
+        if err := h.dao.File().Update(&file); err != nil {
+                http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+                return
+        }
+
+        http.Error(w, "File deleted successfully ", http.StatusOK)
+        return
 }

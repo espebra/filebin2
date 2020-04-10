@@ -29,7 +29,7 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 	}
 	data.Bin = bin
 
-	if bin.Status != 0 {
+	if bin.Deleted != 0 {
 		http.Error(w, "This bin is no longer available", http.StatusGone)
 		return
 	}
@@ -73,18 +73,46 @@ func (h *HTTP) DeleteBin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// No need to delete the bin twice
-	if bin.Status > 0 {
+	if bin.Deleted > 0 {
 		http.Error(w, "This bin is no longer available", http.StatusGone)
 		return
 	}
 
-	// Set status to pending delete
-	bin.Status = 1
+	// Set to pending delete
+	bin.Deleted = 1
 	if err := h.dao.Bin().Update(&bin); err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
 	http.Error(w, "Bin deleted successfully ", http.StatusOK)
+	return
+}
+
+func (h *HTTP) LockBin(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	inputBin := params["bin"]
+
+	bin, err := h.dao.Bin().GetById(inputBin)
+	if err != nil {
+		fmt.Printf("Unable to GetById(%s): %s\n", inputBin, err.Error())
+		http.Error(w, "Bin not found", http.StatusNotFound)
+		return
+	}
+
+	// No need to set the bin to readonlytwice
+	if bin.Readonly == true {
+		http.Error(w, "This bin is already locked", http.StatusConflict)
+		return
+	}
+
+	// Set to read only
+	bin.Readonly = true
+	if err := h.dao.Bin().Update(&bin); err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	http.Error(w, "Bin locked successfully.", http.StatusOK)
 	return
 }

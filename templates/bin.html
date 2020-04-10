@@ -10,6 +10,7 @@
         <link rel="stylesheet" href="/static/css/custom.css"/>
         <title>Filebin | {{ .Bin.Id }}</title>
         <script src="/static/js/upload.js"></script>
+	{{ if eq .Bin.Readonly false }}
         <script>
             window.onload = function () {
                 if (typeof FileReader == "undefined") alert ("Your browser \
@@ -40,20 +41,23 @@
                 }
             }
         </script>
+	{{ end }}
     </head>
     <body class="container-xl">
 
         {{template "topbar" .}}
 
         <h1>Filebin</h1>
-        <!-- Drop zone -->
-        <span id="fileDrop">Drop files to upload</span>
+	{{ if eq .Bin.Readonly false }}
+            <!-- Drop zone -->
+            <span id="fileDrop">Drop files to upload</span>
 
-        <!-- Upload queue -->
-        <span id="fileList"></span>
+            <!-- Upload queue -->
+            <span id="fileList"></span>
 
-        <!-- Upload status -->
-        <span id="fileCount"></span>
+            <!-- Upload status -->
+            <span id="fileCount"></span>
+	{{ end }}
 
         {{ $numfiles := .Files | len }}
         
@@ -91,6 +95,11 @@
                                     <i class="fas fa-fw fa-info-circle text-primary"></i> Bin properties
                                 </a>
                                 <div class="dropdown-divider"></div>
+				{{ if eq .Bin.Readonly false }}
+                                <a class="dropdown-item" href="" data-toggle="modal" data-target="#modalLockBin" aria-haspopup="true" aria-expanded="false">
+                                    <i class="fas fa-fw fa-lock text-warning"></i> Lock bin
+                                </a>
+				{{ end }}
                                 <a class="dropdown-item" href="" data-toggle="modal" data-target="#modalDeleteBin">
                                     <i class="far fa-fw fa-trash-alt text-danger"></i> Delete bin
                                 </a>
@@ -107,7 +116,7 @@
                 <div class="col"><strong>Uploaded</strong></div>
                 <div class="col"></div>
             </div>
-                    {{ range .Files }}
+                    {{ range $index, $value := .Files }}
                         <hr class="mt-1 mb-1"/>
                         <div class="row">
                             <div class="col-5 col-sm-6">
@@ -126,7 +135,7 @@
                                             <i class="fas fa-fw fa-info-circle text-primary"></i> File properties
                                         </a>
                                         <div class="dropdown-divider"></div>
-                                        <a class="dropdown-item" href="" data-toggle="modal" data-target="#deleteFile">
+                                        <a class="dropdown-item" href="" data-toggle="modal" data-target="#modalDeleteFile-{{ $index }}">
                                             <i class="far fa-fw fa-trash-alt text-danger"></i> Delete file
                                         </a>
                                     </div>
@@ -138,7 +147,7 @@
 
         <!-- Download archive modal start -->
         <div class="modal fade" id="modalArchive" tabindex="-1" role="dialog" aria-labelledby="modalArchiveTitle" aria-hidden="true">
-            <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-dialog" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title" id="modelArchiveTitle">Download files</h5>
@@ -172,16 +181,17 @@
 
         <!-- Delete bin modal start -->
         <div class="modal fade" id="modalDeleteBin" tabindex="-1" role="dialog" aria-labelledby="modalDeleteBinTitle" aria-hidden="true">
-            <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-dialog" role="document">
                 <div class="modal-content">
-                    <div class="modal-header">
+                    <div class="modal-header alert-danger">
                         <h5 class="modal-title" id="modelDeleteBinTitle">Delete bin</h5>
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
                     <div class="modal-body">
-                        <p>You are free to delete this bin. However you are encouraged to delete your own bins only, or bins that are being used to share obvious malicious or illegal content. This action is not reversible.</p>
+                        <p>You are free to delete this bin. However you are encouraged to delete your own bins only, or bins that are being used to share obvious malicious or illegal content.</p>
+                        <p>This action is not reversible.</p>
 
                         <p class="lead">Delete all the files in bin <a href="/{{ $.Bin.Id }}">{{ $.Bin.Id }}</a>?</p>
 
@@ -189,7 +199,7 @@
                     </div>
                     <div class="modal-footer">
                         <div class="pull-left">
-                        <button type="button" class="btn btn-danger" id="deleteButton" onclick="deleteURL('/{{ $.Bin.Id }}','deleteStatus')"><i class="fa fa-trash-o"></i> Confirm</button>
+                        <button type="button" class="btn btn-danger" id="deleteButton" onclick="deleteURL('/{{ $.Bin.Id }}','deleteStatus')"><i class="fas fa-fw fa-trash-alt"></i> Confirm</button>
                         </div>
                         <a href="/{{ $.Bin.Id }}" class="btn btn-secondary"><i class="fa fa-close"></i> Close</a>
                     </div>
@@ -202,14 +212,61 @@
         <div class="modal fade" id="modalBinProperties" tabindex="-1" role="dialog" aria-labelledby="modalBinPropertiesTitle" aria-hidden="true">
             <div class="modal-dialog modal-lg" role="document">
                 <div class="modal-content">
-                    <div class="modal-header">
+                    <div class="modal-header alert-primary">
                         <h5 class="modal-title" id="modelBinPropertiesTitle">Bin properties</h5>
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
                     <div class="modal-body">
-properties
+                        <ul class="row">
+                            <dt class="col-sm-3">Bin</dt>
+                            <dd class="col-sm-9">
+                                <a href="/{{ $.Bin.Id }}">
+                                    {{ $.Bin.Id }}
+                                </a>
+                            </dd>
+
+                            <dt class="col-sm-3">Number of files</dt>
+                            <dd class="col-sm-9">
+                                {{ $.Files | len }}
+                            </dd>
+
+                            <dt class="col-sm-3">Total size</dt>
+                            <dd class="col-sm-9">
+                                {{ $.Bin.BytesReadable }}
+                                ({{ $.Bin.Bytes }} bytes)
+                            </dd>
+
+                            <dt class="col-sm-3">Locked</dt>
+                            <dd class="col-sm-9">
+                                {{ if $.Bin.Readonly }}
+					Yes, the bin is locked (read only).
+				{{ else }}
+					No, the bin is unlocked.
+				{{ end }}
+                            </dd>
+
+                            <dt class="col-sm-3">Created</dt>
+                            <dd class="col-sm-9">
+                                {{ $.Bin.CreatedRelative }}
+                                ({{ $.Bin.Created.Format "2006-01-02 15:04:05 UTC" }})
+                            </dd>
+
+                            <dt class="col-sm-3">Last updated</dt>
+                            <dd class="col-sm-9">
+                                {{ $.Bin.UpdatedRelative }}
+                                ({{ $.Bin.Updated.Format "2006-01-02 15:04:05 UTC" }})
+                            </dd>
+
+                            <dt class="col-sm-3">Expires</dt>
+                            <dd class="col-sm-9">
+                                {{ if $.Bin.ExpirationRelative }}
+                                    {{ $.Bin.ExpirationRelative }}
+                                {{ end }}
+                                ({{ $.Bin.Expiration.Format "2006-01-02 15:04:05 UTC" }})
+                            </dd>
+                        </ul>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
@@ -218,6 +275,66 @@ properties
             </div>
         </div>
         <!-- Bin properties modal end -->
+
+        <!-- Lock bin modal start -->
+        <div class="modal fade" id="modalLockBin" tabindex="-1" role="dialog" aria-labelledby="modalLockBinTitle" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header alert-warning">
+                        <h5 class="modal-title" id="modelLockBinTitle">Lock bin</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <p>The bin is currently unlocked, which means that new files can be added to it and existing files can be updated. If the bin is locked, the bin will become read only and no more file uploads will be allowed. Note that a locked bin can still be deleted.</p>
+			<p>This action is not reversible.</p>
+
+                        <p class="lead">Do you want to lock bin <a href="/{{ $.Bin.Id }}">{{ $.Bin.Id }}</a>?</p>
+
+                        <div id="lockStatus"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <div class="pull-left">
+                        <button type="button" class="btn btn-warning" id="lockButton" onclick="lockBin('{{ $.Bin.Id }}','lockStatus')"><i class="fas fa-fw fa-lock"></i> Confirm</button>
+                        </div>
+                        <a href="/{{ $.Bin.Id }}" class="btn btn-secondary"><i class="fa fa-close"></i> Close</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Lock bin modal end -->
+
+        <!-- Delete file modal start -->
+        {{ range $index, $value := .Files }}
+            <div class="modal fade" id="modalDeleteFile-{{ $index }}" tabindex="-1" role="dialog" aria-labelledby="modalDeleteFileTitle" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header alert-danger">
+                            <h5 class="modal-title" id="modelDeleteFileTitle">Delete file</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <p>You are free to delete any file in this bin. However you are encouraged to delete the files that you have uploaded only, or files with obvious malicious or illegal content.</p>
+                            <p>This action is not reversible.</p>
+
+                            <p class="lead">Delete the file <a href="/{{ $.Bin.Id }}/{{ .Filename }}">{{ .Filename }}</a>?</p>
+
+                            <div id="deleteStatus-{{ $index }}"></div>
+                        </div>
+                        <div class="modal-footer">
+                            <div class="pull-left">
+                            <button type="button" class="btn btn-danger" id="deleteButton" onclick="deleteURL('/{{ $.Bin.Id }}/{{ .Filename }}','deleteStatus-{{ $index }}')"><i class="fas fa-fw fa-trash-alt"></i> Confirm</button>
+                            </div>
+                            <a href="/{{ $.Bin.Id }}" class="btn btn-secondary"><i class="fa fa-close"></i> Close</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Delete bin modal end -->
+        {{ end }}
 
         <script src="/static/js/jquery-3.4.1.slim.min.js"></script>
         <script src="/static/js/popper.min.js"></script>

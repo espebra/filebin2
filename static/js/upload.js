@@ -345,3 +345,38 @@ function deleteURL (url, messageBoxID) {
 
     xhr.send();
 };
+
+function lockBin (bin, messageBoxID) {
+    console.log("Lock bin: " + bin);
+    var xhr = new XMLHttpRequest();
+    var box = document.getElementById(messageBoxID);
+
+    box.textContent = "Lock operation in progress ..."
+    box.className = "alert alert-dark";
+
+    xhr.onload = function(e) {
+        if (xhr.status == 200 && xhr.readyState == 4) {
+            console.log("Locked successfully");
+            box.textContent = "Lock operation completed successfully.";
+            box.className = "alert alert-success";
+        } else if (xhr.status  == 409 && xhr.readyState == 4) {
+            box.textContent = "The bin is already locked.";
+            box.className = "alert alert-success";
+        } else {
+            console.log("Failed to lock");
+            box.textContent = "Error " + xhr.status + ". Unable to verify the operation.";
+            box.className = "alert alert-danger";
+        }
+    };
+
+    xhr.onerror = function (e) {
+        console.log("onerror: status: " + xhr.status + ", readystate: " + xhr.readyState);
+    };
+
+    xhr.open(
+        "LOCK",
+        "/" + bin
+    );
+
+    xhr.send();
+};

@@ -8,6 +8,7 @@ type File struct {
 	Id              int       `json:"-"`
 	Bin             string    `json:"-"`
 	Filename        string    `json:"filename"`
+	Deleted          int       `json:"-"`
 	Mime            string    `json:"content-type"`
 	Bytes           uint64    `json:"bytes"`
 	BytesReadable   string    `json:"bytes_readable"`
