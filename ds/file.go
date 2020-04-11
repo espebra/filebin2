@@ -10,6 +10,7 @@ type File struct {
 	Filename        string    `json:"filename"`
 	Deleted         int       `json:"-"`
 	Mime            string    `json:"content-type"`
+	Category        string    `json:"-"`
 	Bytes           uint64    `json:"bytes"`
 	BytesReadable   string    `json:"bytes_readable"`
 	MD5             string    `json:"md5"`

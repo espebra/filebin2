@@ -18,6 +18,16 @@ type FileDao struct {
 	db *sql.DB
 }
 
+func setCategory(file *ds.File) {
+	if strings.HasPrefix(file.Mime, "image") {
+		file.Category = "image"
+	} else if strings.HasPrefix(file.Mime, "video") {
+		file.Category = "video"
+	} else {
+		file.Category = "unknown"
+	}
+}
+
 func (d *FileDao) ValidateInput(file *ds.File) error {
 	// Replace all invalid characters with _
 	file.Filename = invalidFilename.ReplaceAllString(file.Filename, "_")
@@ -70,6 +80,7 @@ func (d *FileDao) GetByName(bin string, filename string) (file ds.File, found bo
 	file.UpdatedRelative = humanize.Time(file.Updated)
 	file.CreatedRelative = humanize.Time(file.Created)
 	file.BytesReadable = humanize.Bytes(file.Bytes)
+	setCategory(&file)
 	return file, true, nil
 }
 
@@ -106,6 +117,7 @@ func (d *FileDao) Upsert(file *ds.File) (err error) {
 	file.UpdatedRelative = humanize.Time(file.Updated)
 	file.CreatedRelative = humanize.Time(file.Created)
 	file.BytesReadable = humanize.Bytes(file.Bytes)
+	setCategory(file)
 	return nil
 }
 
@@ -130,6 +142,7 @@ func (d *FileDao) Insert(file *ds.File) (err error) {
 	file.UpdatedRelative = humanize.Time(file.Updated)
 	file.CreatedRelative = humanize.Time(file.Created)
 	file.BytesReadable = humanize.Bytes(file.Bytes)
+	setCategory(file)
 	return nil
 }
 
@@ -152,6 +165,7 @@ func (d *FileDao) GetByBin(id string, deleted int) (files []ds.File, err error) 
 		file.CreatedRelative = humanize.Time(file.Created)
 		file.BytesReadable = humanize.Bytes(file.Bytes)
 		file.URL = path.Join(file.Bin, file.Filename)
+		setCategory(&file)
 		files = append(files, file)
 	}
 	return files, nil
@@ -175,6 +189,7 @@ func (d *FileDao) GetAll() (files []ds.File, err error) {
 		file.UpdatedRelative = humanize.Time(file.Updated)
 		file.CreatedRelative = humanize.Time(file.Created)
 		file.BytesReadable = humanize.Bytes(file.Bytes)
+		setCategory(&file)
 		files = append(files, file)
 	}
 	return files, nil
@@ -191,6 +206,7 @@ func (d *FileDao) Update(file *ds.File) (err error) {
 	file.Updated = now
 	file.UpdatedRelative = humanize.Time(file.Updated)
 	file.BytesReadable = humanize.Bytes(file.Bytes)
+	setCategory(file)
 	return nil
 }
 
