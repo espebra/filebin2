@@ -109,6 +109,7 @@ func (s S3AO) PutObject(bin string, filename string, data io.Reader, size int64)
 	n, err := s.client.PutObject(s.bucket, objectKey, encrypted, int64(encryptedSize), minio.PutObjectOptions{ContentType: "application/octet-stream"})
 	if err != nil {
 		fmt.Printf("Unable to put object: %s\n", err.Error())
+		return nonce, err
 	}
 	fmt.Printf("Stored object: %s (%d bytes) in %.3fs\n", objectKey, n, time.Since(t0).Seconds())
 	return nonce, nil

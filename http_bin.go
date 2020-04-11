@@ -8,7 +8,6 @@ import (
 
 	"github.com/espebra/filebin2/ds"
 	"github.com/gorilla/mux"
-	//"github.com/dustin/go-humanize"
 )
 
 func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
@@ -24,7 +23,7 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 	bin, found, err := h.dao.Bin().GetById(inputBin)
 	if err != nil {
 		fmt.Printf("Unable to GetById(%s): %s\n", inputBin, err.Error())
-		http.Error(w, "Errno 1", http.StatusInternalServerError)
+		http.Error(w, "Errno 200", http.StatusInternalServerError)
 		return
 	}
 	if found == false {
@@ -51,7 +50,7 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 		out, err := json.MarshalIndent(data, "", "    ")
 		if err != nil {
 			fmt.Printf("Failed to parse json: %s\n", err.Error())
-			http.Error(w, "Errno 2", http.StatusInternalServerError)
+			http.Error(w, "Errno 201", http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(200)
@@ -59,7 +58,7 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 	} else {
 		if err := h.templates.ExecuteTemplate(w, "bin", data); err != nil {
 			fmt.Printf("Failed to execute template: %s\n", err.Error())
-			http.Error(w, "Errno 1", http.StatusInternalServerError)
+			http.Error(w, "Errno 203", http.StatusInternalServerError)
 			return
 		}
 	}
@@ -72,7 +71,7 @@ func (h *HTTP) DeleteBin(w http.ResponseWriter, r *http.Request) {
 	bin, found, err := h.dao.Bin().GetById(inputBin)
 	if err != nil {
 		fmt.Printf("Unable to GetById(%s): %s\n", inputBin, err.Error())
-		http.Error(w, "Errno 2", http.StatusInternalServerError)
+		http.Error(w, "Errno 204", http.StatusInternalServerError)
 		return
 	}
 	if found == false {
@@ -104,7 +103,7 @@ func (h *HTTP) LockBin(w http.ResponseWriter, r *http.Request) {
 	bin, found, err := h.dao.Bin().GetById(inputBin)
 	if err != nil {
 		fmt.Printf("Unable to GetById(%s): %s\n", inputBin, err.Error())
-		http.Error(w, "Errno 3", http.StatusInternalServerError)
+		http.Error(w, "Errno 205", http.StatusInternalServerError)
 		return
 	}
 	if found == false {

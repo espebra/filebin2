@@ -17,14 +17,14 @@ func (h *HTTP) Index(w http.ResponseWriter, r *http.Request) {
 	err := h.dao.Bin().Insert(bin)
 	if err != nil {
 		fmt.Printf("Unable to insert new bin: %s\n", err.Error())
-		http.Error(w, "Errno 5", http.StatusInternalServerError)
+		http.Error(w, "Errno 301", http.StatusInternalServerError)
 		return
 	}
 	data.Bin = *bin
 
 	if err := h.templates.ExecuteTemplate(w, "index", data); err != nil {
 		fmt.Printf("Failed to execute template: %s\n", err.Error())
-		http.Error(w, "Errno 1", http.StatusInternalServerError)
+		http.Error(w, "Errno 302", http.StatusInternalServerError)
 		return
 	}
 }

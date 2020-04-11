@@ -18,7 +18,7 @@ type FileDao struct {
 	db *sql.DB
 }
 
-func (d *FileDao) validateInput(file *ds.File) error {
+func (d *FileDao) ValidateInput(file *ds.File) error {
 	// Replace all invalid characters with _
 	file.Filename = invalidFilename.ReplaceAllString(file.Filename, "_")
 
@@ -74,7 +74,7 @@ func (d *FileDao) GetByName(bin string, filename string) (file ds.File, found bo
 }
 
 func (d *FileDao) Upsert(file *ds.File) (err error) {
-	if err := d.validateInput(file); err != nil {
+	if err := d.ValidateInput(file); err != nil {
 		return err
 	}
 	now := time.Now().UTC().Truncate(time.Microsecond)
@@ -110,7 +110,7 @@ func (d *FileDao) Upsert(file *ds.File) (err error) {
 }
 
 func (d *FileDao) Insert(file *ds.File) (err error) {
-	if err := d.validateInput(file); err != nil {
+	if err := d.ValidateInput(file); err != nil {
 		return err
 	}
 	now := time.Now().UTC().Truncate(time.Microsecond)

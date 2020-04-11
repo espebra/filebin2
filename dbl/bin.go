@@ -18,7 +18,7 @@ type BinDao struct {
 	db *sql.DB
 }
 
-func (d *BinDao) validateInput(bin *ds.Bin) error {
+func (d *BinDao) ValidateInput(bin *ds.Bin) error {
 	// Generate the bin if it is not set
 	if bin.Id == "" {
 		bin.Id = d.GenerateId()
@@ -98,7 +98,7 @@ func (d *BinDao) GetById(id string) (bin ds.Bin, found bool, err error) {
 }
 
 func (d *BinDao) Upsert(bin *ds.Bin) (err error) {
-	if err = d.validateInput(bin); err != nil {
+	if err = d.ValidateInput(bin); err != nil {
 		return err
 	}
 	now := time.Now().UTC().Truncate(time.Microsecond)
@@ -136,7 +136,7 @@ func (d *BinDao) Upsert(bin *ds.Bin) (err error) {
 }
 
 func (d *BinDao) Insert(bin *ds.Bin) (err error) {
-	if err := d.validateInput(bin); err != nil {
+	if err := d.ValidateInput(bin); err != nil {
 		return err
 	}
 	now := time.Now().UTC().Truncate(time.Microsecond)
