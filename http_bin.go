@@ -38,7 +38,7 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	files, err := h.dao.File().GetByBin(inputBin)
+	files, err := h.dao.File().GetByBin(inputBin, 0)
 	if err != nil {
 		fmt.Printf("Unable to GetByBin(%s): %s\n", inputBin, err.Error())
 		http.Error(w, "Not found", http.StatusNotFound)

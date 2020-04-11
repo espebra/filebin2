@@ -340,7 +340,7 @@ func TestGetFilesByBin(t *testing.T) {
 		t.Error(err)
 	}
 
-	files, err := dao.File().GetByBin(bin.Id)
+	files, err := dao.File().GetByBin(bin.Id, 0)
 	if err != nil {
 		t.Error(err)
 	}
@@ -348,7 +348,7 @@ func TestGetFilesByBin(t *testing.T) {
 		t.Errorf("Was expecting two files, got %d instead.", len(files))
 	}
 
-	files, err = dao.File().GetByBin("-1")
+	files, err = dao.File().GetByBin("-1", 0)
 	if err != nil {
 		t.Error("Did not expect an error even though we asked for a bin id that does not exist")
 	}

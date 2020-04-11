@@ -133,9 +133,9 @@ func (d *FileDao) Insert(file *ds.File) (err error) {
 	return nil
 }
 
-func (d *FileDao) GetByBin(id string) (files []ds.File, err error) {
-	sqlStatement := "SELECT id, bin_id, filename, deleted, mime, bytes, md5, sha256, downloads, updates, nonce, updated, created FROM file WHERE bin_id = $1 ORDER BY filename ASC"
-	rows, err := d.db.Query(sqlStatement, id)
+func (d *FileDao) GetByBin(id string, deleted int) (files []ds.File, err error) {
+	sqlStatement := "SELECT id, bin_id, filename, deleted, mime, bytes, md5, sha256, downloads, updates, nonce, updated, created FROM file WHERE bin_id = $1 AND deleted = $2 ORDER BY filename ASC"
+	rows, err := d.db.Query(sqlStatement, id, deleted)
 	if err != nil {
 		return files, err
 	}
