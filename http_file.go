@@ -122,6 +122,8 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 
 	inputBin := r.Header.Get("bin")
 	inputFilename := r.Header.Get("filename")
+	inputMD5 := r.Header.Get("Content-MD5")
+	inputSHA256 := r.Header.Get("Content-SHA256")
 	inputBytes, err := strconv.ParseUint(r.Header.Get("content-length"), 10, 64)
 	if err != nil {
 		fmt.Printf("Unable to parse the content-length request header: %s\n", err.Error())
@@ -188,6 +190,11 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Request body of different size than specified by content-length", http.StatusBadRequest)
 		return
 	}
+	if nBytes == 0 {
+		fmt.Printf("Rejecting upload of empty file %s to bin %s (%d bytes)\n", inputFilename, bin.Id, nBytes)
+		http.Error(w, "Empty file uploads are not allowed", http.StatusBadRequest)
+		return
+	}
 	fp.Seek(0, 0)
 
 	t2 := time.Now()
@@ -197,12 +204,28 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("Error during checksum: %s\n", err.Error())
 		return
 	}
+	md5_checksum_string := fmt.Sprintf("%x", md5_checksum.Sum(nil))
+	if inputMD5 != "" {
+		if md5_checksum_string != inputMD5 {
+			fmt.Printf("Rejecting upload for file %s to bin %s due to wrong MD5 checksum (got %s and calculated %s)\n", inputFilename, bin.Id, inputMD5, md5_checksum_string)
+			http.Error(w, "MD5 checksum did not match", http.StatusBadRequest)
+			return
+		}
+	}
 	fp.Seek(0, 0)
 
 	sha256_checksum := sha256.New()
 	if _, err := io.Copy(sha256_checksum, fp); err != nil {
 		fmt.Printf("Error during checksum: %s\n", err.Error())
 		return
+	}
+	sha256_checksum_string := fmt.Sprintf("%x", sha256_checksum.Sum(nil))
+	if inputSHA256 != "" {
+		if sha256_checksum_string != inputSHA256 {
+			fmt.Printf("Rejecting upload for file %s to bin %s due to wrong SHA256 checksum (got %s and calculated %s)\n", inputFilename, bin.Id, inputSHA256, sha256_checksum_string)
+			http.Error(w, "SHA256 checksum did not match", http.StatusBadRequest)
+			return
+		}
 	}
 	fp.Seek(0, 0)
 
@@ -230,8 +253,8 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	file.Deleted = 0
 	file.Bytes = inputBytes
 	file.Mime = mime.String()
-	file.SHA256 = fmt.Sprintf("%x", sha256_checksum.Sum(nil))
-	file.MD5 = fmt.Sprintf("%x", md5_checksum.Sum(nil))
+	file.SHA256 = sha256_checksum_string
+	file.MD5 = md5_checksum_string
 	if err := h.dao.File().ValidateInput(&file); err != nil {
 		fmt.Printf("Rejected upload of filename %s to bin %s due to failed input validation: %s\n", inputFilename, bin.Id, err.Error())
 		http.Error(w, "Input validation failed", http.StatusBadRequest)
