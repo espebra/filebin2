@@ -323,10 +323,10 @@ func (h *HTTP) DeleteFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update the updated timestamp of the bin
-        if err := h.dao.Bin().Update(&bin); err != nil {
-                http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-                return
-        }
+	if err := h.dao.Bin().Update(&bin); err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
 
 	http.Error(w, "File deleted successfully", http.StatusOK)
 	return
