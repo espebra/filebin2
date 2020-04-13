@@ -1,13 +1,13 @@
 package main
 
 import (
-	"log"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"net/url"
+	"path"
 	"strings"
 	"testing"
-	"path"
-	"net/url"
 )
 
 type TestCase struct {
@@ -262,18 +262,30 @@ func TestLockBin(t *testing.T) {
 		t.Errorf("Expected response code %d, got %d\n", tc.StatusCode, statusCode)
 	}
 
-	tc = TestCase{
-		Method:     "POST",
-		Filename:   "b",
-		Bin:        "mytestbin",
-		Content:    "content a",
-		StatusCode: 405,
+	tcs := []TestCase{
+		{
+			// Try to update existing file, should be rejected
+			Method:     "POST",
+			Filename:   "a",
+			Bin:        "mytestbin",
+			Content:    "content a",
+			StatusCode: 405,
+		}, {
+			// Try to create new file, should be rejected
+			Method:     "POST",
+			Filename:   "b",
+			Bin:        "mytestbin",
+			Content:    "content b",
+			StatusCode: 405,
+		},
 	}
-	statusCode, _, err = httpRequest(tc)
-	if err != nil {
-		t.Errorf("Did not expect http request to fail: %s\n", err.Error())
-	}
-	if tc.StatusCode != statusCode {
-		t.Errorf("Expected response code %d, got %d\n", tc.StatusCode, statusCode)
+	for _, tc := range tcs {
+		statusCode, _, err = httpRequest(tc)
+		if err != nil {
+			t.Errorf("Did not expect http request to fail: %s\n", err.Error())
+		}
+		if tc.StatusCode != statusCode {
+			t.Errorf("Expected response code %d, got %d\n", tc.StatusCode, statusCode)
+		}
 	}
 }
