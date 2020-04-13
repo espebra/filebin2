@@ -7,7 +7,7 @@ prepare:
 	mkdir -p artifacts tests
 
 test: prepare
-	sh runtests.sh
+	bash runtests
 
 build: prepare
 	rice embed-go -v -i .
