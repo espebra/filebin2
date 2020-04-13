@@ -39,7 +39,7 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if bin.Deleted > 0 {
-		http.Error(w, "The bin is no longer available", http.StatusGone)
+		http.Error(w, "The bin is no longer available", http.StatusNotFound)
 		return
 	}
 
@@ -54,14 +54,14 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if file.Deleted > 0 {
-		http.Error(w, "The file is no longer available", http.StatusGone)
+		http.Error(w, "The file is no longer available", http.StatusNotFound)
 		return
 	}
 
 	fp, err := h.s3.GetObject(inputBin, inputFilename, file.Nonce)
 	if err != nil {
 		fmt.Printf("Unable to get object: %s\n", err.Error())
-		http.Error(w, "Errno 114", http.StatusGone)
+		http.Error(w, "Errno 114", http.StatusInternalServerError)
 		return
 	}
 
@@ -316,7 +316,7 @@ func (h *HTTP) DeleteFile(w http.ResponseWriter, r *http.Request) {
 
 	// No need to delete the file if the bin is already deleted
 	if bin.Deleted > 0 {
-		http.Error(w, "This bin is no longer available", http.StatusGone)
+		http.Error(w, "This bin is no longer available", http.StatusNotFound)
 		return
 	}
 
@@ -333,7 +333,7 @@ func (h *HTTP) DeleteFile(w http.ResponseWriter, r *http.Request) {
 
 	// No need to delete the file twice
 	if file.Deleted > 0 {
-		http.Error(w, "This file is no longer available", http.StatusGone)
+		http.Error(w, "This file is no longer available", http.StatusNotFound)
 		return
 	}
 
