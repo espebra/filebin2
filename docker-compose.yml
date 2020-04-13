@@ -49,14 +49,14 @@ services:
       - s3
     entrypoint: ["make"]
 
-  varnish:
-    image: "varnish:stable"
-    restart: "no"
-    expose:
-      - "6081"
-    ports:
-      - "6081:80"
-    volumes:
-      - ./etc/varnish:/etc/varnish:delegated
-    depends_on:
-      - app
+  #varnish:
+  #  image: "varnish:stable"
+  #  restart: "no"
+  #  expose:
+  #    - "6081"
+  #  ports:
+  #    - "6081:80"
+  #  volumes:
+  #    - ./etc/varnish:/etc/varnish:delegated
+  #  depends_on:
+  #    - app
