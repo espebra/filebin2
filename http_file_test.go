@@ -69,7 +69,7 @@ func TestUploadFile(t *testing.T) {
 			Filename:   "a",
 			Bin:        "mytestbin",
 			Content:    strings.NewReader("content a"),
-			SHA256:     "0069ffe8481777aa403982d9e9b3fa48957015a07cfa0f66dae32050b95bda54foo",
+			SHA256:     "0069ffe8481777aa403982d9e9b3fa48957015a07cfa0f66dae32050b95bda54",
 			MD5:        "d8114b361885ee54897e52ce2308e274",
 			StatusCode: 201,
 		}, {
