@@ -7,15 +7,6 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func stringInSlice(needle string, haystack []string) (int, bool) {
-	for i, item := range haystack {
-		if item == needle {
-			return i, true
-		}
-	}
-	return -1, false
-}
-
 type DAO struct {
 	db      *sql.DB
 	ConnStr string

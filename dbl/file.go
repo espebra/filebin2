@@ -84,43 +84,6 @@ func (d *FileDao) GetByName(bin string, filename string) (file ds.File, found bo
 	return file, true, nil
 }
 
-func (d *FileDao) Upsert(file *ds.File) (err error) {
-	if err := d.ValidateInput(file); err != nil {
-		return err
-	}
-	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "SELECT id, bin_id, filename, deleted, mime, bytes, md5, sha256, downloads, updates, nonce, updated, created FROM file WHERE bin_id = $1 AND filename = $2 LIMIT 1"
-	err = d.db.QueryRow(sqlStatement, file.Bin, file.Filename).Scan(&file.Id, &file.Bin, &file.Filename, &file.Deleted, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updates, &file.Nonce, &file.Updated, &file.Created)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			deleted := 0
-			downloads := 0
-			updates := 0
-			sqlStatement := "INSERT INTO file (bin_id, filename, deleted, mime, bytes, md5, sha256, downloads, updates, nonce, updated, created) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id"
-			err := d.db.QueryRow(sqlStatement, file.Bin, file.Filename, deleted, file.Mime, file.Bytes, file.MD5, file.SHA256, downloads, updates, file.Nonce, now, now).Scan(&file.Id)
-			if err != nil {
-				return err
-			}
-			file.Downloads = uint64(downloads)
-			file.Updates = uint64(updates)
-			file.Deleted = deleted
-			file.Updated = now
-			file.Created = now
-		} else {
-			return err
-		}
-	}
-	// https://github.com/lib/pq/issues/329
-	file.Updated = file.Updated.UTC()
-	file.Created = file.Created.UTC()
-
-	file.UpdatedRelative = humanize.Time(file.Updated)
-	file.CreatedRelative = humanize.Time(file.Created)
-	file.BytesReadable = humanize.Bytes(file.Bytes)
-	setCategory(file)
-	return nil
-}
-
 func (d *FileDao) Insert(file *ds.File) (err error) {
 	if err := d.ValidateInput(file); err != nil {
 		return err

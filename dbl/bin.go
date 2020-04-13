@@ -97,44 +97,6 @@ func (d *BinDao) GetById(id string) (bin ds.Bin, found bool, err error) {
 	return bin, true, nil
 }
 
-func (d *BinDao) Upsert(bin *ds.Bin) (err error) {
-	if err = d.ValidateInput(bin); err != nil {
-		return err
-	}
-	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "SELECT bin.id, bin.readonly, bin.deleted, bin.downloads, COALESCE(SUM(file.bytes), 0), bin.updated, bin.created, bin.expiration FROM bin LEFT JOIN file ON bin.id = file.bin_id WHERE bin.id = $1 GROUP BY bin.id LIMIT 1"
-	err = d.db.QueryRow(sqlStatement, bin.Id).Scan(&bin.Id, &bin.Readonly, &bin.Deleted, &bin.Downloads, &bin.Bytes, &bin.Updated, &bin.Created, &bin.Expiration)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			expiration := now.Add(time.Hour * 24 * 7)
-			downloads := 0
-			deleted := 0
-			readonly := false
-			sqlStatement := "INSERT INTO bin (id, readonly, deleted, downloads, updated, created, expiration) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id"
-			err := d.db.QueryRow(sqlStatement, bin.Id, readonly, deleted, downloads, now, now, expiration).Scan(&bin.Id)
-			if err != nil {
-				return err
-			}
-			bin.Updated = now
-			bin.Created = now
-			bin.Expiration = expiration
-			bin.Deleted = deleted
-			bin.Readonly = readonly
-		} else {
-			return err
-		}
-	}
-	// https://github.com/lib/pq/issues/329
-	bin.Updated = bin.Updated.UTC()
-	bin.Created = bin.Created.UTC()
-	bin.Expiration = bin.Expiration.UTC()
-	bin.UpdatedRelative = humanize.Time(bin.Updated)
-	bin.CreatedRelative = humanize.Time(bin.Created)
-	bin.ExpirationRelative = humanize.Time(bin.Expiration)
-	bin.BytesReadable = humanize.Bytes(bin.Bytes)
-	return nil
-}
-
 func (d *BinDao) Insert(bin *ds.Bin) (err error) {
 	if err := d.ValidateInput(bin); err != nil {
 		return err
