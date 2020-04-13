@@ -1,20 +1,17 @@
 .PHONY: default
 default: test build
 
-clean:
-	rm -f templates.rice-box.go static.rice-box.go rice-box.go
-
-test: clean
+prepare:
 	go version
-	mkdir -p tests
+	rm -f templates.rice-box.go static.rice-box.go rice-box.go
+	mkdir -p artifacts tests
+
+test: prepare
 	go test -cover -v -race -mod=vendor -coverprofile=cover.out -p 1 ./...
 	go tool cover -html=cover.out -o artifacts/coverage.html
 	go tool cover -func=cover.out
 
-build: clean
-	go version
-	mkdir -p artifacts
-	rm -f templates.rice-box.go static.rice-box.go rice-box.go
+build: prepare
 	rice embed-go -v -i .
 	GOOS=darwin GOARCH=amd64 go build -o artifacts/filebin-darwin-amd64
 	GOOS=linux GOARCH=amd64 go build -o artifacts/filebin-linux-amd64
