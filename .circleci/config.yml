@@ -8,13 +8,13 @@ jobs:
     steps:
       - checkout
       - run: docker-compose up --abort-on-container-exit
-      - codecov/upload:
-          file: coverage.out
       - store_artifacts:
           path: artifacts/
           destination: /
       - store_test_results:
           path: tests/
+      - codecov/upload:
+          file: coverage.out
 workflows:
   version: 2
   build:
