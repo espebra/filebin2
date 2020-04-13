@@ -7,9 +7,7 @@ prepare:
 	mkdir -p artifacts tests
 
 test: prepare
-	go test -cover -v -race -mod=vendor -coverprofile=cover.out -p 1 ./...
-	go tool cover -html=cover.out -o artifacts/coverage.html
-	go tool cover -func=cover.out
+	sh runtests.sh
 
 build: prepare
 	rice embed-go -v -i .
