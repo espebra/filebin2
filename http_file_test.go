@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -19,6 +20,10 @@ type TestCase struct {
 	MD5             string
 	SHA256          string
 	StatusCode      int
+}
+
+func (tc TestCase) String() string {
+	return fmt.Sprintf("Test case details:\n\n  Method: %s\n  Bin: %s\n  Filename: %s\n  Upload content: %s\n  Download content: %s\n  MD5: %s\n  SHA256: %s\n  Status code: %d\n\n", tc.Method, tc.Bin, tc.Filename, tc.UploadContent, tc.DownloadContent, tc.MD5, tc.SHA256, tc.StatusCode)
 }
 
 func httpRequest(tc TestCase) (statuscode int, body string, err error) {
@@ -76,13 +81,16 @@ func runTests(tcs []TestCase, t *testing.T) {
 		statusCode, body, err := httpRequest(tc)
 		if err != nil {
 			t.Errorf("Test case %d: Did not expect http request to fail: %s\n", i, err.Error())
+			t.Errorf("%s\n", tc.String())
 		}
 		if tc.StatusCode != statusCode {
 			t.Errorf("Test case %d: Expected response code %d, got %d\n", i, tc.StatusCode, statusCode)
+			t.Errorf("%s\n", tc.String())
 		}
 		if tc.DownloadContent != "" {
 			if tc.DownloadContent != body {
 				t.Errorf("Test case %d: Expected body %s, got %s\n", i, tc.DownloadContent, body)
+				t.Errorf("%s\n", tc.String())
 			}
 		}
 	}
@@ -305,10 +313,35 @@ func TestNotExistingBinsAndFiles(t *testing.T) {
 			Bin:        "unknownbin",
 			StatusCode: 404,
 		}, {
-			// Delete file that doesn't exist
+			// Delete file that doesn't exist in bin that doesn't exist
 			Method:     "DELETE",
 			Bin:        "unknownbin",
 			Filename:   "unknownfile",
+			StatusCode: 404,
+		}, {
+			// Create new bin
+			Method:        "POST",
+			Bin:           "mytestbin3",
+			Filename:      "a",
+			UploadContent: "content a",
+			StatusCode:    201,
+		}, {
+			// Delete file that doesn't exist in bin that exists
+			Method:     "DELETE",
+			Bin:        "mytestbin3",
+			Filename:   "unknownfile",
+			StatusCode: 404,
+		}, {
+			// Delete file that exists in bin that exists
+			Method:     "DELETE",
+			Bin:        "mytestbin3",
+			Filename:   "a",
+			StatusCode: 200,
+		}, {
+			// Delete file again that no longer exists in bin that exists
+			Method:     "DELETE",
+			Bin:        "mytestbin3",
+			Filename:   "a",
 			StatusCode: 404,
 		},
 	}
