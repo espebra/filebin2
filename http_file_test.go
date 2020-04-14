@@ -12,8 +12,8 @@ import (
 
 type TestCase struct {
 	Method     string
-	Filename   string
 	Bin        string
+	Filename   string
 	Content    string
 	MD5        string
 	SHA256     string
@@ -75,8 +75,8 @@ func TestUploadFile(t *testing.T) {
 		{
 			// Test case 0: Ok to specify everything
 			Method:     "POST",
-			Filename:   "a",
 			Bin:        "mytestbin",
+			Filename:   "a",
 			Content:    "content a",
 			SHA256:     "0069ffe8481777aa403982d9e9b3fa48957015a07cfa0f66dae32050b95bda54",
 			MD5:        "d8114b361885ee54897e52ce2308e274",
@@ -84,52 +84,52 @@ func TestUploadFile(t *testing.T) {
 		}, {
 			// Test case 1: Ok to not specify MD5 and SHA256
 			Method:     "POST",
-			Filename:   "b",
 			Bin:        "mytestbin",
+			Filename:   "b",
 			Content:    "content b",
 			StatusCode: 201,
 		}, {
 			// Test case 2: Missing filename should fail
 			Method:     "POST",
-			Filename:   "",
 			Bin:        "mytestbin",
+			Filename:   "",
 			Content:    "some content",
 			StatusCode: 400,
 		}, {
 			// Test case 3: No content should fail
 			Method:     "POST",
-			Filename:   "c",
 			Bin:        "mytestbin",
+			Filename:   "c",
 			Content:    "",
 			StatusCode: 400,
 		}, {
 			// Test case 4: Wrong MD5 checksum should fail
 			Method:     "POST",
-			Filename:   "d",
 			Bin:        "mytestbin",
+			Filename:   "d",
 			Content:    "some more content",
 			MD5:        "wrong checksum",
 			StatusCode: 400,
 		}, {
 			// Test case 5: Wrong SHA256 checksum should fail
 			Method:     "POST",
-			Filename:   "e",
 			Bin:        "mytestbin",
+			Filename:   "e",
 			Content:    "some more content",
 			SHA256:     "wrong checksum",
 			StatusCode: 400,
 		}, {
 			// Test case 6: New file that will be updated later
 			Method:     "POST",
-			Filename:   "f",
 			Bin:        "mytestbin",
+			Filename:   "f",
 			Content:    "first revision",
 			StatusCode: 201,
 		}, {
 			// Test case 7: New file that will be updated later
 			Method:     "POST",
-			Filename:   "f",
 			Bin:        "mytestbin",
+			Filename:   "f",
 			Content:    "second revision",
 			StatusCode: 201,
 		},
@@ -151,8 +151,8 @@ func TestDownloadFile(t *testing.T) {
 		{
 			// Test case 0: Ok to specify everything
 			Method:     "GET",
-			Filename:   "a",
 			Bin:        "mytestbin",
+			Filename:   "a",
 			Content:    "content a",
 			SHA256:     "0069ffe8481777aa403982d9e9b3fa48957015a07cfa0f66dae32050b95bda54",
 			MD5:        "d8114b361885ee54897e52ce2308e274",
@@ -160,14 +160,14 @@ func TestDownloadFile(t *testing.T) {
 		}, {
 			// Test case 1: Unknown file
 			Method:     "GET",
-			Filename:   "unknown",
 			Bin:        "mytestbin",
+			Filename:   "unknown",
 			StatusCode: 404,
 		}, {
 			// Test case 2: Unknown bin
 			Method:     "GET",
-			Filename:   "unknown",
 			Bin:        "unknown",
+			Filename:   "unknown",
 			StatusCode: 404,
 		},
 	}
@@ -190,8 +190,8 @@ func TestDownloadFile(t *testing.T) {
 func TestDeleteFile(t *testing.T) {
 	tc := TestCase{
 		Method:     "POST",
-		Filename:   "a",
 		Bin:        "mytestbin",
+		Filename:   "a",
 		Content:    "content a",
 		StatusCode: 201,
 	}
@@ -206,8 +206,8 @@ func TestDeleteFile(t *testing.T) {
 
 	tc = TestCase{
 		Method:     "DELETE",
-		Filename:   "a",
 		Bin:        "mytestbin",
+		Filename:   "a",
 		StatusCode: 200,
 	}
 	statusCode, _, err = httpRequest(tc)
@@ -220,8 +220,8 @@ func TestDeleteFile(t *testing.T) {
 
 	tc = TestCase{
 		Method:     "GET",
-		Filename:   "a",
 		Bin:        "mytestbin",
+		Filename:   "a",
 		StatusCode: 404,
 	}
 	statusCode, _, err = httpRequest(tc)
@@ -233,11 +233,11 @@ func TestDeleteFile(t *testing.T) {
 	}
 }
 
-func TestLockBin(t *testing.T) {
+func TestLockAndDeleteBin(t *testing.T) {
 	tc := TestCase{
 		Method:     "POST",
-		Filename:   "a",
 		Bin:        "mytestbin",
+		Filename:   "a",
 		Content:    "content a",
 		StatusCode: 201,
 	}
@@ -266,15 +266,15 @@ func TestLockBin(t *testing.T) {
 		{
 			// Try to update existing file, should be rejected
 			Method:     "POST",
-			Filename:   "a",
 			Bin:        "mytestbin",
+			Filename:   "a",
 			Content:    "content a",
 			StatusCode: 405,
 		}, {
 			// Try to create new file, should be rejected
 			Method:     "POST",
-			Filename:   "b",
 			Bin:        "mytestbin",
+			Filename:   "b",
 			Content:    "content b",
 			StatusCode: 405,
 		},
@@ -287,5 +287,34 @@ func TestLockBin(t *testing.T) {
 		if tc.StatusCode != statusCode {
 			t.Errorf("Expected response code %d, got %d\n", tc.StatusCode, statusCode)
 		}
+	}
+
+	// Delete bin
+	tc = TestCase{
+		Method:     "DELETE",
+		Bin:        "mytestbin",
+		StatusCode: 200,
+	}
+	statusCode, _, err = httpRequest(tc)
+	if err != nil {
+		t.Errorf("Did not expect http request to fail: %s\n", err.Error())
+	}
+	if tc.StatusCode != statusCode {
+		t.Errorf("Expected response code %d, got %d\n", tc.StatusCode, statusCode)
+	}
+
+	// Fetch the deleted file
+	tc = TestCase{
+		Method:     "GET",
+		Bin:        "mytestbin",
+		Filename:   "a",
+		StatusCode: 404,
+	}
+	statusCode, _, err = httpRequest(tc)
+	if err != nil {
+		t.Errorf("Did not expect http request to fail: %s\n", err.Error())
+	}
+	if tc.StatusCode != statusCode {
+		t.Errorf("Expected response code %d, got %d\n", tc.StatusCode, statusCode)
 	}
 }
