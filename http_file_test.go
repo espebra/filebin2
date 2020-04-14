@@ -71,6 +71,23 @@ func httpRequest(tc TestCase) (statuscode int, body string, err error) {
 	return resp.StatusCode, body, err
 }
 
+func runTests(tcs []TestCase, t *testing.T) {
+	for i, tc := range tcs {
+		statusCode, body, err := httpRequest(tc)
+		if err != nil {
+			t.Errorf("Test case %d: Did not expect http request to fail: %s\n", i, err.Error())
+		}
+		if tc.StatusCode != statusCode {
+			t.Errorf("Test case %d: Expected response code %d, got %d\n", i, tc.StatusCode, statusCode)
+		}
+		if tc.DownloadContent != "" {
+			if tc.DownloadContent != body {
+				t.Errorf("Test case %d: Expected body %s, got %s\n", i, tc.DownloadContent, body)
+			}
+		}
+	}
+}
+
 func TestUploadFile(t *testing.T) {
 	tcs := []TestCase{
 		{
@@ -135,21 +152,7 @@ func TestUploadFile(t *testing.T) {
 			StatusCode:    201,
 		},
 	}
-
-	for i, tc := range tcs {
-		statusCode, body, err := httpRequest(tc)
-		if err != nil {
-			t.Errorf("Test case %d: Did not expect http request to fail: %s\n", i, err.Error())
-		}
-		if tc.StatusCode != statusCode {
-			t.Errorf("Test case %d: Expected response code %d, got %d\n", i, tc.StatusCode, statusCode)
-		}
-		if tc.DownloadContent != "" {
-			if tc.DownloadContent != body {
-				t.Errorf("Test case %d: Expected body %s, got %s\n", i, tc.DownloadContent, body)
-			}
-		}
-	}
+	runTests(tcs, t)
 }
 
 func TestDownloadFile(t *testing.T) {
@@ -177,20 +180,7 @@ func TestDownloadFile(t *testing.T) {
 			StatusCode: 404,
 		},
 	}
-	for i, tc := range tcs {
-		statusCode, body, err := httpRequest(tc)
-		if err != nil {
-			t.Errorf("Test case %d: Did not expect http request to fail: %s\n", i, err.Error())
-		}
-		if tc.StatusCode != statusCode {
-			t.Errorf("Test case %d: Expected response code %d, got %d\n", i, tc.StatusCode, statusCode)
-		}
-		if tc.DownloadContent != "" {
-			if tc.DownloadContent != body {
-				t.Errorf("Test case %d: Expected body %s, got %s\n", i, tc.DownloadContent, body)
-			}
-		}
-	}
+	runTests(tcs, t)
 }
 
 func TestDeleteFile(t *testing.T) {
@@ -216,20 +206,7 @@ func TestDeleteFile(t *testing.T) {
 			StatusCode: 404,
 		},
 	}
-	for i, tc := range tcs {
-		statusCode, body, err := httpRequest(tc)
-		if err != nil {
-			t.Errorf("Test case %d: Did not expect http request to fail: %s\n", i, err.Error())
-		}
-		if tc.StatusCode != statusCode {
-			t.Errorf("Test case %d: Expected response code %d, got %d\n", i, tc.StatusCode, statusCode)
-		}
-		if tc.DownloadContent != "" {
-			if tc.DownloadContent != body {
-				t.Errorf("Test case %d: Expected body %s, got %s\n", i, tc.DownloadContent, body)
-			}
-		}
-	}
+	runTests(tcs, t)
 }
 
 func TestLockAndDeleteBin(t *testing.T) {
@@ -281,27 +258,24 @@ func TestLockAndDeleteBin(t *testing.T) {
 			Bin:        "mytestbin",
 			Filename:   "a",
 			StatusCode: 404,
+		}, {
+			// Lock bin that was deleted
+			Method:     "DELETE",
+			Bin:        "mytestbin",
+			StatusCode: 200,
 		},
 	}
-	for i, tc := range tcs {
-		statusCode, body, err := httpRequest(tc)
-		if err != nil {
-			t.Errorf("Test case %d: Did not expect http request to fail: %s\n", i, err.Error())
-		}
-		if tc.StatusCode != statusCode {
-			t.Errorf("Test case %d: Expected response code %d, got %d\n", i, tc.StatusCode, statusCode)
-		}
-		if tc.DownloadContent != "" {
-			if tc.DownloadContent != body {
-				t.Errorf("Test case %d: Expected body %s, got %s\n", i, tc.DownloadContent, body)
-			}
-		}
-	}
+	runTests(tcs, t)
 }
 
 func TestNotExistingBinsAndFiles(t *testing.T) {
 	tcs := []TestCase{
 		{
+			// Lock bin that doesn't exist
+			Method:     "LOCK",
+			Bin:        "unknownbin",
+			StatusCode: 404,
+		}, {
 			// Delete bin that doesn't exist
 			Method:     "DELETE",
 			Bin:        "unknownbin",
@@ -319,18 +293,5 @@ func TestNotExistingBinsAndFiles(t *testing.T) {
 			StatusCode: 404,
 		},
 	}
-	for i, tc := range tcs {
-		statusCode, body, err := httpRequest(tc)
-		if err != nil {
-			t.Errorf("Test case %d: Did not expect http request to fail: %s\n", i, err.Error())
-		}
-		if tc.StatusCode != statusCode {
-			t.Errorf("Test case %d: Expected response code %d, got %d\n", i, tc.StatusCode, statusCode)
-		}
-		if tc.DownloadContent != "" {
-			if tc.DownloadContent != body {
-				t.Errorf("Test case %d: Expected body %s, got %s\n", i, tc.DownloadContent, body)
-			}
-		}
-	}
+	runTests(tcs, t)
 }

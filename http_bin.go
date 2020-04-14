@@ -112,7 +112,7 @@ func (h *HTTP) LockBin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if bin.Deleted > 0 {
-		http.Error(w, "This bin is no longer available", http.StatusGone)
+		http.Error(w, "This bin is no longer available", http.StatusNotFound)
 		return
 	}
 
