@@ -343,6 +343,29 @@ func TestNotExistingBinsAndFiles(t *testing.T) {
 			Bin:        "mytestbin3",
 			Filename:   "a",
 			StatusCode: 404,
+		}, {
+			// Create file again
+			Method:        "POST",
+			Bin:           "mytestbin3",
+			Filename:      "a",
+			UploadContent: "content a",
+			StatusCode:    201,
+		}, {
+			// Delete bin
+			Method:     "DELETE",
+			Bin:        "mytestbin3",
+			StatusCode: 200,
+		}, {
+			// Delete file from the bin that is deleted
+			Method:     "DELETE",
+			Bin:        "mytestbin3",
+			Filename:   "a",
+			StatusCode: 404,
+		}, {
+			// Lock bin that is deleted
+			Method:     "LOCK",
+			Bin:        "mytestbin3",
+			StatusCode: 404,
 		},
 	}
 	runTests(tcs, t)
