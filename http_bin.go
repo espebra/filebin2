@@ -81,7 +81,7 @@ func (h *HTTP) DeleteBin(w http.ResponseWriter, r *http.Request) {
 
 	// No need to delete the bin twice
 	if bin.Deleted > 0 {
-		http.Error(w, "This bin is no longer available", http.StatusGone)
+		http.Error(w, "This bin is no longer available", http.StatusOK)
 		return
 	}
 
@@ -118,7 +118,7 @@ func (h *HTTP) LockBin(w http.ResponseWriter, r *http.Request) {
 
 	// No need to set the bin to readonlytwice
 	if bin.Readonly == true {
-		http.Error(w, "This bin is already locked", http.StatusConflict)
+		http.Error(w, "This bin is already locked", http.StatusOK)
 		return
 	}
 
