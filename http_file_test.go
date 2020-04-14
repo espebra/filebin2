@@ -150,15 +150,8 @@ func TestUploadFile(t *testing.T) {
 			Filename:      "f",
 			UploadContent: "second revision",
 			StatusCode:    201,
-		},
-	}
-	runTests(tcs, t)
-}
-
-func TestDownloadFile(t *testing.T) {
-	tcs := []TestCase{
-		{
-			// Test case 0: Ok to specify everything
+		}, {
+			// Test case 8: Ok to specify everything
 			Method:          "GET",
 			Bin:             "mytestbin",
 			Filename:        "a",
@@ -167,17 +160,43 @@ func TestDownloadFile(t *testing.T) {
 			MD5:             "d8114b361885ee54897e52ce2308e274",
 			StatusCode:      200,
 		}, {
-			// Test case 1: Unknown file
+			// Test case 9: Unknown file
 			Method:     "GET",
 			Bin:        "mytestbin",
 			Filename:   "unknown",
 			StatusCode: 404,
 		}, {
-			// Test case 2: Unknown bin
+			// Test case 10: Unknown bin
 			Method:     "GET",
 			Bin:        "unknown",
 			Filename:   "unknown",
 			StatusCode: 404,
+		},
+	}
+	runTests(tcs, t)
+}
+
+func TestUploadToDeletedBin(t *testing.T) {
+	tcs := []TestCase{
+		{
+			// Create file
+			Method:        "POST",
+			Bin:           "mytestbin2",
+			Filename:      "a",
+			UploadContent: "content a",
+			StatusCode:    201,
+		}, {
+			// Delete bin
+			Method:     "DELETE",
+			Bin:        "mytestbin2",
+			StatusCode: 200,
+		}, {
+			// Create the file again, it should fail
+			Method:        "POST",
+			Bin:           "mytestbin2",
+			Filename:      "a",
+			UploadContent: "content a",
+			StatusCode:    405,
 		},
 	}
 	runTests(tcs, t)
