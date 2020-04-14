@@ -331,6 +331,11 @@ func TestNotExistingBinsAndFiles(t *testing.T) {
 			UploadContent: "content a",
 			StatusCode:    201,
 		}, {
+			// Get bin
+			Method:          "GET",
+			Bin:             "mytestbin3",
+			StatusCode:      200,
+		}, {
 			// Get file
 			Method:          "GET",
 			Bin:             "mytestbin3",
@@ -373,6 +378,11 @@ func TestNotExistingBinsAndFiles(t *testing.T) {
 			Method:     "DELETE",
 			Bin:        "mytestbin3",
 			StatusCode: 200,
+		}, {
+			// Get the bin that was deleted
+			Method:     "GET",
+			Bin:        "mytestbin3",
+			StatusCode: 404,
 		}, {
 			// Get file from bin that was deleted
 			Method:     "GET",

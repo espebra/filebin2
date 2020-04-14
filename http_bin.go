@@ -33,7 +33,7 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 	data.Bin = bin
 
 	if bin.Deleted != 0 {
-		http.Error(w, "This bin is no longer available", http.StatusGone)
+		http.Error(w, "This bin is no longer available", http.StatusNotFound)
 		return
 	}
 
