@@ -12,6 +12,7 @@ import (
 )
 
 type TestCase struct {
+	Description     string
 	Method          string
 	Bin             string
 	Filename        string
@@ -23,7 +24,7 @@ type TestCase struct {
 }
 
 func (tc TestCase) String() string {
-	return fmt.Sprintf("Test case details:\n\n  Method: %s\n  Bin: %s\n  Filename: %s\n  Upload content: %s\n  Download content: %s\n  MD5: %s\n  SHA256: %s\n  Status code: %d\n\n", tc.Method, tc.Bin, tc.Filename, tc.UploadContent, tc.DownloadContent, tc.MD5, tc.SHA256, tc.StatusCode)
+	return fmt.Sprintf("Test case details:\n\nDescription: %s\nMethod: %s\nBin: %s\nFilename: %s\nUpload content: %s\nDownload content: %s\nMD5: %s\nSHA256: %s\nStatus code: %d\n\n", tc.Description, tc.Method, tc.Bin, tc.Filename, tc.UploadContent, tc.DownloadContent, tc.MD5, tc.SHA256, tc.StatusCode)
 }
 
 func httpRequest(tc TestCase) (statuscode int, body string, err error) {
@@ -99,7 +100,7 @@ func runTests(tcs []TestCase, t *testing.T) {
 func TestUploadFile(t *testing.T) {
 	tcs := []TestCase{
 		{
-			// Test case 0: Ok to specify everything
+			Description:   "Upload ok to specify everything",
 			Method:        "POST",
 			Bin:           "mytestbin",
 			Filename:      "a",
@@ -108,28 +109,28 @@ func TestUploadFile(t *testing.T) {
 			MD5:           "d8114b361885ee54897e52ce2308e274",
 			StatusCode:    201,
 		}, {
-			// Test case 1: Ok to not specify MD5 and SHA256
+			Description:   "Ok to not specify MD5 and SHA256",
 			Method:        "POST",
 			Bin:           "mytestbin",
 			Filename:      "b",
 			UploadContent: "content b",
 			StatusCode:    201,
 		}, {
-			// Test case 2: Missing filename should fail
+			Description:   "Missing filename should fail",
 			Method:        "POST",
 			Bin:           "mytestbin",
 			Filename:      "",
 			UploadContent: "some content",
 			StatusCode:    400,
 		}, {
-			// Test case 3: No content should fail
+			Description:   "No content should fail",
 			Method:        "POST",
 			Bin:           "mytestbin",
 			Filename:      "c",
 			UploadContent: "",
 			StatusCode:    400,
 		}, {
-			// Test case 4: Wrong MD5 checksum should fail
+			Description:   "Wrong MD5 checksum should fail",
 			Method:        "POST",
 			Bin:           "mytestbin",
 			Filename:      "d",
@@ -137,7 +138,7 @@ func TestUploadFile(t *testing.T) {
 			MD5:           "wrong checksum",
 			StatusCode:    400,
 		}, {
-			// Test case 5: Wrong SHA256 checksum should fail
+			Description:   "Wrong SHA256 checksum should fail",
 			Method:        "POST",
 			Bin:           "mytestbin",
 			Filename:      "e",
@@ -145,21 +146,21 @@ func TestUploadFile(t *testing.T) {
 			SHA256:        "wrong checksum",
 			StatusCode:    400,
 		}, {
-			// Test case 6: New file that will be updated later
+			Description:   "Upload new file that will be updated later",
 			Method:        "POST",
 			Bin:           "mytestbin",
 			Filename:      "f",
 			UploadContent: "first revision",
 			StatusCode:    201,
 		}, {
-			// Test case 7: New file that will be updated later
+			Description:   "Update file that will be updated later",
 			Method:        "POST",
 			Bin:           "mytestbin",
 			Filename:      "f",
 			UploadContent: "second revision",
 			StatusCode:    201,
 		}, {
-			// Test case 8: Ok to specify everything
+			Description:     "Ok to specify everything on download",
 			Method:          "GET",
 			Bin:             "mytestbin",
 			Filename:        "a",
@@ -168,17 +169,17 @@ func TestUploadFile(t *testing.T) {
 			MD5:             "d8114b361885ee54897e52ce2308e274",
 			StatusCode:      200,
 		}, {
-			// Test case 9: Unknown file
-			Method:     "GET",
-			Bin:        "mytestbin",
-			Filename:   "unknown",
-			StatusCode: 404,
+			Description: "Try to download non-existing file",
+			Method:      "GET",
+			Bin:         "mytestbin",
+			Filename:    "unknown",
+			StatusCode:  404,
 		}, {
-			// Test case 10: Unknown bin
-			Method:     "GET",
-			Bin:        "unknown",
-			Filename:   "unknown",
-			StatusCode: 404,
+			Description: "Try to view non-existing bin",
+			Method:      "GET",
+			Bin:         "unknown",
+			Filename:    "unknown",
+			StatusCode:  404,
 		},
 	}
 	runTests(tcs, t)
@@ -187,19 +188,19 @@ func TestUploadFile(t *testing.T) {
 func TestUploadToDeletedBin(t *testing.T) {
 	tcs := []TestCase{
 		{
-			// Create file
+			Description:   "Create file to set up test case",
 			Method:        "POST",
 			Bin:           "mytestbin2",
 			Filename:      "a",
 			UploadContent: "content a",
 			StatusCode:    201,
 		}, {
-			// Delete bin
-			Method:     "DELETE",
-			Bin:        "mytestbin2",
-			StatusCode: 200,
+			Description: "Delete file",
+			Method:      "DELETE",
+			Bin:         "mytestbin2",
+			StatusCode:  200,
 		}, {
-			// Create the file again, it should fail
+			Description:   "Create the file again, it should fail",
 			Method:        "POST",
 			Bin:           "mytestbin2",
 			Filename:      "a",
@@ -213,24 +214,24 @@ func TestUploadToDeletedBin(t *testing.T) {
 func TestDeleteFile(t *testing.T) {
 	tcs := []TestCase{
 		{
-			// Create file
+			Description:   "Create file to set up test case",
 			Method:        "POST",
 			Bin:           "mytestbin",
 			Filename:      "a",
 			UploadContent: "content a",
 			StatusCode:    201,
 		}, {
-			// Delete file
-			Method:     "DELETE",
-			Bin:        "mytestbin",
-			Filename:   "a",
-			StatusCode: 200,
+			Description: "Delete file before trying to fetch it",
+			Method:      "DELETE",
+			Bin:         "mytestbin",
+			Filename:    "a",
+			StatusCode:  200,
 		}, {
-			// Get file after it was deleted, should fail
-			Method:     "GET",
-			Bin:        "mytestbin",
-			Filename:   "a",
-			StatusCode: 404,
+			Description: "Get file after it was deleted, should fail",
+			Method:      "GET",
+			Bin:         "mytestbin",
+			Filename:    "a",
+			StatusCode:  404,
 		},
 	}
 	runTests(tcs, t)
@@ -239,57 +240,62 @@ func TestDeleteFile(t *testing.T) {
 func TestLockAndDeleteBin(t *testing.T) {
 	tcs := []TestCase{
 		{
-			// Create file
+			Description:   "Create file to set up test case",
 			Method:        "POST",
 			Bin:           "mytestbin",
 			Filename:      "a",
 			UploadContent: "content a",
 			StatusCode:    201,
 		}, {
-			// Lock the bin
-			Method:     "LOCK",
-			Bin:        "mytestbin",
-			StatusCode: 200,
+			Description: "Lock the bin",
+			Method:      "LOCK",
+			Bin:         "mytestbin",
+			StatusCode:  200,
 		}, {
-			// Lock the bin again
-			Method:     "LOCK",
-			Bin:        "mytestbin",
-			StatusCode: 200,
+			Description: "Lock the bin again",
+			Method:      "LOCK",
+			Bin:         "mytestbin",
+			StatusCode:  200,
 		}, {
-			// Try to update existing file, should be rejected
+			Description:   "Try to update existing file, should be rejected",
 			Method:        "POST",
 			Bin:           "mytestbin",
 			Filename:      "a",
 			UploadContent: "content a",
 			StatusCode:    405,
 		}, {
-			// Try to create new file, should be rejected
+			Description:   "Try to create a new file, should be rejected",
 			Method:        "POST",
 			Bin:           "mytestbin",
 			Filename:      "b",
 			UploadContent: "content b",
 			StatusCode:    405,
 		}, {
-			// Delete the bin
-			Method:     "DELETE",
-			Bin:        "mytestbin",
-			StatusCode: 200,
+			Description: "Delete bin, should be accepted",
+			Method:      "DELETE",
+			Bin:         "mytestbin",
+			StatusCode:  200,
 		}, {
-			// Delete the bin again
-			Method:     "DELETE",
-			Bin:        "mytestbin",
-			StatusCode: 200,
+			Description: "Delete bin again, should be accepted",
+			Method:      "DELETE",
+			Bin:         "mytestbin",
+			StatusCode:  200,
 		}, {
-			// Get the bin that was deleted
-			Method:     "GET",
-			Bin:        "mytestbin",
-			Filename:   "a",
-			StatusCode: 404,
+			Description: "Get the file from the bin that was deleted, should fail",
+			Method:      "GET",
+			Bin:         "mytestbin",
+			Filename:    "a",
+			StatusCode:  404,
 		}, {
-			// Lock bin that was deleted
-			Method:     "DELETE",
-			Bin:        "mytestbin",
-			StatusCode: 200,
+			Description: "Delete the bin that was deleted, should ok",
+			Method:      "DELETE",
+			Bin:         "mytestbin",
+			StatusCode:  200,
+		}, {
+			Description: "Lock the bin that was deleted, should fail",
+			Method:      "LOCK",
+			Bin:         "mytestbin",
+			StatusCode:  404,
 		},
 	}
 	runTests(tcs, t)
@@ -298,108 +304,108 @@ func TestLockAndDeleteBin(t *testing.T) {
 func TestNotExistingBinsAndFiles(t *testing.T) {
 	tcs := []TestCase{
 		{
-			// Get bin that doesn't exist
-			Method:     "GET",
-			Bin:        "unknownbin",
-			StatusCode: 404,
+			Description: "Get bin that doesn't exist",
+			Method:      "GET",
+			Bin:         "unknownbin",
+			StatusCode:  404,
 		}, {
-			// Lock bin that doesn't exist
-			Method:     "LOCK",
-			Bin:        "unknownbin",
-			StatusCode: 404,
+			Description: "Lock bin that doesn't exist",
+			Method:      "LOCK",
+			Bin:         "unknownbin",
+			StatusCode:  404,
 		}, {
-			// Delete bin that doesn't exist
-			Method:     "DELETE",
-			Bin:        "unknownbin",
-			StatusCode: 404,
+			Description: "Delete bin that doesn't exist",
+			Method:      "DELETE",
+			Bin:         "unknownbin",
+			StatusCode:  404,
 		}, {
-			// Lock bin that doesn't exist
-			Method:     "DELETE",
-			Bin:        "unknownbin",
-			StatusCode: 404,
+			Description: "Lock bin that doesn't exist",
+			Method:      "DELETE",
+			Bin:         "unknownbin",
+			StatusCode:  404,
 		}, {
-			// Delete file that doesn't exist in bin that doesn't exist
-			Method:     "DELETE",
-			Bin:        "unknownbin",
-			Filename:   "unknownfile",
-			StatusCode: 404,
+			Description: "Delete file that doesn't exist in bin that doesn't exist",
+			Method:      "DELETE",
+			Bin:         "unknownbin",
+			Filename:    "unknownfile",
+			StatusCode:  404,
 		}, {
-			// Create new bin
+			Description:   "Create new bin",
 			Method:        "POST",
 			Bin:           "mytestbin3",
 			Filename:      "a",
 			UploadContent: "content a",
 			StatusCode:    201,
 		}, {
-			// Get bin
-			Method:          "GET",
-			Bin:             "mytestbin3",
-			StatusCode:      200,
+			Description: "Get bin",
+			Method:      "GET",
+			Bin:         "mytestbin3",
+			StatusCode:  200,
 		}, {
-			// Get file
+			Description:     "Get file",
 			Method:          "GET",
 			Bin:             "mytestbin3",
 			Filename:        "a",
 			DownloadContent: "content a",
 			StatusCode:      200,
 		}, {
-			// Delete file that doesn't exist in bin that exists
-			Method:     "DELETE",
-			Bin:        "mytestbin3",
-			Filename:   "unknownfile",
-			StatusCode: 404,
+			Description: "Delete file that doesn't exist in bin that exists",
+			Method:      "DELETE",
+			Bin:         "mytestbin3",
+			Filename:    "unknownfile",
+			StatusCode:  404,
 		}, {
-			// Delete file that exists in bin that exists
-			Method:     "DELETE",
-			Bin:        "mytestbin3",
-			Filename:   "a",
-			StatusCode: 200,
+			Description: "Delete file that exists in bin that exists",
+			Method:      "DELETE",
+			Bin:         "mytestbin3",
+			Filename:    "a",
+			StatusCode:  200,
 		}, {
-			// Delete file again that no longer exists in bin that exists
-			Method:     "DELETE",
-			Bin:        "mytestbin3",
-			Filename:   "a",
-			StatusCode: 404,
+			Description: "Delete file again that no longer exists in bin that exists",
+			Method:      "DELETE",
+			Bin:         "mytestbin3",
+			Filename:    "a",
+			StatusCode:  404,
 		}, {
-			// Get file that was deleted
-			Method:     "GET",
-			Bin:        "mytestbin3",
-			Filename:   "a",
-			StatusCode: 404,
+			Description: "Get file that was deleted",
+			Method:      "GET",
+			Bin:         "mytestbin3",
+			Filename:    "a",
+			StatusCode:  404,
 		}, {
-			// Create file again
+			Description:   "Create file again",
 			Method:        "POST",
 			Bin:           "mytestbin3",
 			Filename:      "a",
 			UploadContent: "content a",
 			StatusCode:    201,
 		}, {
-			// Delete bin
-			Method:     "DELETE",
-			Bin:        "mytestbin3",
-			StatusCode: 200,
+			Description: "Delete bin",
+			Method:      "DELETE",
+			Bin:         "mytestbin3",
+			StatusCode:  200,
 		}, {
-			// Get the bin that was deleted
-			Method:     "GET",
-			Bin:        "mytestbin3",
-			StatusCode: 404,
+			Description: "Get the bin that was deleted",
+			Method:      "GET",
+			Bin:         "mytestbin3",
+			StatusCode:  404,
 		}, {
-			// Get file from bin that was deleted
-			Method:     "GET",
-			Bin:        "mytestbin3",
-			Filename:   "a",
-			StatusCode: 404,
+			Description: "Get file from bin that was deleted",
+			Method:      "GET",
+			Bin:         "mytestbin3",
+			Filename:    "a",
+			StatusCode:  404,
 		}, {
-			// Delete file from the bin that is deleted
-			Method:     "DELETE",
-			Bin:        "mytestbin3",
-			Filename:   "a",
-			StatusCode: 404,
+			Description: "Delete file from the bin that is deleted",
+			Method:      "DELETE",
+			Bin:         "mytestbin3",
+			Filename:    "a",
+			StatusCode:  404,
 		}, {
-			// Lock bin that is deleted
-			Method:     "LOCK",
-			Bin:        "mytestbin3",
-			StatusCode: 404,
+			Description: "Lock bin that is deleted",
+			Method:      "LOCK",
+			Bin:         "mytestbin3",
+			StatusCode:  404,
 		},
 	}
 	runTests(tcs, t)

@@ -51,6 +51,13 @@ func (h *HTTP) Run() {
 	}
 }
 
+func (h *HTTP) Error(w http.ResponseWriter, internal string, external string, errno int, statusCode int) {
+	if internal != "" {
+		fmt.Printf("Errno %d: %s\n", errno, internal)
+	}
+	http.Error(w, external, statusCode)
+}
+
 // Parse all templates
 func (h *HTTP) ParseTemplates() *template.Template {
 

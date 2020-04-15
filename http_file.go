@@ -30,38 +30,35 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 
 	bin, found, err := h.dao.Bin().GetById(inputBin)
 	if err != nil {
-		fmt.Printf("Unable to GetById(%s): %s\n", inputBin, err.Error())
-		http.Error(w, "Errno 112", http.StatusInternalServerError)
+		h.Error(w, fmt.Sprintf("Failed to select bin by id %s: %s", inputBin, err.Error()), "Database error", 112, http.StatusInternalServerError)
 		return
 	}
 	if found == false {
-		http.Error(w, "The bin does not exist", http.StatusNotFound)
+		h.Error(w, "", "The bin does not exist", 113, http.StatusNotFound)
 		return
 	}
 	if bin.Deleted > 0 {
-		http.Error(w, "The bin is no longer available", http.StatusNotFound)
+		h.Error(w, "", "The bin is no longer available", 114, http.StatusNotFound)
 		return
 	}
 
 	file, found, err := h.dao.File().GetByName(inputBin, inputFilename)
 	if err != nil {
-		fmt.Printf("Unable to GetByName(%s, %s): %s\n", inputBin, inputFilename, err.Error())
-		http.Error(w, "Errno 113", http.StatusInternalServerError)
+		h.Error(w, fmt.Sprintf("Failed to select file by bin %s and filename %s: %s", inputBin, inputFilename, err.Error()), "Database error", 115, http.StatusInternalServerError)
 		return
 	}
 	if found == false {
-		http.Error(w, "The file does not exist", http.StatusNotFound)
+		h.Error(w, "", "The file does not exist", 116, http.StatusNotFound)
 		return
 	}
 	if file.Deleted > 0 {
-		http.Error(w, "The file is no longer available", http.StatusNotFound)
+		h.Error(w, "", "The file is no longer available", 117, http.StatusNotFound)
 		return
 	}
 
 	fp, err := h.s3.GetObject(inputBin, inputFilename, file.Nonce)
 	if err != nil {
-		fmt.Printf("Unable to get object: %s\n", err.Error())
-		http.Error(w, "Errno 114", http.StatusInternalServerError)
+		h.Error(w, fmt.Sprintf("Failed to fetch object by bin %s and filename %s: %s", inputBin, inputFilename, err.Error()), "Storage error", 118, http.StatusInternalServerError)
 		return
 	}
 
@@ -104,17 +101,9 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Downloaded file %s (%s) from bin %s in %.3fs (%d downloads)\n", inputFilename, humanize.Bytes(file.Bytes), inputBin, time.Since(t0).Seconds(), file.Downloads)
 
 	if _, err = io.Copy(w, fp); err != nil {
-		fmt.Printf("The client cancelled the download: %s\n", err.Error())
-		//http.Error(w, "Errno 4", http.StatusInternalServerError)
+		h.Error(w, fmt.Sprintf("The client cancelled the download of bin %s and filename %s: %s", inputBin, inputFilename, err.Error()), "Client hung up error", 119, http.StatusBadRequest)
 		return
 	}
-
-	//buf := new(bytes.Buffer)
-	//buf.ReadFrom(fp)
-	//s := buf.String()
-	//if content != s {
-	//        t.Errorf("Invalid content from get object. Expected %s, got %s\n", content, s)
-	//}
 }
 
 func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
@@ -126,8 +115,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	inputSHA256 := r.Header.Get("Content-SHA256")
 	inputBytes, err := strconv.ParseUint(r.Header.Get("content-length"), 10, 64)
 	if err != nil {
-		fmt.Printf("Unable to parse the content-length request header: %s\n", err.Error())
-		http.Error(w, "content-length is required", http.StatusLengthRequired)
+		h.Error(w, "", "Missing or invalid content-length header", 120, http.StatusLengthRequired)
 		return
 	}
 	// TODO: Input validation on content-length. Between min:max.
@@ -135,8 +123,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	// Check if bin exists
 	bin, found, err := h.dao.Bin().GetById(inputBin)
 	if err != nil {
-		fmt.Printf("Unable to load bin %s: %s\n", inputBin, err.Error())
-		http.Error(w, "Errno 103", http.StatusInternalServerError)
+		h.Error(w, fmt.Sprintf("Failed to select bin by id %s: %s", inputBin, err.Error()), "Database error", 112, http.StatusInternalServerError)
 		return
 	}
 
@@ -145,8 +132,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 		bin = ds.Bin{}
 		bin.Id = inputBin
 		if err := h.dao.Bin().Insert(&bin); err != nil {
-			fmt.Printf("Unable to insert bin %s: %s\n", inputBin, err.Error())
-			http.Error(w, "Errno 104", http.StatusInternalServerError)
+			h.Error(w, fmt.Sprintf("Unable to insert bin %s: %s", inputBin, err.Error()), "Database error", 121, http.StatusInternalServerError)
 			return
 		}
 
@@ -155,8 +141,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 
 	// Reject uploads to deleted bins
 	if bin.Deleted > 0 {
-		fmt.Printf("Rejected upload of filename %s to deleted bin %s\n", inputFilename, inputBin)
-		http.Error(w, "Unable to upload file to bin that is no longer available", http.StatusMethodNotAllowed)
+		h.Error(w, "", "The bin is no longer available", 122, http.StatusMethodNotAllowed)
 		return
 	}
 
