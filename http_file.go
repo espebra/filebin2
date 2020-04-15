@@ -147,9 +147,8 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 
 	// Reject uploads to readonly bins
 	if bin.Readonly == true {
-		fmt.Printf("Rejected upload of filename %s to readonly bin %s\n", inputFilename, inputBin)
 		w.Header().Set("Allow", "GET, HEAD")
-		http.Error(w, "Unable to upload file to bin that is set to readonly", http.StatusMethodNotAllowed)
+		h.Error(w, fmt.Sprintf("Rejected upload of filename %s to readonly bin %s", inputFilename, inputBin), "Uploads to locked binds are not allowed", 123, http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -160,7 +159,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	defer os.Remove(fp.Name())
 	defer fp.Close()
 	if err != nil {
-		fmt.Printf("%s\n", err.Error())
+		h.Error(w, fmt.Sprintf("Failed to create temporary upload file %s: %s", fp.Name(), err.Error()), "Storage error", 124, http.StatusInternalServerError)
 		return
 	}
 
@@ -168,17 +167,15 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 
 	nBytes, err := io.Copy(fp, r.Body)
 	if err != nil {
-		fmt.Printf("Error occurred during io.Copy: %s\n", err.Error())
+		h.Error(w, fmt.Sprintf("Failed to write temporary upload file %s: %s", fp.Name(), err.Error()), "Storage error", 125, http.StatusInternalServerError)
 		return
 	}
 	if uint64(nBytes) != inputBytes {
-		fmt.Printf("Rejecting upload for file %s to bin %s since we got %d bytes and should have received %d bytes\n", inputFilename, bin.Id, nBytes, inputBytes)
-		http.Error(w, "Request body of different size than specified by content-length", http.StatusBadRequest)
+		h.Error(w, fmt.Sprintf("Rejecting upload for file %s to bin %s since we got %d bytes and should have received %d bytes", inputFilename, bin.Id, nBytes, inputBytes), "Content-length did not match the request body length", 126, http.StatusBadRequest)
 		return
 	}
 	if nBytes == 0 {
-		fmt.Printf("Rejecting upload of empty file %s to bin %s (%d bytes)\n", inputFilename, bin.Id, nBytes)
-		http.Error(w, "Empty file uploads are not allowed", http.StatusBadRequest)
+		h.Error(w, "", "Empty file uploads are not allowed", 127, http.StatusBadRequest)
 		return
 	}
 	fp.Seek(0, 0)
@@ -187,14 +184,13 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 
 	md5_checksum := md5.New()
 	if _, err := io.Copy(md5_checksum, fp); err != nil {
-		fmt.Printf("Error during checksum: %s\n", err.Error())
+		h.Error(w, fmt.Sprintf("Error during checksum: %s", err.Error()), "Processing error", 128, http.StatusInternalServerError)
 		return
 	}
 	md5_checksum_string := fmt.Sprintf("%x", md5_checksum.Sum(nil))
 	if inputMD5 != "" {
 		if md5_checksum_string != inputMD5 {
-			fmt.Printf("Rejecting upload for file %s to bin %s due to wrong MD5 checksum (got %s and calculated %s)\n", inputFilename, bin.Id, inputMD5, md5_checksum_string)
-			http.Error(w, "MD5 checksum did not match", http.StatusBadRequest)
+			h.Error(w, fmt.Sprintf("Rejecting upload for file %s to bin %s due to wrong MD5 checksum (got %s and calculated %s)", inputFilename, bin.Id, inputMD5, md5_checksum_string), "MD5 checksum did not match", 129, http.StatusBadRequest)
 			return
 		}
 	}
@@ -202,14 +198,13 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 
 	sha256_checksum := sha256.New()
 	if _, err := io.Copy(sha256_checksum, fp); err != nil {
-		fmt.Printf("Error during checksum: %s\n", err.Error())
+		h.Error(w, fmt.Sprintf("Error during checksum: %s", err.Error()), "Processing error", 130, http.StatusInternalServerError)
 		return
 	}
 	sha256_checksum_string := fmt.Sprintf("%x", sha256_checksum.Sum(nil))
 	if inputSHA256 != "" {
 		if sha256_checksum_string != inputSHA256 {
-			fmt.Printf("Rejecting upload for file %s to bin %s due to wrong SHA256 checksum (got %s and calculated %s)\n", inputFilename, bin.Id, inputSHA256, sha256_checksum_string)
-			http.Error(w, "SHA256 checksum did not match", http.StatusBadRequest)
+			h.Error(w, fmt.Sprintf("Rejecting upload for file %s to bin %s due to wrong SHA256 checksum (got %s and calculated %s)", inputFilename, bin.Id, inputSHA256, sha256_checksum_string), "SHA256 checksum did not match", 130, http.StatusBadRequest)
 			return
 		}
 	}
@@ -217,8 +212,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 
 	mime, err := mimetype.DetectReader(fp)
 	if err != nil {
-		fmt.Printf("Unable to detect mime type on filename %s in bin %s: %s\n", inputFilename, inputBin, err.Error())
-		http.Error(w, "Errno 105", http.StatusInternalServerError)
+		h.Error(w, fmt.Sprintf("Unable to detect mime type on filename %s in bin %s: %s", inputFilename, inputBin, err.Error()), "Processing error", 131, http.StatusInternalServerError)
 		return
 	}
 	fp.Seek(0, 0)
