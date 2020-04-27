@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	testExpiration      = "5s"
+	testExpiration      = 5
 	testHTTPHost        = "localhost"
 	testHTTPPort        = 8080
 	testDbName          = "db"
