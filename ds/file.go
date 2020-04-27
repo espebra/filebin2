@@ -22,5 +22,5 @@ type File struct {
 	UpdatedRelative string    `json:"updated_relative"`
 	Created         time.Time `json:"created"`
 	CreatedRelative string    `json:"created_relative"`
-	URL             string    `json:"url"`
+	URL             string    `json:"-"`
 }

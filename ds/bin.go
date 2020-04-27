@@ -18,3 +18,10 @@ type Bin struct {
 	Expiration         time.Time `json:"expiration"`
 	ExpirationRelative string    `json:"expiration_relative"`
 }
+
+func (b *Bin) Expired() bool {
+	if b.Expiration.Before(time.Now()) {
+		return true
+	}
+	return false
+}

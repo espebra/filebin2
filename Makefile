@@ -11,8 +11,8 @@ test: prepare
 
 build: prepare
 	rice embed-go -v -i .
-	GOOS=darwin GOARCH=amd64 go build -o artifacts/filebin-darwin-amd64
-	GOOS=linux GOARCH=amd64 go build -o artifacts/filebin-linux-amd64
+	#GOOS=darwin GOARCH=amd64 go build -o artifacts/filebin2-darwin-amd64
+	GOOS=linux GOARCH=amd64 go build -o artifacts/filebin2-linux-amd64
 
 fmt:
 	gofmt -w *.go

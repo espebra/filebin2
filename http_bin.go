@@ -32,6 +32,11 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 	}
 	data.Bin = bin
 
+	if bin.Expired() {
+		http.Error(w, "This bin is no longer available", http.StatusNotFound)
+		return
+	}
+
 	if bin.Deleted != 0 {
 		http.Error(w, "This bin is no longer available", http.StatusNotFound)
 		return
@@ -79,6 +84,11 @@ func (h *HTTP) DeleteBin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if bin.Expired() {
+		http.Error(w, "This bin is no longer available", http.StatusNotFound)
+		return
+	}
+
 	// No need to delete the bin twice
 	if bin.Deleted > 0 {
 		http.Error(w, "This bin is no longer available", http.StatusOK)
@@ -108,6 +118,11 @@ func (h *HTTP) LockBin(w http.ResponseWriter, r *http.Request) {
 	}
 	if found == false {
 		http.Error(w, "Bin does not exist", http.StatusNotFound)
+		return
+	}
+
+	if bin.Expired() {
+		http.Error(w, "This bin is no longer available", http.StatusNotFound)
 		return
 	}
 

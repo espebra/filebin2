@@ -13,6 +13,8 @@ import (
 )
 
 var (
+	expirationFlag = flag.Int("expiration", 604800, "Bin expiration time in seconds since the last bin update")
+
 	// HTTP
 	listenHostFlag = flag.String("listen-host", "127.0.0.1", "Listen host")
 	listenPortFlag = flag.Int("listen-port", 8080, "Listen port")
@@ -31,6 +33,9 @@ var (
 	s3AccessKeyFlag     = flag.String("s3-access-key", os.Getenv("S3_ACCESS_KEY"), "S3 access key")
 	s3SecretKeyFlag     = flag.String("s3-secret-key", os.Getenv("S3_SECRET_KEY"), "S3 secret key")
 	s3EncryptionKeyFlag = flag.String("s3-encryption-key", os.Getenv("S3_ENCRYPTION_KEY"), "S3 encryption key")
+
+	// Lurker
+	lurkerIntervalFlag = flag.Int("lurker-interval", 300, "Lurker interval is the delay to sleep between each run in seconds")
 )
 
 func main() {
@@ -53,6 +58,15 @@ func main() {
 		os.Exit(2)
 	}
 
+	l := &Lurker{
+		dao: &daoconn,
+		s3:  &s3conn,
+	}
+
+	// Start the lurker process
+	l.Init(*lurkerIntervalFlag)
+	l.Run()
+
 	staticBox := rice.MustFindBox("static")
 	templateBox := rice.MustFindBox("templates")
 
@@ -63,11 +77,14 @@ func main() {
 		templateBox: templateBox,
 		dao:         &daoconn,
 		s3:          &s3conn,
+		expiration:  *expirationFlag,
 	}
 
 	if err := h.Init(); err != nil {
 		fmt.Printf("Unable to start the HTTP server: %s\n", err.Error())
 	}
+	fmt.Printf("Expiration: %s\n", h.expirationDuration.String())
 
+	// Start the http server
 	h.Run()
 }

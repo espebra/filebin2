@@ -1,13 +1,13 @@
 package main
 
 import (
-	"fmt"
-	"io"
-	"net/http"
-	//"encoding/json"
 	"crypto/md5"
 	"crypto/sha256"
+	"encoding/json"
+	"fmt"
+	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -37,6 +37,12 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 		h.Error(w, "", "The bin does not exist", 113, http.StatusNotFound)
 		return
 	}
+
+	if bin.Expired() {
+		http.Error(w, "This bin is no longer available", http.StatusNotFound)
+		return
+	}
+
 	if bin.Deleted > 0 {
 		h.Error(w, "", "The bin is no longer available", 114, http.StatusNotFound)
 		return
@@ -66,6 +72,7 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Last-Modified", file.Updated.Format(http.TimeFormat))
 	w.Header().Set("Bin", file.Bin)
 	w.Header().Set("Filename", file.Filename)
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", file.Bytes))
 	//w.Header().Set("Cache-Control", "s-maxage=1")
 
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", file.Bytes))
@@ -100,8 +107,8 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("Downloaded file %s (%s) from bin %s in %.3fs (%d downloads)\n", inputFilename, humanize.Bytes(file.Bytes), inputBin, time.Since(t0).Seconds(), file.Downloads)
 
-	if _, err = io.Copy(w, fp); err != nil {
-		h.Error(w, fmt.Sprintf("The client cancelled the download of bin %s and filename %s: %s", inputBin, inputFilename, err.Error()), "Client hung up error", 119, http.StatusBadRequest)
+	if bytes, err := io.Copy(w, fp); err != nil {
+		fmt.Printf("The client cancelled the download of bin %s and filename %s after %s of %s\n", inputBin, inputFilename, humanize.Bytes(uint64(bytes)), humanize.Bytes(file.Bytes))
 		return
 	}
 }
@@ -115,7 +122,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	inputSHA256 := r.Header.Get("Content-SHA256")
 	inputBytes, err := strconv.ParseUint(r.Header.Get("content-length"), 10, 64)
 	if err != nil {
-		h.Error(w, "", "Missing or invalid content-length header", 120, http.StatusLengthRequired)
+		h.Error(w, "Upload failed: Invalid content-length header", "Missing or invalid content-length header", 120, http.StatusLengthRequired)
 		return
 	}
 	// TODO: Input validation on content-length. Between min:max.
@@ -131,6 +138,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 		// Bin does not exist, so create it here
 		bin = ds.Bin{}
 		bin.Id = inputBin
+		bin.Expiration = time.Now().UTC().Add(h.expirationDuration)
 		if err := h.dao.Bin().Insert(&bin); err != nil {
 			h.Error(w, fmt.Sprintf("Unable to insert bin %s: %s", inputBin, err.Error()), "Database error", 121, http.StatusInternalServerError)
 			return
@@ -139,9 +147,14 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 		// TODO: Execute new bin created trigger
 	}
 
+	if bin.Expired() {
+		h.Error(w, fmt.Sprintf("Upload failed: Bin %s is expired", inputBin), "The bin is no longer available", 122, http.StatusMethodNotAllowed)
+		return
+	}
+
 	// Reject uploads to deleted bins
 	if bin.Deleted > 0 {
-		h.Error(w, "", "The bin is no longer available", 122, http.StatusMethodNotAllowed)
+		h.Error(w, fmt.Sprintf("Upload failed: Bin %s is deleted", inputBin), "The bin is no longer available", 132, http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -267,6 +280,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update bin to set the correct updated timestamp
+	bin.Expiration = time.Now().UTC().Add(h.expirationDuration)
 	if err := h.dao.Bin().Update(&bin); err != nil {
 		fmt.Printf("Unable to update bin %s: %s\n", bin.Id, err.Error())
 		http.Error(w, "Errno 109", http.StatusInternalServerError)
@@ -275,7 +289,23 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("Uploaded filename %s (%s) to bin %s (db in %.3fs, buffered in %.3fs, checksum in %.3fs, stored in %.3fs, total %.3fs)\n", file.Filename, humanize.Bytes(file.Bytes), bin.Id, t1.Sub(t0).Seconds(), t2.Sub(t1).Seconds(), t3.Sub(t2).Seconds(), t4.Sub(t3).Seconds(), t4.Sub(t0).Seconds())
 
+	type Data struct {
+		Bin  ds.Bin  `json:"bin"`
+		File ds.File `json:"file"`
+	}
+	var data Data
+	data.Bin = bin
+	data.File = file
+
+	w.Header().Set("Content-Type", "application/json")
+	out, err := json.MarshalIndent(data, "", "    ")
+	if err != nil {
+		fmt.Printf("Failed to parse json: %s\n", err.Error())
+		http.Error(w, "Errno 201", http.StatusInternalServerError)
+		return
+	}
 	w.WriteHeader(http.StatusCreated)
+	io.WriteString(w, string(out))
 }
 
 func (h *HTTP) DeleteFile(w http.ResponseWriter, r *http.Request) {
@@ -291,6 +321,11 @@ func (h *HTTP) DeleteFile(w http.ResponseWriter, r *http.Request) {
 	}
 	if found == false {
 		http.Error(w, "The file does not exist", http.StatusNotFound)
+		return
+	}
+
+	if bin.Expired() {
+		h.Error(w, "", "The bin is no longer available", 122, http.StatusMethodNotAllowed)
 		return
 	}
 

@@ -246,12 +246,12 @@
                                 ({{ $.Bin.Bytes }} bytes)
                             </dd>
 
-                            <dt class="col-sm-3">Locked</dt>
+                            <dt class="col-sm-3">Status</dt>
                             <dd class="col-sm-9">
                                 {{ if $.Bin.Readonly }}
-					Yes, the bin is locked (read only).
+					Locked (Read only)
 				{{ else }}
-					No, the bin is unlocked.
+					Unlocked
 				{{ end }}
                             </dd>
 

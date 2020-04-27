@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 	//"encoding/json"
 	"github.com/GeertJohan/go.rice"
 	"github.com/espebra/filebin2/dbl"
@@ -18,14 +19,16 @@ import (
 type funcHandler func(http.ResponseWriter, *http.Request)
 
 type HTTP struct {
-	httpPort    int
-	httpHost    string
-	router      *mux.Router
-	templateBox *rice.Box
-	staticBox   *rice.Box
-	templates   *template.Template
-	dao         *dbl.DAO
-	s3          *s3.S3AO
+	expiration         int
+	expirationDuration time.Duration
+	httpPort           int
+	httpHost           string
+	router             *mux.Router
+	templateBox        *rice.Box
+	staticBox          *rice.Box
+	templates          *template.Template
+	dao                *dbl.DAO
+	s3                 *s3.S3AO
 }
 
 func (h *HTTP) Init() (err error) {
@@ -34,12 +37,16 @@ func (h *HTTP) Init() (err error) {
 
 	h.router.HandleFunc("/", h.Index).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/", h.Upload).Methods(http.MethodPost)
+	h.router.HandleFunc("/about", h.About).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/api", h.API).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/api.json", h.APISpec).Methods(http.MethodHead, http.MethodGet)
 	h.router.Handle("/static/{path:.*}", http.StripPrefix("/static/", http.FileServer(h.staticBox.HTTPBox()))).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.ViewBin).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.DeleteBin).Methods(http.MethodDelete)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.LockBin).Methods("LOCK")
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.GetFile).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.DeleteFile).Methods(http.MethodDelete)
+	h.expirationDuration = time.Second * time.Duration(h.expiration)
 	return err
 }
 
@@ -66,7 +73,7 @@ func (h *HTTP) ParseTemplates() *template.Template {
 
 	templ := template.New("").Funcs(fns)
 	err := h.templateBox.Walk("/", func(filepath string, info os.FileInfo, err error) error {
-		if strings.HasSuffix(filepath, ".html") {
+		if strings.HasSuffix(filepath, ".tpl") {
 			// Read the template
 			f := path.Base(filepath)
 			//log.Println("Loading template: " + f)
