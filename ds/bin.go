@@ -6,8 +6,8 @@ import (
 
 type Bin struct {
 	Id                 string    `json:"id"`
+	Status             int       `json:"-"`
 	Readonly           bool      `json:"readonly"`
-	Deleted            int       `json:"-"`
 	Downloads          uint64    `json:"-"`
 	Bytes              uint64    `json:"bytes"`
 	BytesReadable      string    `json:"bytes_readable"`
@@ -17,6 +17,8 @@ type Bin struct {
 	CreatedRelative    string    `json:"created_relative"`
 	Expiration         time.Time `json:"expiration"`
 	ExpirationRelative string    `json:"expiration_relative"`
+	Deleted            time.Time `json:"-"`
+	DeletedRelative    string    `json:"-"`
 }
 
 func (b *Bin) Expired() bool {

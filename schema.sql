@@ -1,10 +1,11 @@
  CREATE TABLE bin (
 	id		VARCHAR(64) NOT NULL PRIMARY KEY,
 	readonly	BOOLEAN NOT NULL,
-	deleted		INT NOT NULL,
+	status		INT NOT NULL,
 	updated		TIMESTAMP NOT NULL,
 	created		TIMESTAMP NOT NULL,
 	expiration	TIMESTAMP NOT NULL,
+	deleted		TIMESTAMP NOT NULL,
 	downloads	BIGINT NOT NULL
 );
 
@@ -12,7 +13,7 @@ CREATE TABLE file (
 	id		SERIAL NOT NULL PRIMARY KEY,
 	bin_id		VARCHAR(64) REFERENCES bin(id) ON DELETE CASCADE,
 	filename	VARCHAR(128) NOT NULL,
-	deleted		INT NOT NULL,
+	status		INT NOT NULL,
 	mime		VARCHAR(128) NOT NULL,
 	bytes		BIGINT NOT NULL,
 	md5		VARCHAR(128) NOT NULL,
@@ -22,5 +23,6 @@ CREATE TABLE file (
 	nonce		VARCHAR(128) NOT NULL,
 	updated		TIMESTAMP NOT NULL,
 	created		TIMESTAMP NOT NULL,
+	deleted		TIMESTAMP NOT NULL,
 	UNIQUE(bin_id, filename)
 );

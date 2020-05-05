@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"time"
 	"net/http"
 
 	"github.com/espebra/filebin2/ds"
@@ -37,7 +38,7 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if bin.Deleted != 0 {
+	if bin.Status != 0 {
 		http.Error(w, "This bin is no longer available", http.StatusNotFound)
 		return
 	}
@@ -72,6 +73,7 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 func (h *HTTP) DeleteBin(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	inputBin := params["bin"]
+	now := time.Now().UTC().Truncate(time.Microsecond)
 
 	bin, found, err := h.dao.Bin().GetById(inputBin)
 	if err != nil {
@@ -90,13 +92,14 @@ func (h *HTTP) DeleteBin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// No need to delete the bin twice
-	if bin.Deleted > 0 {
+	if bin.Status > 0 {
 		http.Error(w, "This bin is no longer available", http.StatusOK)
 		return
 	}
 
 	// Set to pending delete
-	bin.Deleted = 1
+	bin.Status = 1
+	bin.Deleted = now
 	if err := h.dao.Bin().Update(&bin); err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
@@ -126,7 +129,7 @@ func (h *HTTP) LockBin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if bin.Deleted > 0 {
+	if bin.Status > 0 {
 		http.Error(w, "This bin is no longer available", http.StatusNotFound)
 		return
 	}

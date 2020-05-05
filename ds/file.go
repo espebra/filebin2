@@ -8,7 +8,7 @@ type File struct {
 	Id              int       `json:"-"`
 	Bin             string    `json:"-"`
 	Filename        string    `json:"filename"`
-	Deleted         int       `json:"-"`
+	Status          int       `json:"-"`
 	Mime            string    `json:"content-type"`
 	Category        string    `json:"-"`
 	Bytes           uint64    `json:"bytes"`
@@ -22,5 +22,7 @@ type File struct {
 	UpdatedRelative string    `json:"updated_relative"`
 	Created         time.Time `json:"created"`
 	CreatedRelative string    `json:"created_relative"`
+	Deleted         time.Time `json:"-"`
+	DeletedRelative string    `json:"-"`
 	URL             string    `json:"-"`
 }

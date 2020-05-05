@@ -43,7 +43,7 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if bin.Deleted > 0 {
+	if bin.Status > 0 {
 		h.Error(w, "", "The bin is no longer available", 114, http.StatusNotFound)
 		return
 	}
@@ -57,7 +57,7 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 		h.Error(w, "", "The file does not exist", 116, http.StatusNotFound)
 		return
 	}
-	if file.Deleted > 0 {
+	if file.Status > 0 {
 		h.Error(w, "", "The file is no longer available", 117, http.StatusNotFound)
 		return
 	}
@@ -153,7 +153,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Reject uploads to deleted bins
-	if bin.Deleted > 0 {
+	if bin.Status > 0 {
 		h.Error(w, fmt.Sprintf("Upload failed: Bin %s is deleted", inputBin), "The bin is no longer available", 132, http.StatusMethodNotAllowed)
 		return
 	}
@@ -243,7 +243,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	// Set values according to the new file
 	file.Filename = inputFilename
 	file.Bin = bin.Id
-	file.Deleted = 0
+	file.Status = 0
 	file.Bytes = inputBytes
 	file.Mime = mime.String()
 	file.SHA256 = sha256_checksum_string
@@ -312,6 +312,7 @@ func (h *HTTP) DeleteFile(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	inputBin := params["bin"]
 	inputFilename := params["filename"]
+	now := time.Now().UTC().Truncate(time.Microsecond)
 
 	bin, found, err := h.dao.Bin().GetById(inputBin)
 	if err != nil {
@@ -330,7 +331,7 @@ func (h *HTTP) DeleteFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// No need to delete the file if the bin is already deleted
-	if bin.Deleted > 0 {
+	if bin.Status > 0 {
 		http.Error(w, "This bin is no longer available", http.StatusNotFound)
 		return
 	}
@@ -347,13 +348,14 @@ func (h *HTTP) DeleteFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// No need to delete the file twice
-	if file.Deleted > 0 {
+	if file.Status > 0 {
 		http.Error(w, "This file is no longer available", http.StatusNotFound)
 		return
 	}
 
 	// Set to pending delete
-	file.Deleted = 1
+	file.Status = 1
+	file.Deleted = now
 	if err := h.dao.File().Update(&file); err != nil {
 		fmt.Printf("Unable to update the file (%s, %s): %s\n", inputBin, inputFilename, err.Error())
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)

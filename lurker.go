@@ -54,5 +54,8 @@ func (l *Lurker) CleanUpExpiredBins() {
 		fmt.Printf("Unable to GetBinsPendingExpiration(): %s\n", err.Error())
 		return
 	}
+	for _, bin := range bins {
+		fmt.Printf("> Bin %s is expired\n", bin.Id)
+	}
 	fmt.Printf("Found %d expired bins.\n", len(bins))
 }
