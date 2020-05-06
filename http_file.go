@@ -38,13 +38,8 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if bin.Expired() {
+	if bin.IsReadable() == false {
 		http.Error(w, "This bin is no longer available", http.StatusNotFound)
-		return
-	}
-
-	if bin.Status > 0 {
-		h.Error(w, "", "The bin is no longer available", 114, http.StatusNotFound)
 		return
 	}
 
@@ -57,7 +52,7 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 		h.Error(w, "", "The file does not exist", 116, http.StatusNotFound)
 		return
 	}
-	if file.Status > 0 {
+	if file.IsReadable() == false {
 		h.Error(w, "", "The file is no longer available", 117, http.StatusNotFound)
 		return
 	}
@@ -143,26 +138,26 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 			h.Error(w, fmt.Sprintf("Unable to insert bin %s: %s", inputBin, err.Error()), "Database error", 121, http.StatusInternalServerError)
 			return
 		}
-
 		// TODO: Execute new bin created trigger
 	}
 
-	if bin.Expired() {
-		h.Error(w, fmt.Sprintf("Upload failed: Bin %s is expired", inputBin), "The bin is no longer available", 122, http.StatusMethodNotAllowed)
-		return
-	}
-
-	// Reject uploads to deleted bins
-	if bin.Status > 0 {
-		h.Error(w, fmt.Sprintf("Upload failed: Bin %s is deleted", inputBin), "The bin is no longer available", 132, http.StatusMethodNotAllowed)
-		return
-	}
-
-	// Reject uploads to readonly bins
-	if bin.Readonly == true {
-		w.Header().Set("Allow", "GET, HEAD")
-		h.Error(w, fmt.Sprintf("Rejected upload of filename %s to readonly bin %s", inputFilename, inputBin), "Uploads to locked binds are not allowed", 123, http.StatusMethodNotAllowed)
-		return
+	if bin.IsWritable() == false {
+		if bin.Expired() {
+			h.Error(w, fmt.Sprintf("Upload failed: Bin %s is expired", inputBin), "The bin is no longer available", 122, http.StatusMethodNotAllowed)
+			return
+		} else if bin.Status > 0 {
+			// Reject uploads to deleted bins
+			h.Error(w, fmt.Sprintf("Upload failed: Bin %s is deleted", inputBin), "The bin is no longer available", 132, http.StatusMethodNotAllowed)
+			return
+		} else if bin.Readonly == true {
+			// Reject uploads to readonly bins
+			w.Header().Set("Allow", "GET, HEAD")
+			h.Error(w, fmt.Sprintf("Rejected upload of filename %s to readonly bin %s", inputFilename, inputBin), "Uploads to locked binds are not allowed", 123, http.StatusMethodNotAllowed)
+			return
+		} else {
+			h.Error(w, fmt.Sprintf("Rejected upload of filename %s to bin %s for unknown reason", inputFilename, inputBin), "Unexpected upload failure", 134, http.StatusInternalServerError)
+			return
+		}
 	}
 
 	fmt.Printf("Uploading filename %s (%s) to bin %s\n", inputFilename, humanize.Bytes(inputBytes), bin.Id)
@@ -325,14 +320,8 @@ func (h *HTTP) DeleteFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if bin.Expired() {
-		h.Error(w, "", "The bin is no longer available", 122, http.StatusMethodNotAllowed)
-		return
-	}
-
-	// No need to delete the file if the bin is already deleted
-	if bin.Status > 0 {
-		http.Error(w, "This bin is no longer available", http.StatusNotFound)
+	if bin.IsReadable() == false {
+		h.Error(w, "", "The bin is no longer available", 122, http.StatusNotFound)
 		return
 	}
 
@@ -348,7 +337,7 @@ func (h *HTTP) DeleteFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// No need to delete the file twice
-	if file.Status > 0 {
+	if file.IsReadable() == false {
 		http.Error(w, "This file is no longer available", http.StatusNotFound)
 		return
 	}

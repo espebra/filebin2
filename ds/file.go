@@ -26,3 +26,15 @@ type File struct {
 	DeletedRelative string    `json:"-"`
 	URL             string    `json:"-"`
 }
+
+func (f *File) IsReadable() bool {
+	// Not readable if the deleted timestamp is more recent than zero
+	if f.Deleted.IsZero() == false {
+		return false
+	}
+	// Not readable if flagged as deleted
+	if f.Status != 0 {
+		return false
+	}
+	return true
+}

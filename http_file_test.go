@@ -276,10 +276,10 @@ func TestLockAndDeleteBin(t *testing.T) {
 			Bin:         "mytestbin",
 			StatusCode:  200,
 		}, {
-			Description: "Delete bin again, should be accepted",
+			Description: "Delete bin again, should not be found",
 			Method:      "DELETE",
 			Bin:         "mytestbin",
-			StatusCode:  200,
+			StatusCode:  404,
 		}, {
 			Description: "Get the file from the bin that was deleted, should fail",
 			Method:      "GET",
@@ -287,10 +287,10 @@ func TestLockAndDeleteBin(t *testing.T) {
 			Filename:    "a",
 			StatusCode:  404,
 		}, {
-			Description: "Delete the bin that was deleted, should ok",
+			Description: "Delete the bin that was deleted, should be not found",
 			Method:      "DELETE",
 			Bin:         "mytestbin",
-			StatusCode:  200,
+			StatusCode:  404,
 		}, {
 			Description: "Lock the bin that was deleted, should fail",
 			Method:      "LOCK",

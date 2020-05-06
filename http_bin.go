@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"time"
 	"net/http"
+	"time"
 
 	"github.com/espebra/filebin2/ds"
 	"github.com/gorilla/mux"
@@ -33,12 +33,7 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 	}
 	data.Bin = bin
 
-	if bin.Expired() {
-		http.Error(w, "This bin is no longer available", http.StatusNotFound)
-		return
-	}
-
-	if bin.Status != 0 {
+	if bin.IsReadable() == false {
 		http.Error(w, "This bin is no longer available", http.StatusNotFound)
 		return
 	}
@@ -86,14 +81,8 @@ func (h *HTTP) DeleteBin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if bin.Expired() {
+	if bin.IsReadable() == false {
 		http.Error(w, "This bin is no longer available", http.StatusNotFound)
-		return
-	}
-
-	// No need to delete the bin twice
-	if bin.Status > 0 {
-		http.Error(w, "This bin is no longer available", http.StatusOK)
 		return
 	}
 
@@ -124,12 +113,7 @@ func (h *HTTP) LockBin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if bin.Expired() {
-		http.Error(w, "This bin is no longer available", http.StatusNotFound)
-		return
-	}
-
-	if bin.Status > 0 {
+	if bin.IsReadable() == false {
 		http.Error(w, "This bin is no longer available", http.StatusNotFound)
 		return
 	}

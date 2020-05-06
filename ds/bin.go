@@ -21,6 +21,34 @@ type Bin struct {
 	DeletedRelative    string    `json:"-"`
 }
 
+func (b *Bin) IsReadable() bool {
+	// Not readable if expired
+	if b.Expired() {
+		return false
+	}
+	// Not readable if the deleted timestamp is more recent than zero
+	if b.Deleted.IsZero() == false {
+		return false
+	}
+	// Not readable if flagged as deleted
+	if b.Status != 0 {
+		return false
+	}
+	return true
+}
+
+func (b *Bin) IsWritable() bool {
+	// Not writable if not readable
+	if b.IsReadable() == false {
+		return false
+	}
+	// Not readable if bin is readonly
+	if b.Readonly {
+		return false
+	}
+	return true
+}
+
 func (b *Bin) Expired() bool {
 	if b.Expiration.Before(time.Now()) {
 		return true
