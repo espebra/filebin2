@@ -140,6 +140,7 @@
                                     </a>
                                     <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownFileMenuButton">
                                         <a class="dropdown-item" href="#">
+                                        <a class="dropdown-item" href="" data-toggle="modal" data-target="#modalFileProperties-{{ $index }}">
                                             <i class="fas fa-fw fa-info-circle text-primary"></i> File properties
                                         </a>
                                         <div class="dropdown-divider"></div>
@@ -341,8 +342,73 @@
                     </div>
                 </div>
             </div>
-            <!-- Delete bin modal end -->
         {{ end }}
+        <!-- Delete file modal end -->
+
+        <!-- File properties modal start -->
+        {{ range $index, $value := .Files }}
+            <div class="modal fade" id="modalFileProperties-{{ $index }}" tabindex="-1" role="dialog" aria-labelledby="modalFilePropertiesTitle" aria-hidden="true">
+                <div class="modal-dialog modal-lg" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header alert-primary">
+                            <h5 class="modal-title" id="modelFilePropertiesTitle">File properties</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <ul class="row">
+                                <dt class="col-sm-3">Bin</dt>
+                                <dd class="col-sm-9">
+                                    <a href="{{ .URL }}">
+                                        {{ .Filename }}
+                                    </a>
+                                </dd>
+
+                                <dt class="col-sm-3">Bin</dt>
+                                <dd class="col-sm-9">
+                                    <a href="/{{ $.Bin.Id }}">
+                                        {{ $.Bin.Id }}
+                                    </a>
+                                </dd>
+
+                                <dt class="col-sm-3">File size</dt>
+                                <dd class="col-sm-9">
+                                    {{ .BytesReadable }}
+                                    ({{ .Bytes }} bytes)
+                                </dd>
+
+                                {{ if ne .Created .Updated }}
+                                    <dt class="col-sm-3">Last updated</dt>
+                                    <dd class="col-sm-9">
+                                        {{ .UpdatedRelative }}
+                                        ({{ .Updated.Format "2006-01-02 15:04:05 UTC" }})
+                                    </dd>
+                                {{ end }}
+
+                                <dt class="col-sm-3">Created</dt>
+                                <dd class="col-sm-9">
+                                    {{ .CreatedRelative }}
+                                    ({{ .Created.Format "2006-01-02 15:04:05 UTC" }})
+                                </dd>
+
+                                <dt class="col-sm-3">Expires</dt>
+                                <dd class="col-sm-9">
+                                    {{ if $.Bin.ExpirationRelative }}
+                                        {{ $.Bin.ExpirationRelative }}
+                                    {{ end }}
+                                    ({{ $.Bin.Expiration.Format "2006-01-02 15:04:05 UTC" }})
+                                </dd>
+                            </ul>
+                        </div>
+                        <div class="modal-footer">
+                            <a href="/{{ $.Bin.Id }}" class="btn btn-secondary"><i class="fa fa-close"></i> Close</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {{ end }}
+        <!-- File properties modal end -->
 
         <script src="/static/js/jquery-3.4.1.slim.min.js"></script>
         <script src="/static/js/popper.min.js"></script>
