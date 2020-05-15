@@ -30,36 +30,36 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 
 	bin, found, err := h.dao.Bin().GetById(inputBin)
 	if err != nil {
-		h.Error(w, fmt.Sprintf("Failed to select bin by id %s: %s", inputBin, err.Error()), "Database error", 112, http.StatusInternalServerError)
+		h.Error(w, r, fmt.Sprintf("Failed to select bin by id %s: %s", inputBin, err.Error()), "Database error", 112, http.StatusInternalServerError)
 		return
 	}
 	if found == false {
-		h.Error(w, "", "The bin does not exist", 113, http.StatusNotFound)
+		h.Error(w, r, "", "The bin does not exist", 113, http.StatusNotFound)
 		return
 	}
 
 	if bin.IsReadable() == false {
-		http.Error(w, "This bin is no longer available", http.StatusNotFound)
+		h.Error(w, r, "", "This bin is no longer available.", 114, http.StatusNotFound)
 		return
 	}
 
 	file, found, err := h.dao.File().GetByName(inputBin, inputFilename)
 	if err != nil {
-		h.Error(w, fmt.Sprintf("Failed to select file by bin %s and filename %s: %s", inputBin, inputFilename, err.Error()), "Database error", 115, http.StatusInternalServerError)
+		h.Error(w, r, fmt.Sprintf("Failed to select file by bin %s and filename %s: %s", inputBin, inputFilename, err.Error()), "Database error", 115, http.StatusInternalServerError)
 		return
 	}
 	if found == false {
-		h.Error(w, "", "The file does not exist", 116, http.StatusNotFound)
+		h.Error(w, r, "", fmt.Sprintf("The file %s does not exist.", inputFilename), 116, http.StatusNotFound)
 		return
 	}
 	if file.IsReadable() == false {
-		h.Error(w, "", "The file is no longer available", 117, http.StatusNotFound)
+		h.Error(w, r, "", fmt.Sprintf("The file %s is no longer available.", inputFilename), 117, http.StatusNotFound)
 		return
 	}
 
 	fp, err := h.s3.GetObject(inputBin, inputFilename, file.Nonce)
 	if err != nil {
-		h.Error(w, fmt.Sprintf("Failed to fetch object by bin %s and filename %s: %s", inputBin, inputFilename, err.Error()), "Storage error", 118, http.StatusInternalServerError)
+		h.Error(w, r, fmt.Sprintf("Failed to fetch object by bin %s and filename %s: %s", inputBin, inputFilename, err.Error()), "Storage error", 118, http.StatusInternalServerError)
 		return
 	}
 
@@ -117,7 +117,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	inputSHA256 := r.Header.Get("Content-SHA256")
 	inputBytes, err := strconv.ParseUint(r.Header.Get("content-length"), 10, 64)
 	if err != nil {
-		h.Error(w, "Upload failed: Invalid content-length header", "Missing or invalid content-length header", 120, http.StatusLengthRequired)
+		h.Error(w, r, "Upload failed: Invalid content-length header", "Missing or invalid content-length header", 120, http.StatusLengthRequired)
 		return
 	}
 	// TODO: Input validation on content-length. Between min:max.
@@ -125,7 +125,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	// Check if bin exists
 	bin, found, err := h.dao.Bin().GetById(inputBin)
 	if err != nil {
-		h.Error(w, fmt.Sprintf("Failed to select bin by id %s: %s", inputBin, err.Error()), "Database error", 112, http.StatusInternalServerError)
+		h.Error(w, r, fmt.Sprintf("Failed to select bin by id %s: %s", inputBin, err.Error()), "Database error", 112, http.StatusInternalServerError)
 		return
 	}
 
@@ -135,7 +135,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 		bin.Id = inputBin
 		bin.Expiration = time.Now().UTC().Add(h.expirationDuration)
 		if err := h.dao.Bin().Insert(&bin); err != nil {
-			h.Error(w, fmt.Sprintf("Unable to insert bin %s: %s", inputBin, err.Error()), "Database error", 121, http.StatusInternalServerError)
+			h.Error(w, r, fmt.Sprintf("Unable to insert bin %s: %s", inputBin, err.Error()), "Database error", 121, http.StatusInternalServerError)
 			return
 		}
 		// TODO: Execute new bin created trigger
@@ -143,19 +143,19 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 
 	if bin.IsWritable() == false {
 		if bin.Expired() {
-			h.Error(w, fmt.Sprintf("Upload failed: Bin %s is expired", inputBin), "The bin is no longer available", 122, http.StatusMethodNotAllowed)
+			h.Error(w, r, fmt.Sprintf("Upload failed: Bin %s is expired", inputBin), "The bin is no longer available", 122, http.StatusMethodNotAllowed)
 			return
 		} else if bin.Status > 0 {
 			// Reject uploads to deleted bins
-			h.Error(w, fmt.Sprintf("Upload failed: Bin %s is deleted", inputBin), "The bin is no longer available", 132, http.StatusMethodNotAllowed)
+			h.Error(w, r, fmt.Sprintf("Upload failed: Bin %s is deleted", inputBin), "The bin is no longer available", 132, http.StatusMethodNotAllowed)
 			return
 		} else if bin.Readonly == true {
 			// Reject uploads to readonly bins
 			w.Header().Set("Allow", "GET, HEAD")
-			h.Error(w, fmt.Sprintf("Rejected upload of filename %s to readonly bin %s", inputFilename, inputBin), "Uploads to locked binds are not allowed", 123, http.StatusMethodNotAllowed)
+			h.Error(w, r, fmt.Sprintf("Rejected upload of filename %s to readonly bin %s", inputFilename, inputBin), "Uploads to locked binds are not allowed", 123, http.StatusMethodNotAllowed)
 			return
 		} else {
-			h.Error(w, fmt.Sprintf("Rejected upload of filename %s to bin %s for unknown reason", inputFilename, inputBin), "Unexpected upload failure", 134, http.StatusInternalServerError)
+			h.Error(w, r, fmt.Sprintf("Rejected upload of filename %s to bin %s for unknown reason", inputFilename, inputBin), "Unexpected upload failure", 134, http.StatusInternalServerError)
 			return
 		}
 	}
@@ -167,7 +167,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	defer os.Remove(fp.Name())
 	defer fp.Close()
 	if err != nil {
-		h.Error(w, fmt.Sprintf("Failed to create temporary upload file %s: %s", fp.Name(), err.Error()), "Storage error", 124, http.StatusInternalServerError)
+		h.Error(w, r, fmt.Sprintf("Failed to create temporary upload file %s: %s", fp.Name(), err.Error()), "Storage error", 124, http.StatusInternalServerError)
 		return
 	}
 
@@ -175,15 +175,15 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 
 	nBytes, err := io.Copy(fp, r.Body)
 	if err != nil {
-		h.Error(w, fmt.Sprintf("Failed to write temporary upload file %s: %s", fp.Name(), err.Error()), "Storage error", 125, http.StatusInternalServerError)
+		h.Error(w, r, fmt.Sprintf("Failed to write temporary upload file %s: %s", fp.Name(), err.Error()), "Storage error", 125, http.StatusInternalServerError)
 		return
 	}
 	if uint64(nBytes) != inputBytes {
-		h.Error(w, fmt.Sprintf("Rejecting upload for file %s to bin %s since we got %d bytes and should have received %d bytes", inputFilename, bin.Id, nBytes, inputBytes), "Content-length did not match the request body length", 126, http.StatusBadRequest)
+		h.Error(w, r, fmt.Sprintf("Rejecting upload for file %s to bin %s since we got %d bytes and should have received %d bytes", inputFilename, bin.Id, nBytes, inputBytes), "Content-length did not match the request body length", 126, http.StatusBadRequest)
 		return
 	}
 	if nBytes == 0 {
-		h.Error(w, "", "Empty file uploads are not allowed", 127, http.StatusBadRequest)
+		h.Error(w, r, "", "Empty file uploads are not allowed", 127, http.StatusBadRequest)
 		return
 	}
 	fp.Seek(0, 0)
@@ -192,13 +192,13 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 
 	md5_checksum := md5.New()
 	if _, err := io.Copy(md5_checksum, fp); err != nil {
-		h.Error(w, fmt.Sprintf("Error during checksum: %s", err.Error()), "Processing error", 128, http.StatusInternalServerError)
+		h.Error(w, r, fmt.Sprintf("Error during checksum: %s", err.Error()), "Processing error", 128, http.StatusInternalServerError)
 		return
 	}
 	md5_checksum_string := fmt.Sprintf("%x", md5_checksum.Sum(nil))
 	if inputMD5 != "" {
 		if md5_checksum_string != inputMD5 {
-			h.Error(w, fmt.Sprintf("Rejecting upload for file %s to bin %s due to wrong MD5 checksum (got %s and calculated %s)", inputFilename, bin.Id, inputMD5, md5_checksum_string), "MD5 checksum did not match", 129, http.StatusBadRequest)
+			h.Error(w, r, fmt.Sprintf("Rejecting upload for file %s to bin %s due to wrong MD5 checksum (got %s and calculated %s)", inputFilename, bin.Id, inputMD5, md5_checksum_string), "MD5 checksum did not match", 129, http.StatusBadRequest)
 			return
 		}
 	}
@@ -206,13 +206,13 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 
 	sha256_checksum := sha256.New()
 	if _, err := io.Copy(sha256_checksum, fp); err != nil {
-		h.Error(w, fmt.Sprintf("Error during checksum: %s", err.Error()), "Processing error", 130, http.StatusInternalServerError)
+		h.Error(w, r, fmt.Sprintf("Error during checksum: %s", err.Error()), "Processing error", 130, http.StatusInternalServerError)
 		return
 	}
 	sha256_checksum_string := fmt.Sprintf("%x", sha256_checksum.Sum(nil))
 	if inputSHA256 != "" {
 		if sha256_checksum_string != inputSHA256 {
-			h.Error(w, fmt.Sprintf("Rejecting upload for file %s to bin %s due to wrong SHA256 checksum (got %s and calculated %s)", inputFilename, bin.Id, inputSHA256, sha256_checksum_string), "SHA256 checksum did not match", 130, http.StatusBadRequest)
+			h.Error(w, r, fmt.Sprintf("Rejecting upload for file %s to bin %s due to wrong SHA256 checksum (got %s and calculated %s)", inputFilename, bin.Id, inputSHA256, sha256_checksum_string), "SHA256 checksum did not match", 130, http.StatusBadRequest)
 			return
 		}
 	}
@@ -220,7 +220,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 
 	mime, err := mimetype.DetectReader(fp)
 	if err != nil {
-		h.Error(w, fmt.Sprintf("Unable to detect mime type on filename %s in bin %s: %s", inputFilename, inputBin, err.Error()), "Processing error", 131, http.StatusInternalServerError)
+		h.Error(w, r, fmt.Sprintf("Unable to detect mime type on filename %s in bin %s: %s", inputFilename, inputBin, err.Error()), "Processing error", 131, http.StatusInternalServerError)
 		return
 	}
 	fp.Seek(0, 0)
@@ -321,7 +321,7 @@ func (h *HTTP) DeleteFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if bin.IsReadable() == false {
-		h.Error(w, "", "The bin is no longer available", 122, http.StatusNotFound)
+		h.Error(w, r, "", "The bin is no longer available", 122, http.StatusNotFound)
 		return
 	}
 

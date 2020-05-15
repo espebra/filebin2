@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"net/http"
 	"os"
 	"path"
@@ -11,6 +13,7 @@ import (
 	//"encoding/json"
 	"github.com/GeertJohan/go.rice"
 	"github.com/espebra/filebin2/dbl"
+	"github.com/espebra/filebin2/ds"
 	"github.com/espebra/filebin2/s3"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -58,11 +61,33 @@ func (h *HTTP) Run() {
 	}
 }
 
-func (h *HTTP) Error(w http.ResponseWriter, internal string, external string, errno int, statusCode int) {
+func (h *HTTP) Error(w http.ResponseWriter, r *http.Request, internal string, external string, errno int, statusCode int) {
 	if internal != "" {
 		fmt.Printf("Errno %d: %s\n", errno, internal)
 	}
-	http.Error(w, external, statusCode)
+	//http.Error(w, external, statusCode)
+
+	var msg ds.Message
+	msg.Id = errno
+	msg.Text = external
+
+	if r.Header.Get("accept") == "application/json" {
+		w.Header().Set("Content-Type", "application/json")
+		out, err := json.MarshalIndent(msg, "", "    ")
+		if err != nil {
+			fmt.Printf("Failed to parse json: %s\n", err.Error())
+			http.Error(w, "Errno 1000", http.StatusInternalServerError)
+			return
+		}
+		io.WriteString(w, string(out))
+		w.WriteHeader(statusCode)
+	} else {
+		if err := h.templates.ExecuteTemplate(w, "message", msg); err != nil {
+			fmt.Printf("Failed to execute template: %s\n", err.Error())
+			http.Error(w, "Errno 1001", http.StatusInternalServerError)
+			return
+		}
+	}
 }
 
 // Parse all templates

@@ -28,13 +28,13 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if found == false {
-		http.Error(w, "Bin does not exist", http.StatusNotFound)
+		h.Error(w, r, "", fmt.Sprintf("The bin %s does not exist.", inputBin), 201, http.StatusNotFound)
 		return
 	}
 	data.Bin = bin
 
 	if bin.IsReadable() == false {
-		http.Error(w, "This bin is no longer available", http.StatusNotFound)
+		h.Error(w, r, "", fmt.Sprintf("The bin %s is no longer available.", inputBin), 202, http.StatusNotFound)
 		return
 	}
 
