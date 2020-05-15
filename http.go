@@ -65,11 +65,12 @@ func (h *HTTP) Error(w http.ResponseWriter, r *http.Request, internal string, ex
 	if internal != "" {
 		fmt.Printf("Errno %d: %s\n", errno, internal)
 	}
-	//http.Error(w, external, statusCode)
 
 	var msg ds.Message
 	msg.Id = errno
 	msg.Text = external
+
+	w.WriteHeader(statusCode)
 
 	if r.Header.Get("accept") == "application/json" {
 		w.Header().Set("Content-Type", "application/json")
@@ -80,7 +81,6 @@ func (h *HTTP) Error(w http.ResponseWriter, r *http.Request, internal string, ex
 			return
 		}
 		io.WriteString(w, string(out))
-		w.WriteHeader(statusCode)
 	} else {
 		if err := h.templates.ExecuteTemplate(w, "message", msg); err != nil {
 			fmt.Printf("Failed to execute template: %s\n", err.Error())
