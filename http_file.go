@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
 	"os"
 	"strconv"
 	"strings"
@@ -234,6 +235,21 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Errno 106", http.StatusInternalServerError)
 		return
 	}
+
+	dump, err := httputil.DumpRequest(r, false)
+	if err != nil {
+		h.Error(w, r, "Failed to dump request", "Parse error", 135, http.StatusInternalServerError)
+		return
+	}
+	file.Trace = string(dump)
+
+	// Extract client IP
+	ip, err := extractIP(r.RemoteAddr)
+	if err != nil {
+		h.Error(w, r, "Failed to dump request", "Parse error", 136, http.StatusInternalServerError)
+		return
+	}
+	file.IP = ip
 
 	// Set values according to the new file
 	file.Filename = inputFilename

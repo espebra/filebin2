@@ -17,6 +17,8 @@ type File struct {
 	SHA256          string    `json:"sha256"`
 	Downloads       uint64    `json:"-"`
 	Updates         uint64    `json:"-"`
+	IP              string    `json:"-"`
+	Trace           string    `json:"-"`
 	Nonce           []byte    `json:"-"`
 	Updated         time.Time `json:"updated"`
 	UpdatedRelative string    `json:"updated_relative"`

@@ -62,6 +62,12 @@ func TestGetFileById(t *testing.T) {
 	if dbFile.SHA256 != "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" {
 		t.Errorf("Was expecting checksum e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, got %s instead.", dbFile.SHA256)
 	}
+	if dbFile.IP != "N/A" {
+		t.Errorf("Was expecting default value for IP, got %s instead.", dbFile.IP)
+	}
+	if dbFile.Trace != "N/A" {
+		t.Errorf("Was expecting default value for trace, got %s instead.", dbFile.Trace)
+	}
 
 	dbBin, found, err := dao.Bin().GetById(dbFile.Bin)
 	if err != nil {
@@ -99,6 +105,8 @@ func TestGetFileByName(t *testing.T) {
 	file.Bin = bin.Id // Foreign key
 	file.Bytes = 1
 	file.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	file.IP = "127.0.0.1"
+	file.Trace = "some trace"
 	err = dao.File().Insert(file)
 	if err != nil {
 		t.Error(err)
@@ -124,6 +132,12 @@ func TestGetFileByName(t *testing.T) {
 	}
 	if dbFile.SHA256 != "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" {
 		t.Errorf("Was expecting checksum e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, got %s instead.", dbFile.SHA256)
+	}
+	if dbFile.IP != "127.0.0.1" {
+		t.Errorf("Was expecting IP 127.0.0.1, got %s instead.", dbFile.IP)
+	}
+	if dbFile.Trace != "some trace" {
+		t.Errorf("Was expecting trace 'some trace', got %s instead.", dbFile.Trace)
 	}
 }
 
@@ -292,6 +306,8 @@ func TestUpdateFile(t *testing.T) {
 	file.Filename = "testfile.txt"
 	file.Bytes = 1
 	file.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	file.IP = "127.0.0.1"
+	file.Trace = "first trace"
 	err = dao.File().Insert(file)
 	if err != nil {
 		t.Error(err)
@@ -304,6 +320,8 @@ func TestUpdateFile(t *testing.T) {
 
 	dbFile.Bytes = 2
 	dbFile.SHA256 = "ff0350c8a7fea1087c5300e9ae922a7ab453648b1c156d5c58437d9f4565244b"
+	dbFile.IP = "127.0.0.2"
+	dbFile.Trace = "second trace"
 	err = dao.File().Update(&dbFile)
 	if err != nil {
 		t.Error(err)
@@ -318,6 +336,12 @@ func TestUpdateFile(t *testing.T) {
 	}
 	if updatedFile.SHA256 != "ff0350c8a7fea1087c5300e9ae922a7ab453648b1c156d5c58437d9f4565244b" {
 		t.Errorf("Was expecting the updated file checksum ff0350c8a7fea1087c5300e9ae922a7ab453648b1c156d5c58437d9f4565244b, got %s instead.", updatedFile.SHA256)
+	}
+	if updatedFile.IP != "127.0.0.2" {
+		t.Errorf("Was expecting the updated IP 127.0.0.2, got %s instead.", updatedFile.IP)
+	}
+	if updatedFile.Trace != "second trace" {
+		t.Errorf("Was expecting the updated trace 'second trace', got %s instead.", updatedFile.Trace)
 	}
 }
 

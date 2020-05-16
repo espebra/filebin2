@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"html/template"
 	"io"
 	"net/http"
@@ -118,4 +119,14 @@ func (h *HTTP) ParseTemplates() *template.Template {
 		fmt.Errorf("%s", err.Error())
 	}
 	return templ
+}
+
+func extractIP(addr string) (ip string, err error) {
+        host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		fmt.Printf("Error 1: %s\n", err.Error())
+		return ip, err
+	}
+	ipRaw := net.ParseIP(host)
+	return ipRaw.String(), nil
 }
