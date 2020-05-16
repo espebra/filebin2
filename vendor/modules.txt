@@ -2,8 +2,6 @@
 ## explicit
 github.com/GeertJohan/go.rice
 github.com/GeertJohan/go.rice/embedded
-# github.com/aws/aws-sdk-go v1.29.24
-## explicit
 # github.com/daaku/go.zipexe v1.0.1
 ## explicit
 github.com/daaku/go.zipexe
@@ -21,8 +19,6 @@ github.com/gorilla/handlers
 # github.com/gorilla/mux v1.7.4
 ## explicit
 github.com/gorilla/mux
-# github.com/jstemmer/go-junit-report v0.9.1
-## explicit
 # github.com/lib/pq v1.3.0
 ## explicit
 github.com/lib/pq
@@ -43,10 +39,6 @@ github.com/minio/sha256-simd
 github.com/minio/sio
 # github.com/mitchellh/go-homedir v1.1.0
 github.com/mitchellh/go-homedir
-# github.com/nkovacs/streamquote v1.0.0
-## explicit
-# github.com/valyala/fasttemplate v1.1.0
-## explicit
 # golang.org/x/crypto v0.0.0-20190513172903-22d7a77e9e5f
 ## explicit
 golang.org/x/crypto/argon2
@@ -57,6 +49,7 @@ golang.org/x/crypto/internal/chacha20
 golang.org/x/crypto/internal/subtle
 golang.org/x/crypto/poly1305
 # golang.org/x/net v0.0.0-20200202094626-16171245cfb2
+## explicit
 golang.org/x/net/http/httpguts
 golang.org/x/net/idna
 golang.org/x/net/publicsuffix
