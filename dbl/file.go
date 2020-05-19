@@ -150,9 +150,9 @@ func (d *FileDao) GetByBin(id string, status int) (files []ds.File, err error) {
 	return files, nil
 }
 
-func (d *FileDao) GetAll() (files []ds.File, err error) {
-	sqlStatement := "SELECT id, bin_id, filename, status, mime, bytes, md5, sha256, downloads, updates, ip, trace, nonce, updated, created, deleted FROM file"
-	rows, err := d.db.Query(sqlStatement)
+func (d *FileDao) GetAll(status int) (files []ds.File, err error) {
+	sqlStatement := "SELECT id, bin_id, filename, status, mime, bytes, md5, sha256, downloads, updates, ip, trace, nonce, updated, created, deleted FROM file WHERE status = $1 ORDER BY filename ASC"
+	rows, err := d.db.Query(sqlStatement, status)
 	if err != nil {
 		return files, err
 	}

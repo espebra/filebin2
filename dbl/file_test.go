@@ -217,7 +217,7 @@ func TestGetAllFiles(t *testing.T) {
 		}
 	}
 
-	files, err := dao.File().GetAll()
+	files, err := dao.File().GetAll(0)
 	if err != nil {
 		t.Error(err)
 	}

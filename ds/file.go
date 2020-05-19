@@ -16,7 +16,7 @@ type File struct {
 	MD5             string    `json:"md5"`
 	SHA256          string    `json:"sha256"`
 	Downloads       uint64    `json:"-"`
-	Updates         uint64    `json:"-"`
+	Updates         uint64    `json:"updates"`
 	IP              string    `json:"-"`
 	Trace           string    `json:"-"`
 	Nonce           []byte    `json:"-"`

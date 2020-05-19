@@ -194,3 +194,17 @@ func (d *BinDao) RegisterDownload(bin *ds.Bin) (err error) {
 	}
 	return nil
 }
+
+func (d *BinDao) FlagRecentlyExpiredBins() (count int64, err error) {
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	sqlStatement := "UPDATE bin SET status = 1 WHERE status = 0 AND expiration <= $1"
+	res, err := d.db.Exec(sqlStatement, now)
+	if err != nil {
+		return 0, err
+	}
+	count, err = res.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}

@@ -236,6 +236,11 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if found {
+		// Increment the update counter if the file exists.
+		file.Updates = file.Updates + 1
+	}
+
 	dump, err := httputil.DumpRequest(r, false)
 	if err != nil {
 		h.Error(w, r, "Failed to dump request", "Parse error", 135, http.StatusInternalServerError)

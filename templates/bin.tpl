@@ -379,6 +379,11 @@
                                 </dd>
 
                                 {{ if ne .Created .Updated }}
+                                    <dt class="col-sm-3">Update count</dt>
+                                    <dd class="col-sm-9">
+                                        {{ .Updates }}
+                                    </dd>
+
                                     <dt class="col-sm-3">Last updated</dt>
                                     <dd class="col-sm-9">
                                         {{ .UpdatedRelative }}
