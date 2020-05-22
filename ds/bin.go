@@ -20,6 +20,7 @@ type Bin struct {
 	ExpirationRelative string    `json:"expiration_relative"`
 	Deleted            time.Time `json:"-"`
 	DeletedRelative    string    `json:"-"`
+	URL             string    `json:"-"`
 }
 
 func (b *Bin) IsReadable() bool {

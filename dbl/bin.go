@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+        "path"
 )
 
 var invalidBin = regexp.MustCompile("[^A-Za-z0-9-_.]")
@@ -72,6 +73,7 @@ func (d *BinDao) GetAll(status int) (bins []ds.Bin, err error) {
 		bin.ExpirationRelative = humanize.Time(bin.Expiration)
 		bin.DeletedRelative = humanize.Time(bin.Deleted)
 		bin.BytesReadable = humanize.Bytes(bin.Bytes)
+		bin.URL = path.Join(bin.Id)
 		bins = append(bins, bin)
 	}
 	return bins, nil
@@ -100,6 +102,7 @@ func (d *BinDao) GetBinsPendingExpiration() (bins []ds.Bin, err error) {
 		bin.ExpirationRelative = humanize.Time(bin.Expiration)
 		bin.DeletedRelative = humanize.Time(bin.Deleted)
 		bin.BytesReadable = humanize.Bytes(bin.Bytes)
+		bin.URL = path.Join(bin.Id)
 		bins = append(bins, bin)
 	}
 	return bins, nil
@@ -126,6 +129,7 @@ func (d *BinDao) GetById(id string) (bin ds.Bin, found bool, err error) {
 	bin.CreatedRelative = humanize.Time(bin.Created)
 	bin.ExpirationRelative = humanize.Time(bin.Expiration)
 	bin.DeletedRelative = humanize.Time(bin.Deleted)
+	bin.URL = path.Join(bin.Id)
 	return bin, true, nil
 }
 
@@ -199,6 +203,23 @@ func (d *BinDao) FlagRecentlyExpiredBins() (count int64, err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	sqlStatement := "UPDATE bin SET status = 1 WHERE status = 0 AND expiration <= $1"
 	res, err := d.db.Exec(sqlStatement, now)
+	if err != nil {
+		return 0, err
+	}
+	count, err = res.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func (d *BinDao) FlagEmptyBins() (count int64, err error) {
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	limit := now.Add(-5 * time.Minute)
+
+	// Flag empty bins that are older than limit as pending delete
+	sqlStatement := "UPDATE bin SET status = 1 WHERE bin.id IN (SELECT bin.id FROM bin LEFT JOIN file ON bin.id = file.bin_id WHERE bin.status = 0 GROUP BY bin.id HAVING COUNT(filename) = 0 AND bin.created < $1)"
+	res, err := d.db.Exec(sqlStatement, limit)
 	if err != nil {
 		return 0, err
 	}
