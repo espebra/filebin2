@@ -50,15 +50,15 @@ func (d *BinDao) GenerateId() string {
 	return string(id)
 }
 
-func (d *BinDao) GetAll() (bins []ds.Bin, err error) {
-	sqlStatement := "SELECT bin.id, bin.readonly, bin.status, bin.downloads, COALESCE(SUM(file.bytes), 0), bin.updated, bin.created, bin.expiration, bin.deleted FROM bin LEFT JOIN file ON bin.id = file.bin_id GROUP BY bin.id"
-	rows, err := d.db.Query(sqlStatement)
+func (d *BinDao) GetAll(status int) (bins []ds.Bin, err error) {
+	sqlStatement := "SELECT bin.id, bin.readonly, bin.status, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(filename) AS files, bin.updated, bin.created, bin.expiration, bin.deleted FROM bin LEFT JOIN file ON bin.id = file.bin_id WHERE bin.status = $1 GROUP BY bin.id"
+	rows, err := d.db.Query(sqlStatement, status)
 	if err != nil {
 		return bins, err
 	}
 	for rows.Next() {
 		var bin ds.Bin
-		err = rows.Scan(&bin.Id, &bin.Readonly, &bin.Status, &bin.Downloads, &bin.Bytes, &bin.Updated, &bin.Created, &bin.Expiration, &bin.Deleted)
+		err = rows.Scan(&bin.Id, &bin.Readonly, &bin.Status, &bin.Downloads, &bin.Bytes, &bin.Files, &bin.Updated, &bin.Created, &bin.Expiration, &bin.Deleted)
 		if err != nil {
 			return bins, err
 		}
@@ -79,14 +79,14 @@ func (d *BinDao) GetAll() (bins []ds.Bin, err error) {
 
 func (d *BinDao) GetBinsPendingExpiration() (bins []ds.Bin, err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "SELECT bin.id, bin.readonly, bin.status, bin.downloads, COALESCE(SUM(file.bytes), 0), bin.updated, bin.created, bin.expiration, bin.deleted FROM bin LEFT JOIN file ON bin.id = file.bin_id WHERE bin.expiration <= $1 AND bin.status < 2 GROUP BY bin.id"
+	sqlStatement := "SELECT bin.id, bin.readonly, bin.status, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(filename) AS files, bin.updated, bin.created, bin.expiration, bin.deleted FROM bin LEFT JOIN file ON bin.id = file.bin_id WHERE bin.expiration <= $1 AND bin.status < 2 GROUP BY bin.id"
 	rows, err := d.db.Query(sqlStatement, now)
 	if err != nil {
 		return bins, err
 	}
 	for rows.Next() {
 		var bin ds.Bin
-		err = rows.Scan(&bin.Id, &bin.Readonly, &bin.Status, &bin.Downloads, &bin.Bytes, &bin.Updated, &bin.Created, &bin.Expiration, &bin.Deleted)
+		err = rows.Scan(&bin.Id, &bin.Readonly, &bin.Status, &bin.Downloads, &bin.Bytes, &bin.Files, &bin.Updated, &bin.Created, &bin.Expiration, &bin.Deleted)
 		if err != nil {
 			return bins, err
 		}
@@ -107,8 +107,8 @@ func (d *BinDao) GetBinsPendingExpiration() (bins []ds.Bin, err error) {
 
 func (d *BinDao) GetById(id string) (bin ds.Bin, found bool, err error) {
 	// Get bin info
-	sqlStatement := "SELECT bin.id, bin.readonly, bin.status, bin.downloads, COALESCE(SUM(file.bytes), 0), bin.updated, bin.created, bin.expiration, bin.deleted FROM bin LEFT JOIN file ON bin.id = file.bin_id WHERE bin.id = $1 GROUP BY bin.id LIMIT 1"
-	err = d.db.QueryRow(sqlStatement, id).Scan(&bin.Id, &bin.Readonly, &bin.Status, &bin.Downloads, &bin.Bytes, &bin.Updated, &bin.Created, &bin.Expiration, &bin.Deleted)
+	sqlStatement := "SELECT bin.id, bin.readonly, bin.status, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(filename) AS files, bin.updated, bin.created, bin.expiration, bin.deleted FROM bin LEFT JOIN file ON bin.id = file.bin_id WHERE bin.id = $1 GROUP BY bin.id LIMIT 1"
+	err = d.db.QueryRow(sqlStatement, id).Scan(&bin.Id, &bin.Readonly, &bin.Status, &bin.Downloads, &bin.Bytes, &bin.Files, &bin.Updated, &bin.Created, &bin.Expiration, &bin.Deleted)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return bin, false, nil

@@ -35,6 +35,9 @@ func TestGetBinById(t *testing.T) {
 	if dbBin.Id != id {
 		t.Errorf("Was expecting bin id %s, got %s instead.", id, dbBin.Id)
 	}
+	if dbBin.Files != 0 {
+		t.Errorf("Was expecting number of files to be 0, got %d\n", dbBin.Files)
+	}
 
 	err = dao.Bin().RegisterDownload(bin)
 	if err != nil {
@@ -46,6 +49,10 @@ func TestGetBinById(t *testing.T) {
 
 	if bin.Bytes != 0 {
 		t.Errorf("Was expecting bytes to be 0, not %d\n", bin.Bytes)
+	}
+
+	if bin.Files != 0 {
+		t.Errorf("Was expecting number of files to be 0, not %d\n", bin.Files)
 	}
 }
 
@@ -87,7 +94,7 @@ func TestGetAllBins(t *testing.T) {
 		}
 	}
 
-	bins, err := dao.Bin().GetAll()
+	bins, err := dao.Bin().GetAll(0)
 	if err != nil {
 		t.Error(err)
 	}
@@ -217,5 +224,92 @@ func TestInvalidBinInput(t *testing.T) {
 	err = dao.Bin().Insert(bin)
 	if err == nil {
 		t.Error("Expected an error since bin contains invalid characters")
+	}
+}
+
+func TestFileCount(t *testing.T) {
+	dao, err := tearUp()
+	if err != nil {
+		t.Error(err)
+	}
+	defer tearDown(dao)
+
+	type testcase struct {
+		Bin   string
+		Files uint64
+		Bytes uint64
+	}
+
+	testcases := []testcase{
+		{
+			Bin:   "firstbin",
+			Files: 10,
+			Bytes: 1,
+		}, {
+			Bin:   "secondbin",
+			Files: 20,
+			Bytes: 2,
+		}, {
+			Bin:   "thirdbin",
+			Files: 30,
+			Bytes: 100,
+		},
+	}
+
+	for _, tc := range testcases {
+		bin := &ds.Bin{}
+		bin.Id = tc.Bin
+		err = dao.Bin().Insert(bin)
+		if err != nil {
+			t.Error(err)
+		}
+
+		for i := 0; i < int(tc.Files); i++ {
+			// Create some files
+			file := &ds.File{}
+			file.Bin = bin.Id // Foreign key
+			file.Filename = fmt.Sprintf("testfile-%d", i)
+			file.Bytes = tc.Bytes
+			err = dao.File().Insert(file)
+			if err != nil {
+				t.Error(err)
+			}
+		}
+
+		dbBin, found, err := dao.Bin().GetById(bin.Id)
+		if err != nil {
+			t.Error(err)
+		}
+		if found == false {
+			t.Errorf("Expected found to be true as the bin exists.")
+		}
+		if dbBin.Files != tc.Files {
+			t.Errorf("Was expecting number of files in bin %s to be %d, got %d instead.\n", bin.Id, tc.Files, dbBin.Files)
+		}
+		if dbBin.Bytes != (tc.Bytes * tc.Files) {
+			t.Errorf("Was expecting %d bytes in total in bin %s, got %d instead.\n", (tc.Bytes * tc.Files), bin.Id, dbBin.Bytes)
+		}
+	}
+
+	dbBins, err := dao.Bin().GetAll(0)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(dbBins) != len(testcases) {
+		t.Errorf("Was expecting %d bins, got %d.\n", len(testcases), len(dbBins))
+	}
+
+	for _, bin := range dbBins {
+		for _, tc := range testcases {
+			if bin.Id == tc.Bin {
+				if bin.Files != tc.Files {
+					t.Errorf("Was expecting %d files in bin %s, got %d.\n", tc.Files, bin.Id, bin.Files)
+				}
+				if bin.Bytes != (tc.Files * tc.Bytes) {
+					t.Errorf("Was expecting %d bytes in bin %s, got %d.\n", (tc.Files * tc.Bytes), bin.Id, bin.Bytes)
+				}
+			}
+		}
 	}
 }
