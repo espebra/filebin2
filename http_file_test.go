@@ -24,7 +24,7 @@ type TestCase struct {
 }
 
 func (tc TestCase) String() string {
-	return fmt.Sprintf("Test case details:\n\nDescription: %s\nMethod: %s\nBin: %s\nFilename: %s\nUpload content: %s\nDownload content: %s\nMD5: %s\nSHA256: %s\nStatus code: %d\n\n", tc.Description, tc.Method, tc.Bin, tc.Filename, tc.UploadContent, tc.DownloadContent, tc.MD5, tc.SHA256, tc.StatusCode)
+	return fmt.Sprintf("Test case details:\n\nDescription: %s\nMethod: %s\nBin: %s\nFilename: %s\nUpload content: %s\nDownload content: %s\nMD5: %s\nSHA256: %s\nExpected status code: %d\n\n", tc.Description, tc.Method, tc.Bin, tc.Filename, tc.UploadContent, tc.DownloadContent, tc.MD5, tc.SHA256, tc.StatusCode)
 }
 
 func httpRequest(tc TestCase) (statuscode int, body string, err error) {
@@ -85,8 +85,10 @@ func runTests(tcs []TestCase, t *testing.T) {
 			t.Errorf("%s\n", tc.String())
 		}
 		if tc.StatusCode != statusCode {
-			t.Errorf("Test case %d: Expected response code %d, got %d\n", i, tc.StatusCode, statusCode)
-			t.Errorf("%s\n", tc.String())
+			t.Errorf("Test case %d\n", i)
+			t.Errorf("  Expected response code %d, got %d\n", tc.StatusCode, statusCode)
+			t.Errorf("  Response body: %s\n", body)
+			t.Errorf("  %s\n", tc.String())
 		}
 		if tc.DownloadContent != "" {
 			if tc.DownloadContent != body {
