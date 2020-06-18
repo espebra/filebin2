@@ -44,7 +44,7 @@ func (h *HTTP) Init() (err error) {
 	h.router.HandleFunc("/about", h.About).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/api", h.API).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/api.json", h.APISpec).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/admin", h.ViewAdminDashboard).Methods(http.MethodHead, http.MethodGet)
+	//h.router.HandleFunc("/admin", h.ViewAdminDashboard).Methods(http.MethodHead, http.MethodGet)
 	h.router.Handle("/static/{path:.*}", http.StripPrefix("/static/", http.FileServer(h.staticBox.HTTPBox()))).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.ViewBin).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.DeleteBin).Methods(http.MethodDelete)
