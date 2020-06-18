@@ -259,7 +259,13 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	// Set values according to the new file
 	file.Filename = inputFilename
 	file.Bin = bin.Id
+
+	// Reset the deleted status and timestamp in case the file was deleted
+	// earlier
+	var t time.Time
+	file.Deleted = t
 	file.Status = 0
+
 	file.Bytes = inputBytes
 	file.Mime = mime.String()
 	file.SHA256 = sha256_checksum_string
