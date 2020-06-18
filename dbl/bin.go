@@ -7,10 +7,10 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/espebra/filebin2/ds"
 	"math/rand"
+	"path"
 	"regexp"
 	"strings"
 	"time"
-        "path"
 )
 
 var invalidBin = regexp.MustCompile("[^A-Za-z0-9-_.]")
@@ -110,7 +110,8 @@ func (d *BinDao) GetBinsPendingExpiration() (bins []ds.Bin, err error) {
 
 func (d *BinDao) GetById(id string) (bin ds.Bin, found bool, err error) {
 	// Get bin info
-	sqlStatement := "SELECT bin.id, bin.readonly, bin.status, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(filename) AS files, bin.updated, bin.created, bin.expiration, bin.deleted FROM bin LEFT JOIN file ON bin.id = file.bin_id WHERE bin.id = $1 AND bin.status = 0 AND file.status = 0 GROUP BY bin.id LIMIT 1"
+	// XXX: Split into two queries for readability
+	sqlStatement := "SELECT bin.id, bin.readonly, bin.status, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(filename) AS files, bin.updated, bin.created, bin.expiration, bin.deleted FROM bin LEFT JOIN file ON bin.id = file.bin_id WHERE bin.id = $1 GROUP BY bin.id LIMIT 1"
 	err = d.db.QueryRow(sqlStatement, id).Scan(&bin.Id, &bin.Readonly, &bin.Status, &bin.Downloads, &bin.Bytes, &bin.Files, &bin.Updated, &bin.Created, &bin.Expiration, &bin.Deleted)
 	if err != nil {
 		if err == sql.ErrNoRows {
