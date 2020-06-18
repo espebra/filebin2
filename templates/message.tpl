@@ -24,7 +24,6 @@
             <a href="javascript:history.back()">Go Back</a>
         </p>
  
-        <script src="/static/js/jquery-3.4.1.slim.min.js"></script>
         <script src="/static/js/popper.min.js"></script>
         <script src="/static/js/bootstrap.min.js"></script>
     </body>

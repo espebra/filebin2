@@ -103,11 +103,6 @@
                         <td><a href="https://github.com/dustin/go-humanize/">https://github.com/dustin/go-humanize/</a></td>
                     </tr>
                     <tr>
-                        <td>jQuery</td>
-                        <td>MIT</td>
-                        <td><a href="https://jquery.org/">https://jquery.org/</a></td>
-                    </tr>
-                    <tr>
                         <td>Mimetype</td>
                         <td>MIT</td>
                         <td><a href="https://github.com/gabriel-vasile/mimetype/">https://github.com/gabriel-vasile/mimetype/</a></td>
