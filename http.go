@@ -1,11 +1,11 @@
 package main
 
 import (
-	"encoding/json"
+	//"encoding/json"
 	"fmt"
-	"net"
 	"html/template"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"path"
@@ -14,7 +14,7 @@ import (
 	//"encoding/json"
 	"github.com/GeertJohan/go.rice"
 	"github.com/espebra/filebin2/dbl"
-	"github.com/espebra/filebin2/ds"
+	//"github.com/espebra/filebin2/ds"
 	"github.com/espebra/filebin2/s3"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -44,6 +44,7 @@ func (h *HTTP) Init() (err error) {
 	h.router.HandleFunc("/about", h.About).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/api", h.API).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/api.json", h.APISpec).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin", h.ViewAdminDashboard).Methods(http.MethodHead, http.MethodGet)
 	h.router.Handle("/static/{path:.*}", http.StripPrefix("/static/", http.FileServer(h.staticBox.HTTPBox()))).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.ViewBin).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.DeleteBin).Methods(http.MethodDelete)
@@ -67,28 +68,29 @@ func (h *HTTP) Error(w http.ResponseWriter, r *http.Request, internal string, ex
 		fmt.Printf("Errno %d: %s\n", errno, internal)
 	}
 
-	var msg ds.Message
-	msg.Id = errno
-	msg.Text = external
+	//var msg ds.Message
+	//msg.Id = errno
+	//msg.Text = external
 
 	w.WriteHeader(statusCode)
+	io.WriteString(w, external)
 
-	if r.Header.Get("accept") == "application/json" {
-		w.Header().Set("Content-Type", "application/json")
-		out, err := json.MarshalIndent(msg, "", "    ")
-		if err != nil {
-			fmt.Printf("Failed to parse json: %s\n", err.Error())
-			http.Error(w, "Errno 1000", http.StatusInternalServerError)
-			return
-		}
-		io.WriteString(w, string(out))
-	} else {
-		if err := h.templates.ExecuteTemplate(w, "message", msg); err != nil {
-			fmt.Printf("Failed to execute template: %s\n", err.Error())
-			http.Error(w, "Errno 1001", http.StatusInternalServerError)
-			return
-		}
-	}
+	//if r.Header.Get("accept") == "application/json" {
+	//	w.Header().Set("Content-Type", "application/json")
+	//	out, err := json.MarshalIndent(msg, "", "    ")
+	//	if err != nil {
+	//		fmt.Printf("Failed to parse json: %s\n", err.Error())
+	//		http.Error(w, "Errno 1000", http.StatusInternalServerError)
+	//		return
+	//	}
+	//	io.WriteString(w, string(out))
+	//} else {
+	//	if err := h.templates.ExecuteTemplate(w, "message", msg); err != nil {
+	//		fmt.Printf("Failed to execute template: %s\n", err.Error())
+	//		http.Error(w, "Errno 1001", http.StatusInternalServerError)
+	//		return
+	//	}
+	//}
 }
 
 // Parse all templates
@@ -122,7 +124,7 @@ func (h *HTTP) ParseTemplates() *template.Template {
 }
 
 func extractIP(addr string) (ip string, err error) {
-        host, _, err := net.SplitHostPort(addr)
+	host, _, err := net.SplitHostPort(addr)
 	if err != nil {
 		fmt.Printf("Error 1: %s\n", err.Error())
 		return ip, err
