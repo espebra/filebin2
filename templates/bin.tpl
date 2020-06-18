@@ -62,7 +62,7 @@
         {{ $numfiles := .Files | len }}
         
         <p class="lead">
-            The bin <a href="/{{ .Bin.Id }}">{{ .Bin.Id }}</a> was created {{ .Bin.CreatedRelative }}
+            The bin <a class="link-primary" href="/{{ .Bin.Id }}">{{ .Bin.Id }}</a> was created {{ .Bin.CreatedRelative }}
             
             {{- if ne .Bin.CreatedRelative .Bin.UpdatedRelative -}}
             , updated {{ .Bin.UpdatedRelative }} 
@@ -129,7 +129,7 @@
                                         <i class="far fa-fw fa-file"></i>
                                     {{ end }}
                                 {{ end }}
-                                <a href="{{ .URL }}">{{ .Filename }}</a>
+                                <a class="link-primary" href="{{ .URL }}">{{ .Filename }}</a>
                             </div>
                             <div class="col">{{ .BytesReadable }}</div>
                             <div class="col">{{ .UpdatedRelative }}</div>
@@ -202,7 +202,7 @@
                         <p>You are free to delete this bin. However you are encouraged to delete your own bins only, or bins that are being used to share obvious malicious or illegal content.</p>
                         <p>This action is not reversible.</p>
 
-                        <p class="lead">Delete all the files in bin <a href="/{{ $.Bin.Id }}">{{ $.Bin.Id }}</a>?</p>
+                        <p class="lead">Delete all the files in bin <a class="link-primary" href="/{{ $.Bin.Id }}">{{ $.Bin.Id }}</a>?</p>
 
                         <div id="deleteStatus"></div>
                     </div>
@@ -210,7 +210,7 @@
                         <div class="pull-left">
                         <button type="button" class="btn btn-danger" id="deleteButton" onclick="deleteURL('/{{ $.Bin.Id }}','deleteStatus')"><i class="fas fa-fw fa-trash-alt"></i> Confirm</button>
                         </div>
-                        <a href="/{{ $.Bin.Id }}" class="btn btn-secondary"><i class="fa fa-close"></i> Close</a>
+                        <a class="link-primary" href="/{{ $.Bin.Id }}" class="btn btn-secondary"><i class="fa fa-close"></i> Close</a>
                     </div>
                 </div>
             </div>
@@ -231,7 +231,7 @@
                         <ul class="row">
                             <dt class="col-sm-3">Bin</dt>
                             <dd class="col-sm-9">
-                                <a href="/{{ $.Bin.Id }}">
+                                <a class="link-primary" href="/{{ $.Bin.Id }}">
                                     {{ $.Bin.Id }}
                                 </a>
                             </dd>
@@ -299,7 +299,7 @@
                         <p>The bin is currently unlocked, which means that new files can be added to it and existing files can be updated. If the bin is locked, the bin will become read only and no more file uploads will be allowed. Note that a locked bin can still be deleted.</p>
 			<p>This action is not reversible.</p>
 
-                        <p class="lead">Do you want to lock bin <a href="/{{ $.Bin.Id }}">{{ $.Bin.Id }}</a>?</p>
+                        <p class="lead">Do you want to lock bin <a class="link-primary" href="/{{ $.Bin.Id }}">{{ $.Bin.Id }}</a>?</p>
 
                         <div id="lockStatus"></div>
                     </div>
@@ -307,7 +307,7 @@
                         <div class="pull-left">
                         <button type="button" class="btn btn-warning" id="lockButton" onclick="lockBin('{{ $.Bin.Id }}','lockStatus')"><i class="fas fa-fw fa-lock"></i> Confirm</button>
                         </div>
-                        <a href="/{{ $.Bin.Id }}" class="btn btn-secondary"><i class="fa fa-close"></i> Close</a>
+                        <a class="link-primary" href="/{{ $.Bin.Id }}" class="btn btn-secondary"><i class="fa fa-close"></i> Close</a>
                     </div>
                 </div>
             </div>
@@ -329,7 +329,7 @@
                             <p>You are free to delete any file in this bin. However you are encouraged to delete the files that you have uploaded only, or files with obvious malicious or illegal content.</p>
                             <p>This action is not reversible.</p>
 
-                            <p class="lead">Delete the file <a href="/{{ $.Bin.Id }}/{{ .Filename }}">{{ .Filename }}</a>?</p>
+                            <p class="lead">Delete the file <a class="link-primary" href="/{{ $.Bin.Id }}/{{ .Filename }}">{{ .Filename }}</a>?</p>
 
                             <div id="deleteStatus-{{ $index }}"></div>
                         </div>
@@ -337,7 +337,7 @@
                             <div class="pull-left">
                             <button type="button" class="btn btn-danger" id="deleteButton" onclick="deleteURL('/{{ $.Bin.Id }}/{{ .Filename }}','deleteStatus-{{ $index }}')"><i class="fas fa-fw fa-trash-alt"></i> Confirm</button>
                             </div>
-                            <a href="/{{ $.Bin.Id }}" class="btn btn-secondary"><i class="fa fa-close"></i> Close</a>
+                            <a class="link-primary" href="/{{ $.Bin.Id }}" class="btn btn-secondary"><i class="fa fa-close"></i> Close</a>
                         </div>
                     </div>
                 </div>
@@ -358,16 +358,16 @@
                         </div>
                         <div class="modal-body">
                             <ul class="row">
-                                <dt class="col-sm-3">Bin</dt>
+                                <dt class="col-sm-3">Filename</dt>
                                 <dd class="col-sm-9">
-                                    <a href="{{ .URL }}">
+                                    <a class="link-primary" href="{{ .URL }}">
                                         {{ .Filename }}
                                     </a>
                                 </dd>
 
                                 <dt class="col-sm-3">Bin</dt>
                                 <dd class="col-sm-9">
-                                    <a href="/{{ $.Bin.Id }}">
+                                    <a class="link-primary" href="/{{ $.Bin.Id }}">
                                         {{ $.Bin.Id }}
                                     </a>
                                 </dd>
@@ -407,7 +407,7 @@
                             </ul>
                         </div>
                         <div class="modal-footer">
-                            <a href="/{{ $.Bin.Id }}" class="btn btn-secondary"><i class="fa fa-close"></i> Close</a>
+                            <a class="link-primary" href="/{{ $.Bin.Id }}" class="btn btn-secondary"><i class="fa fa-close"></i> Close</a>
                         </div>
                     </div>
                 </div>
