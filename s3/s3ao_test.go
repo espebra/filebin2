@@ -36,6 +36,12 @@ func TestInit(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+
+	status := s3ao.Status()
+	if status == false {
+		t.Error("Was expecting status to be true here")
+	}
+
 	err = tearDown(s3ao)
 	if err != nil {
 		t.Error(err)

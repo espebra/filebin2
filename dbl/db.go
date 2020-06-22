@@ -66,3 +66,10 @@ func (dao DAO) Bin() *BinDao {
 func (dao DAO) File() *FileDao {
 	return dao.fileDao
 }
+
+func (dao DAO) Status() bool {
+	if err := dao.db.Ping(); err != nil {
+		return false
+	}
+	return true
+}

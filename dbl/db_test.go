@@ -48,3 +48,18 @@ func TestFailingInit(t *testing.T) {
 		t.Error("Was expecting to fail here, invalid user and db name were provided.")
 	}
 }
+
+func TestPing(t *testing.T) {
+	dao, err := tearUp()
+	if err != nil {
+		t.Error(err)
+	}
+	status := dao.Status()
+	if status == false {
+		t.Error("Was expecting the database status check to return true")
+	}
+	err = tearDown(dao)
+	if err != nil {
+		t.Error(err)
+	}
+}

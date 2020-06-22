@@ -53,6 +53,17 @@ func Init(endpoint, bucket, region, accessKey, secretKey, encryptionKey string) 
 	return s3ao, nil
 }
 
+func (s S3AO) Status() bool {
+	found, err := s.client.BucketExists(s.bucket)
+	if err != nil {
+		return false
+	}
+	if found == false {
+		return false
+	}
+	return true
+}
+
 func (s S3AO) GenerateNonce() []byte {
 	var nonce []byte
 	if _, err := io.ReadFull(rand.Reader, nonce[:]); err != nil {
