@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/espebra/filebin2/ds"
+	"io"
 	"net/http"
 	"time"
 )
@@ -68,4 +70,40 @@ func (h *HTTP) APISpec(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Errno 302", http.StatusInternalServerError)
 		return
 	}
+}
+
+func (h *HTTP) FilebinStatus(w http.ResponseWriter, r *http.Request) {
+	type Data struct {
+		AppStatus bool `json:"app-status"`
+		DbStatus  bool `json:"db-status"`
+		S3Status  bool `json:"s3-status"`
+	}
+	var data Data
+
+	code := 200
+	data.AppStatus = true
+	if h.dao.Status() {
+		data.DbStatus = true
+	} else {
+		data.DbStatus = false
+		code = 503
+	}
+
+	if h.s3.Status() {
+		data.S3Status = true
+	} else {
+		data.S3Status = false
+		code = 503
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "max-age=1")
+	out, err := json.MarshalIndent(data, "", "    ")
+	if err != nil {
+		fmt.Printf("Failed to parse json: %s\n", err.Error())
+		http.Error(w, "Errno 201", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(code)
+	io.WriteString(w, string(out))
 }
