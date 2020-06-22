@@ -20,15 +20,15 @@
             "in": "path",
             "description": "The bin to download from.",
             "required": true,
-            "type": "string",
+            "type": "string"
           },
           {
             "name": "filename",
             "in": "path",
             "description": "The filename of the file to download from the bin specified.",
             "required": true,
-            "type": "string",
-          },
+            "type": "string"
+          }
         ],
         "responses": {
           "200": {
@@ -51,15 +51,15 @@
             "in": "path",
             "description": "The bin to delete from.",
             "required": true,
-            "type": "string",
+            "type": "string"
           },
           {
             "name": "filename",
             "in": "path",
             "description": "The filename of the file to delete.",
             "required": true,
-            "type": "string",
-          },
+            "type": "string"
+          }
         ],
         "responses": {
           "200": {
@@ -83,20 +83,20 @@
             "in": "header",
             "name": "bin",
             "description": "The bin to upload the file to",
-            "required": true,
+            "required": true
           },
           {
             "in": "header",
             "name": "filename",
             "description": "The filename of the file to upload",
-            "required": true,
+            "required": true
           },
           {
             "in": "body",
             "name": "body",
             "description": "Content of the file to be uploaded",
-            "required": true,
-          },
+            "required": true
+          }
         ],
         "responses": {
           "201": {
@@ -121,11 +121,11 @@
             "in": "path",
             "description": "The bin to show.",
             "required": true,
-            "type": "string",
+            "type": "string"
           }
         ],
         "produces": [
-          "application/json",
+          "application/json"
         ],
         "responses": {
           "200": {
@@ -148,7 +148,7 @@
             "in": "path",
             "description": "The bin to lock.",
             "required": true,
-            "type": "string",
+            "type": "string"
           }
         ],
         "responses": {
@@ -172,7 +172,7 @@
             "in": "path",
             "description": "The bin to delete.",
             "required": true,
-            "type": "string",
+            "type": "string"
           }
         ],
         "responses": {
@@ -183,7 +183,7 @@
             "description": "The bin does not exist or is not available"
           }
         }
-      },
+      }
     }
   }
 }
