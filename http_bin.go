@@ -21,7 +21,7 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 		Files []ds.File `json:"files"`
 	}
 	var data Data
-	data.Page = "viewbin"
+	data.Page = "bin"
 
 	bin, found, err := h.dao.Bin().GetById(inputBin)
 	if err != nil {

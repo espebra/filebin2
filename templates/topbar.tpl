@@ -6,7 +6,7 @@
             <li class="nav-item">
 		{{ if eq .Page "front" }}
 		{{ else }}
-                <a class="nav-link" href="/">Front page</a>
+                <a class="nav-link" href="/">Create new bin</a>
 		{{ end }}
             </li>
         </ul>
@@ -17,6 +17,11 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarItems">
             <ul class="navbar-nav">
+		{{ if eq .Page "bin" }}
+                <li class="nav-item">
+                    <a class="nav-link" href="" data-toggle="modal" data-target="#modalTakedown">Take down</a>
+                </li>
+		{{ end }}
                 <li class="nav-item">
                     <a class="nav-link" href="/about">About</a>
                 </li>
@@ -24,10 +29,7 @@
                     <a class="nav-link" href="/api">API</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="" data-toggle="modal" data-target="#modalSecurity">Security</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="" data-toggle="modal" data-target="#modalTakedown">Take down</a>
+                    <a class="nav-link" href="/privacy">Privacy</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="" data-toggle="modal" data-target="#modalTerms">Terms and conditions</a>
@@ -145,27 +147,6 @@
     </div>
 </div>
 <!-- About Modal stop -->
-
-<!-- Security Modal start -->
-<div class="modal fade" id="modalSecurity" tabindex="-1" role="dialog" aria-labelledby="modalSecurityTitle" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modelSecurityTitle">Security</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <p>Security</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-<!-- Security Modal stop -->
 
 <!-- Terms and conditions Modal start -->
 <div class="modal fade" id="modalTerms" tabindex="-1" role="dialog" aria-labelledby="modalTermsTitle" aria-hidden="true">

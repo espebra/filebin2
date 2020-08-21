@@ -73,7 +73,7 @@
 
             {{ if eq $numfiles 0 }}files.{{ end }}
             {{ if eq $numfiles 1 }}file at {{ .Bin.BytesReadable }}.{{ end }}
-            {{ if gt $numfiles 1 }}files at {{ .Bin.BytesReadable }}.{{ end }}
+            {{ if gt $numfiles 1 }}files at {{ .Bin.BytesReadable }} in total.{{ end }}
         </p>
 
         <p>
