@@ -62,7 +62,8 @@ func (h *HTTP) Run() {
 	fmt.Printf("Starting HTTP server on %s:%d\n", h.httpHost, h.httpPort)
 	err := http.ListenAndServe(fmt.Sprintf("%s:%d", h.httpHost, h.httpPort), handlers.CompressHandler(h.router))
 	if err != nil {
-		fmt.Errorf("Failed to start HTTP server: %s", err.Error())
+		fmt.Printf("Failed to start HTTP server: %s\n", err.Error())
+		os.Exit(2)
 	}
 }
 

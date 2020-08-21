@@ -54,7 +54,7 @@ func main() {
 
 	s3conn, err := s3.Init(*s3EndpointFlag, *s3BucketFlag, *s3RegionFlag, *s3AccessKeyFlag, *s3SecretKeyFlag, *s3EncryptionKeyFlag)
 	if err != nil {
-		fmt.Printf("Unable to connect to S3: %s\n", err.Error())
+		fmt.Printf("Unable to initialize S3 connection: %s\n", err.Error())
 		os.Exit(2)
 	}
 

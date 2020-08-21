@@ -210,7 +210,7 @@
                         <div class="pull-left">
                         <button type="button" class="btn btn-danger" id="deleteButton" onclick="deleteURL('/{{ $.Bin.Id }}','deleteStatus')"><i class="fas fa-fw fa-trash-alt"></i> Confirm</button>
                         </div>
-                        <a class="link-primary" href="/{{ $.Bin.Id }}" class="btn btn-secondary"><i class="fa fa-close"></i> Close</a>
+                        <a class="btn btn-secondary" href="/{{ $.Bin.Id }}" class="btn btn-secondary"><i class="fa fa-close"></i> Close</a>
                     </div>
                 </div>
             </div>

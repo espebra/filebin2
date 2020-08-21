@@ -18,7 +18,7 @@
         <ul class="navbar-nav">
 	    {{ if eq .Page "bin" }}
                 <li class="nav-item">
-                    <a class="nav-link" href="" data-toggle="modal" data-target="#modalTakedown">Take down</a>
+                    <a class="nav-link" href="" data-toggle="modal" data-target="#modalTakedown">Takedown</a>
                 </li>
 	    {{ end }}
         </ul>
@@ -41,7 +41,10 @@
                 </button>
             </div>
             <div class="modal-body">
-                <p>Takedown</p>
+                <p>This web service provides functionality for clients to upload and download files. There is an opportunity to abuse this, although it is in breach of the <a href="/terms">Terms and conditions</a>.</p>
+
+                <p>There is no automatic content moderation of illegal or copyrighted files, but anyone familiar with the location of the files can delete them at their own will.</p>
+                <p>Instead of sending a takedown request to the service owner, you are encouraged to <a href="" data-dismiss="modal" data-toggle="modal" data-target="#modalDeleteBin">delete the bin</a> yourself.</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
