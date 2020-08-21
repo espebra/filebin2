@@ -1,4 +1,4 @@
-{{ define "privacy" }}<!doctype html>
+{{ define "terms" }}<!doctype html>
 <html lang="en">
     <head>
         <meta charset="utf-8">
@@ -8,11 +8,11 @@
         <link rel="stylesheet" href="/static/css/fontawesome.all.min.css"/>
         <link rel="stylesheet" href="/static/css/upload.css"/>
         <link rel="stylesheet" href="/static/css/custom.css"/>
-        <title>Filebin | Privacy</title>
+        <title>Filebin | Terms and conditions</title>
     </head>
     <body class="container-xl">
         {{template "topbar" .}}
-        <h1>Privacy</h1>
+        <h1>Terms and conditions</h1>
 
         <p>Text goes here.</p>
 

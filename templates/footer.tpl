@@ -1,0 +1,19 @@
+{{ define "footer" }}
+<hr class="mb-0"/>
+<nav class="navbar navbar-expand-sm navbar-light small">
+    <ul class="navbar-nav">
+        <li class="nav-item">
+            <a class="nav-link" href="/about">About</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="/api">API documentation</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="/privacy">Privacy</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="/terms">Terms and conditions</a>
+        </li>
+    </ul>
+</nav>
+{{ end }}
