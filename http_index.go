@@ -12,9 +12,12 @@ import (
 func (h *HTTP) Index(w http.ResponseWriter, r *http.Request) {
 
 	type Data struct {
+		ds.Common
 		Bin ds.Bin `json:"bin"`
 	}
 	var data Data
+
+	data.Page = "front"
 
 	bin := &ds.Bin{}
 	bin.Expiration = time.Now().UTC().Add(h.expirationDuration)
@@ -35,7 +38,14 @@ func (h *HTTP) Index(w http.ResponseWriter, r *http.Request) {
 
 func (h *HTTP) About(w http.ResponseWriter, r *http.Request) {
 	//w.Header().Set("Cache-Control", "max-age=900")
-	if err := h.templates.ExecuteTemplate(w, "about", nil); err != nil {
+	type Data struct {
+		ds.Common
+		Bin ds.Bin `json:"bin"`
+	}
+	var data Data
+	data.Page = "about"
+
+	if err := h.templates.ExecuteTemplate(w, "about", data); err != nil {
 		fmt.Printf("Failed to execute template: %s\n", err.Error())
 		http.Error(w, "Errno 302", http.StatusInternalServerError)
 		return
@@ -44,9 +54,11 @@ func (h *HTTP) About(w http.ResponseWriter, r *http.Request) {
 
 func (h *HTTP) API(w http.ResponseWriter, r *http.Request) {
 	type Data struct {
+		ds.Common
 		Bin ds.Bin `json:"bin"`
 	}
 	var data Data
+	data.Page = "api"
 
 	//w.Header().Set("Cache-Control", "max-age=900")
 	if err := h.templates.ExecuteTemplate(w, "api", data); err != nil {
@@ -59,9 +71,11 @@ func (h *HTTP) API(w http.ResponseWriter, r *http.Request) {
 func (h *HTTP) APISpec(w http.ResponseWriter, r *http.Request) {
 
 	type Data struct {
+		ds.Common
 		Bin ds.Bin `json:"bin"`
 	}
 	var data Data
+	data.Page = "api"
 
 	w.Header().Set("Content-Type", "application/json")
 	//w.Header().Set("Cache-Control", "max-age=900")

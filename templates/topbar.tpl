@@ -1,9 +1,13 @@
 {{ define "topbar" }}
+
 <nav class="navbar navbar-expand-sm navbar-light d-flex justify-content-between align-items-start small">
     <div>
         <ul class="navbar-nav">
             <li class="nav-item">
+		{{ if eq .Page "front" }}
+		{{ else }}
                 <a class="nav-link" href="/">Front page</a>
+		{{ end }}
             </li>
         </ul>
     </div>

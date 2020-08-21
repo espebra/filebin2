@@ -16,10 +16,12 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 	inputBin := params["bin"]
 
 	type Data struct {
+		ds.Common
 		Bin   ds.Bin    `json:"bin"`
 		Files []ds.File `json:"files"`
 	}
 	var data Data
+	data.Page = "viewbin"
 
 	bin, found, err := h.dao.Bin().GetById(inputBin)
 	if err != nil {
