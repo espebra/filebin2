@@ -77,7 +77,7 @@
           "file"
         ],
         "summary": "Upload a file to a bin",
-        "description": "",
+        "description": "Upload a file to a new or existing bin. The bin will be created if it does not exist prior to the upload.",
         "parameters": [
           {
             "in": "header",
