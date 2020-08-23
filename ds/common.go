@@ -1,5 +1,5 @@
 package ds
 
 type Common struct {
-	Page            string       `json:"-"`
+	Page string `json:"-"`
 }
