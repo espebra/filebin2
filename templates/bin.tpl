@@ -110,48 +110,63 @@
         </p>
 
         {{ if .Files }}
-            <div class="row">
-                <div class="col-5 col-sm-6"><strong>Filename</strong></div>
-                <div class="col"><strong>Size</strong></div>
-                <div class="col"><strong>Uploaded</strong></div>
-                <div class="col"></div>
-            </div>
-                    {{ range $index, $value := .Files }}
-                        <hr class="mt-1 mb-1"/>
-                        <div class="row">
-                            <div class="col-5 col-sm-6">
-                                {{ if eq .Category "image" }}
-                                    <i class="far fa-fw fa-file-image"></i>
-                                {{ else }}
-                                    {{ if eq .Category "video" }}
-                                        <i class="far fa-fw fa-file-video"></i>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Filename</th>
+                            <th>Content type</th>
+                            <th>Size</th>
+                            <th>Uploaded</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{ range $index, $value := .Files }}
+                            <tr>
+                                <td>
+                                    {{ if eq .Category "image" }}
+                                        <i class="far fa-fw fa-file-image"></i>
                                     {{ else }}
-                                        <i class="far fa-fw fa-file"></i>
+                                        {{ if eq .Category "video" }}
+                                            <i class="far fa-fw fa-file-video"></i>
+                                        {{ else }}
+                                            <i class="far fa-fw fa-file"></i>
+                                        {{ end }}
                                     {{ end }}
-                                {{ end }}
-                                <a class="link-primary" href="{{ .URL }}">{{ .Filename }}</a>
-                            </div>
-                            <div class="col">{{ .BytesReadable }}</div>
-                            <div class="col">{{ .UpdatedRelative }}</div>
-                            <div class="col">
-                                <div class="dropdown">
-                                    <a class="dropdown-toggle small" id="dropdownFileMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                        More
-                                    </a>
-                                    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownFileMenuButton">
-                                        <a class="dropdown-item" href="#">
-                                        <a class="dropdown-item" href="" data-toggle="modal" data-target="#modalFileProperties-{{ $index }}">
-                                            <i class="fas fa-fw fa-info-circle text-primary"></i> File properties
+                                    <a class="link-primary" href="{{ .URL }}">{{ .Filename }}</a>
+                                </td>
+                                <td>
+                                    {{ .Mime }}
+                                </td>
+                                <td>
+                                    {{ .BytesReadable }}
+                                </td>
+                                <td>
+                                    {{ .UpdatedRelative }}
+                                </td>
+                                <td>
+                                    <div class="dropdown">
+                                        <a class="dropdown-toggle small" id="dropdownFileMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                            More
                                         </a>
-                                        <div class="dropdown-divider"></div>
-                                        <a class="dropdown-item" href="" data-toggle="modal" data-target="#modalDeleteFile-{{ $index }}">
-                                            <i class="far fa-fw fa-trash-alt text-danger"></i> Delete file
-                                        </a>
+                                        <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownFileMenuButton">
+                                            <a class="dropdown-item" href="#">
+                                            <a class="dropdown-item" href="" data-toggle="modal" data-target="#modalFileProperties-{{ $index }}">
+                                                <i class="fas fa-fw fa-info-circle text-primary"></i> File properties
+                                            </a>
+                                            <div class="dropdown-divider"></div>
+                                            <a class="dropdown-item" href="" data-toggle="modal" data-target="#modalDeleteFile-{{ $index }}">
+                                                <i class="far fa-fw fa-trash-alt text-danger"></i> Delete file
+                                            </a>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-                    {{ end }}
+                                </td>
+                            </tr>
+                        {{ end }}
+                    </tbody>
+                </table>
+            </div>
         {{ end }}
 
         <!-- Download archive modal start -->
@@ -250,10 +265,10 @@
                             <dt class="col-sm-3">Status</dt>
                             <dd class="col-sm-9">
                                 {{ if $.Bin.Readonly }}
-					Locked (Read only)
-				{{ else }}
-					Unlocked
-				{{ end }}
+	        			Locked (Read only)
+	        		{{ else }}
+	        			Unlocked
+	        		{{ end }}
                             </dd>
 
                             <dt class="col-sm-3">Created</dt>
@@ -297,7 +312,7 @@
                     </div>
                     <div class="modal-body">
                         <p>The bin is currently unlocked, which means that new files can be added to it and existing files can be updated. If the bin is locked, the bin will become read only and no more file uploads will be allowed. Note that a locked bin can still be deleted.</p>
-			<p>This action is not reversible.</p>
+	        	<p>This action is not reversible.</p>
 
                         <p class="lead">Do you want to lock bin <a class="link-primary" href="/{{ $.Bin.Id }}">{{ $.Bin.Id }}</a>?</p>
 
