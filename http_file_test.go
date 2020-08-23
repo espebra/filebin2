@@ -250,12 +250,12 @@ func TestLockAndDeleteBin(t *testing.T) {
 			StatusCode:    201,
 		}, {
 			Description: "Lock the bin",
-			Method:      "LOCK",
+			Method:      "PUT",
 			Bin:         "mytestbin",
 			StatusCode:  200,
 		}, {
 			Description: "Lock the bin again",
-			Method:      "LOCK",
+			Method:      "PUT",
 			Bin:         "mytestbin",
 			StatusCode:  200,
 		}, {
@@ -295,7 +295,7 @@ func TestLockAndDeleteBin(t *testing.T) {
 			StatusCode:  404,
 		}, {
 			Description: "Lock the bin that was deleted, should fail",
-			Method:      "LOCK",
+			Method:      "PUT",
 			Bin:         "mytestbin",
 			StatusCode:  404,
 		},
@@ -312,7 +312,7 @@ func TestNotExistingBinsAndFiles(t *testing.T) {
 			StatusCode:  404,
 		}, {
 			Description: "Lock bin that doesn't exist",
-			Method:      "LOCK",
+			Method:      "PUT",
 			Bin:         "unknownbin",
 			StatusCode:  404,
 		}, {
@@ -405,7 +405,7 @@ func TestNotExistingBinsAndFiles(t *testing.T) {
 			StatusCode:  404,
 		}, {
 			Description: "Lock bin that is deleted",
-			Method:      "LOCK",
+			Method:      "PUT",
 			Bin:         "mytestbin3",
 			StatusCode:  404,
 		},

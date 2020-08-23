@@ -374,7 +374,7 @@ function lockBin (bin, messageBoxID) {
     };
 
     xhr.open(
-        "LOCK",
+        "PUT",
         "/" + bin
     );
 
