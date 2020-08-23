@@ -45,9 +45,12 @@
 
                 <p>There is an opportunity to abuse this to share illegal, copyrighted or malicious content. There is no automatic moderation of such content, but anyone familiar with the location of the files can delete them at their own will.</p>
 
-                <p>Instead of sending a takedown request to the service owner, you are encouraged to <a href="" data-dismiss="modal" data-toggle="modal" data-target="#modalDeleteBin">delete the bin</a> yourself.</p>
+                <p>If this bin contains files that should not be here, please <a href="" data-dismiss="modal" data-toggle="modal" data-target="#modalDeleteBin">delete the bin</a>. This will immediately make the files unavailable, and is faster than sending a takedown request to the service owner.</p>
             </div>
             <div class="modal-footer">
+                <button type="button" class="btn btn-danger" data-dismiss="modal" data-toggle="modal" data-target="#modalDeleteBin">
+                    <i class="fas fa-fw fa-trash-alt"></i> Delete bin
+                </button>
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
             </div>
         </div>

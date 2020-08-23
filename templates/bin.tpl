@@ -214,10 +214,11 @@
                         </button>
                     </div>
                     <div class="modal-body">
-                        <p>You are free to delete this bin. However you are encouraged to delete your own bins only, or bins that are being used to share obvious malicious or illegal content.</p>
+                        <p>You are free to delete this bin. However you are encouraged to delete your own bins only, or bins that are being used to share obvious illegal, copyrighted or malicious content. Bins that are deleted can not be reused.</p>
+
                         <p>This action is not reversible.</p>
 
-                        <p class="lead">Delete all the files in bin <a class="link-primary" href="/{{ $.Bin.Id }}">{{ $.Bin.Id }}</a>?</p>
+                        <p class="lead">Delete the bin <a class="link-primary" href="/{{ $.Bin.Id }}">{{ $.Bin.Id }}</a> and all of its files?</p>
 
                         <div id="deleteStatus"></div>
                     </div>
