@@ -43,7 +43,7 @@
             <div class="modal-body">
                 <p>This web service provides functionality for clients to upload and download files.</p>
 
-                <p>There is an opportunity to <a href="/terms">abuse this</a> to share illegal, copyrighted or malicious content. There is no automatic moderation of such content, but anyone familiar with the location of the files can delete them at their own will.</p>
+                <p>There is an opportunity to abuse this to share illegal, copyrighted or malicious content. There is no automatic moderation of such content, but anyone familiar with the location of the files can delete them at their own will.</p>
 
                 <p>Instead of sending a takedown request to the service owner, you are encouraged to <a href="" data-dismiss="modal" data-toggle="modal" data-target="#modalDeleteBin">delete the bin</a> yourself.</p>
             </div>
