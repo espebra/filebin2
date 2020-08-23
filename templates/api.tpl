@@ -62,7 +62,7 @@
         {{template "topbar" .}}
         <h1>API documentation</h1>
 
-        <p>This API documentation page is generated from the <a href="/api.json">OpenAPI 3.0 specification</a> and aims to make it easy to create tools to upload, list, download and delete files from Filebin.</p>
+        <p>This API documentation page is generated from the <a href="/api.yaml">OpenAPI 3.0 specification</a> and aims to make it easy to create tools to upload, list, download and delete files from Filebin.</p>
 
         <div id="swagger-ui"></div>
 

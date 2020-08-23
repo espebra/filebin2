@@ -84,7 +84,6 @@ func (h *HTTP) Terms(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-
 func (h *HTTP) API(w http.ResponseWriter, r *http.Request) {
 	type Data struct {
 		ds.Common
@@ -111,7 +110,7 @@ func (h *HTTP) APISpec(w http.ResponseWriter, r *http.Request) {
 	var data Data
 	data.Page = "api"
 
-	w.Header().Set("Content-Type", "text/yaml")
+	w.Header().Set("Content-Type", "text/plain")
 	//w.Header().Set("Cache-Control", "max-age=900")
 	if err := h.templates.ExecuteTemplate(w, "apispec", data); err != nil {
 		fmt.Printf("Failed to execute template: %s\n", err.Error())
