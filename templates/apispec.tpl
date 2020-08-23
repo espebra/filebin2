@@ -103,7 +103,7 @@ paths:
       tags:
         - bin
       summary: Lock an entire bin to make it read only
-      description: ''
+      description: 'This will make a bin read only. A read only bin does not accept new files to be uploaded or existing files to be updated. This provides some content integrity when distributing a bin to multiple parties. Note that it is possible to delete a read only bin.'
       parameters:
         - name: bin
           in: path
@@ -119,7 +119,7 @@ paths:
       tags:
         - bin
       summary: Delete an entire bin and all of its files
-      description: ''
+      description: 'This will delete all files from a bin. It is not possible to reuse a bin that has been deleted. Everyone knowing the URL to the bin have access to delete it.'
       parameters:
         - name: bin
           in: path
