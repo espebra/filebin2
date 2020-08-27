@@ -27,6 +27,7 @@ type HTTP struct {
 	expirationDuration time.Duration
 	httpPort           int
 	httpHost           string
+	httpAccessLog      string
 	router             *mux.Router
 	templateBox        *rice.Box
 	staticBox          *rice.Box
@@ -55,14 +56,20 @@ func (h *HTTP) Init() (err error) {
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.LockBin).Methods("PUT")
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.GetFile).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.DeleteFile).Methods(http.MethodDelete)
+
 	h.expirationDuration = time.Second * time.Duration(h.expiration)
 	return err
 }
 
 func (h *HTTP) Run() {
 	fmt.Printf("Starting HTTP server on %s:%d\n", h.httpHost, h.httpPort)
-	err := http.ListenAndServe(fmt.Sprintf("%s:%d", h.httpHost, h.httpPort), handlers.CompressHandler(h.router))
+	accessLog, err := os.OpenFile(h.httpAccessLog, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
+		fmt.Printf("Unable to open log file: %s\n", err.Error())
+		os.Exit(2)
+	}
+	defer accessLog.Close()
+	if err := http.ListenAndServe(fmt.Sprintf("%s:%d", h.httpHost, h.httpPort), handlers.CombinedLoggingHandler(accessLog, handlers.CompressHandler(h.router))); err != nil {
 		fmt.Printf("Failed to start HTTP server: %s\n", err.Error())
 		os.Exit(2)
 	}

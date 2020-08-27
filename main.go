@@ -18,6 +18,7 @@ var (
 	// HTTP
 	listenHostFlag = flag.String("listen-host", "127.0.0.1", "Listen host")
 	listenPortFlag = flag.Int("listen-port", 8080, "Listen port")
+	accessLogFlag  = flag.String("access-log", "/var/log/filebin/access.log", "Path for access.log output")
 
 	// Database
 	dbHostFlag     = flag.String("db-host", "127.0.0.1", "Database host")
@@ -71,13 +72,14 @@ func main() {
 	templateBox := rice.MustFindBox("templates")
 
 	h := &HTTP{
-		httpHost:    *listenHostFlag,
-		httpPort:    *listenPortFlag,
-		staticBox:   staticBox,
-		templateBox: templateBox,
-		dao:         &daoconn,
-		s3:          &s3conn,
-		expiration:  *expirationFlag,
+		httpHost:      *listenHostFlag,
+		httpPort:      *listenPortFlag,
+		httpAccessLog: *accessLogFlag,
+		staticBox:     staticBox,
+		templateBox:   templateBox,
+		dao:           &daoconn,
+		s3:            &s3conn,
+		expiration:    *expirationFlag,
 	}
 
 	if err := h.Init(); err != nil {
