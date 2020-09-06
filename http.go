@@ -28,6 +28,8 @@ type HTTP struct {
 	httpPort           int
 	httpHost           string
 	httpAccessLog      string
+	adminUsername      string
+	adminPassword      string
 	router             *mux.Router
 	templateBox        *rice.Box
 	staticBox          *rice.Box
@@ -49,7 +51,7 @@ func (h *HTTP) Init() (err error) {
 	h.router.HandleFunc("/privacy", h.Privacy).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/terms", h.Terms).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/archive/{bin:[A-Za-z0-9_-]+}/{format:[a-z]+}", h.Archive).Methods(http.MethodHead, http.MethodGet)
-	//h.router.HandleFunc("/admin", h.ViewAdminDashboard).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin", h.Auth(h.ViewAdminDashboard)).Methods(http.MethodHead, http.MethodGet)
 	h.router.Handle("/static/{path:.*}", http.StripPrefix("/static/", http.FileServer(h.staticBox.HTTPBox()))).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.ViewBin).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.DeleteBin).Methods(http.MethodDelete)
@@ -61,17 +63,52 @@ func (h *HTTP) Init() (err error) {
 	return err
 }
 
+func (h *HTTP) Auth(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Let the client know authentication is required
+		w.Header().Set("WWW-Authenticate", "Basic realm='Filebin'")
+
+		// Abort here if the admin username or password is not set
+		if h.adminUsername == "" || h.adminPassword == "" {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		// Read the authorization request header
+		username, password, ok := r.BasicAuth()
+		if ok == false {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		if username != h.adminUsername || password != h.adminPassword {
+			time.Sleep(3 * time.Second)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		fn(w, r)
+	}
+}
+
 func (h *HTTP) Run() {
 	fmt.Printf("Starting HTTP server on %s:%d\n", h.httpHost, h.httpPort)
-	accessLog, err := os.OpenFile(h.httpAccessLog, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		fmt.Printf("Unable to open log file: %s\n", err.Error())
-		os.Exit(2)
-	}
-	defer accessLog.Close()
-	if err := http.ListenAndServe(fmt.Sprintf("%s:%d", h.httpHost, h.httpPort), handlers.CombinedLoggingHandler(accessLog, handlers.CompressHandler(h.router))); err != nil {
-		fmt.Printf("Failed to start HTTP server: %s\n", err.Error())
-		os.Exit(2)
+	if h.httpAccessLog == "" {
+		if err := http.ListenAndServe(fmt.Sprintf("%s:%d", h.httpHost, h.httpPort), handlers.CombinedLoggingHandler(os.Stdout, handlers.CompressHandler(h.router))); err != nil {
+			fmt.Printf("Failed to start HTTP server: %s\n", err.Error())
+			os.Exit(2)
+		}
+	} else {
+		accessLog, err := os.OpenFile(h.httpAccessLog, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		defer accessLog.Close()
+		if err != nil {
+			fmt.Printf("Unable to open log file: %s\n", err.Error())
+			os.Exit(2)
+		}
+		if err := http.ListenAndServe(fmt.Sprintf("%s:%d", h.httpHost, h.httpPort), handlers.CombinedLoggingHandler(accessLog, handlers.CompressHandler(h.router))); err != nil {
+			fmt.Printf("Failed to start HTTP server: %s\n", err.Error())
+			os.Exit(2)
+		}
 	}
 }
 

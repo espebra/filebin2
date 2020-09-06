@@ -18,7 +18,7 @@ var (
 	// HTTP
 	listenHostFlag = flag.String("listen-host", "127.0.0.1", "Listen host")
 	listenPortFlag = flag.Int("listen-port", 8080, "Listen port")
-	accessLogFlag  = flag.String("access-log", "/var/log/filebin/access.log", "Path for access.log output")
+	accessLogFlag  = flag.String("access-log", "", "Path for access.log output")
 
 	// Database
 	dbHostFlag     = flag.String("db-host", "127.0.0.1", "Database host")
@@ -37,6 +37,10 @@ var (
 
 	// Lurker
 	lurkerIntervalFlag = flag.Int("lurker-interval", 300, "Lurker interval is the delay to sleep between each run in seconds")
+
+	// Auth
+	adminUsernameFlag = flag.String("admin-username", os.Getenv("ADMIN_USERNAME"), "Admin username")
+	adminPasswordFlag = flag.String("admin-password", os.Getenv("ADMIN_PASSWORD"), "Admin password")
 )
 
 func main() {
@@ -75,6 +79,8 @@ func main() {
 		httpHost:      *listenHostFlag,
 		httpPort:      *listenPortFlag,
 		httpAccessLog: *accessLogFlag,
+		adminUsername: *adminUsernameFlag,
+		adminPassword: *adminPasswordFlag,
 		staticBox:     staticBox,
 		templateBox:   templateBox,
 		dao:           &daoconn,

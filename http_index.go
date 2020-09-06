@@ -40,7 +40,6 @@ func (h *HTTP) About(w http.ResponseWriter, r *http.Request) {
 	//w.Header().Set("Cache-Control", "max-age=900")
 	type Data struct {
 		ds.Common
-		Bin ds.Bin `json:"bin"`
 	}
 	var data Data
 	data.Page = "about"

@@ -9,6 +9,7 @@ import (
 	"path"
 	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/minio/minio-go/v6"
 	"github.com/minio/sio"
 )
@@ -17,6 +18,15 @@ type S3AO struct {
 	client        *minio.Client
 	bucket        string
 	encryptionKey string
+}
+
+type BucketInfo struct {
+	Objects                       uint64
+	ObjectsSize                   uint64
+	ObjectsSizeReadable           string
+	IncompleteObjects             uint64
+	IncompleteObjectsSize         uint64
+	IncompleteObjectsSizeReadable string
 }
 
 // Initialize S3AO
@@ -227,4 +237,43 @@ func (s S3AO) GetObject(bin string, filename string, nonce []byte) (io.Reader, e
 	}
 	fmt.Printf("Fetched object: %s in %.3fs\n", objectKey, time.Since(t0).Seconds())
 	return decryptedObject, err
+}
+
+func (s S3AO) GetBucketInfo() (info BucketInfo) {
+	doneCh := make(chan struct{})
+	defer close(doneCh)
+
+	objectCh := s.client.ListObjectsV2(s.bucket, "", true, doneCh)
+	var size int64
+	var numObjects uint64
+	for object := range objectCh {
+		if object.Err != nil {
+			fmt.Println(object.Err)
+			return info
+		}
+		size = size + object.Size
+		numObjects = numObjects + 1
+	}
+
+	info.Objects = numObjects
+	info.ObjectsSize = uint64(size)
+	info.ObjectsSizeReadable = humanize.Bytes(info.ObjectsSize)
+
+	doneCh = make(chan struct{})
+	defer close(doneCh)
+	multiPartObjectCh := s.client.ListIncompleteUploads(s.bucket, "", true, doneCh)
+	size = 0
+	numObjects = 0
+	for multiPartObject := range multiPartObjectCh {
+		if multiPartObject.Err != nil {
+			fmt.Println(multiPartObject.Err)
+			return info
+		}
+		size = size + multiPartObject.Size
+		numObjects = numObjects + 1
+	}
+	info.IncompleteObjects = numObjects
+	info.IncompleteObjectsSize = uint64(size)
+	info.IncompleteObjectsSizeReadable = humanize.Bytes(info.IncompleteObjectsSize)
+	return info
 }
