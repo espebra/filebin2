@@ -104,7 +104,7 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 		for _, file := range files {
 			header := &zip.FileHeader{}
 			header.Name = file.Filename
-			header.Modified = file.Updated
+			header.Modified = file.UpdatedAt
 			header.SetMode(400) // RW for the file owner
 
 			ze, err := zw.CreateHeader(header)
@@ -137,7 +137,7 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 			header := &tar.Header{}
 			header.Name = file.Filename
 			header.Size = int64(file.Bytes)
-			header.ModTime = file.Updated
+			header.ModTime = file.UpdatedAt
 			header.Mode = 0600 // rw access for the owner
 
 			if err := tw.WriteHeader(header); err != nil {
@@ -190,7 +190,7 @@ func (h *HTTP) DeleteBin(w http.ResponseWriter, r *http.Request) {
 
 	// Set to pending delete
 	bin.Status = 1
-	bin.Deleted = now
+	bin.DeletedAt = now
 	if err := h.dao.Bin().Update(&bin); err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return

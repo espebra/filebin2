@@ -64,8 +64,8 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Expires", bin.Expiration.Format(http.TimeFormat))
-	w.Header().Set("Last-Modified", file.Updated.Format(http.TimeFormat))
+	w.Header().Set("Expires", bin.ExpiredAt.Format(http.TimeFormat))
+	w.Header().Set("Last-Modified", file.UpdatedAt.Format(http.TimeFormat))
 	w.Header().Set("Bin", file.Bin)
 	w.Header().Set("Filename", file.Filename)
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", file.Bytes))
@@ -134,7 +134,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 		// Bin does not exist, so create it here
 		bin = ds.Bin{}
 		bin.Id = inputBin
-		bin.Expiration = time.Now().UTC().Add(h.expirationDuration)
+		bin.ExpiredAt = time.Now().UTC().Add(h.expirationDuration)
 		if err := h.dao.Bin().Insert(&bin); err != nil {
 			h.Error(w, r, fmt.Sprintf("Unable to insert bin %s: %s", inputBin, err.Error()), "Database error", 121, http.StatusInternalServerError)
 			return
@@ -263,7 +263,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	// Reset the deleted status and timestamp in case the file was deleted
 	// earlier
 	var t time.Time
-	file.Deleted = t
+	file.DeletedAt = t
 	file.Status = 0
 
 	file.Bytes = inputBytes
@@ -302,7 +302,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update bin to set the correct updated timestamp
-	bin.Expiration = time.Now().UTC().Add(h.expirationDuration)
+	bin.ExpiredAt = time.Now().UTC().Add(h.expirationDuration)
 	if err := h.dao.Bin().Update(&bin); err != nil {
 		fmt.Printf("Unable to update bin %s: %s\n", bin.Id, err.Error())
 		http.Error(w, "Errno 109", http.StatusInternalServerError)
@@ -371,7 +371,7 @@ func (h *HTTP) DeleteFile(w http.ResponseWriter, r *http.Request) {
 
 	// Set to pending delete
 	file.Status = 1
-	file.Deleted = now
+	file.DeletedAt = now
 	if err := h.dao.File().Update(&file); err != nil {
 		fmt.Printf("Unable to update the file (%s, %s): %s\n", inputBin, inputFilename, err.Error())
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)

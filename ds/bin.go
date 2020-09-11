@@ -5,22 +5,22 @@ import (
 )
 
 type Bin struct {
-	Id                 string    `json:"id"`
-	Status             int       `json:"-"`
-	Readonly           bool      `json:"readonly"`
-	Downloads          uint64    `json:"-"`
-	Bytes              uint64    `json:"bytes"`
-	BytesReadable      string    `json:"bytes_readable"`
-	Files              uint64    `json:"files"`
-	Updated            time.Time `json:"updated"`
-	UpdatedRelative    string    `json:"updated_relative"`
-	Created            time.Time `json:"created"`
-	CreatedRelative    string    `json:"created_relative"`
-	Expiration         time.Time `json:"expiration"`
-	ExpirationRelative string    `json:"expiration_relative"`
-	Deleted            time.Time `json:"-"`
-	DeletedRelative    string    `json:"-"`
-	URL                string    `json:"-"`
+	Id                string    `json:"id"`
+	Status            int       `json:"-"`
+	Readonly          bool      `json:"readonly"`
+	Downloads         uint64    `json:"-"`
+	Bytes             uint64    `json:"bytes"`
+	BytesReadable     string    `json:"bytes_readable"`
+	Files             uint64    `json:"files"`
+	UpdatedAt         time.Time `json:"updated_at"`
+	UpdatedAtRelative string    `json:"updated_at_relative"`
+	CreatedAt         time.Time `json:"created_at"`
+	CreatedAtRelative string    `json:"created_at_relative"`
+	ExpiredAt         time.Time `json:"expired_at"`
+	ExpiredAtRelative string    `json:"expired_at_relative"`
+	DeletedAt         time.Time `json:"-"`
+	DeletedAtRelative string    `json:"-"`
+	URL               string    `json:"-"`
 }
 
 func (b *Bin) IsReadable() bool {
@@ -29,7 +29,7 @@ func (b *Bin) IsReadable() bool {
 		return false
 	}
 	// Not readable if the deleted timestamp is more recent than zero
-	if b.Deleted.IsZero() == false {
+	if b.DeletedAt.IsZero() == false {
 		return false
 	}
 	// Not readable if flagged as deleted
@@ -52,7 +52,7 @@ func (b *Bin) IsWritable() bool {
 }
 
 func (b *Bin) Expired() bool {
-	if b.Expiration.Before(time.Now()) {
+	if b.ExpiredAt.Before(time.Now()) {
 		return true
 	}
 	return false

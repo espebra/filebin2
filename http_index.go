@@ -20,7 +20,7 @@ func (h *HTTP) Index(w http.ResponseWriter, r *http.Request) {
 	data.Page = "front"
 
 	bin := &ds.Bin{}
-	bin.Expiration = time.Now().UTC().Add(h.expirationDuration)
+	bin.ExpiredAt = time.Now().UTC().Add(h.expirationDuration)
 	err := h.dao.Bin().Insert(bin)
 	if err != nil {
 		fmt.Printf("Unable to insert new bin: %s\n", err.Error())

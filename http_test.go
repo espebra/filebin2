@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	testExpiration      = 5
+	testExpiredAt       = 5
 	testHTTPHost        = "localhost"
 	testHTTPPort        = 8080
 	testDbName          = "db"
@@ -72,7 +72,7 @@ func TestMain(m *testing.M) {
 	staticBox := rice.MustFindBox("static")
 	templateBox := rice.MustFindBox("templates")
 	h := &HTTP{
-		expiration:  testExpiration,
+		expiration:  testExpiredAt,
 		httpHost:    testHTTPHost,
 		httpPort:    testHTTPPort,
 		staticBox:   staticBox,

@@ -71,7 +71,7 @@
             {{ range $index, $value := .Bins.PendingDelete }}
                 <tr>
                     <td><a href="{{ .URL }}">{{ .Id }}</a></td>
-                    <td>{{ .UpdatedRelative }}</td>
+                    <td>{{ .UpdatedAtRelative }}</td>
                     <td>{{ .BytesReadable }}</td>
                     <td>{{ .Files }}</td>
                     <td>
@@ -97,7 +97,7 @@
             {{ range $index, $value := .Bins.Available }}
                 <tr>
                     <td><a href="{{ .URL }}">{{ .Id }}</a></td>
-                    <td>{{ .UpdatedRelative }}</td>
+                    <td>{{ .UpdatedAtRelative }}</td>
                     <td>{{ .BytesReadable }}</td>
                     <td>{{ .Files }}</td>
                     <td>

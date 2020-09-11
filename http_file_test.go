@@ -187,7 +187,7 @@ func TestUploadFile(t *testing.T) {
 	runTests(tcs, t)
 }
 
-func TestUploadToDeletedBin(t *testing.T) {
+func TestUploadToDeletedAtBin(t *testing.T) {
 	tcs := []TestCase{
 		{
 			Description:   "Create file to set up test case",

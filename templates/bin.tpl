@@ -62,13 +62,13 @@
         {{ $numfiles := .Files | len }}
         
         <p class="lead">
-            The bin <a class="link-primary" href="/{{ .Bin.Id }}">{{ .Bin.Id }}</a> was created {{ .Bin.CreatedRelative }}
+            The bin <a class="link-primary" href="/{{ .Bin.Id }}">{{ .Bin.Id }}</a> was created {{ .Bin.CreatedAtRelative }}
             
-            {{- if ne .Bin.CreatedRelative .Bin.UpdatedRelative -}}
-            , updated {{ .Bin.UpdatedRelative }} 
+            {{- if ne .Bin.CreatedAtRelative .Bin.UpdatedAtRelative -}}
+            , updated {{ .Bin.UpdatedAtRelative }} 
             {{ end }}
             
-            and it expires {{ .Bin.ExpirationRelative }}.
+            and it expires {{ .Bin.ExpiredAtRelative }}.
             It contains {{ .Files | len }}
 
             {{ if eq $numfiles 0 }}files.{{ end }}
@@ -143,7 +143,7 @@
                                     {{ .BytesReadable }}
                                 </td>
                                 <td>
-                                    {{ .UpdatedRelative }}
+                                    {{ .UpdatedAtRelative }}
                                 </td>
                                 <td>
                                     <div class="dropdown">
@@ -274,22 +274,22 @@
 
                             <dt class="col-sm-3">Created</dt>
                             <dd class="col-sm-9">
-                                {{ $.Bin.CreatedRelative }}
-                                ({{ $.Bin.Created.Format "2006-01-02 15:04:05 UTC" }})
+                                {{ $.Bin.CreatedAtRelative }}
+                                ({{ $.Bin.CreatedAt.Format "2006-01-02 15:04:05 UTC" }})
                             </dd>
 
                             <dt class="col-sm-3">Last updated</dt>
                             <dd class="col-sm-9">
-                                {{ $.Bin.UpdatedRelative }}
-                                ({{ $.Bin.Updated.Format "2006-01-02 15:04:05 UTC" }})
+                                {{ $.Bin.UpdatedAtRelative }}
+                                ({{ $.Bin.UpdatedAt.Format "2006-01-02 15:04:05 UTC" }})
                             </dd>
 
                             <dt class="col-sm-3">Expires</dt>
                             <dd class="col-sm-9">
-                                {{ if $.Bin.ExpirationRelative }}
-                                    {{ $.Bin.ExpirationRelative }}
+                                {{ if $.Bin.ExpiredAtRelative }}
+                                    {{ $.Bin.ExpiredAtRelative }}
                                 {{ end }}
-                                ({{ $.Bin.Expiration.Format "2006-01-02 15:04:05 UTC" }})
+                                ({{ $.Bin.ExpiredAt.Format "2006-01-02 15:04:05 UTC" }})
                             </dd>
                         </ul>
                     </div>
@@ -394,7 +394,7 @@
                                     ({{ .Bytes }} bytes)
                                 </dd>
 
-                                {{ if ne .Created .Updated }}
+                                {{ if ne .CreatedAt .UpdatedAt }}
                                     <dt class="col-sm-3">Update count</dt>
                                     <dd class="col-sm-9">
                                         {{ .Updates }}
@@ -402,23 +402,23 @@
 
                                     <dt class="col-sm-3">Last updated</dt>
                                     <dd class="col-sm-9">
-                                        {{ .UpdatedRelative }}
-                                        ({{ .Updated.Format "2006-01-02 15:04:05 UTC" }})
+                                        {{ .UpdatedAtRelative }}
+                                        ({{ .UpdatedAt.Format "2006-01-02 15:04:05 UTC" }})
                                     </dd>
                                 {{ end }}
 
                                 <dt class="col-sm-3">Created</dt>
                                 <dd class="col-sm-9">
-                                    {{ .CreatedRelative }}
-                                    ({{ .Created.Format "2006-01-02 15:04:05 UTC" }})
+                                    {{ .CreatedAtRelative }}
+                                    ({{ .CreatedAt.Format "2006-01-02 15:04:05 UTC" }})
                                 </dd>
 
                                 <dt class="col-sm-3">Expires</dt>
                                 <dd class="col-sm-9">
-                                    {{ if $.Bin.ExpirationRelative }}
-                                        {{ $.Bin.ExpirationRelative }}
+                                    {{ if $.Bin.ExpiredAtRelative }}
+                                        {{ $.Bin.ExpiredAtRelative }}
                                     {{ end }}
-                                    ({{ $.Bin.Expiration.Format "2006-01-02 15:04:05 UTC" }})
+                                    ({{ $.Bin.ExpiredAt.Format "2006-01-02 15:04:05 UTC" }})
                                 </dd>
                             </ul>
                         </div>

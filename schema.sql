@@ -2,10 +2,10 @@
 	id		VARCHAR(64) NOT NULL PRIMARY KEY,
 	readonly	BOOLEAN NOT NULL,
 	status		INT NOT NULL,
-	updated		TIMESTAMP NOT NULL,
-	created		TIMESTAMP NOT NULL,
-	expiration	TIMESTAMP NOT NULL,
-	deleted		TIMESTAMP NOT NULL,
+	updated_at	TIMESTAMP NOT NULL,
+	created_at	TIMESTAMP NOT NULL,
+	expired_at	TIMESTAMP NOT NULL,
+	deleted_at	TIMESTAMP NOT NULL,
 	downloads	BIGINT NOT NULL
 );
 
@@ -23,9 +23,9 @@ CREATE TABLE file (
 	ip		VARCHAR(128) NOT NULL,
 	trace		TEXT NOT NULL,
 	nonce		VARCHAR(128) NOT NULL,
-	updated		TIMESTAMP NOT NULL,
-	created		TIMESTAMP NOT NULL,
-	deleted		TIMESTAMP NOT NULL,
+	updated_at	TIMESTAMP NOT NULL,
+	created_at	TIMESTAMP NOT NULL,
+	deleted_at	TIMESTAMP NOT NULL,
 	UNIQUE(bin_id, filename)
 );
 

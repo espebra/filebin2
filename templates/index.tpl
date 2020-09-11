@@ -52,7 +52,7 @@
             Convenient file sharing without
             registration. Simply upload files and share
             the URL. The files will expire automatically
-            {{ .Bin.ExpirationRelative }}.
+            {{ .Bin.ExpiredAtRelative }}.
         </p>
         <p class="lead">
             <strong>1.</strong>
