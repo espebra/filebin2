@@ -1,6 +1,7 @@
 package s3
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
@@ -10,7 +11,8 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
-	"github.com/minio/minio-go/v6"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/minio/sio"
 )
 
@@ -35,7 +37,10 @@ func Init(endpoint, bucket, region, accessKey, secretKey, encryptionKey string) 
 	ssl := false
 
 	// Set up client for S3AO
-	minioClient, err := minio.New(endpoint, accessKey, secretKey, ssl)
+	minioClient, err := minio.New(endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
+		Secure: ssl,
+	})
 	if err != nil {
 		return s3ao, err
 	}
@@ -46,7 +51,7 @@ func Init(endpoint, bucket, region, accessKey, secretKey, encryptionKey string) 
 	fmt.Printf("Established session to S3AO at %s\n", endpoint)
 
 	// Ensure that the bucket exists
-	found, err := s3ao.client.BucketExists(bucket)
+	found, err := s3ao.client.BucketExists(context.Background(), bucket)
 	if err != nil {
 		fmt.Printf("Unable to check if S3AO bucket exists: %s\n", err.Error())
 		return s3ao, err
@@ -55,7 +60,7 @@ func Init(endpoint, bucket, region, accessKey, secretKey, encryptionKey string) 
 		fmt.Printf("Found S3AO bucket: %s\n", bucket)
 	} else {
 		t0 := time.Now()
-		if err := s3ao.client.MakeBucket(bucket, region); err != nil {
+		if err := s3ao.client.MakeBucket(context.Background(), bucket, minio.MakeBucketOptions{Region: region}); err != nil {
 			fmt.Printf("%s\n", err.Error())
 		}
 		fmt.Printf("Created S3AO bucket: %s in %.3fs\n", bucket, time.Since(t0).Seconds())
@@ -64,7 +69,7 @@ func Init(endpoint, bucket, region, accessKey, secretKey, encryptionKey string) 
 }
 
 func (s S3AO) Status() bool {
-	found, err := s.client.BucketExists(s.bucket)
+	found, err := s.client.BucketExists(context.Background(), s.bucket)
 	if err != nil {
 		return false
 	}
@@ -86,11 +91,7 @@ func (s S3AO) PutObject(bin string, filename string, data io.Reader, size int64)
 	t0 := time.Now()
 
 	// Hash the path in S3
-	b := sha256.New()
-	b.Write([]byte(bin))
-	f := sha256.New()
-	f.Write([]byte(filename))
-	objectKey := path.Join(fmt.Sprintf("%x", b.Sum(nil)), fmt.Sprintf("%x", f.Sum(nil)))
+	objectKey := s.GetObjectKey(bin, filename)
 
 	// the master key used to derive encryption keys
 	// this key must be keep secret
@@ -127,41 +128,48 @@ func (s S3AO) PutObject(bin string, filename string, data io.Reader, size int64)
 		return nonce, err
 	}
 
-	n, err := s.client.PutObject(s.bucket, objectKey, encrypted, int64(encryptedSize), minio.PutObjectOptions{ContentType: "application/octet-stream"})
+	info, err := s.client.PutObject(context.Background(), s.bucket, objectKey, encrypted, int64(encryptedSize), minio.PutObjectOptions{ContentType: "application/octet-stream"})
 	if err != nil {
 		fmt.Printf("Unable to put object: %s\n", err.Error())
 		return nonce, err
 	}
-	fmt.Printf("Stored object: %s (%d bytes) in %.3fs\n", objectKey, n, time.Since(t0).Seconds())
+	s3size := info.Size
+	fmt.Printf("Stored object: %s (%d bytes) in %.3fs\n", objectKey, s3size, time.Since(t0).Seconds())
 	return nonce, nil
 }
 
 func (s S3AO) RemoveObject(bin string, filename string) error {
-	key := path.Join(bin, filename)
+	key := s.GetObjectKey(bin, filename)
 	err := s.RemoveKey(key)
 	return err
 }
 
 func (s S3AO) RemoveKey(key string) error {
 	t0 := time.Now()
-	err := s.client.RemoveObject(s.bucket, key)
+
+	opts := minio.RemoveObjectOptions{
+		GovernanceBypass: true,
+	}
+
+	err := s.client.RemoveObject(context.Background(), s.bucket, key, opts)
 	if err != nil {
 		fmt.Printf("Unable to remove object: %s\n", err.Error())
+		return err
 	}
 	fmt.Printf("Removed object: %s in %.3fs\n", key, time.Since(t0).Seconds())
 	return nil
 }
 
 func (s S3AO) listObjects() (objects []string, err error) {
-	// Create a done channel to control 'ListObjects' go routine.
 	doneCh := make(chan struct{})
-
-	// Indicate to our routine to exit cleanly upon return.
 	defer close(doneCh)
 
-	isRecursive := true
-	objectCh := s.client.ListObjectsV2(s.bucket, "", isRecursive, doneCh)
-	for object := range objectCh {
+	opts := minio.ListObjectsOptions{
+		Prefix:    "",
+		Recursive: true,
+	}
+
+	for object := range s.client.ListObjects(context.Background(), s.bucket, opts) {
 		if object.Err != nil {
 			return objects, object.Err
 		}
@@ -185,7 +193,7 @@ func (s S3AO) RemoveBucket() error {
 	}
 
 	// RemoveBucket
-	if err := s.client.RemoveBucket(s.bucket); err != nil {
+	if err := s.client.RemoveBucket(context.Background(), s.bucket); err != nil {
 		return err
 	}
 
@@ -193,7 +201,7 @@ func (s S3AO) RemoveBucket() error {
 	return nil
 }
 
-func (s S3AO) GetObject(bin string, filename string, nonce []byte) (io.Reader, error) {
+func (s S3AO) GetObject(bin string, filename string, nonce []byte, start int64, end int64) (io.Reader, error) {
 	t0 := time.Now()
 
 	// Hash the path in S3
@@ -221,7 +229,13 @@ func (s S3AO) GetObject(bin string, filename string, nonce []byte) (io.Reader, e
 		return object, err
 	}
 
-	object, err := s.client.GetObject(s.bucket, objectKey, minio.GetObjectOptions{})
+	opts := minio.GetObjectOptions{}
+
+	if end > 0 {
+		opts.SetRange(start, end)
+	}
+
+	object, err := s.client.GetObject(context.Background(), s.bucket, objectKey, opts)
 	if err != nil {
 		return object, err
 	}
@@ -243,7 +257,12 @@ func (s S3AO) GetBucketInfo() (info BucketInfo) {
 	doneCh := make(chan struct{})
 	defer close(doneCh)
 
-	objectCh := s.client.ListObjectsV2(s.bucket, "", true, doneCh)
+	opts := minio.ListObjectsOptions{
+		Prefix:    "",
+		Recursive: true,
+	}
+
+	objectCh := s.client.ListObjects(context.Background(), s.bucket, opts)
 	var size int64
 	var numObjects uint64
 	for object := range objectCh {
@@ -259,9 +278,7 @@ func (s S3AO) GetBucketInfo() (info BucketInfo) {
 	info.ObjectsSize = uint64(size)
 	info.ObjectsSizeReadable = humanize.Bytes(info.ObjectsSize)
 
-	doneCh = make(chan struct{})
-	defer close(doneCh)
-	multiPartObjectCh := s.client.ListIncompleteUploads(s.bucket, "", true, doneCh)
+	multiPartObjectCh := s.client.ListIncompleteUploads(context.Background(), s.bucket, "", true)
 	size = 0
 	numObjects = 0
 	for multiPartObject := range multiPartObjectCh {
@@ -276,4 +293,13 @@ func (s S3AO) GetBucketInfo() (info BucketInfo) {
 	info.IncompleteObjectsSize = uint64(size)
 	info.IncompleteObjectsSizeReadable = humanize.Bytes(info.IncompleteObjectsSize)
 	return info
+}
+
+func (s S3AO) GetObjectKey(bin string, filename string) (key string) {
+	b := sha256.New()
+	b.Write([]byte(bin))
+	f := sha256.New()
+	f.Write([]byte(filename))
+	key = path.Join(fmt.Sprintf("%x", b.Sum(nil)), fmt.Sprintf("%x", f.Sum(nil)))
+	return key
 }

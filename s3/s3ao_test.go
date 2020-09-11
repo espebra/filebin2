@@ -106,7 +106,7 @@ func TestGetObject(t *testing.T) {
 		t.Errorf("Unable to put object: %s\n", err.Error())
 	}
 
-	fp, err := s3ao.GetObject(bin, filename, nonce)
+	fp, err := s3ao.GetObject(bin, filename, nonce, 0, 0)
 	if err != nil {
 		t.Errorf("Unable to get object: %s\n", err.Error())
 	}
@@ -129,7 +129,7 @@ func TestUnknownObject(t *testing.T) {
 	filename := "testobject"
 	bin := "testbin"
 	nonce := s3ao.GenerateNonce()
-	fp, err := s3ao.GetObject(bin, filename, nonce)
+	fp, err := s3ao.GetObject(bin, filename, nonce, 0, 0)
 	if err != nil {
 		// This is strange behaviour. The library should return an error
 		// if the object does not exist.
