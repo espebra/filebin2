@@ -32,14 +32,14 @@ func (h *HTTP) ViewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 
 	data.BucketInfo = h.s3.GetBucketInfo()
 
-	binsPendingDelete, err := h.dao.Bin().GetAll(1)
+	binsPendingDelete, err := h.dao.Bin().GetAll(true)
 	if err != nil {
 		fmt.Printf("Unable to GetAll(): %s\n", err.Error())
 		http.Error(w, "Errno 200", http.StatusInternalServerError)
 		return
 	}
 
-	binsAvailable, err := h.dao.Bin().GetAll(0)
+	binsAvailable, err := h.dao.Bin().GetAll(false)
 	if err != nil {
 		fmt.Printf("Unable to GetAll(): %s\n", err.Error())
 		http.Error(w, "Errno 200", http.StatusInternalServerError)

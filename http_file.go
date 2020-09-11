@@ -146,7 +146,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 		if bin.Expired() {
 			h.Error(w, r, fmt.Sprintf("Upload failed: Bin %s is expired", inputBin), "The bin is no longer available", 122, http.StatusMethodNotAllowed)
 			return
-		} else if bin.Status > 0 {
+		} else if bin.DeletedAt.IsZero() == false {
 			// Reject uploads to deleted bins
 			h.Error(w, r, fmt.Sprintf("Upload failed: Bin %s is deleted", inputBin), "The bin is no longer available", 132, http.StatusMethodNotAllowed)
 			return
@@ -264,7 +264,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	// earlier
 	var t time.Time
 	file.DeletedAt = t
-	file.Status = 0
+	file.Hidden = false
 
 	file.Bytes = inputBytes
 	file.Mime = mime.String()
@@ -370,7 +370,7 @@ func (h *HTTP) DeleteFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set to pending delete
-	file.Status = 1
+	file.Hidden = true
 	file.DeletedAt = now
 	if err := h.dao.File().Update(&file); err != nil {
 		fmt.Printf("Unable to update the file (%s, %s): %s\n", inputBin, inputFilename, err.Error())

@@ -42,7 +42,7 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	files, err := h.dao.File().GetByBin(inputBin, 0)
+	files, err := h.dao.File().GetByBin(inputBin, false)
 	if err != nil {
 		fmt.Printf("Unable to GetByBin(%s): %s\n", inputBin, err.Error())
 		http.Error(w, "Not found", http.StatusNotFound)
@@ -90,7 +90,7 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	files, err := h.dao.File().GetByBin(inputBin, 0)
+	files, err := h.dao.File().GetByBin(inputBin, false)
 	if err != nil {
 		fmt.Printf("Unable to GetByBin(%s): %s\n", inputBin, err.Error())
 		http.Error(w, "Not found", http.StatusNotFound)
@@ -189,7 +189,7 @@ func (h *HTTP) DeleteBin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set to pending delete
-	bin.Status = 1
+	bin.Hidden = true
 	bin.DeletedAt = now
 	if err := h.dao.Bin().Update(&bin); err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)

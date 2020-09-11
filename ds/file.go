@@ -8,7 +8,7 @@ type File struct {
 	Id                int       `json:"-"`
 	Bin               string    `json:"-"`
 	Filename          string    `json:"filename"`
-	Status            int       `json:"-"`
+	Hidden            bool      `json:"-"`
 	Mime              string    `json:"content-type"`
 	Category          string    `json:"-"`
 	Bytes             uint64    `json:"bytes"`
@@ -35,7 +35,7 @@ func (f *File) IsReadable() bool {
 		return false
 	}
 	// Not readable if flagged as deleted
-	if f.Status != 0 {
+	if f.Hidden {
 		return false
 	}
 	return true

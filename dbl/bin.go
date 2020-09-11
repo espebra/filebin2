@@ -51,15 +51,15 @@ func (d *BinDao) GenerateId() string {
 	return string(id)
 }
 
-func (d *BinDao) GetAll(status int) (bins []ds.Bin, err error) {
-	sqlStatement := "SELECT bin.id, bin.readonly, bin.status, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(filename) AS files, bin.updated_at, bin.created_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id = file.bin_id WHERE bin.status = $1 GROUP BY bin.id"
-	rows, err := d.db.Query(sqlStatement, status)
+func (d *BinDao) GetAll(hidden bool) (bins []ds.Bin, err error) {
+	sqlStatement := "SELECT bin.id, bin.readonly, bin.hidden, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(filename) AS files, bin.updated_at, bin.created_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id = file.bin_id WHERE bin.hidden = $1 GROUP BY bin.id"
+	rows, err := d.db.Query(sqlStatement, hidden)
 	if err != nil {
 		return bins, err
 	}
 	for rows.Next() {
 		var bin ds.Bin
-		err = rows.Scan(&bin.Id, &bin.Readonly, &bin.Status, &bin.Downloads, &bin.Bytes, &bin.Files, &bin.UpdatedAt, &bin.CreatedAt, &bin.ExpiredAt, &bin.DeletedAt)
+		err = rows.Scan(&bin.Id, &bin.Readonly, &bin.Hidden, &bin.Downloads, &bin.Bytes, &bin.Files, &bin.UpdatedAt, &bin.CreatedAt, &bin.ExpiredAt, &bin.DeletedAt)
 		if err != nil {
 			return bins, err
 		}
@@ -81,14 +81,14 @@ func (d *BinDao) GetAll(status int) (bins []ds.Bin, err error) {
 
 func (d *BinDao) GetBinsPendingExpiredAt() (bins []ds.Bin, err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "SELECT bin.id, bin.readonly, bin.status, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(filename) AS files, bin.updated_at, bin.created_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id = file.bin_id WHERE bin.expired_at <= $1 AND bin.status < 2 GROUP BY bin.id"
+	sqlStatement := "SELECT bin.id, bin.readonly, bin.hidden, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(filename) AS files, bin.updated_at, bin.created_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id = file.bin_id WHERE bin.expired_at <= $1 AND bin.hidden < 2 GROUP BY bin.id"
 	rows, err := d.db.Query(sqlStatement, now)
 	if err != nil {
 		return bins, err
 	}
 	for rows.Next() {
 		var bin ds.Bin
-		err = rows.Scan(&bin.Id, &bin.Readonly, &bin.Status, &bin.Downloads, &bin.Bytes, &bin.Files, &bin.UpdatedAt, &bin.CreatedAt, &bin.ExpiredAt, &bin.DeletedAt)
+		err = rows.Scan(&bin.Id, &bin.Readonly, &bin.Hidden, &bin.Downloads, &bin.Bytes, &bin.Files, &bin.UpdatedAt, &bin.CreatedAt, &bin.ExpiredAt, &bin.DeletedAt)
 		if err != nil {
 			return bins, err
 		}
@@ -111,8 +111,8 @@ func (d *BinDao) GetBinsPendingExpiredAt() (bins []ds.Bin, err error) {
 func (d *BinDao) GetById(id string) (bin ds.Bin, found bool, err error) {
 	// Get bin info
 	// XXX: Split into two queries for readability
-	sqlStatement := "SELECT bin.id, bin.readonly, bin.status, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(filename) AS files, bin.updated_at, bin.created_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id = file.bin_id WHERE bin.id = $1 GROUP BY bin.id LIMIT 1"
-	err = d.db.QueryRow(sqlStatement, id).Scan(&bin.Id, &bin.Readonly, &bin.Status, &bin.Downloads, &bin.Bytes, &bin.Files, &bin.UpdatedAt, &bin.CreatedAt, &bin.ExpiredAt, &bin.DeletedAt)
+	sqlStatement := "SELECT bin.id, bin.readonly, bin.hidden, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(filename) AS files, bin.updated_at, bin.created_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id = file.bin_id WHERE bin.id = $1 GROUP BY bin.id LIMIT 1"
+	err = d.db.QueryRow(sqlStatement, id).Scan(&bin.Id, &bin.Readonly, &bin.Hidden, &bin.Downloads, &bin.Bytes, &bin.Files, &bin.UpdatedAt, &bin.CreatedAt, &bin.ExpiredAt, &bin.DeletedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return bin, false, nil
@@ -141,10 +141,10 @@ func (d *BinDao) Insert(bin *ds.Bin) (err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	downloads := uint64(0)
 	readonly := false
-	status := 0
+	hidden := false
 	bin.ExpiredAt = bin.ExpiredAt.UTC().Truncate(time.Microsecond)
-	sqlStatement := "INSERT INTO bin (id, readonly, status, downloads, updated_at, created_at, expired_at, deleted_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id"
-	if err := d.db.QueryRow(sqlStatement, bin.Id, readonly, status, downloads, now, now, bin.ExpiredAt, bin.DeletedAt).Scan(&bin.Id); err != nil {
+	sqlStatement := "INSERT INTO bin (id, readonly, hidden, downloads, updated_at, created_at, expired_at, deleted_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id"
+	if err := d.db.QueryRow(sqlStatement, bin.Id, readonly, hidden, downloads, now, now, bin.ExpiredAt, bin.DeletedAt).Scan(&bin.Id); err != nil {
 		return err
 	}
 	bin.UpdatedAt = now
@@ -155,7 +155,7 @@ func (d *BinDao) Insert(bin *ds.Bin) (err error) {
 	bin.ExpiredAtRelative = humanize.Time(bin.ExpiredAt)
 	bin.Downloads = downloads
 	bin.Readonly = readonly
-	bin.Status = status
+	bin.Hidden = hidden
 	return nil
 }
 
@@ -163,8 +163,8 @@ func (d *BinDao) Update(bin *ds.Bin) (err error) {
 	var id string
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	bin.ExpiredAt = bin.ExpiredAt.UTC().Truncate(time.Microsecond)
-	sqlStatement := "UPDATE bin SET readonly = $1, status = $2, updated_at = $3, expired_at = $4, deleted_at = $5 WHERE id = $6 RETURNING id"
-	err = d.db.QueryRow(sqlStatement, bin.Readonly, bin.Status, now, bin.ExpiredAt, bin.DeletedAt, bin.Id).Scan(&id)
+	sqlStatement := "UPDATE bin SET readonly = $1, hidden = $2, updated_at = $3, expired_at = $4, deleted_at = $5 WHERE id = $6 RETURNING id"
+	err = d.db.QueryRow(sqlStatement, bin.Readonly, bin.Hidden, now, bin.ExpiredAt, bin.DeletedAt, bin.Id).Scan(&id)
 	if err != nil {
 		return err
 	}
@@ -202,7 +202,7 @@ func (d *BinDao) RegisterDownload(bin *ds.Bin) (err error) {
 
 func (d *BinDao) FlagRecentlyExpiredBins() (count int64, err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "UPDATE bin SET status = 1 WHERE status = 0 AND expired_at <= $1"
+	sqlStatement := "UPDATE bin SET hidden = true WHERE hidden = false AND expired_at <= $1"
 	res, err := d.db.Exec(sqlStatement, now)
 	if err != nil {
 		return 0, err
@@ -218,8 +218,8 @@ func (d *BinDao) FlagEmptyBins() (count int64, err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	limit := now.Add(-5 * time.Minute)
 
-	// Flag empty bins that are older than limit as pending delete
-	sqlStatement := "UPDATE bin SET status = 1 WHERE bin.id IN (SELECT bin.id FROM bin LEFT JOIN file ON bin.id = file.bin_id WHERE bin.status = 0 GROUP BY bin.id HAVING COUNT(filename) = 0 AND bin.created_at < $1)"
+	// Flag empty bins that are older than limit as hidden
+	sqlStatement := "UPDATE bin SET hidden = true WHERE bin.id IN (SELECT bin.id FROM bin LEFT JOIN file ON bin.id = file.bin_id WHERE bin.hidden = false GROUP BY bin.id HAVING COUNT(filename) = 0 AND bin.created_at < $1)"
 	res, err := d.db.Exec(sqlStatement, limit)
 	if err != nil {
 		return 0, err

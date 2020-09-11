@@ -94,7 +94,7 @@ func TestGetAllBins(t *testing.T) {
 		}
 	}
 
-	bins, err := dao.Bin().GetAll(0)
+	bins, err := dao.Bin().GetAll(false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -291,7 +291,7 @@ func TestFileCount(t *testing.T) {
 		}
 	}
 
-	dbBins, err := dao.Bin().GetAll(0)
+	dbBins, err := dao.Bin().GetAll(false)
 	if err != nil {
 		t.Error(err)
 	}

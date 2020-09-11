@@ -6,7 +6,7 @@ import (
 
 type Bin struct {
 	Id                string    `json:"id"`
-	Status            int       `json:"-"`
+	Hidden            bool      `json:"-"`
 	Readonly          bool      `json:"readonly"`
 	Downloads         uint64    `json:"-"`
 	Bytes             uint64    `json:"bytes"`
@@ -33,7 +33,7 @@ func (b *Bin) IsReadable() bool {
 		return false
 	}
 	// Not readable if flagged as deleted
-	if b.Status != 0 {
+	if b.Hidden {
 		return false
 	}
 	return true
