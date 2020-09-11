@@ -200,7 +200,7 @@ func (d *BinDao) RegisterDownload(bin *ds.Bin) (err error) {
 	return nil
 }
 
-func (d *BinDao) FlagRecentlyExpiredBins() (count int64, err error) {
+func (d *BinDao) HideRecentlyExpiredBins() (count int64, err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	sqlStatement := "UPDATE bin SET hidden = true WHERE hidden = false AND expired_at <= $1"
 	res, err := d.db.Exec(sqlStatement, now)
@@ -214,11 +214,11 @@ func (d *BinDao) FlagRecentlyExpiredBins() (count int64, err error) {
 	return count, nil
 }
 
-func (d *BinDao) FlagEmptyBins() (count int64, err error) {
+func (d *BinDao) HideEmptyBins() (count int64, err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	limit := now.Add(-5 * time.Minute)
 
-	// Flag empty bins that are older than limit as hidden
+	// Hide empty bins that are older than limit
 	sqlStatement := "UPDATE bin SET hidden = true WHERE bin.id IN (SELECT bin.id FROM bin LEFT JOIN file ON bin.id = file.bin_id WHERE bin.hidden = false GROUP BY bin.id HAVING COUNT(filename) = 0 AND bin.created_at < $1)"
 	res, err := d.db.Exec(sqlStatement, limit)
 	if err != nil {

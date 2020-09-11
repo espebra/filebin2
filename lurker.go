@@ -35,27 +35,38 @@ func (l *Lurker) Run() {
 			select {
 			case <-done:
 				return
-			//case t := <-ticker.C:
 			case _ = <-ticker.C:
 				t0 := time.Now()
-				l.CleanUpExpiredBins()
+				l.FlagExpiredBins()
+				//l.FlagEmptyBins()
+				//l.DeleteFlaggedObjects()
 				fmt.Printf("Lurker completed run in %.3fs\n", time.Since(t0).Seconds())
 			}
 		}
 	}()
-	//ticker.Stop()
-	//done <- true
-	//fmt.Println("Lurker process stopped")
 }
 
-func (l *Lurker) CleanUpExpiredBins() {
-	bins, err := l.dao.Bin().GetBinsPendingExpiration()
+func (l *Lurker) FlagExpiredBins() {
+	count, err := l.dao.Bin().HideRecentlyExpiredBins()
 	if err != nil {
-		fmt.Printf("Unable to GetBinsPendingExpiration(): %s\n", err.Error())
+		fmt.Printf("Unable to HideRecentlyExpiredBins(): %s\n", err.Error())
 		return
 	}
-	for _, bin := range bins {
-		fmt.Printf("> Bin %s is expired\n", bin.Id)
+	if count > 0 {
+		fmt.Printf("Hid %d expired bins waiting for deletion.\n", count)
 	}
-	fmt.Printf("Found %d expired bins.\n", len(bins))
+}
+
+func (l *Lurker) HideEmptyBins() {
+	count, err := l.dao.Bin().HideEmptyBins()
+	if err != nil {
+		fmt.Printf("Unable to HideEmptyBins(): %s\n", err.Error())
+		return
+	}
+	if count > 0 {
+		fmt.Printf("Hid %d empty bins waiting for deletion.\n", count)
+	}
+}
+
+func (l *Lurker) ExpiredBins() {
 }
