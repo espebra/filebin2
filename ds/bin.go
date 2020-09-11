@@ -7,6 +7,7 @@ import (
 type Bin struct {
 	Id                string    `json:"id"`
 	Hidden            bool      `json:"-"`
+	Deleted           bool      `json:"-"`
 	Readonly          bool      `json:"readonly"`
 	Downloads         uint64    `json:"-"`
 	Bytes             uint64    `json:"bytes"`

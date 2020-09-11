@@ -58,7 +58,7 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fp, err := h.s3.GetObject(inputBin, inputFilename, file.Nonce)
+	fp, err := h.s3.GetObject(inputBin, inputFilename, file.Nonce, 0, 0)
 	if err != nil {
 		h.Error(w, r, fmt.Sprintf("Failed to fetch object by bin %s and filename %s: %s", inputBin, inputFilename, err.Error()), "Storage error", 118, http.StatusInternalServerError)
 		return

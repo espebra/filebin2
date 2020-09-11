@@ -10,8 +10,8 @@ require (
 	github.com/gorilla/handlers v1.4.2
 	github.com/gorilla/mux v1.7.4
 	github.com/lib/pq v1.3.0
-	github.com/minio/minio-go/v6 v6.0.50
+	github.com/minio/minio-go/v6 v6.0.50 // indirect
+	github.com/minio/minio-go/v7 v7.0.5
 	github.com/minio/sio v0.2.0
-	golang.org/x/crypto v0.0.0-20190513172903-22d7a77e9e5f
-	golang.org/x/net v0.0.0-20200202094626-16171245cfb2 // indirect
+	golang.org/x/crypto v0.0.0-20200709230013-948cd5f35899
 )

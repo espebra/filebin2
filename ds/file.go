@@ -9,6 +9,7 @@ type File struct {
 	Bin               string    `json:"-"`
 	Filename          string    `json:"filename"`
 	Hidden            bool      `json:"-"`
+	Deleted           bool      `json:"-"`
 	Mime              string    `json:"content-type"`
 	Category          string    `json:"-"`
 	Bytes             uint64    `json:"bytes"`

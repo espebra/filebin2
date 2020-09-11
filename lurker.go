@@ -37,16 +37,15 @@ func (l *Lurker) Run() {
 				return
 			case _ = <-ticker.C:
 				t0 := time.Now()
-				l.FlagExpiredBins()
-				//l.FlagEmptyBins()
-				//l.DeleteFlaggedObjects()
+				l.HideExpiredBins()
+				l.DeleteHiddenFiles()
 				fmt.Printf("Lurker completed run in %.3fs\n", time.Since(t0).Seconds())
 			}
 		}
 	}()
 }
 
-func (l *Lurker) FlagExpiredBins() {
+func (l *Lurker) HideExpiredBins() {
 	count, err := l.dao.Bin().HideRecentlyExpiredBins()
 	if err != nil {
 		fmt.Printf("Unable to HideRecentlyExpiredBins(): %s\n", err.Error())
@@ -68,5 +67,25 @@ func (l *Lurker) HideEmptyBins() {
 	}
 }
 
-func (l *Lurker) ExpiredBins() {
+func (l *Lurker) DeleteHiddenFiles() {
+	files, err := l.dao.File().GetPendingDelete()
+	if err != nil {
+		fmt.Printf("Unable to GetPendingDelete(): %s\n", err.Error())
+		return
+	}
+	if len(files) > 0 {
+		fmt.Printf("Found %d files that are hidden.\n", len(files))
+		for _, file := range files {
+			if err := l.s3.RemoveObject(file.Bin, file.Filename); err != nil {
+				fmt.Printf("Unable to delete file %s from bin %s from S3.\n", file.Filename, file.Bin)
+				return
+			} else {
+				file.Deleted = true
+				if err := l.dao.File().Update(&file); err != nil {
+					fmt.Printf("Unable to update filename %s (id %d) in bin %s: %s\n", file.Filename, file.Id, file.Bin, err.Error())
+					return
+				}
+			}
+		}
+	}
 }
