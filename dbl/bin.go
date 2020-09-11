@@ -79,9 +79,9 @@ func (d *BinDao) GetAll(hidden bool) (bins []ds.Bin, err error) {
 	return bins, nil
 }
 
-func (d *BinDao) GetBinsPendingExpiredAt() (bins []ds.Bin, err error) {
+func (d *BinDao) GetPendingDelete() (bins []ds.Bin, err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "SELECT bin.id, bin.readonly, bin.hidden, bin.deleted, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(filename) AS files, bin.updated_at, bin.created_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id = file.bin_id WHERE bin.expired_at <= $1 AND bin.hidden < 2 GROUP BY bin.id"
+	sqlStatement := "SELECT bin.id, bin.readonly, bin.hidden, bin.deleted, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(filename) AS files, bin.updated_at, bin.created_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id = file.bin_id WHERE (bin.expired_at <= $1 OR bin.hidden = true) AND bin.deleted = false GROUP BY bin.id"
 	rows, err := d.db.Query(sqlStatement, now)
 	if err != nil {
 		return bins, err
