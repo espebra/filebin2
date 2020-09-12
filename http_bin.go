@@ -32,8 +32,14 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if found == false {
-		h.Error(w, r, "", fmt.Sprintf("The bin %s does not exist.", inputBin), 201, http.StatusNotFound)
-		return
+		bin.Id = inputBin
+		bin.ExpiredAt = time.Now().UTC().Add(h.expirationDuration)
+		err := h.dao.Bin().Insert(&bin)
+		if err != nil {
+			fmt.Printf("Unable to insert new bin: %s\n", err.Error())
+			http.Error(w, "Errno 301", http.StatusInternalServerError)
+			return
+		}
 	}
 	data.Bin = bin
 
