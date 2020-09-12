@@ -91,6 +91,14 @@
                                 More
                             </a>
                             <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownBinMenuButton">
+				{{ if eq .Bin.Readonly false }}
+                                <span class="dropdown-item fileUpload">
+                                    <span>
+                                        <i class="fas fa-fw fa-cloud-upload-alt text-primary"></i> Upload more files
+                                    </span>
+                                    <input type="file" class="upload" id="fileField" multiple>
+                                </span>
+                                {{ end }}
                                 <a class="dropdown-item" href="" data-toggle="modal" data-target="#modalBinProperties" aria-haspopup="true" aria-expanded="false">
                                     <i class="fas fa-fw fa-info-circle text-primary"></i> Bin properties
                                 </a>
