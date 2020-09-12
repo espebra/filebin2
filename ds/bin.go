@@ -37,6 +37,10 @@ func (b *Bin) IsReadable() bool {
 	if b.Hidden {
 		return false
 	}
+	// Not readable if actually deleted
+	if b.Deleted {
+		return false
+	}
 	return true
 }
 

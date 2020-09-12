@@ -146,7 +146,22 @@ func (h *HTTP) Error(w http.ResponseWriter, r *http.Request, internal string, ex
 func (h *HTTP) ParseTemplates() *template.Template {
 
 	// Functions that are available from within templates
-	var fns = template.FuncMap{}
+	var fns = template.FuncMap{
+		"isAvailable": func(bin_id string) bool {
+			bin, found, err := h.dao.Bin().GetById(bin_id)
+			if err != nil {
+				fmt.Printf("Unable to GetById(%s): %s\n", bin_id, err.Error())
+				return false
+			}
+			if found == false {
+				return false
+			}
+			if bin.IsReadable() {
+				return true
+			}
+			return false
+		},
+	}
 
 	templ := template.New("").Funcs(fns)
 	err := h.templateBox.Walk("/", func(filepath string, info os.FileInfo, err error) error {

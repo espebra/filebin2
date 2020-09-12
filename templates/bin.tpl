@@ -62,29 +62,33 @@
         {{ $numfiles := .Files | len }}
         
         <p class="lead">
-            {{ if eq $numfiles 0 }}
-	        {{ if eq .Bin.Readonly false }}
-                    <p>This bin is empty. Click <em>Upload files</em> below, or drag and drop the files into this browser window.</p>
+	    {{ if isAvailable .Bin.Id }}
+                {{ if eq $numfiles 0 }}
+	            {{ if eq .Bin.Readonly false }}
+                        <p>This bin is empty. To upload files, click <em>Upload files</em> below or drag and drop the files into this browser window.</p>
 
-                    <p class="fileUpload btn btn-primary">
-                        <span><i class="fa fa-cloud-upload"></i> Upload files</span>
-                        <input type="file" class="upload" id="fileField" multiple>
-                    </p>
+                        <p class="fileUpload btn btn-primary">
+                            <span><i class="fa fa-cloud-upload"></i> Upload files</span>
+                            <input type="file" class="upload" id="fileField" multiple>
+                        </p>
+                    {{ else }}
+                        <p>This bin is empty. Files can not be uploaded to it since it is locked.</p>
+                    {{ end }}
                 {{ else }}
-                    <p>This bin is empty. Files can not be uploaded to it since it is locked.</p>
+                    The bin <a class="link-primary" href="/{{ .Bin.Id }}">{{ .Bin.Id }}</a> was created {{ .Bin.CreatedAtRelative }}
+
+                    {{- if ne .Bin.CreatedAtRelative .Bin.UpdatedAtRelative -}}
+                    , updated {{ .Bin.UpdatedAtRelative }}
+                    {{ end }}
+
+                    and it expires {{ .Bin.ExpiredAtRelative }}.
+                    It contains {{ .Files | len }}
+
+                    {{ if eq $numfiles 1 }}file at {{ .Bin.BytesReadable }}.{{ end }}
+                    {{ if gt $numfiles 1 }}files at {{ .Bin.BytesReadable }} in total.{{ end }}
                 {{ end }}
             {{ else }}
-                The bin <a class="link-primary" href="/{{ .Bin.Id }}">{{ .Bin.Id }}</a> was created {{ .Bin.CreatedAtRelative }}
-
-                {{- if ne .Bin.CreatedAtRelative .Bin.UpdatedAtRelative -}}
-                , updated {{ .Bin.UpdatedAtRelative }}
-                {{ end }}
-
-                and it expires {{ .Bin.ExpiredAtRelative }}.
-                It contains {{ .Files | len }}
-
-                {{ if eq $numfiles 1 }}file at {{ .Bin.BytesReadable }}.{{ end }}
-                {{ if gt $numfiles 1 }}files at {{ .Bin.BytesReadable }} in total.{{ end }}
+                <p>This bin is no longer available.</p>
             {{ end }}
         </p>
 

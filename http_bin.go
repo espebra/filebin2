@@ -43,18 +43,21 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 	}
 	data.Bin = bin
 
-	if bin.IsReadable() == false {
-		h.Error(w, r, "", fmt.Sprintf("The bin %s is no longer available.", inputBin), 202, http.StatusNotFound)
-		return
+	if bin.IsReadable() {
+		files, err := h.dao.File().GetByBin(inputBin, false)
+		if err != nil {
+			fmt.Printf("Unable to GetByBin(%s): %s\n", inputBin, err.Error())
+			http.Error(w, "Not found", http.StatusNotFound)
+			return
+		}
+		data.Files = files
 	}
 
-	files, err := h.dao.File().GetByBin(inputBin, false)
-	if err != nil {
-		fmt.Printf("Unable to GetByBin(%s): %s\n", inputBin, err.Error())
-		http.Error(w, "Not found", http.StatusNotFound)
-		return
+	if bin.IsReadable() {
+		w.WriteHeader(200)
+	} else {
+		w.WriteHeader(404)
 	}
-	data.Files = files
 
 	if r.Header.Get("accept") == "application/json" {
 		w.Header().Set("Content-Type", "application/json")
@@ -64,7 +67,6 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Errno 201", http.StatusInternalServerError)
 			return
 		}
-		w.WriteHeader(200)
 		io.WriteString(w, string(out))
 	} else {
 		if err := h.templates.ExecuteTemplate(w, "bin", data); err != nil {
