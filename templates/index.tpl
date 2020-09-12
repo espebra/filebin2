@@ -65,7 +65,7 @@
         </p>
         <p class="lead">
             <strong>3.</strong>
-            Distribute the <a href="/{{ .Bin.Id }}">URL</a> to share access to the files.
+            Distribute the unique <a href="/{{ .Bin.Id }}">URL</a> to share access to the files.
         </p>
 
         <!-- Menu -->

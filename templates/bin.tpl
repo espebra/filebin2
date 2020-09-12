@@ -62,119 +62,129 @@
         {{ $numfiles := .Files | len }}
         
         <p class="lead">
-            The bin <a class="link-primary" href="/{{ .Bin.Id }}">{{ .Bin.Id }}</a> was created {{ .Bin.CreatedAtRelative }}
-            
-            {{- if ne .Bin.CreatedAtRelative .Bin.UpdatedAtRelative -}}
-            , updated {{ .Bin.UpdatedAtRelative }} 
-            {{ end }}
-            
-            and it expires {{ .Bin.ExpiredAtRelative }}.
-            It contains {{ .Files | len }}
+            {{ if eq $numfiles 0 }}
+	        {{ if eq .Bin.Readonly false }}
+                    <p>This bin is empty. Click <em>Upload files</em> below, or drag and drop the files into this browser window.</p>
 
-            {{ if eq $numfiles 0 }}files.{{ end }}
-            {{ if eq $numfiles 1 }}file at {{ .Bin.BytesReadable }}.{{ end }}
-            {{ if gt $numfiles 1 }}files at {{ .Bin.BytesReadable }} in total.{{ end }}
+                    <p class="fileUpload btn btn-primary">
+                        <span><i class="fa fa-cloud-upload"></i> Upload files</span>
+                        <input type="file" class="upload" id="fileField" multiple>
+                    </p>
+                {{ else }}
+                    <p>This bin is empty. Files can not be uploaded to it since it is locked.</p>
+                {{ end }}
+            {{ else }}
+                The bin <a class="link-primary" href="/{{ .Bin.Id }}">{{ .Bin.Id }}</a> was created {{ .Bin.CreatedAtRelative }}
+
+                {{- if ne .Bin.CreatedAtRelative .Bin.UpdatedAtRelative -}}
+                , updated {{ .Bin.UpdatedAtRelative }}
+                {{ end }}
+
+                and it expires {{ .Bin.ExpiredAtRelative }}.
+                It contains {{ .Files | len }}
+
+                {{ if eq $numfiles 1 }}file at {{ .Bin.BytesReadable }}.{{ end }}
+                {{ if gt $numfiles 1 }}files at {{ .Bin.BytesReadable }} in total.{{ end }}
+            {{ end }}
         </p>
 
-        <p>
-            <ul class="nav nav-pills">
-                {{ if gt $numfiles 0 }}
+        {{ if gt $numfiles 0 }}
+            <p>
+                <ul class="nav nav-pills">
                     <li class="nav-item mr-3">
                         <a class="nav-link btn btn-primary" href="" data-toggle="modal" data-target="#modalArchive">
                             <i class="fas fa-fw fa-cloud-download-alt"></i> Download files
                         </a>
                     </li>
-                {{ end }}
-                <li class="nav-item">
-                    <div class="dropdown">
-                            <a class="nav-link btn btn-primary dropdown-toggle text-white" id="dropdownBinMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                More
-                            </a>
-                            <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownBinMenuButton">
-				{{ if eq .Bin.Readonly false }}
-                                <span class="dropdown-item fileUpload">
-                                    <span>
-                                        <i class="fas fa-fw fa-cloud-upload-alt text-primary"></i> Upload more files
-                                    </span>
-                                    <input type="file" class="upload" id="fileField" multiple>
-                                </span>
-                                {{ end }}
-                                <a class="dropdown-item" href="" data-toggle="modal" data-target="#modalBinProperties" aria-haspopup="true" aria-expanded="false">
-                                    <i class="fas fa-fw fa-info-circle text-primary"></i> Bin properties
+                    <li class="nav-item">
+                        <div class="dropdown">
+                                <a class="nav-link btn btn-primary dropdown-toggle text-white" id="dropdownBinMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    More
                                 </a>
-                                <div class="dropdown-divider"></div>
-				{{ if eq .Bin.Readonly false }}
-                                <a class="dropdown-item" href="" data-toggle="modal" data-target="#modalLockBin" aria-haspopup="true" aria-expanded="false">
-                                    <i class="fas fa-fw fa-lock text-warning"></i> Lock bin
-                                </a>
-				{{ end }}
-                                <a class="dropdown-item" href="" data-toggle="modal" data-target="#modalDeleteBin">
-                                    <i class="far fa-fw fa-trash-alt text-danger"></i> Delete bin
-                                </a>
-                            </div>
-                    </div>
-                </li>
-            </ul>
-        </p>
+                                <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownBinMenuButton">
+                                    {{ if eq .Bin.Readonly false }}
+                                        <span class="dropdown-item fileUpload">
+                                            <span>
+                                                <i class="fas fa-fw fa-cloud-upload-alt text-primary"></i> Upload more files
+                                            </span>
+                                            <input type="file" class="upload" id="fileField" multiple>
+                                        </span>
+                                    {{ end }}
+                                    <a class="dropdown-item" href="" data-toggle="modal" data-target="#modalBinProperties" aria-haspopup="true" aria-expanded="false">
+                                        <i class="fas fa-fw fa-info-circle text-primary"></i> Bin properties
+                                    </a>
+                                    <div class="dropdown-divider"></div>
+                                    {{ if eq .Bin.Readonly false }}
+                                        <a class="dropdown-item" href="" data-toggle="modal" data-target="#modalLockBin" aria-haspopup="true" aria-expanded="false">
+                                            <i class="fas fa-fw fa-lock text-warning"></i> Lock bin
+                                        </a>
+                                    {{ end }}
+                                    <a class="dropdown-item" href="" data-toggle="modal" data-target="#modalDeleteBin">
+                                        <i class="far fa-fw fa-trash-alt text-danger"></i> Delete bin
+                                    </a>
+                                </div>
+                        </div>
+                    </li>
+                </ul>
+            </p>
+        {{ end }}
 
         {{ if .Files }}
-            <div class="table-responsive">
-                <table class="table">
-                    <thead>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th scope="col">Filename</th>
+                        <th scope="col">Content type</th>
+                        <th scope="col">Size</th>
+                        <th scope="col">Uploaded</th>
+                        <th scope="col"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{ range $index, $value := .Files }}
                         <tr>
-                            <th>Filename</th>
-                            <th>Content type</th>
-                            <th>Size</th>
-                            <th>Uploaded</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {{ range $index, $value := .Files }}
-                            <tr>
-                                <td>
-                                    {{ if eq .Category "image" }}
-                                        <i class="far fa-fw fa-file-image"></i>
+                            <td>
+                                {{ if eq .Category "image" }}
+                                    <i class="far fa-fw fa-file-image"></i>
+                                {{ else }}
+                                    {{ if eq .Category "video" }}
+                                        <i class="far fa-fw fa-file-video"></i>
                                     {{ else }}
-                                        {{ if eq .Category "video" }}
-                                            <i class="far fa-fw fa-file-video"></i>
-                                        {{ else }}
-                                            <i class="far fa-fw fa-file"></i>
-                                        {{ end }}
+                                        <i class="far fa-fw fa-file"></i>
                                     {{ end }}
-                                    <a class="link-primary" href="{{ .URL }}">{{ .Filename }}</a>
-                                </td>
-                                <td>
-                                    {{ .Mime }}
-                                </td>
-                                <td>
-                                    {{ .BytesReadable }}
-                                </td>
-                                <td>
-                                    {{ .UpdatedAtRelative }}
-                                </td>
-                                <td>
-                                    <div class="dropdown">
-                                        <a class="dropdown-toggle small" id="dropdownFileMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                            More
+                                {{ end }}
+                                <a class="link-primary" href="{{ .URL }}">{{ .Filename }}</a>
+                            </td>
+                            <td>
+                                {{ .Mime }}
+                            </td>
+                            <td>
+                                {{ .BytesReadable }}
+                            </td>
+                            <td>
+                                {{ .UpdatedAtRelative }}
+                            </td>
+                            <td>
+                                <div class="dropdown">
+                                    <a class="dropdown-toggle small" id="dropdownFileMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        More
+                                    </a>
+                                    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownFileMenuButton">
+                                        <a class="dropdown-item" href="#">
+                                        <a class="dropdown-item" href="" data-toggle="modal" data-target="#modalFileProperties-{{ $index }}">
+                                            <i class="fas fa-fw fa-info-circle text-primary"></i> File properties
                                         </a>
-                                        <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownFileMenuButton">
-                                            <a class="dropdown-item" href="#">
-                                            <a class="dropdown-item" href="" data-toggle="modal" data-target="#modalFileProperties-{{ $index }}">
-                                                <i class="fas fa-fw fa-info-circle text-primary"></i> File properties
-                                            </a>
-                                            <div class="dropdown-divider"></div>
-                                            <a class="dropdown-item" href="" data-toggle="modal" data-target="#modalDeleteFile-{{ $index }}">
-                                                <i class="far fa-fw fa-trash-alt text-danger"></i> Delete file
-                                            </a>
-                                        </div>
+                                        <div class="dropdown-divider"></div>
+                                        <a class="dropdown-item" href="" data-toggle="modal" data-target="#modalDeleteFile-{{ $index }}">
+                                            <i class="far fa-fw fa-trash-alt text-danger"></i> Delete file
+                                        </a>
                                     </div>
-                                </td>
-                            </tr>
-                        {{ end }}
-                    </tbody>
-                </table>
-            </div>
+                                </div>
+                            </td>
+                        </tr>
+                    {{ end }}
+                </tbody>
+            </table>
         {{ end }}
 
         <!-- Download archive modal start -->
