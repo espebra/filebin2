@@ -52,7 +52,7 @@ func (d *BinDao) GenerateId() string {
 }
 
 func (d *BinDao) GetAll(hidden bool) (bins []ds.Bin, err error) {
-	sqlStatement := "SELECT bin.id, bin.readonly, bin.hidden, bin.deleted, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(file.filename), bin.updated_at, bin.created_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id=file.bin_id AND file.hidden=$1 WHERE bin.hidden=$1 AND bin.deleted=false GROUP BY bin.id ORDER BY bin.updated_at DESC";
+	sqlStatement := "SELECT bin.id, bin.readonly, bin.hidden, bin.deleted, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(file.filename), bin.updated_at, bin.created_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id=file.bin_id AND file.hidden=$1 WHERE bin.hidden=$1 AND bin.deleted=false GROUP BY bin.id ORDER BY bin.updated_at DESC"
 	rows, err := d.db.Query(sqlStatement, hidden)
 	if err != nil {
 		return bins, err
