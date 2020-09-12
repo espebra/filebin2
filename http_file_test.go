@@ -309,26 +309,21 @@ func TestNotExistingBinsAndFiles(t *testing.T) {
 			Description: "Get bin that doesn't exist",
 			Method:      "GET",
 			Bin:         "unknownbin",
-			StatusCode:  404,
+			StatusCode:  200,
 		}, {
 			Description: "Lock bin that doesn't exist",
 			Method:      "PUT",
 			Bin:         "unknownbin",
-			StatusCode:  404,
+			StatusCode:  200,
 		}, {
 			Description: "Delete bin that doesn't exist",
 			Method:      "DELETE",
 			Bin:         "unknownbin",
-			StatusCode:  404,
-		}, {
-			Description: "Lock bin that doesn't exist",
-			Method:      "DELETE",
-			Bin:         "unknownbin",
-			StatusCode:  404,
+			StatusCode:  200,
 		}, {
 			Description: "Delete file that doesn't exist in bin that doesn't exist",
 			Method:      "DELETE",
-			Bin:         "unknownbin",
+			Bin:         "unknownbin2",
 			Filename:    "unknownfile",
 			StatusCode:  404,
 		}, {
