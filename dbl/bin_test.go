@@ -87,8 +87,7 @@ func TestGetAllBins(t *testing.T) {
 	for i := 0; i < count; i++ {
 		bin := &ds.Bin{}
 		bin.Id = fmt.Sprintf("somebin-%d", i)
-		err = dao.Bin().Insert(bin)
-		if err != nil {
+		if err := dao.Bin().Insert(bin); err != nil {
 			t.Error(err)
 			break
 		}

@@ -52,7 +52,7 @@ func (d *BinDao) GenerateId() string {
 }
 
 func (d *BinDao) GetAll(hidden bool) (bins []ds.Bin, err error) {
-	sqlStatement := "SELECT bin.id, bin.readonly, bin.hidden, bin.deleted,bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(filename) AS files, bin.updated_at, bin.created_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id = file.bin_id WHERE bin.hidden = $1 GROUP BY bin.id"
+	sqlStatement := "SELECT bin.id, bin.readonly, bin.hidden, bin.deleted, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(file.filename), bin.updated_at, bin.created_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id=file.bin_id AND file.hidden=$1 WHERE bin.hidden=$1 GROUP BY bin.id";
 	rows, err := d.db.Query(sqlStatement, hidden)
 	if err != nil {
 		return bins, err
@@ -110,8 +110,7 @@ func (d *BinDao) GetPendingDelete() (bins []ds.Bin, err error) {
 
 func (d *BinDao) GetById(id string) (bin ds.Bin, found bool, err error) {
 	// Get bin info
-	// XXX: Split into two queries for readability
-	sqlStatement := "SELECT bin.id, bin.readonly, bin.hidden, bin.deleted, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(filename) AS files, bin.updated_at, bin.created_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id = file.bin_id WHERE bin.id = $1 GROUP BY bin.id LIMIT 1"
+	sqlStatement := "SELECT bin.id, bin.readonly, bin.hidden, bin.deleted, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(file.filename), bin.updated_at, bin.created_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id = file.bin_id AND file.hidden=false WHERE bin.id = $1 GROUP BY bin.id LIMIT 1"
 	err = d.db.QueryRow(sqlStatement, id).Scan(&bin.Id, &bin.Readonly, &bin.Hidden, &bin.Deleted, &bin.Downloads, &bin.Bytes, &bin.Files, &bin.UpdatedAt, &bin.CreatedAt, &bin.ExpiredAt, &bin.DeletedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
