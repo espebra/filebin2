@@ -30,7 +30,7 @@ func (h *HTTP) ViewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	data.Page = "about"
 	data.BucketInfo = h.s3.GetBucketInfo()
 
-	binsAvailable, err := h.dao.Bin().GetAll(true)
+	binsAvailable, err := h.dao.Bin().GetAll()
 	if err != nil {
 		fmt.Printf("Unable to GetAll(): %s\n", err.Error())
 		http.Error(w, "Errno 200", http.StatusInternalServerError)

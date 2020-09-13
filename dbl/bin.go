@@ -36,6 +36,9 @@ func (d *BinDao) ValidateInput(bin *ds.Bin) error {
 	if strings.HasPrefix(bin.Id, ".") {
 		return errors.New("Invalid bin specified.")
 	}
+	if bin.UpdatedAt.After(bin.ExpiredAt) {
+		return errors.New("The bin cannot be updated when it has expired.")
+	}
 	return nil
 }
 
@@ -51,10 +54,10 @@ func (d *BinDao) GenerateId() string {
 	return string(id)
 }
 
-func (d *BinDao) GetAll(available bool) (bins []ds.Bin, err error) {
+func (d *BinDao) GetAll() (bins []ds.Bin, err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "SELECT bin.id, bin.readonly, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(file.filename), bin.updated_at, bin.created_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id=file.bin_id AND file.deleted_at IS NULL AND file.in_storage = $1 WHERE bin.expired_at > $2 AND bin.deleted_at IS NULL GROUP BY bin.id ORDER BY bin.updated_at DESC"
-	rows, err := d.db.Query(sqlStatement, available, now)
+	sqlStatement := "SELECT bin.id, bin.readonly, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(file.filename), bin.updated_at, bin.created_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id=file.bin_id AND file.deleted_at IS NULL AND file.in_storage = true WHERE bin.expired_at > $1 AND bin.deleted_at IS NULL GROUP BY bin.id ORDER BY bin.updated_at DESC"
+	rows, err := d.db.Query(sqlStatement, now)
 	if err != nil {
 		return bins, err
 	}
@@ -169,6 +172,9 @@ func (d *BinDao) Update(bin *ds.Bin) (err error) {
 	var id string
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	bin.ExpiredAt = bin.ExpiredAt.UTC().Truncate(time.Microsecond)
+	if err := d.ValidateInput(bin); err != nil {
+		return err
+	}
 	sqlStatement := "UPDATE bin SET readonly = $1, updated_at = $2, expired_at = $3, deleted_at = $4 WHERE id = $5 RETURNING id"
 	err = d.db.QueryRow(sqlStatement, bin.Readonly, now, bin.ExpiredAt, bin.DeletedAt, bin.Id).Scan(&id)
 	if err != nil {

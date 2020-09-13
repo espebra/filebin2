@@ -2,6 +2,7 @@ package dbl
 
 import (
 	//"errors"
+	"time"
 	"fmt"
 	"github.com/espebra/filebin2/ds"
 	"testing"
@@ -87,13 +88,14 @@ func TestGetAllBins(t *testing.T) {
 	for i := 0; i < count; i++ {
 		bin := &ds.Bin{}
 		bin.Id = fmt.Sprintf("somebin-%d", i)
+		bin.ExpiredAt = time.Now().UTC().Add(time.Hour * 1)
 		if err := dao.Bin().Insert(bin); err != nil {
 			t.Error(err)
 			break
 		}
 	}
 
-	bins, err := dao.Bin().GetAll(true)
+	bins, err := dao.Bin().GetAll()
 	if err != nil {
 		t.Error(err)
 	}
@@ -145,6 +147,7 @@ func TestUpdateBin(t *testing.T) {
 
 	bin := &ds.Bin{}
 	bin.Id = "1234567890"
+	bin.ExpiredAt = time.Now().UTC().Add(time.Hour * 1)
 	err = dao.Bin().Insert(bin)
 	if err != nil {
 		t.Error(err)
@@ -258,6 +261,7 @@ func TestFileCount(t *testing.T) {
 	for _, tc := range testcases {
 		bin := &ds.Bin{}
 		bin.Id = tc.Bin
+		bin.ExpiredAt = time.Now().UTC().Add(time.Hour * 1)
 		err = dao.Bin().Insert(bin)
 		if err != nil {
 			t.Error(err)
@@ -291,7 +295,7 @@ func TestFileCount(t *testing.T) {
 		}
 	}
 
-	dbBins, err := dao.Bin().GetAll(true)
+	dbBins, err := dao.Bin().GetAll()
 	if err != nil {
 		t.Error(err)
 	}
