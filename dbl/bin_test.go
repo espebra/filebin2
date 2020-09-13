@@ -93,7 +93,7 @@ func TestGetAllBins(t *testing.T) {
 		}
 	}
 
-	bins, err := dao.Bin().GetAll(false)
+	bins, err := dao.Bin().GetAll(true)
 	if err != nil {
 		t.Error(err)
 	}
@@ -269,6 +269,7 @@ func TestFileCount(t *testing.T) {
 			file.Bin = bin.Id // Foreign key
 			file.Filename = fmt.Sprintf("testfile-%d", i)
 			file.Bytes = tc.Bytes
+			file.InStorage = true
 			err = dao.File().Insert(file)
 			if err != nil {
 				t.Error(err)
@@ -290,7 +291,7 @@ func TestFileCount(t *testing.T) {
 		}
 	}
 
-	dbBins, err := dao.Bin().GetAll(false)
+	dbBins, err := dao.Bin().GetAll(true)
 	if err != nil {
 		t.Error(err)
 	}

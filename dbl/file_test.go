@@ -31,6 +31,7 @@ func TestGetFileById(t *testing.T) {
 	file.Bin = bin.Id // Foreign key
 	file.Bytes = 1
 	file.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	file.InStorage = true
 
 	err = dao.File().Insert(file)
 
@@ -209,6 +210,7 @@ func TestGetAllFiles(t *testing.T) {
 		file.Bin = bin.Id
 		file.Bytes = 1
 		file.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+		file.InStorage = true
 		err = dao.File().Insert(file)
 
 		if err != nil {
@@ -217,7 +219,7 @@ func TestGetAllFiles(t *testing.T) {
 		}
 	}
 
-	files, err := dao.File().GetAll(false)
+	files, err := dao.File().GetAll(true)
 	if err != nil {
 		t.Error(err)
 	}

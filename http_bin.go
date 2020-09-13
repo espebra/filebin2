@@ -44,7 +44,7 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 	data.Bin = bin
 
 	if bin.IsReadable() {
-		files, err := h.dao.File().GetByBin(inputBin, false)
+		files, err := h.dao.File().GetByBin(inputBin, true)
 		if err != nil {
 			fmt.Printf("Unable to GetByBin(%s): %s\n", inputBin, err.Error())
 			http.Error(w, "Not found", http.StatusNotFound)
@@ -98,7 +98,7 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	files, err := h.dao.File().GetByBin(inputBin, false)
+	files, err := h.dao.File().GetByBin(inputBin, true)
 	if err != nil {
 		fmt.Printf("Unable to GetByBin(%s): %s\n", inputBin, err.Error())
 		http.Error(w, "Not found", http.StatusNotFound)
@@ -178,7 +178,6 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 func (h *HTTP) DeleteBin(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	inputBin := params["bin"]
-	now := time.Now().UTC().Truncate(time.Microsecond)
 
 	bin, found, err := h.dao.Bin().GetById(inputBin)
 	if err != nil {
@@ -196,9 +195,10 @@ func (h *HTTP) DeleteBin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set to pending delete
-	bin.Hidden = true
-	bin.DeletedAt = now
+	// Set to deleted
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	bin.DeletedAt.Scan(now)
+
 	if err := h.dao.Bin().Update(&bin); err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return

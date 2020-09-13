@@ -1,12 +1,10 @@
  CREATE TABLE bin (
 	id		VARCHAR(64) NOT NULL PRIMARY KEY,
 	readonly	BOOLEAN NOT NULL,
-	hidden		BOOLEAN NOT NULL,
-	deleted		BOOLEAN NOT NULL,
 	updated_at	TIMESTAMP NOT NULL,
 	created_at	TIMESTAMP NOT NULL,
 	expired_at	TIMESTAMP NOT NULL,
-	deleted_at	TIMESTAMP NOT NULL,
+	deleted_at	TIMESTAMP,
 	downloads	BIGINT NOT NULL
 );
 
@@ -14,8 +12,7 @@ CREATE TABLE file (
 	id		BIGSERIAL NOT NULL PRIMARY KEY,
 	bin_id		VARCHAR(64) REFERENCES bin(id) ON DELETE CASCADE,
 	filename	VARCHAR(128) NOT NULL,
-	hidden		BOOLEAN NOT NULL,
-	deleted		BOOLEAN NOT NULL,
+	in_storage	BOOLEAN NOT NULL,
 	mime		VARCHAR(128) NOT NULL,
 	bytes		BIGINT NOT NULL,
 	md5		VARCHAR(128) NOT NULL,
@@ -27,7 +24,7 @@ CREATE TABLE file (
 	nonce		VARCHAR(128) NOT NULL,
 	updated_at	TIMESTAMP NOT NULL,
 	created_at	TIMESTAMP NOT NULL,
-	deleted_at	TIMESTAMP NOT NULL,
+	deleted_at	TIMESTAMP,
 	UNIQUE(bin_id, filename)
 );
 

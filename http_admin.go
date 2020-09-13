@@ -17,7 +17,6 @@ func (h *HTTP) ViewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	//inputBin := params["bin"]
 
 	type Bins struct {
-		PendingDelete []ds.Bin `json:"pending_delete"`
 		Available     []ds.Bin `json:"available"`
 	}
 
@@ -29,17 +28,9 @@ func (h *HTTP) ViewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 	var data Data
 	data.Page = "about"
-
 	data.BucketInfo = h.s3.GetBucketInfo()
 
-	binsPendingDelete, err := h.dao.Bin().GetAll(true)
-	if err != nil {
-		fmt.Printf("Unable to GetAll(): %s\n", err.Error())
-		http.Error(w, "Errno 200", http.StatusInternalServerError)
-		return
-	}
-
-	binsAvailable, err := h.dao.Bin().GetAll(false)
+	binsAvailable, err := h.dao.Bin().GetAll(true)
 	if err != nil {
 		fmt.Printf("Unable to GetAll(): %s\n", err.Error())
 		http.Error(w, "Errno 200", http.StatusInternalServerError)
@@ -47,28 +38,9 @@ func (h *HTTP) ViewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var bins Bins
-	bins.PendingDelete = binsPendingDelete
 	bins.Available = binsAvailable
 
 	data.Bins = bins
-	//if found == false {
-	//	h.Error(w, r, "", fmt.Sprintf("The bin %s does not exist.", inputBin), 201, http.StatusNotFound)
-	//	return
-	//}
-	//data.Bin = bin
-
-	//if bin.IsReadable() == false {
-	//	h.Error(w, r, "", fmt.Sprintf("The bin %s is no longer available.", inputBin), 202, http.StatusNotFound)
-	//	return
-	//}
-
-	//files, err := h.dao.File().GetByBin(inputBin, 0)
-	//if err != nil {
-	//	fmt.Printf("Unable to GetByBin(%s): %s\n", inputBin, err.Error())
-	//	http.Error(w, "Not found", http.StatusNotFound)
-	//	return
-	//}
-	//data.Files = files
 
 	if r.Header.Get("accept") == "application/json" {
 		w.Header().Set("Content-Type", "application/json")

@@ -16,7 +16,7 @@
 
         <h1>Dashboard</h1>
 
-	<div class="row">
+	<div class="row mb-3">
             <div class="col-sm-3">
                 <div class="card text-white bg-primary">
                     <div class="card-body">
@@ -59,33 +59,7 @@
             </div>
         </div>
 
-        <h2>Pending delete</h2>
-        <table class="table">
-            <tr>
-                <th>Bin</th>
-                <th>Updated</th>
-                <th>Bytes</th>
-                <th>Files</th>
-                <th>Locked</th>
-            </tr>
-            {{ range $index, $value := .Bins.PendingDelete }}
-                <tr>
-                    <td><a href="{{ .URL }}">{{ .Id }}</a></td>
-                    <td>{{ .UpdatedAtRelative }}</td>
-                    <td>{{ .BytesReadable }}</td>
-                    <td>{{ .Files }}</td>
-                    <td>
-                        {{ if eq .Readonly true }}
-                            <i class="fas fa-fw fa-lock text-muted"></i>
-                        {{ else }}
-                            <i class="fas fa-fw fa-lock-open text-success"></i>
-                        {{ end }}
-                    </td>
-                </tr>
-            {{ end }}
-        </table>
-
-        <h2>Available</h2>
+        <h2>Bins available</h2>
         <table class="table">
             <tr>
                 <th>Bin</th>

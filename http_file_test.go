@@ -197,7 +197,7 @@ func TestUploadToDeletedAtBin(t *testing.T) {
 			UploadContent: "content a",
 			StatusCode:    201,
 		}, {
-			Description: "Delete file",
+			Description: "Delete bin",
 			Method:      "DELETE",
 			Bin:         "mytestbin2",
 			StatusCode:  200,

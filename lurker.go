@@ -37,7 +37,7 @@ func (l *Lurker) Run() {
 				return
 			case _ = <-ticker.C:
 				t0 := time.Now()
-				l.HideExpiredBins()
+				//l.HideExpiredBins()
 				l.DeletePendingFiles()
 				l.DeletePendingBins()
 				fmt.Printf("Lurker completed run in %.3fs\n", time.Since(t0).Seconds())
@@ -46,27 +46,27 @@ func (l *Lurker) Run() {
 	}()
 }
 
-func (l *Lurker) HideExpiredBins() {
-	count, err := l.dao.Bin().HideRecentlyExpiredBins()
-	if err != nil {
-		fmt.Printf("Unable to HideRecentlyExpiredBins(): %s\n", err.Error())
-		return
-	}
-	if count > 0 {
-		fmt.Printf("Hid %d expired bins waiting for deletion.\n", count)
-	}
-}
+//func (l *Lurker) HideExpiredBins() {
+//	count, err := l.dao.Bin().HideRecentlyExpiredBins()
+//	if err != nil {
+//		fmt.Printf("Unable to HideRecentlyExpiredBins(): %s\n", err.Error())
+//		return
+//	}
+//	if count > 0 {
+//		fmt.Printf("Hid %d expired bins waiting for deletion.\n", count)
+//	}
+//}
 
-func (l *Lurker) HideEmptyBins() {
-	count, err := l.dao.Bin().HideEmptyBins()
-	if err != nil {
-		fmt.Printf("Unable to HideEmptyBins(): %s\n", err.Error())
-		return
-	}
-	if count > 0 {
-		fmt.Printf("Hid %d empty bins waiting for deletion.\n", count)
-	}
-}
+//func (l *Lurker) HideEmptyBins() {
+//	count, err := l.dao.Bin().HideEmptyBins()
+//	if err != nil {
+//		fmt.Printf("Unable to HideEmptyBins(): %s\n", err.Error())
+//		return
+//	}
+//	if count > 0 {
+//		fmt.Printf("Hid %d empty bins waiting for deletion.\n", count)
+//	}
+//}
 
 func (l *Lurker) DeletePendingFiles() {
 	files, err := l.dao.File().GetPendingDelete()
@@ -81,7 +81,7 @@ func (l *Lurker) DeletePendingFiles() {
 				fmt.Printf("Unable to delete file %s from bin %s from S3.\n", file.Filename, file.Bin)
 				return
 			} else {
-				file.Deleted = true
+				file.InStorage = false
 				if err := l.dao.File().Update(&file); err != nil {
 					fmt.Printf("Unable to update filename %s (id %d) in bin %s: %s\n", file.Filename, file.Id, file.Bin, err.Error())
 					return
@@ -110,14 +110,13 @@ func (l *Lurker) DeletePendingBins() {
 					fmt.Printf("Unable to delete file %s from bin %s from S3.\n", file.Filename, file.Bin)
 					return
 				} else {
-					file.Deleted = true
+					file.InStorage = false
 					if err := l.dao.File().Update(&file); err != nil {
 						fmt.Printf("Unable to update filename %s (id %d) in bin %s: %s\n", file.Filename, file.Id, file.Bin, err.Error())
 						return
 					}
 				}
 			}
-			bin.Deleted = true
 			if err := l.dao.Bin().Update(&bin); err != nil {
 				fmt.Printf("Unable to update bin %s: %s\n", bin.Id, err.Error())
 				return

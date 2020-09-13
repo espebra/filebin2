@@ -5,7 +5,9 @@
 # - Coverage reports as html for easy overview.
 #
 
+#set -euxo pipefail
 set -uxo pipefail
+#go test -failfast -cover -v -race -mod=vendor -coverprofile=coverage.out -p 1 ./... | tee tests.out
 go test -cover -v -race -mod=vendor -coverprofile=coverage.out -p 1 ./... | tee tests.out
 ret=$?
 mkdir -p tests
