@@ -14,9 +14,9 @@
         {{template "topbar" .}}
         <h1>About</h1>
 
-        <p>Filebin is a file sharing service that aims to be convenient and easy to use.</p>
+        <p>Filebin is a file sharing web application that aims to be convenient and easy to use.</p>
 
-        <p>The <a href="https://github.com/espebra/filebin2/">source code</a> is licensed under the BSD 3-clause license. It is built using the following open source components and libraries:</p>
+        <p>The <a href="https://github.com/espebra/filebin2/">source code</a> is licensed under the BSD 3-clause license and it can be self hosted. It is built using the following open source components and libraries:</p>
             
         <table class="table table-sm">
             <tr>
