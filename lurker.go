@@ -37,7 +37,6 @@ func (l *Lurker) Run() {
 				return
 			case _ = <-ticker.C:
 				t0 := time.Now()
-				//l.HideExpiredBins()
 				l.DeletePendingFiles()
 				l.DeletePendingBins()
 				fmt.Printf("Lurker completed run in %.3fs\n", time.Since(t0).Seconds())
@@ -45,28 +44,6 @@ func (l *Lurker) Run() {
 		}
 	}()
 }
-
-//func (l *Lurker) HideExpiredBins() {
-//	count, err := l.dao.Bin().HideRecentlyExpiredBins()
-//	if err != nil {
-//		fmt.Printf("Unable to HideRecentlyExpiredBins(): %s\n", err.Error())
-//		return
-//	}
-//	if count > 0 {
-//		fmt.Printf("Hid %d expired bins waiting for deletion.\n", count)
-//	}
-//}
-
-//func (l *Lurker) HideEmptyBins() {
-//	count, err := l.dao.Bin().HideEmptyBins()
-//	if err != nil {
-//		fmt.Printf("Unable to HideEmptyBins(): %s\n", err.Error())
-//		return
-//	}
-//	if count > 0 {
-//		fmt.Printf("Hid %d empty bins waiting for deletion.\n", count)
-//	}
-//}
 
 func (l *Lurker) DeletePendingFiles() {
 	files, err := l.dao.File().GetPendingDelete()
@@ -77,6 +54,7 @@ func (l *Lurker) DeletePendingFiles() {
 	if len(files) > 0 {
 		fmt.Printf("Found %d files pending removal.\n", len(files))
 		for _, file := range files {
+			//fmt.Printf(" > Bin %s, filename %s\n", file.Bin, file.Filename)
 			if err := l.s3.RemoveObject(file.Bin, file.Filename); err != nil {
 				fmt.Printf("Unable to delete file %s from bin %s from S3.\n", file.Filename, file.Bin)
 				return
@@ -100,7 +78,8 @@ func (l *Lurker) DeletePendingBins() {
 	if len(bins) > 0 {
 		fmt.Printf("Found %d bins pending removal.\n", len(bins))
 		for _, bin := range bins {
-			files, err := l.dao.File().GetByBin(bin.Id, false)
+			//fmt.Printf(" > Bin %s\n", bin.Id)
+			files, err := l.dao.File().GetByBin(bin.Id, true)
 			if err != nil {
 				fmt.Printf("Unable to GetByBin: %s\n", err.Error())
 				return
@@ -110,6 +89,7 @@ func (l *Lurker) DeletePendingBins() {
 					fmt.Printf("Unable to delete file %s from bin %s from S3.\n", file.Filename, file.Bin)
 					return
 				} else {
+					fmt.Printf("Removing file %s from bin %s\n", file.Filename, bin.Id)
 					file.InStorage = false
 					if err := l.dao.File().Update(&file); err != nil {
 						fmt.Printf("Unable to update filename %s (id %d) in bin %s: %s\n", file.Filename, file.Id, file.Bin, err.Error())

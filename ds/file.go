@@ -42,10 +42,10 @@ func (f *File) IsReadable() bool {
 }
 
 func (f *File) IsDeleted() bool {
-        if f.DeletedAt.Valid {
-                if f.DeletedAt.Time.IsZero() == false {
-                        return true
-                }
-        }
+	if f.DeletedAt.Valid {
+		if f.DeletedAt.Time.IsZero() == false {
+			return true
+		}
+	}
 	return false
 }

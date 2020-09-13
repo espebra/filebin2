@@ -1,11 +1,10 @@
 package dbl
 
 import (
-	//"errors"
-	"time"
 	"fmt"
 	"github.com/espebra/filebin2/ds"
 	"testing"
+	"time"
 )
 
 func TestGetBinById(t *testing.T) {

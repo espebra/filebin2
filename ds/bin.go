@@ -7,7 +7,6 @@ import (
 
 type Bin struct {
 	Id                string       `json:"id"`
-	InStorage         bool         `json:"-"`
 	Readonly          bool         `json:"readonly"`
 	Downloads         uint64       `json:"-"`
 	Bytes             uint64       `json:"bytes"`
@@ -56,8 +55,8 @@ func (b *Bin) IsExpired() bool {
 }
 
 func (b *Bin) IsDeleted() bool {
-        if b.DeletedAt.Valid {
-                if b.DeletedAt.Time.IsZero() == false {
+	if b.DeletedAt.Valid {
+		if b.DeletedAt.Time.IsZero() == false {
 			return true
 		}
 	}

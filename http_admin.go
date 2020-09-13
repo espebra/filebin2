@@ -17,7 +17,7 @@ func (h *HTTP) ViewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	//inputBin := params["bin"]
 
 	type Bins struct {
-		Available     []ds.Bin `json:"available"`
+		Available []ds.Bin `json:"available"`
 	}
 
 	type Data struct {
