@@ -56,14 +56,14 @@ func (d *BinDao) GenerateId() string {
 
 func (d *BinDao) GetAll() (bins []ds.Bin, err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "SELECT bin.id, bin.readonly, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(file.filename), bin.updated_at, bin.created_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id=file.bin_id AND file.deleted_at IS NULL AND file.in_storage = true WHERE bin.expired_at > $1 AND bin.deleted_at IS NULL GROUP BY bin.id ORDER BY bin.updated_at DESC"
+	sqlStatement := "SELECT bin.id, bin.readonly, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(file.filename), COALESCE(SUM(file.downloads), 0), COALESCE(SUM(file.updates), 0), bin.updated_at, bin.created_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id=file.bin_id AND file.deleted_at IS NULL AND file.in_storage = true WHERE bin.expired_at > $1 AND bin.deleted_at IS NULL GROUP BY bin.id ORDER BY bin.updated_at DESC"
 	rows, err := d.db.Query(sqlStatement, now)
 	if err != nil {
 		return bins, err
 	}
 	for rows.Next() {
 		var bin ds.Bin
-		err = rows.Scan(&bin.Id, &bin.Readonly, &bin.Downloads, &bin.Bytes, &bin.Files, &bin.UpdatedAt, &bin.CreatedAt, &bin.ExpiredAt, &bin.DeletedAt)
+		err = rows.Scan(&bin.Id, &bin.Readonly, &bin.Downloads, &bin.Bytes, &bin.Files, &bin.Downloads, &bin.Updates, &bin.UpdatedAt, &bin.CreatedAt, &bin.ExpiredAt, &bin.DeletedAt)
 		if err != nil {
 			return bins, err
 		}

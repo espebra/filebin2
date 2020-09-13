@@ -63,17 +63,23 @@
         <table class="table">
             <tr>
                 <th>Bin</th>
+                <th>Created</th>
                 <th>Updated</th>
                 <th>Bytes</th>
                 <th>Files</th>
+                <th>Downloads</th>
+                <th>Updates</th>
                 <th>Locked</th>
             </tr>
             {{ range $index, $value := .Bins.Available }}
                 <tr>
                     <td><a href="{{ .URL }}">{{ .Id }}</a></td>
+                    <td>{{ .CreatedAtRelative }}</td>
                     <td>{{ .UpdatedAtRelative }}</td>
                     <td>{{ .BytesReadable }}</td>
                     <td>{{ .Files }}</td>
+                    <td>{{ .Downloads }}</td>
+                    <td>{{ .Updates }}</td>
                     <td>
                         {{ if eq .Readonly true }}
                             <i class="fas fa-fw fa-lock text-muted"></i>
