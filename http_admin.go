@@ -25,10 +25,18 @@ func (h *HTTP) ViewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 		//Files []ds.File `json:"files"`
 		BucketInfo s3.BucketInfo `json:"bucketinfo"`
 		Page       string        `json:"page"`
+		DBInfo     ds.Info       `json:"db_info"`
 	}
 	var data Data
 	data.Page = "about"
 	data.BucketInfo = h.s3.GetBucketInfo()
+	info, err := h.dao.Info().GetInfo()
+	if err != nil {
+		fmt.Printf("Unable to GetInfo(): %s\n", err.Error())
+		http.Error(w, "Errno 326", http.StatusInternalServerError)
+		return
+	}
+	data.DBInfo = info
 
 	binsAvailable, err := h.dao.Bin().GetAll()
 	if err != nil {

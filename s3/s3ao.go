@@ -24,9 +24,11 @@ type S3AO struct {
 
 type BucketInfo struct {
 	Objects                       uint64
+	ObjectsReadable                       string
 	ObjectsSize                   uint64
 	ObjectsSizeReadable           string
 	IncompleteObjects             uint64
+	IncompleteObjectsReadable             string
 	IncompleteObjectsSize         uint64
 	IncompleteObjectsSizeReadable string
 }
@@ -275,6 +277,7 @@ func (s S3AO) GetBucketInfo() (info BucketInfo) {
 	}
 
 	info.Objects = numObjects
+	info.ObjectsReadable = humanize.Comma(int64(numObjects))
 	info.ObjectsSize = uint64(size)
 	info.ObjectsSizeReadable = humanize.Bytes(info.ObjectsSize)
 
@@ -290,6 +293,7 @@ func (s S3AO) GetBucketInfo() (info BucketInfo) {
 		numObjects = numObjects + 1
 	}
 	info.IncompleteObjects = numObjects
+	info.IncompleteObjectsReadable = humanize.Comma(int64(numObjects))
 	info.IncompleteObjectsSize = uint64(size)
 	info.IncompleteObjectsSizeReadable = humanize.Bytes(info.IncompleteObjectsSize)
 	return info

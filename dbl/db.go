@@ -12,6 +12,7 @@ type DAO struct {
 	ConnStr string
 	binDao  *BinDao
 	fileDao *FileDao
+	infoDao *InfoDao
 }
 
 // Init a database connection given
@@ -33,6 +34,7 @@ func Init(dbHost string, dbPort int, dbName, dbUser, dbPassword string) (DAO, er
 	dao.ConnStr = connStr
 	dao.binDao = &BinDao{db: db}
 	dao.fileDao = &FileDao{db: db}
+	dao.infoDao = &InfoDao{db: db}
 	return dao, nil
 }
 
@@ -65,6 +67,10 @@ func (dao DAO) Bin() *BinDao {
 
 func (dao DAO) File() *FileDao {
 	return dao.fileDao
+}
+
+func (dao DAO) Info() *InfoDao {
+	return dao.infoDao
 }
 
 func (dao DAO) Status() bool {

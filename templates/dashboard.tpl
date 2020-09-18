@@ -16,48 +16,40 @@
 
         <h1>Dashboard</h1>
 
-	<div class="row mb-3">
-            <div class="col-sm-3">
-                <div class="card text-white bg-primary">
-                    <div class="card-body">
-                        <p class="card-title">Files stored in S3</p>
-                        <h4 class="card-text">{{ .BucketInfo.Objects }}</h4>
-                    </div>
-                </div>
-            </div>
-            <div class="col-sm-3">
-                <div class="card text-white bg-primary">
-                    <div class="card-body">
-                        <p class="card-title">Capacity used in S3</p>
-                        <h4 class="card-text">{{ .BucketInfo.ObjectsSizeReadable }}</h4>
-                    </div>
-                </div>
-            </div>
-            <div class="col-sm-3">
-                {{ if eq .BucketInfo.IncompleteObjects 0 }}
-                <div class="card text-white bg-success">
-                {{ else }}
-                <div class="card text-white bg-warning">
-                {{ end }}
-                    <div class="card-body">
-                        <p class="card-title">Incomplete files in S3</p>
-                        <h4 class="card-text">{{ .BucketInfo.IncompleteObjects }}</h4>
-                    </div>
-                </div>
-            </div>
-            <div class="col-sm-3">
-                {{ if eq .BucketInfo.IncompleteObjects 0 }}
-                <div class="card text-white bg-success">
-                {{ else }}
-                <div class="card text-white bg-warning">
-                {{ end }}
-                    <div class="card-body">
-                        <p class="card-title">Size of incomplete files in S3</p>
-                        <h4 class="card-text">{{ .BucketInfo.IncompleteObjectsSizeReadable }}</h4>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Storage (S3) incomplete</th>
+                    <th>Storage (S3) current</th>
+                    <th>Database current</th>
+                    <th>Database total</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <th>Number of bytes</th>
+                    <td>{{ .BucketInfo.IncompleteObjectsSizeReadable }}</td>
+                    <td>{{ .BucketInfo.ObjectsSizeReadable }}</td>
+                    <td>{{ .DBInfo.CurrentBytesReadable }}</td>
+                    <td>{{ .DBInfo.TotalBytesReadable }}</td>
+                </tr>
+                <tr>
+                    <th>Number of files</th>
+                    <td>{{ .BucketInfo.IncompleteObjectsReadable }}</td>
+                    <td>{{ .BucketInfo.ObjectsReadable }}</td>
+                    <td>{{ .DBInfo.CurrentFilesReadable }}</td>
+                    <td>{{ .DBInfo.TotalFilesReadable }}</td>
+                </tr>
+                <tr>
+                    <th>Number of bins</th>
+                    <td></td>
+                    <td></td>
+                    <td>{{ .DBInfo.CurrentBinsReadable }}</td>
+                    <td>{{ .DBInfo.TotalBinsReadable }}</td>
+                </tr>
+            </tbody>
+        </table>
 
         <h2>Bins available</h2>
         <table class="table">
