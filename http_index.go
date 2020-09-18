@@ -21,12 +21,7 @@ func (h *HTTP) Index(w http.ResponseWriter, r *http.Request) {
 
 	bin := &ds.Bin{}
 	bin.ExpiredAt = time.Now().UTC().Add(h.expirationDuration)
-	err := h.dao.Bin().Insert(bin)
-	if err != nil {
-		fmt.Printf("Unable to insert new bin: %s\n", err.Error())
-		http.Error(w, "Errno 301", http.StatusInternalServerError)
-		return
-	}
+	bin.Id = h.dao.Bin().GenerateId()
 	data.Bin = *bin
 
 	if err := h.templates.ExecuteTemplate(w, "index", data); err != nil {
