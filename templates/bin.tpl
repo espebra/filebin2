@@ -65,7 +65,7 @@
 	    {{ if isAvailable .Bin.Id }}
                 {{ if eq $numfiles 0 }}
 	            {{ if eq .Bin.Readonly false }}
-                        <p>This bin is empty. To upload files, click <em>Upload files</em> below or drag and drop the files into this browser window.</p>
+                        <p>This bin is empty. To upload files, click <em>Upload files</em> below or drag-and-drop the files into this browser window.</p>
 
                         <p class="fileUpload btn btn-primary">
                             <span><i class="fa fa-cloud-upload"></i> Upload files</span>
