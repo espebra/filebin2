@@ -27,7 +27,7 @@ type HTTP struct {
 	expirationDuration time.Duration
 	httpPort           int
 	httpHost           string
-	httpProxy          bool
+	httpProxyHeaders   bool
 	httpAccessLog      string
 	adminUsername      string
 	adminPassword      string
@@ -114,7 +114,7 @@ func (h *HTTP) Run() {
 		handler = handlers.CombinedLoggingHandler(accessLog, handler)
 
 		// Add proxy header handling
-		if h.httpProxy {
+		if h.httpProxyHeaders {
 			handler = handlers.ProxyHeaders(handler)
 		}
 
