@@ -75,7 +75,7 @@
                         <p>This bin is empty. Files can not be uploaded to it since it is locked.</p>
                     {{ end }}
                 {{ else }}
-                    The bin <a class="link-primary" href="/{{ .Bin.Id }}">{{ .Bin.Id }}</a> was created {{ .Bin.CreatedAtRelative }}
+                    The bin <a class="link-primary link-custom" href="/{{ .Bin.Id }}">{{ .Bin.Id }}</a> was created {{ .Bin.CreatedAtRelative }}
 
                     {{- if ne .Bin.CreatedAtRelative .Bin.UpdatedAtRelative -}}
                     , updated {{ .Bin.UpdatedAtRelative }}
@@ -157,7 +157,7 @@
                                         <i class="far fa-fw fa-file"></i>
                                     {{ end }}
                                 {{ end }}
-                                <a class="link-primary" href="{{ .URL }}">{{ .Filename }}</a>
+                                <a class="link-primary link-custom" href="{{ .URL }}">{{ .Filename }}</a>
                             </td>
                             <td>
                                 {{ .Mime }}
@@ -170,7 +170,7 @@
                             </td>
                             <td>
                                 <div class="dropdown">
-                                    <a class="dropdown-toggle small" id="dropdownFileMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    <a class="dropdown-toggle small link-custom" id="dropdownFileMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                         More
                                     </a>
                                     <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownFileMenuButton">
@@ -269,7 +269,7 @@
                         <ul class="row">
                             <dt class="col-sm-3">Bin</dt>
                             <dd class="col-sm-9">
-                                <a class="link-primary" href="/{{ $.Bin.Id }}">
+                                <a class="link-primary link-custom" href="/{{ $.Bin.Id }}">
                                     {{ $.Bin.Id }}
                                 </a>
                             </dd>
@@ -398,14 +398,14 @@
                             <ul class="row">
                                 <dt class="col-sm-3">Filename</dt>
                                 <dd class="col-sm-9">
-                                    <a class="link-primary" href="{{ .URL }}">
+                                    <a class="link-primary link-custom" href="{{ .URL }}">
                                         {{ .Filename }}
                                     </a>
                                 </dd>
 
                                 <dt class="col-sm-3">Bin</dt>
                                 <dd class="col-sm-9">
-                                    <a class="link-primary" href="/{{ $.Bin.Id }}">
+                                    <a class="link-primary link-custom" href="/{{ $.Bin.Id }}">
                                         {{ $.Bin.Id }}
                                     </a>
                                 </dd>

@@ -6,6 +6,10 @@
     margin-bottom: 0 !important;
 }
 
+.link-custom {
+    text-decoration: none;
+}
+
 .fileUpload {
     position: relative;
     overflow: hidden;
