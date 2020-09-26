@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"time"
+	"github.com/dustin/go-humanize"
 )
 
 func (h *HTTP) Index(w http.ResponseWriter, r *http.Request) {
@@ -21,6 +22,7 @@ func (h *HTTP) Index(w http.ResponseWriter, r *http.Request) {
 
 	bin := &ds.Bin{}
 	bin.ExpiredAt = time.Now().UTC().Add(h.expirationDuration)
+	bin.ExpiredAtRelative = humanize.Time(bin.ExpiredAt)
 	bin.Id = h.dao.Bin().GenerateId()
 	data.Bin = *bin
 
