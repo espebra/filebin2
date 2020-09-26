@@ -27,6 +27,7 @@ type HTTP struct {
 	expirationDuration time.Duration
 	httpPort           int
 	httpHost           string
+	httpProxy          bool
 	httpAccessLog      string
 	adminUsername      string
 	adminPassword      string
@@ -52,6 +53,7 @@ func (h *HTTP) Init() (err error) {
 	h.router.HandleFunc("/terms", h.Terms).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/archive/{bin:[A-Za-z0-9_-]+}/{format:[a-z]+}", h.Archive).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin", h.Auth(h.ViewAdminDashboard)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin/cleanup", h.Auth(h.ViewAdminCleanup)).Methods(http.MethodHead, http.MethodGet)
 	h.router.Handle("/static/{path:.*}", http.StripPrefix("/static/", http.FileServer(h.staticBox.HTTPBox()))).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.ViewBin).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.DeleteBin).Methods(http.MethodDelete)
@@ -99,13 +101,25 @@ func (h *HTTP) Run() {
 			os.Exit(2)
 		}
 	} else {
+		// Add gzip compression
+		handler := handlers.CompressHandler(h.router)
+
+		// Add access logging
 		accessLog, err := os.OpenFile(h.httpAccessLog, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		defer accessLog.Close()
 		if err != nil {
 			fmt.Printf("Unable to open log file: %s\n", err.Error())
 			os.Exit(2)
 		}
-		if err := http.ListenAndServe(fmt.Sprintf("%s:%d", h.httpHost, h.httpPort), handlers.CombinedLoggingHandler(accessLog, handlers.CompressHandler(h.router))); err != nil {
+		handler = handlers.CombinedLoggingHandler(accessLog, handler)
+
+		// Add proxy header handling
+		if h.httpProxy {
+			handler = handlers.ProxyHeaders(handler)
+		}
+
+		// Start the server
+		if err := http.ListenAndServe(fmt.Sprintf("%s:%d", h.httpHost, h.httpPort), handler); err != nil {
 			fmt.Printf("Failed to start HTTP server: %s\n", err.Error())
 			os.Exit(2)
 		}
@@ -195,4 +209,13 @@ func extractIP(addr string) (ip string, err error) {
 	}
 	ipRaw := net.ParseIP(host)
 	return ipRaw.String(), nil
+}
+
+func inStringSlice(needle string, haystack []string) bool {
+	for i := range haystack {
+		if haystack[i] == needle {
+			return true
+		}
+	}
+	return false
 }
