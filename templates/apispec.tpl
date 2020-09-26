@@ -10,7 +10,7 @@ paths:
       tags:
         - file
       summary: Download a file from a bin
-      description: 'This is a regular file download, which includes content-length and checksums of the content in the response headers. The content-type will be set according to the content.'
+      description: This is a regular file download, which includes content-length and checksums of the content in the response headers. The content-type will be set according to the content.
       parameters:
         - name: bin
           in: path
@@ -27,8 +27,10 @@ paths:
       responses:
         '200':
           description: Successful download.
+        '403':
+          description: The limitation of number of downloads for this file was reached.
         '404':
-          description: 'The file was not found. The bin may be expired, the file is deleted or it did never exist in the first place.'
+          description: The file was not found. The bin may be expired, the file is deleted or it did never exist in the first place.
     delete:
       tags:
         - file
@@ -86,7 +88,7 @@ paths:
       tags:
         - bin
       summary: Show a bin
-      description: 'This will show meta data about the bin such as timestamps, file sizes, file names and so on.'
+      description: This will show meta data about the bin such as timestamps, file sizes, file names and so on.
       parameters:
         - name: bin
           in: path
@@ -103,7 +105,7 @@ paths:
       tags:
         - bin
       summary: Lock an entire bin to make it read only
-      description: 'This will make a bin read only. A read only bin does not accept new files to be uploaded or existing files to be updated. This provides some content integrity when distributing a bin to multiple parties. Note that it is possible to delete a read only bin.'
+      description: This will make a bin read only. A read only bin does not accept new files to be uploaded or existing files to be updated. This provides some content integrity when distributing a bin to multiple parties. Note that it is possible to delete a read only bin.
       parameters:
         - name: bin
           in: path
@@ -119,7 +121,7 @@ paths:
       tags:
         - bin
       summary: Delete an entire bin and all of its files
-      description: 'This will delete all files from a bin. It is not possible to reuse a bin that has been deleted. Everyone knowing the URL to the bin have access to delete it.'
+      description: This will delete all files from a bin. It is not possible to reuse a bin that has been deleted. Everyone knowing the URL to the bin have access to delete it.
       parameters:
         - name: bin
           in: path
