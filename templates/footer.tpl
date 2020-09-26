@@ -1,5 +1,4 @@
 {{ define "footer" }}
-<hr class="mb-0"/>
 <nav class="navbar navbar-expand-sm navbar-light small">
     <ul class="navbar-nav">
         <li class="nav-item">
