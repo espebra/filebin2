@@ -278,7 +278,7 @@ function FileAPI (c, t, d, f, bin, uploadURL, binURL) {
                 console.log(e);
                 bar.className = "progress progress-danger";
                 bar.setAttribute("aria-valuenow", 100);
-                speed.textContent = "Failed due to network error (" + filesize + ")";
+                speed.textContent = "Upload failed (" + filesize + ")";
                 counter_failed += 1;
                 counter_uploading -= 1;
                 updateFileCount();
@@ -324,8 +324,8 @@ function deleteURL (url, messageBoxID) {
             console.log("Deleted successfully");
             box.textContent = "Delete operation completed successfully.";
             box.className = "alert alert-success";
-        } else if (xhr.status  == 410 && xhr.readyState == 4) {
-            box.textContent = "The bin is already deleted.";
+        } else if (xhr.status  == 404 && xhr.readyState == 4) {
+            box.textContent = "Delete operation already completed.";
             box.className = "alert alert-success";
         } else {
             console.log("Failed to delete");
