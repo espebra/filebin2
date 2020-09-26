@@ -13,7 +13,8 @@ import (
 )
 
 var (
-	expirationFlag = flag.Int("expiration", 604800, "Bin expiration time in seconds since the last bin update")
+	expirationFlag     = flag.Int("expiration", 604800, "Bin expiration time in seconds since the last bin update")
+	limitDownloadsFlag = flag.Uint64("limit-downloads", 0, "Limit the number of downloads per file. 0 disables this limit.")
 
 	// HTTP
 	listenHostFlag   = flag.String("listen-host", "127.0.0.1", "Listen host")
@@ -88,6 +89,7 @@ func main() {
 		dao:              &daoconn,
 		s3:               &s3conn,
 		expiration:       *expirationFlag,
+		limitDownloads:   *limitDownloadsFlag,
 	}
 
 	if err := h.Init(); err != nil {

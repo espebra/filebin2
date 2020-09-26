@@ -15,6 +15,7 @@ import (
 )
 
 const (
+	testLimitDownloads  = 2
 	testExpiredAt       = 5
 	testHTTPHost        = "localhost"
 	testHTTPPort        = 8080
@@ -72,13 +73,14 @@ func TestMain(m *testing.M) {
 	staticBox := rice.MustFindBox("static")
 	templateBox := rice.MustFindBox("templates")
 	h := &HTTP{
-		expiration:  testExpiredAt,
-		httpHost:    testHTTPHost,
-		httpPort:    testHTTPPort,
-		staticBox:   staticBox,
-		templateBox: templateBox,
-		dao:         &dao,
-		s3:          &s3ao,
+		limitDownloads: testLimitDownloads,
+		expiration:     testExpiredAt,
+		httpHost:       testHTTPHost,
+		httpPort:       testHTTPPort,
+		staticBox:      staticBox,
+		templateBox:    templateBox,
+		dao:            &dao,
+		s3:             &s3ao,
 	}
 	if err := h.Init(); err != nil {
 		fmt.Printf("Unable to start the HTTP server: %s\n", err.Error())

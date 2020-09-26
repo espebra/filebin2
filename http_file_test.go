@@ -407,3 +407,37 @@ func TestNotExistingBinsAndFiles(t *testing.T) {
 	}
 	runTests(tcs, t)
 }
+
+func TestLimitDownloads(t *testing.T) {
+	tcs := []TestCase{
+		{
+			Description:   "Create new bin",
+			Method:        "POST",
+			Bin:           "mytestbin4",
+			Filename:      "a",
+			UploadContent: "content a",
+			StatusCode:    201,
+		}, {
+			Description:     "Get file first time",
+			Method:          "GET",
+			Bin:             "mytestbin4",
+			Filename:        "a",
+			DownloadContent: "content a",
+			StatusCode:      200,
+		}, {
+			Description:     "Get file second time",
+			Method:          "GET",
+			Bin:             "mytestbin4",
+			Filename:        "a",
+			DownloadContent: "content a",
+			StatusCode:      200,
+		}, {
+			Description: "Get file third time, above the download limit of 2",
+			Method:      "GET",
+			Bin:         "mytestbin4",
+			Filename:    "a",
+			StatusCode:  403,
+		},
+	}
+	runTests(tcs, t)
+}
