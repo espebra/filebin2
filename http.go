@@ -53,7 +53,7 @@ func (h *HTTP) Init() (err error) {
 	h.router.HandleFunc("/terms", h.Terms).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/archive/{bin:[A-Za-z0-9_-]+}/{format:[a-z]+}", h.Archive).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin", h.Auth(h.ViewAdminDashboard)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/admin/cleanup", h.Auth(h.ViewAdminCleanup)).Methods(http.MethodHead, http.MethodGet)
+	//h.router.HandleFunc("/admin/cleanup", h.Auth(h.ViewAdminCleanup)).Methods(http.MethodHead, http.MethodGet)
 	h.router.Handle("/static/{path:.*}", http.StripPrefix("/static/", http.FileServer(h.staticBox.HTTPBox()))).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.ViewBin).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.DeleteBin).Methods(http.MethodDelete)
@@ -202,11 +202,11 @@ func (h *HTTP) ParseTemplates() *template.Template {
 }
 
 func extractIP(addr string) (ip string, err error) {
-	host, _, err := net.SplitHostPort(addr)
-	if err != nil {
-		fmt.Printf("Error 1: %s\n", err.Error())
-		return ip, err
-	}
+	host, _, _ := net.SplitHostPort(addr)
+	//if err != nil {
+	//	fmt.Printf("Error 1: %s\n", err.Error())
+	//	return ip, err
+	//}
 	ipRaw := net.ParseIP(host)
 	return ipRaw.String(), nil
 }
