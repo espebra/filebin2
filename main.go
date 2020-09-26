@@ -13,8 +13,11 @@ import (
 )
 
 var (
-	expirationFlag     = flag.Int("expiration", 604800, "Bin expiration time in seconds since the last bin update")
-	limitDownloadsFlag = flag.Uint64("limit-downloads", 0, "Limit the number of downloads per file. 0 disables this limit.")
+	expirationFlag = flag.Int("expiration", 604800, "Bin expiration time in seconds since the last bin update")
+
+	// Limits
+	limitFileDownloadsFlag = flag.Uint64("limit-file-downloads", 0, "Limit the number of downloads per file. 0 disables this limit.")
+	limitStorageFlag       = flag.Uint64("limit-storage", 0, "Limit the storage capacity to use, in number of gigabytes. 0 disables this limit.")
 
 	// HTTP
 	listenHostFlag   = flag.String("listen-host", "127.0.0.1", "Listen host")
@@ -78,18 +81,19 @@ func main() {
 	templateBox := rice.MustFindBox("templates")
 
 	h := &HTTP{
-		httpHost:         *listenHostFlag,
-		httpPort:         *listenPortFlag,
-		httpAccessLog:    *accessLogFlag,
-		httpProxyHeaders: *proxyHeadersFlag,
-		adminUsername:    *adminUsernameFlag,
-		adminPassword:    *adminPasswordFlag,
-		staticBox:        staticBox,
-		templateBox:      templateBox,
-		dao:              &daoconn,
-		s3:               &s3conn,
-		expiration:       *expirationFlag,
-		limitDownloads:   *limitDownloadsFlag,
+		httpHost:           *listenHostFlag,
+		httpPort:           *listenPortFlag,
+		httpAccessLog:      *accessLogFlag,
+		httpProxyHeaders:   *proxyHeadersFlag,
+		adminUsername:      *adminUsernameFlag,
+		adminPassword:      *adminPasswordFlag,
+		staticBox:          staticBox,
+		templateBox:        templateBox,
+		dao:                &daoconn,
+		s3:                 &s3conn,
+		expiration:         *expirationFlag,
+		limitFileDownloads: *limitFileDownloadsFlag,
+		limitStorage:       *limitStorageFlag,
 	}
 
 	if err := h.Init(); err != nil {

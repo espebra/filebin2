@@ -65,8 +65,8 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 	// Download limit
 	// 0 disables the limit
 	// >= 1 enforces a limit
-	if h.limitDownloads > 0 {
-		if file.Downloads >= h.limitDownloads {
+	if h.limitFileDownloads > 0 {
+		if file.Downloads >= h.limitFileDownloads {
 			h.Error(w, r, "", fmt.Sprintf("The file %s has been requested too many times.\n", inputFilename), 421, http.StatusForbidden)
 			return
 		}
@@ -171,6 +171,23 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 			return
 		} else {
 			h.Error(w, r, fmt.Sprintf("Rejected upload of filename %s to bin %s for unknown reason", inputFilename, inputBin), "Unexpected upload failure", 134, http.StatusInternalServerError)
+			return
+		}
+	}
+
+	info, err := h.dao.Info().GetInfo()
+	if err != nil {
+		fmt.Printf("Unable to GetInfo(): %s\n", err.Error())
+		http.Error(w, "Errno 326", http.StatusInternalServerError)
+		return
+	}
+
+	// Storage limit
+	// 0 disables the limit
+	// >= 1 enforces a limit, in number of gigabytes stored
+	if h.limitStorage > 0 {
+		if uint64(info.CurrentBytes) >= h.limitStorage*1024*1024 {
+			h.Error(w, r, "", "Storage limit reached. Please try again later.\n", 633, http.StatusForbidden)
 			return
 		}
 	}

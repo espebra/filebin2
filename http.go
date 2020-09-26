@@ -25,7 +25,8 @@ type funcHandler func(http.ResponseWriter, *http.Request)
 type HTTP struct {
 	expiration         int
 	expirationDuration time.Duration
-	limitDownloads     uint64
+	limitFileDownloads uint64
+	limitStorage       uint64
 	httpPort           int
 	httpHost           string
 	httpProxyHeaders   bool

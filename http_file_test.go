@@ -408,7 +408,7 @@ func TestNotExistingBinsAndFiles(t *testing.T) {
 	runTests(tcs, t)
 }
 
-func TestLimitDownloads(t *testing.T) {
+func TestLimitFileDownloads(t *testing.T) {
 	tcs := []TestCase{
 		{
 			Description:   "Create new bin",

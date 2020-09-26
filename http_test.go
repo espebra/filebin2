@@ -15,21 +15,22 @@ import (
 )
 
 const (
-	testLimitDownloads  = 2
-	testExpiredAt       = 5
-	testHTTPHost        = "localhost"
-	testHTTPPort        = 8080
-	testDbName          = "db"
-	testDbUser          = "username"
-	testDbPassword      = "changeme"
-	testDbHost          = "db"
-	testDbPort          = 5432
-	testS3Endpoint      = "s3:9000"
-	testS3Region        = "us-east-1"
-	testS3Bucket        = "testbin"
-	testS3AccessKey     = "s3accesskey"
-	testS3SecretKey     = "s3secretkey"
-	testS3EncryptionKey = "encryptionkey"
+	testLimitFileDownloads = 2
+	testLimitStorage       = 1
+	testExpiredAt          = 5
+	testHTTPHost           = "localhost"
+	testHTTPPort           = 8080
+	testDbName             = "db"
+	testDbUser             = "username"
+	testDbPassword         = "changeme"
+	testDbHost             = "db"
+	testDbPort             = 5432
+	testS3Endpoint         = "s3:9000"
+	testS3Region           = "us-east-1"
+	testS3Bucket           = "testbin"
+	testS3AccessKey        = "s3accesskey"
+	testS3SecretKey        = "s3secretkey"
+	testS3EncryptionKey    = "encryptionkey"
 )
 
 var (
@@ -73,14 +74,15 @@ func TestMain(m *testing.M) {
 	staticBox := rice.MustFindBox("static")
 	templateBox := rice.MustFindBox("templates")
 	h := &HTTP{
-		limitDownloads: testLimitDownloads,
-		expiration:     testExpiredAt,
-		httpHost:       testHTTPHost,
-		httpPort:       testHTTPPort,
-		staticBox:      staticBox,
-		templateBox:    templateBox,
-		dao:            &dao,
-		s3:             &s3ao,
+		limitFileDownloads: testLimitFileDownloads,
+		limitStorage:       testLimitStorage,
+		expiration:         testExpiredAt,
+		httpHost:           testHTTPHost,
+		httpPort:           testHTTPPort,
+		staticBox:          staticBox,
+		templateBox:        templateBox,
+		dao:                &dao,
+		s3:                 &s3ao,
 	}
 	if err := h.Init(); err != nil {
 		fmt.Printf("Unable to start the HTTP server: %s\n", err.Error())
