@@ -28,7 +28,7 @@ func Init(dbHost string, dbPort int, dbName, dbUser, dbPassword string) (DAO, er
 		return dao, err
 	}
 	if err := db.Ping(); err != nil {
-		return dao, errors.New("Unable to ping the database")
+		return dao, errors.New(fmt.Sprintf("Unable to ping the database: %s:%d\n", dbHost, dbPort))
 	}
 	dao = DAO{db: db}
 	dao.ConnStr = connStr
