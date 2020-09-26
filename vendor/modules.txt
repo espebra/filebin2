@@ -32,8 +32,6 @@ github.com/lib/pq/oid
 github.com/lib/pq/scram
 # github.com/minio/md5-simd v1.1.0
 github.com/minio/md5-simd
-# github.com/minio/minio-go/v6 v6.0.50
-## explicit
 # github.com/minio/minio-go/v7 v7.0.5
 ## explicit
 github.com/minio/minio-go/v7
