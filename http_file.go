@@ -50,16 +50,26 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if found == false {
-		h.Error(w, r, "", fmt.Sprintf("The file %s does not exist.", inputFilename), 116, http.StatusNotFound)
+		h.Error(w, r, "", fmt.Sprintf("The file %s does not exist.\n", inputFilename), 116, http.StatusNotFound)
 		return
 	}
 	if file.IsReadable() == false {
-		h.Error(w, r, "", fmt.Sprintf("The file %s is no longer available.", inputFilename), 117, http.StatusNotFound)
+		h.Error(w, r, "", fmt.Sprintf("The file %s is no longer available.\n", inputFilename), 117, http.StatusNotFound)
 		return
 	}
 	if file.InStorage == false {
-		h.Error(w, r, "", fmt.Sprintf("The file %s is not available.", inputFilename), 118, http.StatusNotFound)
+		h.Error(w, r, "", fmt.Sprintf("The file %s is not available.\n", inputFilename), 118, http.StatusNotFound)
 		return
+	}
+
+	// Download limit
+	// 0 disables the limit
+	// >= 1 enforces a limit
+	if h.limitDownloads > 0 {
+		if file.Downloads >= h.limitDownloads {
+			h.Error(w, r, "", fmt.Sprintf("The file %s has been requested too many times.\n", inputFilename), 421, http.StatusForbidden)
+			return
+		}
 	}
 
 	fp, err := h.s3.GetObject(inputBin, inputFilename, file.Nonce, 0, 0)
