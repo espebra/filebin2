@@ -174,7 +174,9 @@
                                         More
                                     </a>
                                     <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownFileMenuButton">
-                                        <a class="dropdown-item" href="#">
+                                        <a class="dropdown-item" href="{{ .URL }}">
+                                            <i class="fas fa-fw fa-cloud-download-alt text-primary"></i> Download file
+                                        </a>
                                         <a class="dropdown-item" href="" data-toggle="modal" data-target="#modalFileProperties-{{ $index }}">
                                             <i class="fas fa-fw fa-info-circle text-primary"></i> File properties
                                         </a>
