@@ -229,7 +229,7 @@
         <div class="modal fade" id="modalDeleteBin" tabindex="-1" role="dialog" aria-labelledby="modalDeleteBinTitle" aria-hidden="true">
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
-                    <div class="modal-header alert-danger">
+                    <div class="modal-header alert-secondary">
                         <h5 class="modal-title" id="modelDeleteBinTitle">Delete bin</h5>
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
@@ -259,7 +259,7 @@
         <div class="modal fade" id="modalBinProperties" tabindex="-1" role="dialog" aria-labelledby="modalBinPropertiesTitle" aria-hidden="true">
             <div class="modal-dialog modal-lg" role="document">
                 <div class="modal-content">
-                    <div class="modal-header alert-primary">
+                    <div class="modal-header alert-secondary">
                         <h5 class="modal-title" id="modelBinPropertiesTitle">Bin properties</h5>
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
@@ -327,7 +327,7 @@
         <div class="modal fade" id="modalLockBin" tabindex="-1" role="dialog" aria-labelledby="modalLockBinTitle" aria-hidden="true">
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
-                    <div class="modal-header alert-warning">
+                    <div class="modal-header alert-secondary">
                         <h5 class="modal-title" id="modelLockBinTitle">Lock bin</h5>
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
@@ -357,7 +357,7 @@
             <div class="modal fade" id="modalDeleteFile-{{ $index }}" tabindex="-1" role="dialog" aria-labelledby="modalDeleteFileTitle" aria-hidden="true">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
-                        <div class="modal-header alert-danger">
+                        <div class="modal-header alert-secondary">
                             <h5 class="modal-title" id="modelDeleteFileTitle">Delete file</h5>
                             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
@@ -388,7 +388,7 @@
             <div class="modal fade" id="modalFileProperties-{{ $index }}" tabindex="-1" role="dialog" aria-labelledby="modalFilePropertiesTitle" aria-hidden="true">
                 <div class="modal-dialog modal-lg" role="document">
                     <div class="modal-content">
-                        <div class="modal-header alert-primary">
+                        <div class="modal-header alert-secondary">
                             <h5 class="modal-title" id="modelFilePropertiesTitle">File properties</h5>
                             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
