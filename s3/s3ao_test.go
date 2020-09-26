@@ -37,6 +37,8 @@ func TestInit(t *testing.T) {
 		t.Error(err)
 	}
 
+	s3ao.SetTrace(true)
+
 	status := s3ao.Status()
 	if status == false {
 		t.Error("Was expecting status to be true here")

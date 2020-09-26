@@ -47,7 +47,6 @@ func Init(endpoint, bucket, region, accessKey, secretKey, encryptionKey string) 
 		return s3ao, err
 	}
 	minioClient.SetAppInfo("filebin", "2.0.0")
-	//minioClient.TraceOn(nil)
 
 	s3ao.client = minioClient
 	s3ao.bucket = bucket
@@ -82,6 +81,14 @@ func (s S3AO) Status() bool {
 		return false
 	}
 	return true
+}
+
+func (s S3AO) SetTrace(trace bool) {
+	if trace {
+		s.client.TraceOn(nil)
+	} else {
+		s.client.TraceOff()
+	}
 }
 
 func (s S3AO) GenerateNonce() []byte {
