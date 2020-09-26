@@ -24,11 +24,11 @@ type S3AO struct {
 
 type BucketInfo struct {
 	Objects                       uint64
-	ObjectsReadable                       string
+	ObjectsReadable               string
 	ObjectsSize                   uint64
 	ObjectsSizeReadable           string
 	IncompleteObjects             uint64
-	IncompleteObjectsReadable             string
+	IncompleteObjectsReadable     string
 	IncompleteObjectsSize         uint64
 	IncompleteObjectsSizeReadable string
 }
@@ -46,6 +46,9 @@ func Init(endpoint, bucket, region, accessKey, secretKey, encryptionKey string) 
 	if err != nil {
 		return s3ao, err
 	}
+	minioClient.SetAppInfo("filebin", "2.0.0")
+	//minioClient.TraceOn(nil)
+
 	s3ao.client = minioClient
 	s3ao.bucket = bucket
 	s3ao.encryptionKey = encryptionKey
@@ -162,7 +165,7 @@ func (s S3AO) RemoveKey(key string) error {
 	return nil
 }
 
-func (s S3AO) listObjects() (objects []string, err error) {
+func (s S3AO) ListObjects() (objects []string, err error) {
 	doneCh := make(chan struct{})
 	defer close(doneCh)
 
@@ -182,7 +185,7 @@ func (s S3AO) listObjects() (objects []string, err error) {
 
 func (s S3AO) RemoveBucket() error {
 	t0 := time.Now()
-	objects, err := s.listObjects()
+	objects, err := s.ListObjects()
 	if err != nil {
 		fmt.Printf("Unable to list objects: %s\n", err.Error())
 	}
