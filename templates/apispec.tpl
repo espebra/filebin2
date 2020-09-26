@@ -28,7 +28,7 @@ paths:
         '200':
           description: Successful download.
         '403':
-          description: The limitation of number of downloads for this file was reached.
+          description: The file download count limitation was reached.
         '404':
           description: The file was not found. The bin may be expired, the file is deleted or it did never exist in the first place.
     delete:
@@ -81,6 +81,8 @@ paths:
       responses:
         '201':
           description: Successful upload
+        '403':
+          description: The storage limitation was reached.
         '405':
           description: The bin is locked and can not be written to
   '/{bin}':
