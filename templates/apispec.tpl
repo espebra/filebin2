@@ -136,4 +136,40 @@ paths:
           description: Successful operation
         '404':
           description: The bin does not exist or is not available
+  '/archive/{bin}/tar':
+    get:
+      tags:
+        - bin
+      summary: Get all the files in the bin in a tar archive
+      description: This will tar archive the files on the fly and deliver a response with chunked transfer encoding since the final size is not known.
+      parameters:
+        - name: bin
+          in: path
+          description: The bin to get.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+        '404':
+          description: The bin does not exist or is not available
+  '/archive/{bin}/zip':
+    get:
+      tags:
+        - bin
+      summary: Get all the files in the bin in a zip compressed file
+      description: This will zip compress the files on the fly and deliver a response with chunked transfer encoding since the final size is not known.
+      parameters:
+        - name: bin
+          in: path
+          description: The bin to get.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+        '404':
+          description: The bin does not exist or is not available
 {{ end }}
