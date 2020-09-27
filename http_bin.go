@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/espebra/filebin2/ds"
 	"github.com/gorilla/mux"
 )
@@ -31,27 +32,24 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Errno 200", http.StatusInternalServerError)
 		return
 	}
-	if found == false {
-		bin.Id = inputBin
-		bin.ExpiredAt = time.Now().UTC().Add(h.expirationDuration)
-		err := h.dao.Bin().Insert(&bin)
-		if err != nil {
-			fmt.Printf("Unable to insert new bin: %s\n", err.Error())
-			http.Error(w, "Errno 301", http.StatusInternalServerError)
-			return
-		}
-	}
-	data.Bin = bin
-
-	if bin.IsReadable() {
+	if found {
 		files, err := h.dao.File().GetByBin(inputBin, true)
 		if err != nil {
 			fmt.Printf("Unable to GetByBin(%s): %s\n", inputBin, err.Error())
 			http.Error(w, "Not found", http.StatusNotFound)
 			return
 		}
-		data.Files = files
+		if bin.IsReadable() {
+			data.Files = files
+		}
+	} else {
+		// Synthetize a bin without creating it. It will be created when a file is uploaded.
+		bin = ds.Bin{}
+		bin.Id = inputBin
+		bin.ExpiredAt = time.Now().UTC().Add(h.expirationDuration)
+		bin.ExpiredAtRelative = humanize.Time(bin.ExpiredAt)
 	}
+	data.Bin = bin
 
 	if bin.IsReadable() {
 		w.WriteHeader(200)
@@ -107,7 +105,7 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 
 	if inputFormat == "zip" {
 		w.Header().Set("Content-Type", "application/zip")
-		w.Header().Set("Content-Disposition", `attachment; filename="`+bin.Id+`.zip"`)
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s.tar\"", bin.Id))
 		zw := zip.NewWriter(w)
 		for _, file := range files {
 			header := &zip.FileHeader{}
@@ -139,7 +137,7 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 		return
 	} else if inputFormat == "tar" {
 		w.Header().Set("Content-Type", "application/x-tar")
-		w.Header().Set("Content-Disposition", `attachment; filename="`+bin.Id+`.tar"`)
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s.tar\"", bin.Id))
 		tw := tar.NewWriter(w)
 		for _, file := range files {
 			header := &tar.Header{}

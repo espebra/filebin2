@@ -64,7 +64,7 @@
         {{ $numfiles := .Files | len }}
         
         <p class="lead">
-	    {{ if isAvailable .Bin.Id }}
+	    {{ if isAvailable .Bin }}
                 {{ if eq $numfiles 0 }}
 	            {{ if eq .Bin.Readonly false }}
                         <p>This bin is empty. To upload files, click <em>Upload files</em> below or drag-and-drop the files into this browser window.</p>

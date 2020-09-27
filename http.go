@@ -14,7 +14,7 @@ import (
 	//"encoding/json"
 	"github.com/GeertJohan/go.rice"
 	"github.com/espebra/filebin2/dbl"
-	//"github.com/espebra/filebin2/ds"
+	"github.com/espebra/filebin2/ds"
 	"github.com/espebra/filebin2/s3"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -163,15 +163,7 @@ func (h *HTTP) ParseTemplates() *template.Template {
 
 	// Functions that are available from within templates
 	var fns = template.FuncMap{
-		"isAvailable": func(bin_id string) bool {
-			bin, found, err := h.dao.Bin().GetById(bin_id)
-			if err != nil {
-				fmt.Printf("Unable to GetById(%s): %s\n", bin_id, err.Error())
-				return false
-			}
-			if found == false {
-				return false
-			}
+		"isAvailable": func(bin ds.Bin) bool {
 			if bin.IsReadable() {
 				return true
 			}

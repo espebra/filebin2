@@ -242,6 +242,11 @@ func TestDeleteFile(t *testing.T) {
 func TestLockAndDeleteBin(t *testing.T) {
 	tcs := []TestCase{
 		{
+			Description: "Fetch bin that does not exist",
+			Method:      "GET",
+			Bin:         "mytestbin",
+			StatusCode:  200,
+		}, {
 			Description:   "Create file to set up test case",
 			Method:        "POST",
 			Bin:           "mytestbin",
@@ -314,12 +319,12 @@ func TestNotExistingBinsAndFiles(t *testing.T) {
 			Description: "Lock bin that doesn't exist",
 			Method:      "PUT",
 			Bin:         "unknownbin",
-			StatusCode:  200,
+			StatusCode:  404,
 		}, {
 			Description: "Delete bin that doesn't exist",
 			Method:      "DELETE",
 			Bin:         "unknownbin",
-			StatusCode:  200,
+			StatusCode:  404,
 		}, {
 			Description: "Delete file that doesn't exist in bin that doesn't exist",
 			Method:      "DELETE",

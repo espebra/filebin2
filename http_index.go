@@ -3,11 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/dustin/go-humanize"
 	"github.com/espebra/filebin2/ds"
 	"io"
 	"net/http"
 	"time"
-	"github.com/dustin/go-humanize"
 )
 
 func (h *HTTP) Index(w http.ResponseWriter, r *http.Request) {
