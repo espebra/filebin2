@@ -45,7 +45,7 @@ func (d *BinDao) ValidateInput(bin *ds.Bin) error {
 func (d *BinDao) GenerateId() string {
 	// TODO: Make sure the ID is unique
 	characters := []rune("abcdefghijklmnopqrstuvwxyz1234567890")
-	length := 10
+	length := 16
 
 	id := make([]rune, length)
 	for i := range id {
