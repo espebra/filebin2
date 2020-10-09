@@ -29,8 +29,12 @@ paths:
           description: Successful download.
         '403':
           description: The file download count limitation was reached.
+          content:
+            application/json: {}
         '404':
           description: The file was not found. The bin may be expired, the file is deleted or it did never exist in the first place.
+          content:
+            application/json: {}
     delete:
       tags:
         - file
@@ -52,8 +56,12 @@ paths:
       responses:
         '200':
           description: The file was successfully flagged for deletion.
+          content:
+            application/json: {}
         '404':
           description: The file was not found. The bin may be expired or it did never exist in the first place.
+          content:
+            application/json: {}
   /:
     post:
       tags:
@@ -81,10 +89,16 @@ paths:
       responses:
         '201':
           description: Successful upload
+          content:
+            application/json: {}
         '403':
           description: The storage limitation was reached.
+          content:
+            application/json: {}
         '405':
           description: The bin is locked and can not be written to
+          content:
+            application/json: {}
   '/{bin}':
     get:
       tags:
@@ -101,8 +115,12 @@ paths:
       responses:
         '200':
           description: Successful operation
+          content:
+            application/json: {}
         '404':
           description: The bin does not exist or is not available
+          content:
+            application/json: {}
     put:
       tags:
         - bin
@@ -117,8 +135,12 @@ paths:
       responses:
         '200':
           description: Successful operation
+          content:
+            application/json: {}
         '404':
           description: The bin does not exist or is not available
+          content:
+            application/json: {}
     delete:
       tags:
         - bin
@@ -134,8 +156,12 @@ paths:
       responses:
         '200':
           description: Successful operation
+          content:
+            application/json: {}
         '404':
           description: The bin does not exist or is not available
+          content:
+            application/json: {}
   '/archive/{bin}/tar':
     get:
       tags:
@@ -154,6 +180,8 @@ paths:
           description: Successful operation
         '404':
           description: The bin does not exist or is not available
+          content:
+            application/json: {}
   '/archive/{bin}/zip':
     get:
       tags:
@@ -172,4 +200,6 @@ paths:
           description: Successful operation
         '404':
           description: The bin does not exist or is not available
+          content:
+            application/json: {}
 {{ end }}
