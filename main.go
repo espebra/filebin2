@@ -40,6 +40,7 @@ var (
 	s3SecretKeyFlag     = flag.String("s3-secret-key", os.Getenv("S3_SECRET_KEY"), "S3 secret key")
 	s3EncryptionKeyFlag = flag.String("s3-encryption-key", os.Getenv("S3_ENCRYPTION_KEY"), "S3 encryption key")
 	s3TraceFlag         = flag.Bool("s3-trace", false, "Enable S3 HTTP tracing for debugging")
+	s3SecureFlag        = flag.Bool("s3-secure", true, "Use TLS when connecting to S3")
 
 	// Lurker
 	lurkerIntervalFlag = flag.Int("lurker-interval", 300, "Lurker interval is the delay to sleep between each run in seconds")
@@ -63,7 +64,7 @@ func main() {
 		fmt.Printf("Unable to create Schema: %s\n", err.Error())
 	}
 
-	s3conn, err := s3.Init(*s3EndpointFlag, *s3BucketFlag, *s3RegionFlag, *s3AccessKeyFlag, *s3SecretKeyFlag, *s3EncryptionKeyFlag)
+	s3conn, err := s3.Init(*s3EndpointFlag, *s3BucketFlag, *s3RegionFlag, *s3AccessKeyFlag, *s3SecretKeyFlag, *s3EncryptionKeyFlag, *s3SecureFlag)
 	if err != nil {
 		fmt.Printf("Unable to initialize S3 connection: %s\n", err.Error())
 		os.Exit(2)

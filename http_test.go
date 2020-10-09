@@ -45,7 +45,7 @@ func tearUp() (dao dbl.DAO, s3ao s3.S3AO, err error) {
 	if err := dao.ResetDB(); err != nil {
 		return dao, s3ao, err
 	}
-	s3ao, err = s3.Init(testS3Endpoint, testS3Bucket, testS3Region, testS3AccessKey, testS3SecretKey, testS3EncryptionKey)
+	s3ao, err = s3.Init(testS3Endpoint, testS3Bucket, testS3Region, testS3AccessKey, testS3SecretKey, testS3EncryptionKey, false)
 	if err != nil {
 		return dao, s3ao, err
 	}
