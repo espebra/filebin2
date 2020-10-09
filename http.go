@@ -120,8 +120,16 @@ func (h *HTTP) Run() {
 			handler = handlers.ProxyHeaders(handler)
 		}
 
+		// Set up the server
+		srv := &http.Server{
+			Addr:         fmt.Sprintf("%s:%d", h.httpHost, h.httpPort),
+			Handler:      handler,
+			ReadTimeout:  2 * time.Hour,
+			WriteTimeout: 2 * time.Hour,
+		}
+
 		// Start the server
-		if err := http.ListenAndServe(fmt.Sprintf("%s:%d", h.httpHost, h.httpPort), handler); err != nil {
+		if err := srv.ListenAndServe(); err != nil {
 			fmt.Printf("Failed to start HTTP server: %s\n", err.Error())
 			os.Exit(2)
 		}
