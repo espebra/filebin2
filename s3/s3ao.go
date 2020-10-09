@@ -99,7 +99,7 @@ func (s S3AO) GenerateNonce() []byte {
 }
 
 func (s S3AO) PutObject(bin string, filename string, data io.Reader, size int64) ([]byte, error) {
-	t0 := time.Now()
+	//t0 := time.Now()
 
 	// Hash the path in S3
 	objectKey := s.GetObjectKey(bin, filename)
@@ -139,13 +139,13 @@ func (s S3AO) PutObject(bin string, filename string, data io.Reader, size int64)
 		return nonce, err
 	}
 
-	info, err := s.client.PutObject(context.Background(), s.bucket, objectKey, encrypted, int64(encryptedSize), minio.PutObjectOptions{ContentType: "application/octet-stream"})
+	_, err = s.client.PutObject(context.Background(), s.bucket, objectKey, encrypted, int64(encryptedSize), minio.PutObjectOptions{ContentType: "application/octet-stream"})
 	if err != nil {
 		fmt.Printf("Unable to put object: %s\n", err.Error())
 		return nonce, err
 	}
-	s3size := info.Size
-	fmt.Printf("Stored object: %s (%d bytes) in %.3fs\n", objectKey, s3size, time.Since(t0).Seconds())
+	//s3size := info.Size
+	//fmt.Printf("Stored object: %s (%d bytes) in %.3fs\n", objectKey, s3size, time.Since(t0).Seconds())
 	return nonce, nil
 }
 
