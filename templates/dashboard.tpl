@@ -67,9 +67,9 @@
             {{ range $index, $value := .Bins.Available }}
                 <tr>
                     <td><code><a href="{{ .URL }}">{{ .Id }}</a></code></td>
-                    <td>{{ .CreatedAtRelative }}</td>
-                    <td>{{ .UpdatedAtRelative }}</td>
-                    <td>{{ .BytesReadable }}</td>
+                    <td sorttable_customkey="{{ .CreatedAt }}">{{ .CreatedAtRelative }}</td>
+                    <td sorttable_customkey="{{ .UpdatedAt }}">{{ .UpdatedAtRelative }}</td>
+                    <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
                     <td>{{ .Files }}</td>
                     <td>{{ .Downloads }}</td>
                     <td>{{ .Updates }}</td>
