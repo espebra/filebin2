@@ -48,6 +48,9 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 		bin.Id = inputBin
 		bin.ExpiredAt = time.Now().UTC().Add(h.expirationDuration)
 		bin.ExpiredAtRelative = humanize.Time(bin.ExpiredAt)
+
+		// Intentional slowdown to make crawling less efficient
+		time.Sleep(1 * time.Second)
 	}
 	data.Bin = bin
 
@@ -134,6 +137,9 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 		if err := zw.Close(); err != nil {
 			fmt.Println(err)
 		}
+		if err := h.dao.Bin().RegisterDownload(&bin); err != nil {
+			fmt.Printf("Unable to update bin %s: %s\n", inputBin, err.Error())
+		}
 		return
 	} else if inputFormat == "tar" {
 		w.Header().Set("Content-Type", "application/x-tar")
@@ -165,6 +171,9 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := tw.Close(); err != nil {
 			fmt.Println(err)
+		}
+		if err := h.dao.Bin().RegisterDownload(&bin); err != nil {
+			fmt.Printf("Unable to update bin %s: %s\n", inputBin, err.Error())
 		}
 		return
 	} else {
