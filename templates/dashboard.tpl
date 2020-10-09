@@ -8,6 +8,7 @@
         <link rel="stylesheet" href="/static/css/fontawesome.all.min.css"/>
         <link rel="stylesheet" href="/static/css/upload.css"/>
         <link rel="stylesheet" href="/static/css/custom.css"/>
+        <script src="/static/js/sorttable.js"></script>
         <title>Filebin | Dashboard</title>
     </head>
     <body class="container-xl">
@@ -52,7 +53,7 @@
         </table>
 
         <h2>Bins available</h2>
-        <table class="table">
+        <table class="table sortable">
             <tr>
                 <th>Bin</th>
                 <th>Created</th>
@@ -65,7 +66,7 @@
             </tr>
             {{ range $index, $value := .Bins.Available }}
                 <tr>
-                    <td><a href="{{ .URL }}">{{ .Id }}</a></td>
+                    <td><code><a href="{{ .URL }}">{{ .Id }}</a></code></td>
                     <td>{{ .CreatedAtRelative }}</td>
                     <td>{{ .UpdatedAtRelative }}</td>
                     <td>{{ .BytesReadable }}</td>
