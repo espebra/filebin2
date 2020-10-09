@@ -17,14 +17,14 @@ type File struct {
 	MD5               string       `json:"md5"`
 	SHA256            string       `json:"sha256"`
 	Downloads         uint64       `json:"-"`
-	Updates           uint64       `json:"updates"`
+	Updates           uint64       `json:"-"`
 	IP                string       `json:"-"`
 	Trace             string       `json:"-"`
 	Nonce             []byte       `json:"-"`
-	UpdatedAt         time.Time    `json:"updated_at_"`
-	UpdatedAtRelative string       `json:"updated_at__relative"`
-	CreatedAt         time.Time    `json:"created_at_"`
-	CreatedAtRelative string       `json:"created_at__relative"`
+	UpdatedAt         time.Time    `json:"updated_at"`
+	UpdatedAtRelative string       `json:"updated_at_relative"`
+	CreatedAt         time.Time    `json:"created_at"`
+	CreatedAtRelative string       `json:"created_at_relative"`
 	DeletedAt         sql.NullTime `json:"-"`
 	DeletedAtRelative string       `json:"-"`
 	URL               string       `json:"-"`
