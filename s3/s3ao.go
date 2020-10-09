@@ -34,14 +34,13 @@ type BucketInfo struct {
 }
 
 // Initialize S3AO
-func Init(endpoint, bucket, region, accessKey, secretKey, encryptionKey string) (S3AO, error) {
+func Init(endpoint, bucket, region, accessKey, secretKey, encryptionKey string, secure bool) (S3AO, error) {
 	var s3ao S3AO
-	ssl := false
 
 	// Set up client for S3AO
 	minioClient, err := minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
-		Secure: ssl,
+		Secure: secure,
 	})
 	if err != nil {
 		return s3ao, err

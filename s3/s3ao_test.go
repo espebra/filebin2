@@ -16,7 +16,7 @@ const (
 )
 
 func tearUp() (S3AO, error) {
-	s3ao, err := Init(ENDPOINT, BUCKET, REGION, ACCESS_KEY, SECRET_KEY, ENCRYPTION_KEY)
+	s3ao, err := Init(ENDPOINT, BUCKET, REGION, ACCESS_KEY, SECRET_KEY, ENCRYPTION_KEY, false)
 	if err != nil {
 		return s3ao, err
 	}
@@ -51,7 +51,7 @@ func TestInit(t *testing.T) {
 }
 
 func TestFailingInit(t *testing.T) {
-	_, err := Init("", "", "", "", "", "")
+	_, err := Init("", "", "", "", "", "", false)
 	if err == nil {
 		t.Error("Was expecting to fail here, invalid user and db name were provided.")
 	}
