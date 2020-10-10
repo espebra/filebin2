@@ -28,17 +28,14 @@ CREATE TABLE file (
 	UNIQUE(bin_id, filename)
 );
 
-/*
 CREATE TABLE transaction (
 	id		BIGSERIAL NOT NULL PRIMARY KEY,
 	bin_id		VARCHAR(64) REFERENCES bin(id) ON DELETE CASCADE,
-	file_id		BIGINT REFERENCES file(id) ON DELETE CASCADE,
-	action		INT NOT NULL,
+	method		VARCHAR(128) NOT NULL,
+	path		TEXT NOT NULL,
 	ip		VARCHAR(128) NOT NULL,
 	trace		TEXT NOT NULL,
-	duration	BIGINT NOT NULL,
-	started		TIMESTAMP NOT NULL,
-	finished	TIMESTAMP NOT NULL,
+	started_at	TIMESTAMP NOT NULL,
+	finished_at	TIMESTAMP NOT NULL,
 	UNIQUE(id)
 );
-*/

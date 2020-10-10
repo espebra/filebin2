@@ -8,11 +8,12 @@ import (
 )
 
 type DAO struct {
-	db      *sql.DB
-	ConnStr string
-	binDao  *BinDao
-	fileDao *FileDao
-	infoDao *InfoDao
+	db             *sql.DB
+	ConnStr        string
+	binDao         *BinDao
+	fileDao        *FileDao
+	infoDao        *InfoDao
+	transactionDao *TransactionDao
 }
 
 // Init a database connection given
@@ -35,6 +36,7 @@ func Init(dbHost string, dbPort int, dbName, dbUser, dbPassword string) (DAO, er
 	dao.binDao = &BinDao{db: db}
 	dao.fileDao = &FileDao{db: db}
 	dao.infoDao = &InfoDao{db: db}
+	dao.transactionDao = &TransactionDao{db: db}
 	return dao, nil
 }
 
@@ -50,7 +52,8 @@ func (dao DAO) CreateSchema() error {
 func (dao DAO) ResetDB() error {
 	sqlStatements := []string{
 		"DELETE FROM file",
-		"DELETE FROM bin"}
+		"DELETE FROM bin",
+		"DELETE FROM transaction"}
 
 	for _, s := range sqlStatements {
 		if _, err := dao.db.Exec(s); err != nil {
@@ -71,6 +74,10 @@ func (dao DAO) File() *FileDao {
 
 func (dao DAO) Info() *InfoDao {
 	return dao.infoDao
+}
+
+func (dao DAO) Transaction() *TransactionDao {
+	return dao.transactionDao
 }
 
 func (dao DAO) Status() bool {
