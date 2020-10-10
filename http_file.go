@@ -192,7 +192,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	fmt.Printf("Uploading filename %s (%s) to bin %s\n", inputFilename, humanize.Bytes(inputBytes), bin.Id)
+	//fmt.Printf("Uploading filename %s (%s) to bin %s\n", inputFilename, humanize.Bytes(inputBytes), bin.Id)
 
 	fp, err := ioutil.TempFile(os.TempDir(), "filebin")
 	// Defer removal of the tempfile to clean up partially uploaded files.

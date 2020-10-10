@@ -446,3 +446,25 @@ func TestLimitFileDownloads(t *testing.T) {
 	}
 	runTests(tcs, t)
 }
+
+func TestBinInputValidation(t *testing.T) {
+	tcs := []TestCase{
+		{
+			Description:   "Too long bin",
+			Method:        "POST",
+			Bin:           "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+			Filename:      "a",
+			UploadContent: "content a",
+			StatusCode:    500,
+		},
+		{
+			Description:   "Too short bin",
+			Method:        "POST",
+			Bin:           "yyyy",
+			Filename:      "a",
+			UploadContent: "content a",
+			StatusCode:    500,
+		},
+	}
+	runTests(tcs, t)
+}

@@ -32,6 +32,9 @@ func (d *BinDao) ValidateInput(bin *ds.Bin) error {
 	if len(bin.Id) < 8 {
 		return errors.New("The bin is too short.")
 	}
+	if len(bin.Id) > 60 {
+		return errors.New("The bin is too long.")
+	}
 	// Do not allow the bin to start with .
 	if strings.HasPrefix(bin.Id, ".") {
 		return errors.New("Invalid bin specified.")
