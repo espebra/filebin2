@@ -11,7 +11,7 @@
 CREATE TABLE file (
 	id		BIGSERIAL NOT NULL PRIMARY KEY,
 	bin_id		VARCHAR(64) REFERENCES bin(id) ON DELETE CASCADE,
-	filename	VARCHAR(128) NOT NULL,
+	filename        VARCHAR(128) NOT NULL,
 	in_storage	BOOLEAN NOT NULL,
 	mime		VARCHAR(128) NOT NULL,
 	bytes		BIGINT NOT NULL,
@@ -30,12 +30,13 @@ CREATE TABLE file (
 
 CREATE TABLE transaction (
 	id		BIGSERIAL NOT NULL PRIMARY KEY,
-	bin_id		VARCHAR(64) REFERENCES bin(id) ON DELETE CASCADE,
+	bin_id		VARCHAR(64),
+	filename	TEXT,
 	method		VARCHAR(128) NOT NULL,
 	path		TEXT NOT NULL,
 	ip		VARCHAR(128) NOT NULL,
 	trace		TEXT NOT NULL,
 	started_at	TIMESTAMP NOT NULL,
-	finished_at	TIMESTAMP NOT NULL,
+	finished_at	TIMESTAMP,
 	UNIQUE(id)
 );

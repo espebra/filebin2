@@ -23,7 +23,7 @@ func TestGetByBin(t *testing.T) {
 	}
 
 	tr := &ds.Transaction{}
-	tr.Bin = bin_id
+	tr.BinId = bin_id
 	tr.Method = "GET"
 	tr.Path = "/foo/bar"
 	tr.IP = "1.2.3.4"
@@ -50,7 +50,7 @@ func TestGetByBin(t *testing.T) {
 		t.Errorf("Trace was unexpected: %s\n", tr.Trace)
 	}
 
-	trs, err := dao.Transaction().GetByBin(tr.Bin)
+	trs, err := dao.Transaction().GetByBin(tr.BinId)
 	if err != nil {
 		t.Error(err)
 	}

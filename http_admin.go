@@ -1,10 +1,13 @@
 package main
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/mux"
 	"io"
 	"net/http"
+	"strings"
 	//"time"
 
 	"github.com/espebra/filebin2/ds"
@@ -66,5 +69,93 @@ func (h *HTTP) ViewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Errno 203", http.StatusInternalServerError)
 			return
 		}
+	}
+}
+
+func (h *HTTP) ViewAdminLog(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	inputBin := params["bin"]
+	trs, err := h.dao.Transaction().GetByBin(inputBin)
+	if err != nil {
+		http.Error(w, "Errno 361", http.StatusInternalServerError)
+		return
+	}
+	type Data struct {
+		Transactions []ds.Transaction `json:"transactions"`
+		Bin          ds.Bin           `json:"bin"`
+	}
+
+	var data Data
+	data.Transactions = trs
+
+	bin, _, err := h.dao.Bin().GetById(inputBin)
+	if err != nil {
+		fmt.Printf("Unable to GetById(): %s\n", err.Error())
+		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		return
+	}
+
+	data.Bin = bin
+
+	fmt.Println("Foo")
+
+	if err := h.templates.ExecuteTemplate(w, "log", data); err != nil {
+		fmt.Printf("Failed to execute template: %s\n", err.Error())
+		http.Error(w, "Errno 203", http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *HTTP) ViewAdminCleanup(w http.ResponseWriter, r *http.Request) {
+	type Data struct {
+		Objects []string `json:"objects"`
+		////Files []ds.File `json:"files"`
+		//BucketInfo s3.BucketInfo `json:"bucketinfo"`
+		//Page       string        `json:"page"`
+		Bins []ds.Bin `json:"bins"`
+	}
+
+	objects, err := h.s3.ListObjects()
+	if err != nil {
+		http.Error(w, "Errno 262", http.StatusInternalServerError)
+		return
+	}
+
+	bins, err := h.dao.Bin().GetAll()
+	if err != nil {
+		http.Error(w, "Errno 361", http.StatusInternalServerError)
+		return
+	}
+
+	var allbins []string
+	for _, bin := range bins {
+		b := sha256.New()
+		b.Write([]byte(bin.Id))
+		hash := fmt.Sprintf("%x", b.Sum(nil))
+		allbins = append(allbins, hash)
+	}
+
+	for _, object := range objects {
+		splits := strings.Split(object, "/")
+		if len(splits) == 2 {
+			hash := splits[0]
+			if inStringSlice(hash, allbins) {
+				fmt.Printf("Match\n")
+			} else {
+				fmt.Printf("No match\n")
+			}
+		} else {
+			fmt.Printf("No match. Weird length: %d\n", len(splits))
+		}
+	}
+
+	var data Data
+	data.Objects = objects
+	data.Bins = bins
+
+	if err := h.templates.ExecuteTemplate(w, "cleanup", data); err != nil {
+		fmt.Printf("Failed to execute template: %s\n", err.Error())
+		http.Error(w, "Errno 203", http.StatusInternalServerError)
+		return
 	}
 }

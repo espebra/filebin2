@@ -8,6 +8,8 @@ github.com/daaku/go.zipexe
 # github.com/dustin/go-humanize v1.0.0
 ## explicit
 github.com/dustin/go-humanize
+# github.com/felixge/httpsnoop v1.0.1
+## explicit
 # github.com/gabriel-vasile/mimetype v1.0.4
 ## explicit
 github.com/gabriel-vasile/mimetype

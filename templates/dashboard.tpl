@@ -49,6 +49,13 @@
                     <td>{{ .DBInfo.CurrentBinsReadable }}</td>
                     <td>{{ .DBInfo.TotalBinsReadable }}</td>
                 </tr>
+                <tr>
+                    <th>Log entries</th>
+                    <td></td>
+                    <td></td>
+                    <td>{{ .DBInfo.CurrentLogEntries }}</td>
+                    <td></td>
+                </tr>
             </tbody>
         </table>
 
@@ -63,6 +70,7 @@
                 <th>Downloads</th>
                 <th>Updates</th>
                 <th>Locked</th>
+                <th>Log</th>
             </tr>
             {{ range $index, $value := .Bins.Available }}
                 <tr>
@@ -80,6 +88,7 @@
                             <i class="fas fa-fw fa-lock-open text-success"></i>
                         {{ end }}
                     </td>
+                    <td><a href="/admin/log/{{ .Id }}">Log</a></td>
                 </tr>
             {{ end }}
         </table>
