@@ -61,15 +61,15 @@
                         {{ end }}
 
                         {{ if eq .Type "zip-download" }}
-                            <a href="{{ .Path }}">Zip archive</a>
+                            <a href="/archive/{{ .BinId }}/zip">Zip archive</a>
                         {{ end }}
 
                         {{ if eq .Type "tar-download" }}
-                            <a href="{{ .Path }}">Tar archive</a>
+                            <a href="/archive/{{ .BinId }}/tar">Tar archive</a>
                         {{ end }}
 
                         {{ if eq .Type "file-download" }}
-                            <a href="{{ .Path }}">{{ .Filename }}</a>
+                            <a href="/{{ .BinId }}/{{ .Filename }}">{{ .Filename }}</a>
                         {{ end }}
                     </td>
                     <td>
