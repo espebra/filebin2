@@ -59,14 +59,14 @@ func (d *BinDao) GenerateId() string {
 
 func (d *BinDao) GetAll() (bins []ds.Bin, err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "SELECT bin.id, bin.readonly, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(file.filename), COALESCE(SUM(file.downloads), 0), COALESCE(SUM(file.updates), 0), bin.updated_at, bin.created_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id=file.bin_id AND file.deleted_at IS NULL AND file.in_storage = true WHERE bin.expired_at > $1 AND bin.deleted_at IS NULL GROUP BY bin.id ORDER BY bin.updated_at DESC"
+	sqlStatement := "SELECT bin.id, bin.readonly, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(file.filename), bin.updates, bin.updated_at, bin.created_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id=file.bin_id AND file.deleted_at IS NULL AND file.in_storage = true WHERE bin.expired_at > $1 AND bin.deleted_at IS NULL GROUP BY bin.id ORDER BY bin.updated_at DESC"
 	rows, err := d.db.Query(sqlStatement, now)
 	if err != nil {
 		return bins, err
 	}
 	for rows.Next() {
 		var bin ds.Bin
-		err = rows.Scan(&bin.Id, &bin.Readonly, &bin.Downloads, &bin.Bytes, &bin.Files, &bin.Downloads, &bin.Updates, &bin.UpdatedAt, &bin.CreatedAt, &bin.ExpiredAt, &bin.DeletedAt)
+		err = rows.Scan(&bin.Id, &bin.Readonly, &bin.Downloads, &bin.Bytes, &bin.Files, &bin.Updates, &bin.UpdatedAt, &bin.CreatedAt, &bin.ExpiredAt, &bin.DeletedAt)
 		if err != nil {
 			return bins, err
 		}
@@ -152,10 +152,11 @@ func (d *BinDao) Insert(bin *ds.Bin) (err error) {
 	}
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	downloads := uint64(0)
+	updates := uint64(0)
 	readonly := false
 	bin.ExpiredAt = bin.ExpiredAt.UTC().Truncate(time.Microsecond)
-	sqlStatement := "INSERT INTO bin (id, readonly, downloads, updated_at, created_at, expired_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id"
-	if err := d.db.QueryRow(sqlStatement, bin.Id, readonly, downloads, now, now, bin.ExpiredAt).Scan(&bin.Id); err != nil {
+	sqlStatement := "INSERT INTO bin (id, readonly, downloads, updates, updated_at, created_at, expired_at) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id"
+	if err := d.db.QueryRow(sqlStatement, bin.Id, readonly, downloads, updates, now, now, bin.ExpiredAt).Scan(&bin.Id); err != nil {
 		return err
 	}
 	bin.UpdatedAt = now
@@ -178,8 +179,8 @@ func (d *BinDao) Update(bin *ds.Bin) (err error) {
 	if err := d.ValidateInput(bin); err != nil {
 		return err
 	}
-	sqlStatement := "UPDATE bin SET readonly = $1, updated_at = $2, expired_at = $3, deleted_at = $4 WHERE id = $5 RETURNING id"
-	err = d.db.QueryRow(sqlStatement, bin.Readonly, now, bin.ExpiredAt, bin.DeletedAt, bin.Id).Scan(&id)
+	sqlStatement := "UPDATE bin SET readonly = $1, updated_at = $2, expired_at = $3, deleted_at = $4, updates = $5 WHERE id = $6 RETURNING id"
+	err = d.db.QueryRow(sqlStatement, bin.Readonly, now, bin.ExpiredAt, bin.DeletedAt, bin.Updates, bin.Id).Scan(&id)
 	if err != nil {
 		return err
 	}
@@ -214,5 +215,16 @@ func (d *BinDao) RegisterDownload(bin *ds.Bin) (err error) {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (d *BinDao) RegisterUpdate(bin *ds.Bin) (err error) {
+	bin.UpdatedAt = time.Now().UTC().Truncate(time.Microsecond)
+	sqlStatement := "UPDATE bin SET updates = udates + 1, updated_at = $1 WHERE id = $2 RETURNING updates"
+	err = d.db.QueryRow(sqlStatement, bin.UpdatedAt, bin.Id).Scan(&bin.Updates)
+	if err != nil {
+		return err
+	}
+	bin.UpdatedAtRelative = humanize.Time(bin.UpdatedAt)
 	return nil
 }

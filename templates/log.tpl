@@ -26,7 +26,7 @@
                     <th>Relative start time</th>
                     <th>Duration</th>
                     <th>IP</th>
-                    <th>Filename</th>
+                    <th>Object</th>
                     <th>Details</th>
                 </tr>
             </thead>
@@ -55,7 +55,23 @@
                         {{ end }}
                     </td>
                     <td>{{ .IP }}</td>
-                    <td><a href="/{{ .BinId }}/{{ .Filename }}">{{ .Filename }}</a></td>
+                    <td>
+                        {{ if eq .Type "file-upload" }}
+                            <a href="/{{ .BinId }}/{{ .Filename }}">{{ .Filename }}</a>
+                        {{ end }}
+
+                        {{ if eq .Type "zip-download" }}
+                            <a href="{{ .Path }}">Zip archive</a>
+                        {{ end }}
+
+                        {{ if eq .Type "tar-download" }}
+                            <a href="{{ .Path }}">Tar archive</a>
+                        {{ end }}
+
+                        {{ if eq .Type "file-download" }}
+                            <a href="{{ .Path }}">{{ .Filename }}</a>
+                        {{ end }}
+                    </td>
                     <td>
                         <a href="#" data-toggle="collapse" data-target="#collapse{{ $index }}" aria-expanded="false" aria-controls="collapse{{ $index }}"><i class="far fa-window-maximize"></i></a>
                     </td>

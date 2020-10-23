@@ -5,7 +5,8 @@
 	created_at	TIMESTAMP NOT NULL,
 	expired_at	TIMESTAMP NOT NULL,
 	deleted_at	TIMESTAMP,
-	downloads	BIGINT NOT NULL
+	downloads	BIGINT NOT NULL,
+	updates		BIGINT NOT NULL
 );
 
 CREATE TABLE file (

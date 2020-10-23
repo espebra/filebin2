@@ -4,7 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 	"net"
+	"path"
 	"net/http"
+	"net/url"
 	"net/http/httputil"
 	"time"
 
@@ -83,6 +85,21 @@ func (d *TransactionDao) GetByBin(bin string) (transactions []ds.Transaction, er
 		}
 		t.StartedAtRelative = humanize.Time(t.StartedAt)
 		t.FinishedAtRelative = humanize.Time(t.FinishedAt.Time)
+
+		u, err := url.Parse(t.Path)
+		if err != nil {
+			fmt.Printf("Unable to parse path: %s: %s\n", t.Path, err.Error())
+		}
+
+		if u.Path == "/" {
+			t.Type = "file-upload"
+		} else if u.Path == path.Join("/archive", t.BinId, "zip") {
+			t.Type = "zip-download"
+		} else if u.Path == path.Join("/archive", t.BinId, "tar") {
+			t.Type = "tar-download"
+		} else if u.Path == path.Join("/", t.BinId, t.Filename) {
+			t.Type = "file-download"
+		}
 		transactions = append(transactions, t)
 	}
 	return transactions, nil

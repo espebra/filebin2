@@ -63,8 +63,8 @@
         <table class="table sortable">
             <tr>
                 <th>Bin</th>
-                <th>Created</th>
                 <th>Updated</th>
+                <th>Created</th>
                 <th>Bytes</th>
                 <th>Files</th>
                 <th>Downloads</th>
@@ -75,8 +75,8 @@
             {{ range $index, $value := .Bins.Available }}
                 <tr>
                     <td><code><a href="{{ .URL }}">{{ .Id }}</a></code></td>
-                    <td sorttable_customkey="{{ .CreatedAt }}">{{ .CreatedAtRelative }}</td>
                     <td sorttable_customkey="{{ .UpdatedAt }}">{{ .UpdatedAtRelative }}</td>
+                    <td sorttable_customkey="{{ .CreatedAt }}">{{ .CreatedAtRelative }}</td>
                     <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
                     <td>{{ .Files }}</td>
                     <td>{{ .Downloads }}</td>

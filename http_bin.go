@@ -83,6 +83,11 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 	inputBin := params["bin"]
 	inputFormat := params["format"]
 
+	if inputFormat != "zip" && inputFormat != "tar" {
+		http.Error(w, "Supported formats: zip and tar", http.StatusNotFound)
+		return
+	}
+
 	bin, found, err := h.dao.Bin().GetById(inputBin)
 	if err != nil {
 		fmt.Printf("Unable to GetById(%s): %s\n", inputBin, err.Error())
@@ -105,6 +110,10 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
 	}
+
+        if err := h.dao.Bin().RegisterDownload(&bin); err != nil {
+                fmt.Printf("Unable to update bin %s: %s\n", inputBin, err.Error())
+        }
 
 	if inputFormat == "zip" {
 		w.Header().Set("Content-Type", "application/zip")
@@ -175,9 +184,6 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 		if err := h.dao.Bin().RegisterDownload(&bin); err != nil {
 			fmt.Printf("Unable to update bin %s: %s\n", inputBin, err.Error())
 		}
-		return
-	} else {
-		http.Error(w, "Supported formats: zip and tar", http.StatusNotFound)
 		return
 	}
 }

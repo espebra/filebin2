@@ -12,6 +12,7 @@ type Transaction struct {
 	Method             string       `json:"method"`
 	Path               string       `json:"path"`
 	IP                 string       `json:"ip"`
+	Type               string       `json:"-"`
 	Trace              string       `json:"trace"`
 	StartedAt          time.Time    `json:"started_at"`
 	StartedAtRelative  string       `json:"started_at_relative"`

@@ -9,8 +9,8 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path"
 	"strings"
+	"path"
 	"time"
 	//"encoding/json"
 	"github.com/GeertJohan/go.rice"
@@ -205,6 +205,9 @@ func (h *HTTP) ParseTemplates() *template.Template {
 				}
 			}
 			return false
+		},
+		"join": func(s ...string) string {
+			return path.Join(s...)
 		},
 	}
 
