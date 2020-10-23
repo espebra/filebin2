@@ -8,17 +8,12 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	//"time"
 
 	"github.com/espebra/filebin2/ds"
 	"github.com/espebra/filebin2/s3"
-	//"github.com/gorilla/mux"
 )
 
 func (h *HTTP) ViewAdminDashboard(w http.ResponseWriter, r *http.Request) {
-	//params := mux.Vars(r)
-	//inputBin := params["bin"]
-
 	type Bins struct {
 		Available []ds.Bin `json:"available"`
 	}
@@ -96,8 +91,6 @@ func (h *HTTP) ViewAdminLog(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data.Bin = bin
-
-	fmt.Println("Foo")
 
 	if err := h.templates.ExecuteTemplate(w, "log", data); err != nil {
 		fmt.Printf("Failed to execute template: %s\n", err.Error())
