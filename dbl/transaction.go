@@ -91,14 +91,23 @@ func (d *TransactionDao) GetByBin(bin string) (transactions []ds.Transaction, er
 			fmt.Printf("Unable to parse path: %s: %s\n", t.Path, err.Error())
 		}
 
-		if u.Path == "/" {
+		// Ignore these since they are not actually downloading or uploading file content
+		if t.Method == "HEAD" {
+			continue
+		}
+
+		if t.Method == "POST" && u.Path == "/" {
 			t.Type = "file-upload"
+		} else if t.Method == "GET" && u.Path == path.Join("/", t.BinId, t.Filename) {
+			t.Type = "file-download"
 		} else if u.Path == path.Join("/archive", t.BinId, "zip") {
 			t.Type = "zip-download"
 		} else if u.Path == path.Join("/archive", t.BinId, "tar") {
 			t.Type = "tar-download"
-		} else if u.Path == path.Join("/", t.BinId, t.Filename) {
-			t.Type = "file-download"
+		} else if t.Method == "DELETE" && u.Path == path.Join("/", t.BinId) && t.Filename == "" {
+			t.Type = "bin-delete"
+		} else if t.Method == "DELETE" && u.Path == path.Join("/", t.BinId, t.Filename) && t.Filename != "" {
+			t.Type = "file-delete"
 		}
 		transactions = append(transactions, t)
 	}

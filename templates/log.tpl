@@ -24,9 +24,10 @@
                     <th></th>
                     <th>Timestamp</th>
                     <th>Relative start time</th>
-                    <th>Duration</th>
                     <th>IP</th>
+                    <th>Operation</th>
                     <th>Object</th>
+                    <th>Duration</th>
                     <th>Details</th>
                 </tr>
             </thead>
@@ -40,6 +41,9 @@
                         {{ if eq .Method "GET" }}
                                 <i class="fas fa-cloud-download-alt text-success"></i>
                         {{ end }}
+                        {{ if eq .Method "DELETE" }}
+                                <i class="fas fa-trash-alt text-danger"></i>
+                        {{ end }}
                     </td>
                     <td>
                         {{ .StartedAt.Format "2006-01-02 15:04:05 UTC" }}
@@ -47,17 +51,19 @@
                     <td>
                         {{ .StartedAtRelative }}
                     </td>
-                    <td>
-                        {{ if finished .FinishedAt }}
-                            {{ elapsed .StartedAt .FinishedAt.Time }}
-                        {{ else }}
-                            In progress
-                        {{ end }}
-                    </td>
                     <td>{{ .IP }}</td>
+                    <td>{{ .Type }}</td>
                     <td>
                         {{ if eq .Type "file-upload" }}
                             <a href="/{{ .BinId }}/{{ .Filename }}">{{ .Filename }}</a>
+                        {{ end }}
+
+                        {{ if eq .Type "file-delete" }}
+                            {{ .Filename }}
+                        {{ end }}
+
+                        {{ if eq .Type "bin-delete" }}
+                            -
                         {{ end }}
 
                         {{ if eq .Type "zip-download" }}
@@ -70,6 +76,13 @@
 
                         {{ if eq .Type "file-download" }}
                             <a href="/{{ .BinId }}/{{ .Filename }}">{{ .Filename }}</a>
+                        {{ end }}
+                    </td>
+                    <td>
+                        {{ if finished .FinishedAt }}
+                            {{ elapsed .StartedAt .FinishedAt.Time }}
+                        {{ else }}
+                            In progress
                         {{ end }}
                     </td>
                     <td>
