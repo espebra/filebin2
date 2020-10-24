@@ -153,8 +153,8 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 		bin = ds.Bin{}
 		bin.Id = inputBin
 		bin.ExpiredAt = time.Now().UTC().Add(h.expirationDuration)
-		if err := h.dao.Bin().Insert(&bin); err != nil {
-			h.Error(w, r, fmt.Sprintf("Unable to insert bin %s: %s", inputBin, err.Error()), "Database error", 121, http.StatusInternalServerError)
+		if err := h.dao.Bin().Upsert(&bin); err != nil {
+			h.Error(w, r, fmt.Sprintf("Unable to upsert bin %s: %s", inputBin, err.Error()), "Database error", 121, http.StatusInternalServerError)
 			return
 		}
 		// TODO: Execute new bin created trigger
