@@ -111,10 +111,6 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-        if err := h.dao.Bin().RegisterDownload(&bin); err != nil {
-                fmt.Printf("Unable to update bin %s: %s\n", inputBin, err.Error())
-        }
-
 	if inputFormat == "zip" {
 		w.Header().Set("Content-Type", "application/zip")
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s.tar\"", bin.Id))

@@ -16,7 +16,7 @@ func (d *InfoDao) GetInfo() (info ds.Info, err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
 
 	// Number of log entries
-	sqlStatement := "SELECT COUNT(Id) FROM transaction";
+	sqlStatement := "SELECT COUNT(Id) FROM transaction"
 	if err := d.db.QueryRow(sqlStatement).Scan(&info.CurrentLogEntries); err != nil {
 		return info, err
 	}

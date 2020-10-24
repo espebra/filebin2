@@ -4,10 +4,10 @@ import (
 	"database/sql"
 	"fmt"
 	"net"
-	"path"
 	"net/http"
-	"net/url"
 	"net/http/httputil"
+	"net/url"
+	"path"
 	"time"
 
 	"github.com/espebra/filebin2/ds"
@@ -128,4 +128,29 @@ func (d *TransactionDao) Update(t *ds.Transaction) (err error) {
 	//bin.UpdatedAt = now
 	//bin.UpdatedAtRelative = humanize.Time(bin.UpdatedAt)
 	return nil
+}
+
+func (d *TransactionDao) Cleanup() (count int64, err error) {
+	sqlStatement := "DELETE FROM transaction USING bin WHERE transaction.bin_id=bin.id AND bin.deleted_at IS NOT NULL AND bin.deleted_at < NOW() - INTERVAL '30 days'"
+	res, err := d.db.Exec(sqlStatement)
+	if err != nil {
+		return count, err
+	}
+	n, err := res.RowsAffected()
+	count = n
+	if err != nil {
+		return count, err
+	}
+
+	sqlStatement = "DELETE FROM transaction WHERE NOT bin_id IN (SELECT id FROM bin)"
+	res, err = d.db.Exec(sqlStatement)
+	if err != nil {
+		return count, err
+	}
+	n, err = res.RowsAffected()
+	count = count + n
+	if err != nil {
+		return count, err
+	}
+	return count, nil
 }

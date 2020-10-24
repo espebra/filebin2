@@ -1,7 +1,7 @@
 package ds
 
 type Info struct {
-	CurrentLogEntries    int64  `json:"current_log_entries"`
+	CurrentLogEntries int64 `json:"current_log_entries"`
 
 	CurrentBytes         int64  `json:"current_bytes"`
 	CurrentBytesReadable string `json:"current_bytes_readable"`
