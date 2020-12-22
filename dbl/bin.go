@@ -2,7 +2,6 @@ package dbl
 
 import (
 	"database/sql"
-	"context"
 	"errors"
 	//"fmt"
 	"github.com/dustin/go-humanize"
@@ -178,31 +177,14 @@ func (d *BinDao) Upsert(bin *ds.Bin) (err error) {
 		return err
 	}
 
-	ctx := context.Background()
-	tx, err := d.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-
-	b, found, err := d.GetById(bin.Id)
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	if found {
-		bin = &b
-	} else {
-		now := time.Now().UTC().Truncate(time.Microsecond)
-		downloads := uint64(0)
-		updates := uint64(0)
-		readonly := false
-		bin.ExpiredAt = bin.ExpiredAt.UTC().Truncate(time.Microsecond)
-		sqlStatement := "INSERT INTO bin (id, readonly, downloads, updates, updated_at, created_at, expired_at) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id"
-		if err := d.db.QueryRow(sqlStatement, bin.Id, readonly, downloads, updates, now, now, bin.ExpiredAt).Scan(&bin.Id); err != nil {
-			tx.Rollback()
-			return err
-		}
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	downloads := uint64(0)
+	updates := uint64(0)
+	readonly := false
+	bin.ExpiredAt = bin.ExpiredAt.UTC().Truncate(time.Microsecond)
+	sqlStatement := "INSERT INTO bin (id, readonly, downloads, updates, updated_at, created_at, expired_at) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id"
+	err = d.db.QueryRow(sqlStatement, bin.Id, readonly, downloads, updates, now, now, bin.ExpiredAt).Scan(&bin.Id)
+	if err == nil {
 		bin.UpdatedAt = now
 		bin.CreatedAt = now
 		bin.UpdatedAtRelative = humanize.Time(bin.UpdatedAt)
@@ -215,10 +197,15 @@ func (d *BinDao) Upsert(bin *ds.Bin) (err error) {
 		bin.Readonly = readonly
 	}
 
-	err = tx.Commit()
+	b, found, err := d.GetById(bin.Id)
 	if err != nil {
 		return err
 	}
+
+	if found {
+		bin = &b
+	}
+
 	return nil
 }
 
