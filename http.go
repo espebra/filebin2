@@ -35,6 +35,7 @@ type HTTP struct {
 	httpAccessLog      string
 	adminUsername      string
 	adminPassword      string
+	tmpdir             string
 	router             *mux.Router
 	templateBox        *rice.Box
 	staticBox          *rice.Box

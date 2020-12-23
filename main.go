@@ -13,7 +13,9 @@ import (
 )
 
 var (
+	// Various
 	expirationFlag = flag.Int("expiration", 604800, "Bin expiration time in seconds since the last bin update")
+	tmpdirFlag     = flag.String("tmpdir", os.TempDir(), "Directory for temporary files for upload and download")
 
 	// Limits
 	limitFileDownloadsFlag = flag.Uint64("limit-file-downloads", 0, "Limit the number of downloads per file. 0 disables this limit.")
@@ -95,6 +97,7 @@ func main() {
 		adminPassword:      *adminPasswordFlag,
 		staticBox:          staticBox,
 		templateBox:        templateBox,
+		tmpdir:             *tmpdirFlag,
 		dao:                &daoconn,
 		s3:                 &s3conn,
 		expiration:         *expirationFlag,
