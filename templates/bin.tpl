@@ -97,38 +97,49 @@
         {{ if gt $numfiles 0 }}
             <p>
                 <ul class="nav nav-pills">
-                    <li class="nav-item mr-3">
-                        <a class="nav-link btn btn-primary" href="" data-toggle="modal" data-target="#modalArchive">
+                    <li class="nav-item me-3">
+                        <a class="nav-link btn btn-primary" href="" data-bs-toggle="modal" data-bs-target="#modalArchive">
                             <i class="fas fa-fw fa-cloud-download-alt"></i> Download files
                         </a>
                     </li>
+
                     <li class="nav-item">
                         <div class="dropdown">
-                                <a class="nav-link btn btn-primary dropdown-toggle text-white" id="dropdownBinMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <a class="nav-link btn btn-primary dropdown-toggle text-white" id="dropdownBinMenuButton" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                     More
                                 </a>
-                                <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownBinMenuButton">
+                                <ul class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownBinMenuButton">
                                     {{ if eq .Bin.Readonly false }}
-                                        <span class="dropdown-item fileUpload">
-                                            <span>
-                                                <i class="fas fa-fw fa-cloud-upload-alt text-primary"></i> Upload more files
+                                        <li>
+                                            <span class="dropdown-item fileUpload">
+                                                <span>
+                                                    <i class="fas fa-fw fa-cloud-upload-alt text-primary"></i> Upload more files
+                                                </span>
+                                                <input type="file" class="upload" id="fileField" multiple>
                                             </span>
-                                            <input type="file" class="upload" id="fileField" multiple>
-                                        </span>
+                                        </li>
                                     {{ end }}
-                                    <a class="dropdown-item" href="" data-toggle="modal" data-target="#modalBinProperties" aria-haspopup="true" aria-expanded="false">
-                                        <i class="fas fa-fw fa-info-circle text-primary"></i> Bin properties
-                                    </a>
+                                    <li>
+                                        <a class="dropdown-item" href="" data-bs-toggle="modal" data-bs-target="#modalBinProperties" aria-haspopup="true" aria-expanded="false">
+                                            <i class="fas fa-fw fa-info-circle text-primary"></i> Bin properties
+                                        </a>
+                                    </li>
+                                    <li>
                                     <div class="dropdown-divider"></div>
+                                    </li>
                                     {{ if eq .Bin.Readonly false }}
-                                        <a class="dropdown-item" href="" data-toggle="modal" data-target="#modalLockBin" aria-haspopup="true" aria-expanded="false">
+                                    <li>
+                                        <a class="dropdown-item" href="" data-bs-toggle="modal" data-bs-target="#modalLockBin" aria-haspopup="true" aria-expanded="false">
                                             <i class="fas fa-fw fa-lock text-warning"></i> Lock bin
                                         </a>
+                                    </li>
                                     {{ end }}
-                                    <a class="dropdown-item" href="" data-toggle="modal" data-target="#modalDeleteBin">
+                                    <li>
+                                    <a class="dropdown-item" href="" data-bs-toggle="modal" data-bs-target="#modalDeleteBin">
                                         <i class="far fa-fw fa-trash-alt text-danger"></i> Delete bin
                                     </a>
-                                </div>
+                                    </li>
+                                </ul>
                         </div>
                     </li>
                 </ul>
@@ -172,18 +183,18 @@
                             </td>
                             <td>
                                 <div class="dropdown">
-                                    <a class="dropdown-toggle small link-custom" id="dropdownFileMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    <a class="dropdown-toggle small link-custom" id="dropdownFileMenuButton" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                         More
                                     </a>
                                     <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownFileMenuButton">
                                         <a class="dropdown-item" href="{{ .URL }}">
                                             <i class="fas fa-fw fa-cloud-download-alt text-primary"></i> Download file
                                         </a>
-                                        <a class="dropdown-item" href="" data-toggle="modal" data-target="#modalFileProperties-{{ $index }}">
+                                        <a class="dropdown-item" href="" data-bs-toggle="modal" data-bs-target="#modalFileProperties-{{ $index }}">
                                             <i class="fas fa-fw fa-info-circle text-primary"></i> File properties
                                         </a>
                                         <div class="dropdown-divider"></div>
-                                        <a class="dropdown-item" href="" data-toggle="modal" data-target="#modalDeleteFile-{{ $index }}">
+                                        <a class="dropdown-item" href="" data-bs-toggle="modal" data-bs-target="#modalDeleteFile-{{ $index }}">
                                             <i class="far fa-fw fa-trash-alt text-danger"></i> Delete file
                                         </a>
                                     </div>
@@ -201,9 +212,7 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title" id="modelArchiveTitle">Download files</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
                         <p>
@@ -222,7 +231,7 @@
                         </ul>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     </div>
                 </div>
             </div>
@@ -235,9 +244,7 @@
                 <div class="modal-content">
                     <div class="modal-header alert-secondary">
                         <h5 class="modal-title" id="modelDeleteBinTitle">Delete bin</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
                         <p>You are free to delete this bin. However you are encouraged to delete your own bins only, or bins that are being used to share obvious illegal, copyrighted or malicious content. Bins that are deleted can not be reused.</p>
@@ -265,9 +272,7 @@
                 <div class="modal-content">
                     <div class="modal-header alert-secondary">
                         <h5 class="modal-title" id="modelBinPropertiesTitle">Bin properties</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
                         <ul class="row">
@@ -320,7 +325,7 @@
                         </ul>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     </div>
                 </div>
             </div>
@@ -333,9 +338,7 @@
                 <div class="modal-content">
                     <div class="modal-header alert-secondary">
                         <h5 class="modal-title" id="modelLockBinTitle">Lock bin</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
                         <p>The bin is currently unlocked, which means that new files can be added to it and existing files can be updated. If the bin is locked, the bin will become read only and no more file uploads will be allowed. Note that a locked bin can still be deleted.</p>
@@ -363,9 +366,8 @@
                     <div class="modal-content">
                         <div class="modal-header alert-secondary">
                             <h5 class="modal-title" id="modelDeleteFileTitle">Delete file</h5>
-                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
+                            <!--<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>-->
+                            <a class="btn-close" href="/{{ $.Bin.Id }}"></a>
                         </div>
                         <div class="modal-body">
                             <p>You are free to delete any file in this bin. However you are encouraged to delete the files that you have uploaded only, or files with obvious malicious or illegal content.</p>
@@ -394,9 +396,7 @@
                     <div class="modal-content">
                         <div class="modal-header alert-secondary">
                             <h5 class="modal-title" id="modelFilePropertiesTitle">File properties</h5>
-                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
                             <ul class="row">
@@ -449,7 +449,7 @@
                             </ul>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                         </div>
                     </div>
                 </div>

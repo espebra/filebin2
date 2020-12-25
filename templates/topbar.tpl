@@ -18,7 +18,7 @@
         <ul class="navbar-nav">
 	    {{ if eq .Page "bin" }}
                 <li class="nav-item">
-                    <a class="nav-link" href="" data-toggle="modal" data-target="#modalTakedown">Takedown</a>
+                    <a class="nav-link" href="" data-bs-toggle="modal" data-bs-target="#modalTakedown">Takedown</a>
                 </li>
 	    {{ end }}
         </ul>
@@ -36,22 +36,20 @@
         <div class="modal-content">
             <div class="modal-header alert-secondary">
                 <h5 class="modal-title" id="modelTakedownTitle">Takedown</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p>This web service provides functionality for clients to upload and download files.</p>
 
                 <p>There is an opportunity to abuse this to share illegal, copyrighted or malicious content, even though this is against the <a href="/terms">Terms and conditions</a>. There is no automatic moderation of such content, but anyone familiar with the location of the files can delete them at their own will.</p>
 
-                <p>If this bin contains files that should not be here, please <a href="" data-dismiss="modal" data-toggle="modal" data-target="#modalDeleteBin">delete the bin</a>. This will immediately make the files unavailable, and is faster than sending a takedown request to the service owner.</p>
+                <p>If this bin contains files that should not be here, please <a href="" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#modalDeleteBin">delete the bin</a>. This will immediately make the files unavailable, and is faster than sending a takedown request to the service owner.</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-danger" data-dismiss="modal" data-toggle="modal" data-target="#modalDeleteBin">
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#modalDeleteBin">
                     <i class="fas fa-fw fa-trash-alt"></i> Delete bin
                 </button>
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>

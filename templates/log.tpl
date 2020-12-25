@@ -86,7 +86,7 @@
                         {{ end }}
                     </td>
                     <td>
-                        <a href="#" data-toggle="collapse" data-target="#collapse{{ $index }}" aria-expanded="false" aria-controls="collapse{{ $index }}"><i class="far fa-window-maximize"></i></a>
+                        <a href="#" data-bs-toggle="collapse" data-bs-target="#collapse{{ $index }}" aria-expanded="false" aria-controls="collapse{{ $index }}"><i class="far fa-window-maximize"></i></a>
                     </td>
                 </tr>
                 <tr class="collapse" id="collapse{{ $index }}">
