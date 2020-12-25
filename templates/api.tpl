@@ -39,7 +39,7 @@
                 overflow: -moz-scrollbars-vertical;
                 overflow-y: scroll;
             }
-      
+
             *,
             *:before,
             *:after {
@@ -52,6 +52,9 @@
             }
 
             .topbar {
+                display:none;
+            }
+            .information-container {
                 display:none;
             }
             .scheme-container {
