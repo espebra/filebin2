@@ -4,6 +4,7 @@
 
 .progress {
     margin-bottom: 0 !important;
+    height: 8px;
 }
 
 .link-custom {
