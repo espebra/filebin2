@@ -172,15 +172,16 @@ func (s S3AO) RemoveKey(key string) error {
 }
 
 func (s S3AO) ListObjects() (objects []string, err error) {
-	doneCh := make(chan struct{})
-	defer close(doneCh)
-
 	opts := minio.ListObjectsOptions{
 		Prefix:    "",
 		Recursive: true,
 	}
 
-	for object := range s.client.ListObjects(context.Background(), s.bucket, opts) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	objectCh := s.client.ListObjects(ctx, s.bucket, opts)
+	for object := range objectCh {
 		if object.Err != nil {
 			return objects, object.Err
 		}
@@ -265,9 +266,6 @@ func (s S3AO) GetObject(bin string, filename string, nonce []byte, start int64, 
 }
 
 func (s S3AO) GetBucketInfo() (info BucketInfo) {
-	doneCh := make(chan struct{})
-	defer close(doneCh)
-
 	opts := minio.ListObjectsOptions{
 		Prefix:    "",
 		Recursive: true,
