@@ -222,7 +222,7 @@
                         <p class="lead">Select archive format to download:</p>
 
                         <ul class="nav nav-pills">
-                            <li class="nav-item mr-3">
+                            <li class="nav-item me-3">
                                 <a class="nav-link btn-primary" href="/archive/{{ $.Bin.Id }}/tar"><i class="fas fa-fw fa-file-archive"></i> Tar</a>
                             </li>
                             <li class="nav-item">
