@@ -158,7 +158,7 @@ function FileAPI (c, t, d, f, bin, uploadURL, binURL) {
             var speed = document.createElement("div");
             //var mimeText = document.createTextNode(mimetype);
             speed.textContent = "Pending (" + filesize + ")";
-            speed.className = "col text-right";
+            speed.className = "col text-end";
             meta.appendChild(speed)
 
             // Progressbar
