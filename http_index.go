@@ -129,6 +129,7 @@ func (h *HTTP) FilebinStatus(w http.ResponseWriter, r *http.Request) {
 		data.DbStatus = true
 	} else {
 		data.DbStatus = false
+		fmt.Printf("Database unavailable during status check\n")
 		code = 503
 	}
 
@@ -136,6 +137,7 @@ func (h *HTTP) FilebinStatus(w http.ResponseWriter, r *http.Request) {
 		data.S3Status = true
 	} else {
 		data.S3Status = false
+		fmt.Printf("S3 unavailable during status check\n")
 		code = 503
 	}
 
