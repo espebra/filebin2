@@ -24,7 +24,7 @@ var (
 	// HTTP
 	listenHostFlag   = flag.String("listen-host", "127.0.0.1", "Listen host")
 	listenPortFlag   = flag.Int("listen-port", 8080, "Listen port")
-	accessLogFlag    = flag.String("access-log", "", "Path for access.log output")
+	accessLogFlag    = flag.String("access-log", "/var/log/filebin/access.log", "Path for access.log output")
 	proxyHeadersFlag = flag.Bool("proxy-headers", false, "Read client request information from proxy headers")
 
 	// Database

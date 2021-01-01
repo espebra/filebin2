@@ -19,7 +19,6 @@ import (
 	"github.com/espebra/filebin2/s3"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	//"github.com/felixge/httpsnoop"
 )
 
 type funcHandler func(http.ResponseWriter, *http.Request)
@@ -101,56 +100,48 @@ func (h *HTTP) Auth(fn func(http.ResponseWriter, *http.Request)) http.HandlerFun
 
 func (h *HTTP) Log(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tr, err := h.dao.Transaction().Start(r)
-		if err != nil {
-			fmt.Printf("Unable to register the transaction: %s\n", err.Error())
-		}
-		defer h.dao.Transaction().Finish(tr)
+		//tr, err := h.dao.Transaction().Start(r)
+		//if err != nil {
+		//	fmt.Printf("Unable to register the transaction: %s\n", err.Error())
+		//}
+		//defer h.dao.Transaction().Finish(tr)
 
-		//metrics := httpsnoop.CaptureMetrics(fn(w, r), w, r)
 		fn(w, r)
-		//fmt.Printf("%v\n", metrics)
 	}
 }
 
 func (h *HTTP) Run() {
 	fmt.Printf("Starting HTTP server on %s:%d\n", h.httpHost, h.httpPort)
-	if h.httpAccessLog == "" {
-		if err := http.ListenAndServe(fmt.Sprintf("%s:%d", h.httpHost, h.httpPort), handlers.CombinedLoggingHandler(os.Stdout, handlers.CompressHandler(h.router))); err != nil {
-			fmt.Printf("Failed to start HTTP server: %s\n", err.Error())
-			os.Exit(2)
-		}
-	} else {
-		// Add gzip compression
-		handler := handlers.CompressHandler(h.router)
 
-		// Add access logging
-		accessLog, err := os.OpenFile(h.httpAccessLog, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		defer accessLog.Close()
-		if err != nil {
-			fmt.Printf("Unable to open log file: %s\n", err.Error())
-			os.Exit(2)
-		}
-		handler = handlers.CombinedLoggingHandler(accessLog, handler)
+	// Add gzip compression
+	handler := handlers.CompressHandler(h.router)
 
-		// Add proxy header handling
-		if h.httpProxyHeaders {
-			handler = handlers.ProxyHeaders(handler)
-		}
+	// Add access logging
+	accessLog, err := os.OpenFile(h.httpAccessLog, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	defer accessLog.Close()
+	if err != nil {
+		fmt.Printf("Unable to open log file: %s\n", err.Error())
+		os.Exit(2)
+	}
+	handler = handlers.CombinedLoggingHandler(accessLog, handler)
 
-		// Set up the server
-		srv := &http.Server{
-			Addr:         fmt.Sprintf("%s:%d", h.httpHost, h.httpPort),
-			Handler:      handler,
-			ReadTimeout:  2 * time.Hour,
-			WriteTimeout: 2 * time.Hour,
-		}
+	// Add proxy header handling
+	if h.httpProxyHeaders {
+		handler = handlers.ProxyHeaders(handler)
+	}
 
-		// Start the server
-		if err := srv.ListenAndServe(); err != nil {
-			fmt.Printf("Failed to start HTTP server: %s\n", err.Error())
-			os.Exit(2)
-		}
+	// Set up the server
+	srv := &http.Server{
+		Addr:         fmt.Sprintf("%s:%d", h.httpHost, h.httpPort),
+		Handler:      handler,
+		ReadTimeout:  2 * time.Hour,
+		WriteTimeout: 2 * time.Hour,
+	}
+
+	// Start the server
+	if err := srv.ListenAndServe(); err != nil {
+		fmt.Printf("Failed to start HTTP server: %s\n", err.Error())
+		os.Exit(2)
 	}
 }
 
