@@ -74,11 +74,11 @@ func Init(endpoint, bucket, region, accessKey, secretKey, encryptionKey string, 
 func (s S3AO) Status() bool {
 	found, err := s.client.BucketExists(context.Background(), s.bucket)
 	if err != nil {
-		fmt.Printf("Error from S3 when checking if bucket %s exists: %s\n", s.bucket, err.Error)
+		fmt.Printf("Error from S3 when checking if bucket %s exists: %s\n", s.bucket, err.Error())
 		return false
 	}
 	if found == false {
-		fmt.Printf("S3 bucket %s does not exist\n")
+		fmt.Printf("S3 bucket %s does not exist\n", s.bucket)
 		return false
 	}
 	return true
