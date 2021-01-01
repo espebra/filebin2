@@ -58,7 +58,7 @@
         </p>
         <p class="lead">
             <strong>1.</strong>
-            Click <em>Upload files</em> below, or drag-and-drop the files
+            Click <em>Upload files</em> below and select files, or drag-and-drop the files
             into this browser window.
         </p>
         <p class="lead">
