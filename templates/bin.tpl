@@ -216,7 +216,7 @@
                     </div>
                     <div class="modal-body">
                         <p>
-                            The files in this bin can be downloaded as a single file archive. The default filename of the archive is <code>{{ .Bin.Id }}</code> and the full size is {{ .Bin.BytesReadable }}.
+                            The files in this bin can be downloaded as a single file archive. The default filename of the archive is <code>{{ .Bin.Id }}</code> and the size is {{ .Bin.BytesReadable }} uncompressed.
                         </p>
 
                         <p class="lead">Select archive format to download:</p>
