@@ -134,6 +134,25 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	inputFilename := r.Header.Get("filename")
 	inputMD5 := r.Header.Get("Content-MD5")
 	inputSHA256 := r.Header.Get("Content-SHA256")
+
+	//var inputBin string
+	//var inputFilename string
+	//var inputMD5 string
+	//var inputSHA256 string
+
+	//if strings.HasPrefix(r.Header.Get("content-type"), "multipart/form-data") {
+	//	// Multipart
+	//	inputBin = r.FormValue("bin")
+	//	inputFilename = r.FormValue("filename")
+	//	inputMD5 = r.FormValue("Content-MD5")
+	//	inputSHA256 = r.FormValue("Content-SHA256")
+	//} else {
+	//	inputBin = r.Header.Get("bin")
+	//	inputFilename = r.Header.Get("filename")
+	//	inputMD5 = r.Header.Get("Content-MD5")
+	//	inputSHA256 = r.Header.Get("Content-SHA256")
+	//}
+
 	inputBytes, err := strconv.ParseUint(r.Header.Get("content-length"), 10, 64)
 	if err != nil {
 		h.Error(w, r, "Upload failed: Invalid content-length header", "Missing or invalid content-length header", 120, http.StatusLengthRequired)
@@ -309,11 +328,37 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	nonce, err := h.s3.PutObject(file.Bin, file.Filename, fp, nBytes)
-	if err != nil {
-		fmt.Printf("%s\n", err.Error())
-		http.Error(w, "Insufficient storage capacity, please retry later", http.StatusInternalServerError)
-		return
+	var nonce []byte
+
+	// Retry if the S3 upload fails
+	retry_limit := 3
+	retry_counter := 1
+
+	for {
+		fp.Seek(0, 0)
+		nonce, err = h.s3.PutObject(file.Bin, file.Filename, fp, nBytes)
+		if err == nil {
+			// Completed successfully
+			h.s3.SetTrace(false)
+			break
+		} else {
+			// Completed with error
+			if retry_counter >= retry_limit {
+				// Give up after a few attempts
+				fmt.Printf("Gave up uploading to S3 after %d/%d attempts: %s\n", retry_counter, retry_limit, err.Error())
+				http.Error(w, "Failed to store the object in S3, please try again later", http.StatusInternalServerError)
+				return
+			}
+			fmt.Printf("Failed attempt to upload to S3 (%d/%d): %s\n", retry_counter, retry_limit, err.Error())
+
+			retry_counter = retry_counter + 1
+
+			// Sleep a little before retrying
+			time.Sleep(time.Duration(retry_counter) * time.Second)
+
+			// Get some more debug data in case the retry also fails
+			h.s3.SetTrace(true)
+		}
 	}
 	t4 := time.Now()
 
