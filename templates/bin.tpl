@@ -125,6 +125,11 @@
                                         </a>
                                     </li>
                                     <li>
+                                        <a class="dropdown-item" href="" data-bs-toggle="modal" data-bs-target="#modalBinQR" aria-haspopup="true" aria-expanded="false">
+                                            <i class="fas fa-fw fa-qrcode text-primary"></i> QR code
+                                        </a>
+                                    </li>
+                                    <li>
                                     <div class="dropdown-divider"></div>
                                     </li>
                                     {{ if eq .Bin.Readonly false }}
@@ -331,6 +336,29 @@
             </div>
         </div>
         <!-- Bin properties modal end -->
+
+        <!-- Bin QR code modal start -->
+        <div class="modal fade" id="modalBinQR" tabindex="-1" role="dialog" aria-labelledby="modalBinQRTitle" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header alert-secondary">
+                        <h5 class="modal-title" id="modelBinQRTitle">QR code</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>The URL to this bin is <a href="{{ .BinUrl }}">{{ .BinUrl }}</a>, which is embedded in the QR code below. This can be used to conveniently share the URL across mobile devices without having to type out the URL.</p>
+
+                        <div class="text-center">
+                            <img src="/qr/{{ $.Bin.Id }}"/>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Bin QR code modal end -->
 
         <!-- Lock bin modal start -->
         <div class="modal fade" id="modalLockBin" tabindex="-1" role="dialog" aria-labelledby="modalLockBinTitle" aria-hidden="true">

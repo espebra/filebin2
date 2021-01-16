@@ -9,6 +9,7 @@ import (
 	"github.com/espebra/filebin2/dbl"
 	"github.com/espebra/filebin2/s3"
 	"math/rand"
+	"net/url"
 	"time"
 )
 
@@ -16,6 +17,7 @@ var (
 	// Various
 	expirationFlag = flag.Int("expiration", 604800, "Bin expiration time in seconds since the last bin update")
 	tmpdirFlag     = flag.String("tmpdir", os.TempDir(), "Directory for temporary files for upload and download")
+	baseUrlFlag    = flag.String("baseurl", "https://filebin.net", "The base URL to use. Required for self-hosted instances.")
 
 	// Limits
 	limitFileDownloadsFlag = flag.Uint64("limit-file-downloads", 0, "Limit the number of downloads per file. 0 disables this limit.")
@@ -88,6 +90,12 @@ func main() {
 	staticBox := rice.MustFindBox("static")
 	templateBox := rice.MustFindBox("templates")
 
+	u, err := url.Parse(*baseUrlFlag)
+	if err != nil {
+		fmt.Printf("Unable to parse the baseurl parameter: %s\n", *baseUrlFlag)
+		os.Exit(2)
+	}
+
 	h := &HTTP{
 		httpHost:           *listenHostFlag,
 		httpPort:           *listenPortFlag,
@@ -103,6 +111,7 @@ func main() {
 		expiration:         *expirationFlag,
 		limitFileDownloads: *limitFileDownloadsFlag,
 		limitStorage:       *limitStorageFlag,
+		baseUrl:            *u,
 	}
 
 	if err := h.Init(); err != nil {

@@ -1,4 +1,4 @@
-# github.com/GeertJohan/go.rice v1.0.0
+# github.com/GeertJohan/go.rice v1.0.2
 ## explicit
 github.com/GeertJohan/go.rice
 github.com/GeertJohan/go.rice/embedded
@@ -60,6 +60,11 @@ github.com/modern-go/concurrent
 github.com/modern-go/reflect2
 # github.com/rs/xid v1.2.1
 github.com/rs/xid
+# github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
+## explicit
+github.com/skip2/go-qrcode
+github.com/skip2/go-qrcode/bitset
+github.com/skip2/go-qrcode/reedsolomon
 # golang.org/x/crypto v0.0.0-20200709230013-948cd5f35899
 ## explicit
 golang.org/x/crypto/argon2

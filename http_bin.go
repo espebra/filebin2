@@ -7,11 +7,15 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"path"
 	"time"
 
 	"github.com/dustin/go-humanize"
 	"github.com/espebra/filebin2/ds"
 	"github.com/gorilla/mux"
+
+	qrcode "github.com/skip2/go-qrcode"
 )
 
 func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
@@ -25,6 +29,13 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 	}
 	var data Data
 	data.Page = "bin"
+	data.BaseUrl = h.baseUrl.String()
+
+	var binUrl url.URL
+	binUrl.Scheme = h.baseUrl.Scheme
+	binUrl.Host = h.baseUrl.Host
+	binUrl.Path = path.Join(h.baseUrl.Path, inputBin)
+	data.BinUrl = binUrl.String()
 
 	bin, found, err := h.dao.Bin().GetById(inputBin)
 	if err != nil {
@@ -75,6 +86,31 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Errno 203", http.StatusInternalServerError)
 			return
 		}
+	}
+}
+
+func (h *HTTP) BinQR(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	inputBin := params["bin"]
+
+	var binUrl url.URL
+	binUrl.Scheme = h.baseUrl.Scheme
+	binUrl.Host = h.baseUrl.Host
+	binUrl.Path = path.Join(h.baseUrl.Path, inputBin)
+
+	var png []byte
+	png, err := qrcode.Encode(binUrl.String(), qrcode.Medium, 256)
+	if err != nil {
+		fmt.Printf("Error generating qr code %s: %s\n", binUrl, err.Error())
+		http.Error(w, "Unable to generate QR code", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "image/png")
+
+	if _, err := w.Write(png); err != nil {
+		fmt.Printf("Unable to write image: %s\n", err.Error())
+		http.Error(w, "Unable to generate QR code", http.StatusInternalServerError)
 	}
 }
 
