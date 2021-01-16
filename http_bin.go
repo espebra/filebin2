@@ -149,7 +149,7 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 
 	if inputFormat == "zip" {
 		w.Header().Set("Content-Type", "application/zip")
-		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s.tar\"", bin.Id))
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s.zip\"", bin.Id))
 		zw := zip.NewWriter(w)
 		for _, file := range files {
 			header := &zip.FileHeader{}
