@@ -101,7 +101,7 @@ func (h *HTTP) BinQR(w http.ResponseWriter, r *http.Request) {
 	var png []byte
 	png, err := qrcode.Encode(binUrl.String(), qrcode.Medium, 256)
 	if err != nil {
-		fmt.Printf("Error generating qr code %s: %s\n", binUrl, err.Error())
+		fmt.Printf("Error generating qr code %s: %s\n", binUrl.String(), err.Error())
 		http.Error(w, "Unable to generate QR code", http.StatusInternalServerError)
 		return
 	}
