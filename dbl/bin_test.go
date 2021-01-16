@@ -76,6 +76,21 @@ func TestInsertDuplicatedBin(t *testing.T) {
 	}
 }
 
+func TestBinTooLong(t *testing.T) {
+	dao, err := tearUp()
+	if err != nil {
+		t.Error(err)
+	}
+	defer tearDown(dao)
+
+	bin := &ds.Bin{}
+	bin.Id = "1234567890123456789012345678901234567890123456789012345678901"
+	err = dao.Bin().Insert(bin)
+	if err == nil {
+		t.Errorf("Was expecting an error here, the bin id is too long.")
+	}
+}
+
 func TestGetAllBins(t *testing.T) {
 	dao, err := tearUp()
 	if err != nil {
