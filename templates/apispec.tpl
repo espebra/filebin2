@@ -162,6 +162,24 @@ paths:
           description: The bin does not exist or is not available
           content:
             application/json: {}
+  '/qr/{bin}':
+    get:
+      tags:
+        - bin
+      summary: Generate a QR code with the absolute URL to the bin
+      description: This will generate a PNG image with a QR code that has embedded the absolute URL to the bin. This makes it convenient to share the bin across mobile devices.
+      parameters:
+        - name: bin
+          in: path
+          description: The bin to embed in the QR code
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            image/png: {}
   '/archive/{bin}/tar':
     get:
       tags:
