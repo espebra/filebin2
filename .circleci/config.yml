@@ -7,7 +7,7 @@ jobs:
       image: ubuntu-1604:201903-01
     steps:
       - checkout
-      - run: docker-compose up --abort-on-container-exit
+      - run: docker-compose -f ci.yml up --abort-on-container-exit
       - store_artifacts:
           path: artifacts/
           destination: /
