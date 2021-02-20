@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	//"github.com/espebra/filebin2/ds"
 	"github.com/GeertJohan/go.rice"
 	"github.com/espebra/filebin2/dbl"
@@ -30,8 +31,8 @@ var (
 	proxyHeadersFlag = flag.Bool("proxy-headers", false, "Read client request information from proxy headers")
 
 	// Database
-	dbHostFlag     = flag.String("db-host", "127.0.0.1", "Database host")
-	dbPortFlag     = flag.Int("db-port", 5432, "Database port")
+	dbHostFlag     = flag.String("db-host", os.Getenv("DATABASE_HOST"), "Database host")
+	dbPortFlag     = flag.String("db-port", os.Getenv("DATABASE_PORT"), "Database port")
 	dbNameFlag     = flag.String("db-name", os.Getenv("DATABASE_NAME"), "Name of the database")
 	dbUsernameFlag = flag.String("db-username", os.Getenv("DATABASE_USERNAME"), "Database username")
 	dbPasswordFlag = flag.String("db-password", os.Getenv("DATABASE_PASSWORD"), "Database password")
@@ -58,7 +59,13 @@ func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 	flag.Parse()
 
-	daoconn, err := dbl.Init(*dbHostFlag, *dbPortFlag, *dbNameFlag, *dbUsernameFlag, *dbPasswordFlag)
+	// Set database port to 5432 if not set or invalid
+	dbport, err := strconv.Atoi(*dbPortFlag)
+	if err != nil {
+		dbport = 5432
+	}
+
+	daoconn, err := dbl.Init(*dbHostFlag, dbport, *dbNameFlag, *dbUsernameFlag, *dbPasswordFlag)
 	if err != nil {
 		fmt.Printf("Unable to connect to the database: %s\n", err.Error())
 		os.Exit(2)

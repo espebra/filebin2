@@ -10,6 +10,7 @@ github.com/daaku/go.zipexe
 github.com/dustin/go-humanize
 # github.com/felixge/httpsnoop v1.0.1
 ## explicit
+github.com/felixge/httpsnoop
 # github.com/gabriel-vasile/mimetype v1.0.4
 ## explicit
 github.com/gabriel-vasile/mimetype

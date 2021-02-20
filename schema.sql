@@ -31,13 +31,14 @@ CREATE TABLE file (
 
 CREATE TABLE transaction (
 	id		BIGSERIAL NOT NULL PRIMARY KEY,
-	bin_id		VARCHAR(64),
-	filename	TEXT,
+	bin_id		VARCHAR(64) NOT NULL,
+	timestamp	TIMESTAMP NOT NULL,
+	ip		VARCHAR(128) NOT NULL,
 	method		VARCHAR(128) NOT NULL,
 	path		TEXT NOT NULL,
-	ip		VARCHAR(128) NOT NULL,
+	filename	TEXT,
 	trace		TEXT NOT NULL,
-	started_at	TIMESTAMP NOT NULL,
-	finished_at	TIMESTAMP,
+	status		INT NOT NULL,
+	bytes		INT NOT NULL,
 	UNIQUE(id)
 );

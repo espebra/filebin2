@@ -17,6 +17,7 @@ import (
 	"github.com/GeertJohan/go.rice"
 	"github.com/espebra/filebin2/dbl"
 	"github.com/espebra/filebin2/ds"
+	"github.com/espebra/filebin2/logging"
 	"github.com/espebra/filebin2/s3"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -50,27 +51,39 @@ func (h *HTTP) Init() (err error) {
 	h.templates = h.ParseTemplates()
 
 	h.router.HandleFunc("/", h.Index).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/", h.Log(h.Upload)).Methods(http.MethodPost)
+	h.router.HandleFunc("/", h.Upload).Methods(http.MethodPost)
 	h.router.HandleFunc("/filebin-status", h.FilebinStatus).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/about", h.About).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/api", h.API).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/api.yaml", h.APISpec).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/privacy", h.Privacy).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/terms", h.Terms).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/archive/{bin:[A-Za-z0-9_-]+}/{format:[a-z]+}", h.Log(h.Archive)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/archive/{bin:[A-Za-z0-9_-]+}/{format:[a-z]+}", h.MetaData(h.Archive)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/qr/{bin:[A-Za-z0-9_-]+}", h.BinQR).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/log/{bin:[A-Za-z0-9_-]+}", h.Auth(h.ViewAdminLog)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin", h.Auth(h.ViewAdminDashboard)).Methods(http.MethodHead, http.MethodGet)
 	//h.router.HandleFunc("/admin/cleanup", h.Auth(h.ViewAdminCleanup)).Methods(http.MethodHead, http.MethodGet)
 	h.router.Handle("/static/{path:.*}", http.StripPrefix("/static/", http.FileServer(h.staticBox.HTTPBox()))).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.ViewBin).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.Log(h.DeleteBin)).Methods(http.MethodDelete)
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.Log(h.LockBin)).Methods("PUT")
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.Log(h.GetFile)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.Log(h.DeleteFile)).Methods(http.MethodDelete)
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.MetaData(h.ViewBin)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.MetaData(h.DeleteBin)).Methods(http.MethodDelete)
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.MetaData(h.LockBin)).Methods("PUT")
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.MetaData(h.GetFile)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.MetaData(h.DeleteFile)).Methods(http.MethodDelete)
 
 	h.expirationDuration = time.Second * time.Duration(h.expiration)
 	return err
+}
+
+func (h *HTTP) MetaData(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		params := mux.Vars(r)
+		bin := params["bin"]
+		if bin != "" {
+			r.Header.Del("bin")
+			r.Header.Add("bin", bin)
+		}
+		fn(w, r)
+	}
 }
 
 func (h *HTTP) Auth(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
@@ -101,18 +114,6 @@ func (h *HTTP) Auth(fn func(http.ResponseWriter, *http.Request)) http.HandlerFun
 	}
 }
 
-func (h *HTTP) Log(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		//tr, err := h.dao.Transaction().Start(r)
-		//if err != nil {
-		//	fmt.Printf("Unable to register the transaction: %s\n", err.Error())
-		//}
-		//defer h.dao.Transaction().Finish(tr)
-
-		fn(w, r)
-	}
-}
-
 func (h *HTTP) Run() {
 	fmt.Printf("Starting HTTP server on %s:%d\n", h.httpHost, h.httpPort)
 
@@ -132,6 +133,8 @@ func (h *HTTP) Run() {
 	if h.httpProxyHeaders {
 		handler = handlers.ProxyHeaders(handler)
 	}
+
+	handler = logging.CombinedLoggingHandler(h.dao, handler)
 
 	// Set up the server
 	srv := &http.Server{

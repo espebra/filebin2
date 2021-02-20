@@ -47,6 +47,11 @@
                 <td><a href="https://github.com/gorilla/mux/">https://github.com/gorilla/mux/</a></td>
             </tr>
             <tr>
+                <td>httpsnoop</td>
+                <td>MIT</td>
+                <td><a href="https://github.com/felixge/httpsnoop">https://github.com/felixge/httpsnoop</a></td>
+            </tr>
+            <tr>
                 <td>Humane Units</td>
                 <td>MIT</td>
                 <td><a href="https://github.com/dustin/go-humanize/">https://github.com/dustin/go-humanize/</a></td>

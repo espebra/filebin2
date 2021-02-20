@@ -2,6 +2,7 @@ version: "3"
 services:
   s3:
     image: "minio/minio"
+    hostname: "storage"
     restart: "no"
     environment:
       - MINIO_ACCESS_KEY=s3accesskey
@@ -11,9 +12,12 @@ services:
     ports:
       - "9000:9000"
     entrypoint: ["minio", "server", "/data"]
+    networks:
+      - local
 
   db:
     image: "postgres"
+    hostname: "db"
     restart: "no"
     environment:
       - POSTGRES_DB=db
@@ -25,29 +29,37 @@ services:
       - "5432:5432"
     volumes:
       - .:/docker-entrypoint-initdb.d:delegated
+    networks:
+      - local
 
   app:
     build: .
     restart: "no"
     environment:
+      - DATABASE_HOST=db
+      - DATABASE_PORT=5432
       - DATABASE_NAME=db
-      - DATABASB_USERNAME=username
-      - DATABASB_PASSWORD=changeme
-      - S3_ENDPOINT="localhost:9000"
-      - S3_REGION="us-east-1"
-      - S3_BUCKET="filebin"
+      - DATABASE_USERNAME=username
+      - DATABASE_PASSWORD=changeme
+      - S3_ENDPOINT=storage:9000
+      - S3_REGION=us-east-1
+      - S3_BUCKET=filebin
       - S3_ACCESS_KEY=s3accesskey
       - S3_SECRET_KEY=s3secretkey
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=changeme
     expose:
-      - "8888"
+      - "8080"
     ports:
-      - "8888:8888"
+      - "8080:8080"
     volumes:
       - .:/app:delegated
     depends_on:
       - db
       - s3
-    entrypoint: ["make"]
+    networks:
+      - local
+    entrypoint: ["make", "run"]
 
   #varnish:
   #  image: "varnish:stable"
@@ -60,3 +72,6 @@ services:
   #    - ./etc/varnish:/etc/varnish:delegated
   #  depends_on:
   #    - app
+
+networks:
+  local:

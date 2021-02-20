@@ -27,7 +27,8 @@
                     <th>IP</th>
                     <th>Operation</th>
                     <th>Object</th>
-                    <th>Duration</th>
+                    <th>Bytes</th>
+                    <th>Status</th>
                     <th>Details</th>
                 </tr>
             </thead>
@@ -46,10 +47,10 @@
                         {{ end }}
                     </td>
                     <td>
-                        {{ .StartedAt.Format "2006-01-02 15:04:05 UTC" }}
+                        {{ .Timestamp.Format "2006-01-02 15:04:05 UTC" }}
                     </td>
                     <td>
-                        {{ .StartedAtRelative }}
+                        {{ .TimestampRelative }}
                     </td>
                     <td>{{ .IP }}</td>
                     <td>{{ .Type }}</td>
@@ -79,11 +80,10 @@
                         {{ end }}
                     </td>
                     <td>
-                        {{ if finished .FinishedAt }}
-                            {{ elapsed .StartedAt .FinishedAt.Time }}
-                        {{ else }}
-                            In progress
-                        {{ end }}
+                        {{ .Bytes }}
+                    </td>
+                    <td>
+                        {{ .Status }}
                     </td>
                     <td>
                         <a href="#" data-bs-toggle="collapse" data-bs-target="#collapse{{ $index }}" aria-expanded="false" aria-controls="collapse{{ $index }}"><i class="far fa-window-maximize"></i></a>

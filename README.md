@@ -5,23 +5,16 @@
 
 # Development environment
 
+The development environment consists of a PostgreSQL database, an MinIO object storage instance and a container running filebin2. The easiest way to set up this environment is to clone this repository and do:
+
 ```bash
-# Install dependency
-go get github.com/GeertJohan/go.rice/rice
-
-# Start the database and run the test suite
-docker-compose up --force-recreate
-
-# Bundle the templates and static files
-rice embed-go -v -i .
-
-# Build the app locally
-go build -mod=vendor
-
-# Load the database settings
-source env.sh
-
-# Start the app, which will connect to the database in docker
-./filebin2
+docker-compose up --build
 ```
+
+This will make:
+
+* Filebin2 available on [http://localhost:8080/](http://localhost:8080/).
+* Filebin2 admin available on [http://admin:changeme@localhost:8080/admin](http://admin:changeme@localhost:8080/).
+* MinIO available on [http://localhost:9000/](http://localhost:9000/).
+* PostgreSQL available on `localhost:5432`.
 
