@@ -3,9 +3,20 @@
 [![codecov](https://codecov.io/gh/espebra/filebin2/branch/master/graph/badge.svg)](https://codecov.io/gh/espebra/filebin2)
 [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat)](https://pkg.go.dev/github.com/espebra/filebin2)
 
-# Development environment
+Filebin2 is a web application that facilitates convenient file sharing over the web. It is the software that eventually will be powering https://filebin.net. It is still in development status and will see breaking changes.
 
-The development environment consists of a PostgreSQL database, an MinIO object storage instance and a container running filebin2. The easiest way to set up this environment is to clone this repository and do:
+## Table of contents
+
+* [Why filebin2?](#why-filebin2)
+* [Development environment](#development-environment)
+
+## Why filebin2?
+
+A couple of (in hindsight) bad architectural decisions in the [previous version of filebin](https://github.com/espebra/filebin) paved the road for filebin2. Filebin2 is using a PostgreSQL database to handle meta data and S3 to store files. I decided to move to a new repository because of breaking changes from the previous verson of filebin.
+
+## Development environment
+
+The development environment consists of one PostgreSQL instance, one MinIO object storage instance and an instance of filebin2. The easiest way to set up this environment is to clone this repository and do:
 
 ```bash
 docker-compose up --build
