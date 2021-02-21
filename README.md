@@ -25,7 +25,7 @@ docker-compose up --build
 This will make:
 
 * Filebin2 available on [http://localhost:8080/](http://localhost:8080/).
-* Filebin2 admin available on [http://admin:changeme@localhost:8080/admin](http://admin:changeme@localhost:8080/).
+* Filebin2 admin available on [http://admin:changeme@localhost:8080/admin](http://admin:changeme@localhost:8080/admin).
 * MinIO available on [http://localhost:9000/](http://localhost:9000/).
 * PostgreSQL available on `localhost:5432`.
 
