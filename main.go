@@ -19,7 +19,7 @@ var (
 	expirationFlag      = flag.Int("expiration", 604800, "Bin expiration time in seconds since the last bin update")
 	tmpdirFlag          = flag.String("tmpdir", os.TempDir(), "Directory for temporary files for upload and download")
 	baseUrlFlag         = flag.String("baseurl", "https://filebin.net", "The base URL to use. Required for self-hosted instances.")
-	requireApprovalFlag = flag.String("require-approval", false, "Require admin approval for bins before download requests are accepted.")
+	requireApprovalFlag = flag.Bool("manual-approval", false, "Require manual admin approval of new bins before files can be downloaded.")
 
 	// Limits
 	limitFileDownloadsFlag = flag.Uint64("limit-file-downloads", 0, "Limit the number of downloads per file. 0 disables this limit.")
