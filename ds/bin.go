@@ -6,22 +6,24 @@ import (
 )
 
 type Bin struct {
-	Id                string       `json:"id"`
-	Readonly          bool         `json:"readonly"`
-	Downloads         uint64       `json:"-"`
-	Updates           uint64       `json:"-"`
-	Bytes             uint64       `json:"bytes"`
-	BytesReadable     string       `json:"bytes_readable"`
-	Files             uint64       `json:"files"`
-	UpdatedAt         time.Time    `json:"updated_at"`
-	UpdatedAtRelative string       `json:"updated_at_relative"`
-	CreatedAt         time.Time    `json:"created_at"`
-	CreatedAtRelative string       `json:"created_at_relative"`
-	ExpiredAt         time.Time    `json:"expired_at"`
-	ExpiredAtRelative string       `json:"expired_at_relative"`
-	DeletedAt         sql.NullTime `json:"-"`
-	DeletedAtRelative string       `json:"-"`
-	URL               string       `json:"-"`
+	Id                 string       `json:"id"`
+	Readonly           bool         `json:"readonly"`
+	Downloads          uint64       `json:"-"`
+	Updates            uint64       `json:"-"`
+	Bytes              uint64       `json:"bytes"`
+	BytesReadable      string       `json:"bytes_readable"`
+	Files              uint64       `json:"files"`
+	UpdatedAt          time.Time    `json:"updated_at"`
+	UpdatedAtRelative  string       `json:"updated_at_relative"`
+	CreatedAt          time.Time    `json:"created_at"`
+	CreatedAtRelative  string       `json:"created_at_relative"`
+	ApprovedAt         sql.NullTime `json:"-"`
+	ApprovedAtRelative string       `json:"-"`
+	ExpiredAt          time.Time    `json:"expired_at"`
+	ExpiredAtRelative  string       `json:"expired_at_relative"`
+	DeletedAt          sql.NullTime `json:"-"`
+	DeletedAtRelative  string       `json:"-"`
+	URL                string       `json:"-"`
 }
 
 func (b *Bin) IsReadable() bool {
@@ -51,6 +53,15 @@ func (b *Bin) IsWritable() bool {
 func (b *Bin) IsExpired() bool {
 	if b.ExpiredAt.Before(time.Now()) {
 		return true
+	}
+	return false
+}
+
+func (b *Bin) IsApproved() bool {
+	if b.ApprovedAt.Valid {
+		if b.ApprovedAt.Time.IsZero() == false {
+			return true
+		}
 	}
 	return false
 }

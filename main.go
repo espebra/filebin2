@@ -16,9 +16,10 @@ import (
 
 var (
 	// Various
-	expirationFlag = flag.Int("expiration", 604800, "Bin expiration time in seconds since the last bin update")
-	tmpdirFlag     = flag.String("tmpdir", os.TempDir(), "Directory for temporary files for upload and download")
-	baseUrlFlag    = flag.String("baseurl", "https://filebin.net", "The base URL to use. Required for self-hosted instances.")
+	expirationFlag      = flag.Int("expiration", 604800, "Bin expiration time in seconds since the last bin update")
+	tmpdirFlag          = flag.String("tmpdir", os.TempDir(), "Directory for temporary files for upload and download")
+	baseUrlFlag         = flag.String("baseurl", "https://filebin.net", "The base URL to use. Required for self-hosted instances.")
+	requireApprovalFlag = flag.String("require-approval", false, "Require admin approval for bins before download requests are accepted.")
 
 	// Limits
 	limitFileDownloadsFlag = flag.Uint64("limit-file-downloads", 0, "Limit the number of downloads per file. 0 disables this limit.")
@@ -119,6 +120,7 @@ func main() {
 		limitFileDownloads: *limitFileDownloadsFlag,
 		limitStorage:       *limitStorageFlag,
 		baseUrl:            *u,
+		requireApproval:    *requireApprovalFlag,
 	}
 
 	if err := h.Init(); err != nil {

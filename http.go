@@ -37,6 +37,7 @@ type HTTP struct {
 	adminUsername      string
 	adminPassword      string
 	tmpdir             string
+	requireApproval    bool
 	baseUrl            url.URL
 	router             *mux.Router
 	templateBox        *rice.Box

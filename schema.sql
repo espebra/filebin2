@@ -5,6 +5,7 @@
 	created_at	TIMESTAMP NOT NULL,
 	expired_at	TIMESTAMP NOT NULL,
 	deleted_at	TIMESTAMP,
+	approved_at	TIMESTAMP,
 	downloads	BIGINT NOT NULL,
 	updates		BIGINT NOT NULL
 );
