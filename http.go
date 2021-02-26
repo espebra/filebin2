@@ -8,7 +8,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -26,25 +25,13 @@ import (
 type funcHandler func(http.ResponseWriter, *http.Request)
 
 type HTTP struct {
-	expiration         int
-	expirationDuration time.Duration
-	limitFileDownloads uint64
-	limitStorage       uint64
-	httpPort           int
-	httpHost           string
-	httpProxyHeaders   bool
-	httpAccessLog      string
-	adminUsername      string
-	adminPassword      string
-	tmpdir             string
-	requireApproval    bool
-	baseUrl            url.URL
-	router             *mux.Router
-	templateBox        *rice.Box
-	staticBox          *rice.Box
-	templates          *template.Template
-	dao                *dbl.DAO
-	s3                 *s3.S3AO
+	router      *mux.Router
+	templateBox *rice.Box
+	staticBox   *rice.Box
+	templates   *template.Template
+	dao         *dbl.DAO
+	s3          *s3.S3AO
+	config      *ds.Config
 }
 
 func (h *HTTP) Init() (err error) {
@@ -71,7 +58,7 @@ func (h *HTTP) Init() (err error) {
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.MetaData(h.GetFile)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.MetaData(h.DeleteFile)).Methods(http.MethodDelete)
 
-	h.expirationDuration = time.Second * time.Duration(h.expiration)
+	h.config.ExpirationDuration = time.Second * time.Duration(h.config.Expiration)
 	return err
 }
 
@@ -93,7 +80,7 @@ func (h *HTTP) Auth(fn func(http.ResponseWriter, *http.Request)) http.HandlerFun
 		w.Header().Set("WWW-Authenticate", "Basic realm='Filebin'")
 
 		// Abort here if the admin username or password is not set
-		if h.adminUsername == "" || h.adminPassword == "" {
+		if h.config.AdminUsername == "" || h.config.AdminPassword == "" {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -105,7 +92,7 @@ func (h *HTTP) Auth(fn func(http.ResponseWriter, *http.Request)) http.HandlerFun
 			return
 		}
 
-		if username != h.adminUsername || password != h.adminPassword {
+		if username != h.config.AdminUsername || password != h.config.AdminPassword {
 			time.Sleep(3 * time.Second)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
@@ -116,13 +103,13 @@ func (h *HTTP) Auth(fn func(http.ResponseWriter, *http.Request)) http.HandlerFun
 }
 
 func (h *HTTP) Run() {
-	fmt.Printf("Starting HTTP server on %s:%d\n", h.httpHost, h.httpPort)
+	fmt.Printf("Starting HTTP server on %s:%d\n", h.config.HttpHost, h.config.HttpPort)
 
 	// Add gzip compression
 	handler := handlers.CompressHandler(h.router)
 
 	// Add access logging
-	accessLog, err := os.OpenFile(h.httpAccessLog, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	accessLog, err := os.OpenFile(h.config.HttpAccessLog, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	defer accessLog.Close()
 	if err != nil {
 		fmt.Printf("Unable to open log file: %s\n", err.Error())
@@ -131,7 +118,7 @@ func (h *HTTP) Run() {
 	handler = handlers.CombinedLoggingHandler(accessLog, handler)
 
 	// Add proxy header handling
-	if h.httpProxyHeaders {
+	if h.config.HttpProxyHeaders {
 		handler = handlers.ProxyHeaders(handler)
 	}
 
@@ -139,7 +126,7 @@ func (h *HTTP) Run() {
 
 	// Set up the server
 	srv := &http.Server{
-		Addr:         fmt.Sprintf("%s:%d", h.httpHost, h.httpPort),
+		Addr:         fmt.Sprintf("%s:%d", h.config.HttpHost, h.config.HttpPort),
 		Handler:      handler,
 		ReadTimeout:  2 * time.Hour,
 		WriteTimeout: 2 * time.Hour,
@@ -189,6 +176,12 @@ func (h *HTTP) ParseTemplates() *template.Template {
 	var fns = template.FuncMap{
 		"isAvailable": func(bin ds.Bin) bool {
 			if bin.IsReadable() {
+				return true
+			}
+			return false
+		},
+		"isApproved": func(bin ds.Bin) bool {
+			if bin.IsApproved() {
 				return true
 			}
 			return false

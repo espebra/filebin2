@@ -29,12 +29,12 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 	}
 	var data Data
 	data.Page = "bin"
-	data.BaseUrl = h.baseUrl.String()
+	data.BaseUrl = h.config.BaseUrl.String()
 
 	var binUrl url.URL
-	binUrl.Scheme = h.baseUrl.Scheme
-	binUrl.Host = h.baseUrl.Host
-	binUrl.Path = path.Join(h.baseUrl.Path, inputBin)
+	binUrl.Scheme = h.config.BaseUrl.Scheme
+	binUrl.Host = h.config.BaseUrl.Host
+	binUrl.Path = path.Join(h.config.BaseUrl.Path, inputBin)
 	data.BinUrl = binUrl.String()
 
 	bin, found, err := h.dao.Bin().GetById(inputBin)
@@ -57,7 +57,7 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 		// Synthetize a bin without creating it. It will be created when a file is uploaded.
 		bin = ds.Bin{}
 		bin.Id = inputBin
-		bin.ExpiredAt = time.Now().UTC().Add(h.expirationDuration)
+		bin.ExpiredAt = time.Now().UTC().Add(h.config.ExpirationDuration)
 		bin.ExpiredAtRelative = humanize.Time(bin.ExpiredAt)
 
 		// Intentional slowdown to make crawling less efficient
@@ -94,9 +94,9 @@ func (h *HTTP) BinQR(w http.ResponseWriter, r *http.Request) {
 	inputBin := params["bin"]
 
 	var binUrl url.URL
-	binUrl.Scheme = h.baseUrl.Scheme
-	binUrl.Host = h.baseUrl.Host
-	binUrl.Path = path.Join(h.baseUrl.Path, inputBin)
+	binUrl.Scheme = h.config.BaseUrl.Scheme
+	binUrl.Host = h.config.BaseUrl.Host
+	binUrl.Path = path.Join(h.config.BaseUrl.Path, inputBin)
 
 	var png []byte
 	png, err := qrcode.Encode(binUrl.String(), qrcode.Medium, 256)

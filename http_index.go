@@ -21,7 +21,7 @@ func (h *HTTP) Index(w http.ResponseWriter, r *http.Request) {
 	data.Page = "front"
 
 	bin := &ds.Bin{}
-	bin.ExpiredAt = time.Now().UTC().Add(h.expirationDuration)
+	bin.ExpiredAt = time.Now().UTC().Add(h.config.ExpirationDuration)
 	bin.ExpiredAtRelative = humanize.Time(bin.ExpiredAt)
 	bin.Id = h.dao.Bin().GenerateId()
 	data.Bin = *bin

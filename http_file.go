@@ -65,8 +65,8 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 	// Download limit
 	// 0 disables the limit
 	// >= 1 enforces a limit
-	if h.limitFileDownloads > 0 {
-		if file.Downloads >= h.limitFileDownloads {
+	if h.config.LimitFileDownloads > 0 {
+		if file.Downloads >= h.config.LimitFileDownloads {
 			h.Error(w, r, "", fmt.Sprintf("The file %s has been requested too many times.\n", inputFilename), 421, http.StatusForbidden)
 			return
 		}
@@ -171,7 +171,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 		// Bin does not exist, so create it here
 		bin = ds.Bin{}
 		bin.Id = inputBin
-		bin.ExpiredAt = time.Now().UTC().Add(h.expirationDuration)
+		bin.ExpiredAt = time.Now().UTC().Add(h.config.ExpirationDuration)
 		if err := h.dao.Bin().Upsert(&bin); err != nil {
 			h.Error(w, r, fmt.Sprintf("Unable to upsert bin %s: %s", inputBin, err.Error()), "Database error", 121, http.StatusInternalServerError)
 			return
@@ -208,8 +208,8 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	// Storage limit
 	// 0 disables the limit
 	// >= 1 enforces a limit, in number of gigabytes stored
-	if h.limitStorage > 0 {
-		if uint64(info.CurrentBytes) >= (h.limitStorage * 1024 * 1024 * 1024) {
+	if h.config.LimitStorage > 0 {
+		if uint64(info.CurrentBytes) >= (h.config.LimitStorage * 1024 * 1024 * 1024) {
 			h.Error(w, r, fmt.Sprintf("Storage limit reached (currently consuming %s)", humanize.Bytes(uint64(info.CurrentBytes))), "Storage limit reached. Please try again later.\n", 633, http.StatusForbidden)
 			return
 		}
@@ -217,7 +217,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 
 	//fmt.Printf("Uploading filename %s (%s) to bin %s\n", inputFilename, humanize.Bytes(inputBytes), bin.Id)
 
-	fp, err := ioutil.TempFile(h.tmpdir, "filebin")
+	fp, err := ioutil.TempFile(h.config.Tmpdir, "filebin")
 	// Defer removal of the tempfile to clean up partially uploaded files.
 	defer os.Remove(fp.Name())
 	defer fp.Close()
@@ -381,7 +381,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update bin to set the correct updated timestamp
-	bin.ExpiredAt = time.Now().UTC().Add(h.expirationDuration)
+	bin.ExpiredAt = time.Now().UTC().Add(h.config.ExpirationDuration)
 	if err := h.dao.Bin().Update(&bin); err != nil {
 		fmt.Printf("Unable to update bin %s: %s\n", bin.Id, err.Error())
 		http.Error(w, "Errno 109", http.StatusInternalServerError)

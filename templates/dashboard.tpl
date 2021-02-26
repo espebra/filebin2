@@ -70,6 +70,7 @@
                 <th>Downloads</th>
                 <th>Updates</th>
                 <th>Locked</th>
+                <th>Approved</th>
                 <th>Log</th>
             </tr>
             {{ range $index, $value := .Bins.Available }}
@@ -86,6 +87,13 @@
                             <i class="fas fa-fw fa-lock text-muted"></i>
                         {{ else }}
                             <i class="fas fa-fw fa-lock-open text-success"></i>
+                        {{ end }}
+                    </td>
+                    <td>
+                        {{ if isApproved . }}
+                            Yes
+                        {{ else }}
+                            No
                         {{ end }}
                     </td>
                     <td><a href="/admin/log/{{ .Id }}">Log</a></td>

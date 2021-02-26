@@ -8,6 +8,7 @@ import (
 	//"github.com/espebra/filebin2/ds"
 	"github.com/GeertJohan/go.rice"
 	"github.com/espebra/filebin2/dbl"
+	"github.com/espebra/filebin2/ds"
 	"github.com/espebra/filebin2/s3"
 	"math/rand"
 	"net/url"
@@ -104,29 +105,33 @@ func main() {
 		os.Exit(2)
 	}
 
+	config := &ds.Config{
+		Expiration:         *expirationFlag,
+		LimitFileDownloads: *limitFileDownloadsFlag,
+		LimitStorage:       *limitStorageFlag,
+		HttpHost:           *listenHostFlag,
+		HttpPort:           *listenPortFlag,
+		HttpProxyHeaders:   *proxyHeadersFlag,
+		HttpAccessLog:      *accessLogFlag,
+		AdminUsername:      *adminUsernameFlag,
+		AdminPassword:      *adminPasswordFlag,
+		Tmpdir:             *tmpdirFlag,
+		RequireApproval:    *requireApprovalFlag,
+		BaseUrl:            *u,
+	}
+
 	h := &HTTP{
-		httpHost:           *listenHostFlag,
-		httpPort:           *listenPortFlag,
-		httpAccessLog:      *accessLogFlag,
-		httpProxyHeaders:   *proxyHeadersFlag,
-		adminUsername:      *adminUsernameFlag,
-		adminPassword:      *adminPasswordFlag,
-		staticBox:          staticBox,
-		templateBox:        templateBox,
-		tmpdir:             *tmpdirFlag,
-		dao:                &daoconn,
-		s3:                 &s3conn,
-		expiration:         *expirationFlag,
-		limitFileDownloads: *limitFileDownloadsFlag,
-		limitStorage:       *limitStorageFlag,
-		baseUrl:            *u,
-		requireApproval:    *requireApprovalFlag,
+		staticBox:   staticBox,
+		templateBox: templateBox,
+		dao:         &daoconn,
+		s3:          &s3conn,
+		config:      config,
 	}
 
 	if err := h.Init(); err != nil {
 		fmt.Printf("Unable to start the HTTP server: %s\n", err.Error())
 	}
-	fmt.Printf("Expiration: %s\n", h.expirationDuration.String())
+	fmt.Printf("Expiration: %s\n", config.ExpirationDuration.String())
 
 	// Start the http server
 	h.Run()
