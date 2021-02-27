@@ -5,6 +5,7 @@ import (
 	"github.com/GeertJohan/go.rice"
 	"github.com/espebra/filebin2/dbl"
 	"github.com/espebra/filebin2/s3"
+	"github.com/espebra/filebin2/ds"
 	"log"
 	"net"
 	"net/http"
@@ -73,22 +74,25 @@ func TestMain(m *testing.M) {
 	}
 	staticBox := rice.MustFindBox("static")
 	templateBox := rice.MustFindBox("templates")
+	c := ds.Config{
+		LimitFileDownloads: testLimitFileDownloads,
+		LimitStorage:       testLimitStorage,
+		Expiration:         testExpiredAt,
+		HttpHost:           testHTTPHost,
+		HttpPort:           testHTTPPort,
+	}
 	h := &HTTP{
-		limitFileDownloads: testLimitFileDownloads,
-		limitStorage:       testLimitStorage,
-		expiration:         testExpiredAt,
-		httpHost:           testHTTPHost,
-		httpPort:           testHTTPPort,
-		staticBox:          staticBox,
-		templateBox:        templateBox,
-		dao:                &dao,
-		s3:                 &s3ao,
+		staticBox:   staticBox,
+		templateBox: templateBox,
+		dao:         &dao,
+		s3:          &s3ao,
+		config:      &c,
 	}
 	if err := h.Init(); err != nil {
 		fmt.Printf("Unable to start the HTTP server: %s\n", err.Error())
 		os.Exit(2)
 	}
-	tcpListener, _ := net.Listen("tcp", fmt.Sprintf("%s:%d", h.httpHost, h.httpPort))
+	tcpListener, _ := net.Listen("tcp", fmt.Sprintf("%s:%d", h.config.HttpHost, h.config.HttpPort))
 	waitForServer.Add(1)
 	go startHttpServer(tcpListener, &waitForServer, h.router)
 	retCode := m.Run()
