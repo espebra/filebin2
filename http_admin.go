@@ -83,9 +83,9 @@ func (h *HTTP) ViewAdminLog(w http.ResponseWriter, r *http.Request) {
 	var data Data
 	data.Transactions = trs
 
-	bin, _, err := h.dao.Bin().GetById(inputBin)
+	bin, _, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
-		fmt.Printf("Unable to GetById(): %s\n", err.Error())
+		fmt.Printf("Unable to GetByID(): %s\n", err.Error())
 		http.Error(w, "Errno 200", http.StatusInternalServerError)
 		return
 	}

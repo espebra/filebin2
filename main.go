@@ -19,7 +19,7 @@ var (
 	// Various
 	expirationFlag      = flag.Int("expiration", 604800, "Bin expiration time in seconds since the last bin update")
 	tmpdirFlag          = flag.String("tmpdir", os.TempDir(), "Directory for temporary files for upload and download")
-	baseUrlFlag         = flag.String("baseurl", "https://filebin.net", "The base URL to use. Required for self-hosted instances.")
+	baseURLFlag         = flag.String("baseurl", "https://filebin.net", "The base URL to use. Required for self-hosted instances.")
 	requireApprovalFlag = flag.Bool("manual-approval", false, "Require manual admin approval of new bins before files can be downloaded.")
 
 	// Limits
@@ -99,9 +99,9 @@ func main() {
 	staticBox := rice.MustFindBox("static")
 	templateBox := rice.MustFindBox("templates")
 
-	u, err := url.Parse(*baseUrlFlag)
+	u, err := url.Parse(*baseURLFlag)
 	if err != nil {
-		fmt.Printf("Unable to parse the baseurl parameter: %s\n", *baseUrlFlag)
+		fmt.Printf("Unable to parse the baseurl parameter: %s\n", *baseURLFlag)
 		os.Exit(2)
 	}
 

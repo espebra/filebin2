@@ -31,15 +31,15 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 	data.Page = "bin"
 	data.BaseUrl = h.config.BaseUrl.String()
 
-	var binUrl url.URL
-	binUrl.Scheme = h.config.BaseUrl.Scheme
-	binUrl.Host = h.config.BaseUrl.Host
-	binUrl.Path = path.Join(h.config.BaseUrl.Path, inputBin)
-	data.BinUrl = binUrl.String()
+	var binURL url.URL
+	binURL.Scheme = h.config.BaseUrl.Scheme
+	binURL.Host = h.config.BaseUrl.Host
+	binURL.Path = path.Join(h.config.BaseUrl.Path, inputBin)
+	data.BinUrl = binURL.String()
 
-	bin, found, err := h.dao.Bin().GetById(inputBin)
+	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
-		fmt.Printf("Unable to GetById(%s): %s\n", inputBin, err.Error())
+		fmt.Printf("Unable to GetByID(%s): %s\n", inputBin, err.Error())
 		http.Error(w, "Errno 200", http.StatusInternalServerError)
 		return
 	}
@@ -93,15 +93,15 @@ func (h *HTTP) BinQR(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	inputBin := params["bin"]
 
-	var binUrl url.URL
-	binUrl.Scheme = h.config.BaseUrl.Scheme
-	binUrl.Host = h.config.BaseUrl.Host
-	binUrl.Path = path.Join(h.config.BaseUrl.Path, inputBin)
+	var binURL url.URL
+	binURL.Scheme = h.config.BaseUrl.Scheme
+	binURL.Host = h.config.BaseUrl.Host
+	binURL.Path = path.Join(h.config.BaseUrl.Path, inputBin)
 
 	var png []byte
-	png, err := qrcode.Encode(binUrl.String(), qrcode.Medium, 256)
+	png, err := qrcode.Encode(binURL.String(), qrcode.Medium, 256)
 	if err != nil {
-		fmt.Printf("Error generating qr code %s: %s\n", binUrl.String(), err.Error())
+		fmt.Printf("Error generating qr code %s: %s\n", binURL.String(), err.Error())
 		http.Error(w, "Unable to generate QR code", http.StatusInternalServerError)
 		return
 	}
@@ -124,9 +124,9 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bin, found, err := h.dao.Bin().GetById(inputBin)
+	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
-		fmt.Printf("Unable to GetById(%s): %s\n", inputBin, err.Error())
+		fmt.Printf("Unable to GetByID(%s): %s\n", inputBin, err.Error())
 		http.Error(w, "Errno 200", http.StatusInternalServerError)
 		return
 	}
@@ -224,9 +224,9 @@ func (h *HTTP) DeleteBin(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	inputBin := params["bin"]
 
-	bin, found, err := h.dao.Bin().GetById(inputBin)
+	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
-		fmt.Printf("Unable to GetById(%s): %s\n", inputBin, err.Error())
+		fmt.Printf("Unable to GetByID(%s): %s\n", inputBin, err.Error())
 		http.Error(w, "Errno 204", http.StatusInternalServerError)
 		return
 	}
@@ -257,9 +257,9 @@ func (h *HTTP) LockBin(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	inputBin := params["bin"]
 
-	bin, found, err := h.dao.Bin().GetById(inputBin)
+	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
-		fmt.Printf("Unable to GetById(%s): %s\n", inputBin, err.Error())
+		fmt.Printf("Unable to GetByID(%s): %s\n", inputBin, err.Error())
 		http.Error(w, "Errno 205", http.StatusInternalServerError)
 		return
 	}

@@ -29,7 +29,7 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 	inputFilename := params["filename"]
 	// TODO: Input validation (inputFilename)
 
-	bin, found, err := h.dao.Bin().GetById(inputBin)
+	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
 		h.Error(w, r, fmt.Sprintf("Failed to select bin by id %s: %s", inputBin, err.Error()), "Database error", 112, http.StatusInternalServerError)
 		return
@@ -161,7 +161,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	// TODO: Input validation on content-length. Between min:max.
 
 	// Check if bin exists
-	bin, found, err := h.dao.Bin().GetById(inputBin)
+	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
 		h.Error(w, r, fmt.Sprintf("Failed to select bin by id %s: %s", inputBin, err.Error()), "Database error", 112, http.StatusInternalServerError)
 		return
@@ -245,29 +245,29 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 
 	t2 := time.Now()
 
-	md5_checksum := md5.New()
-	if _, err := io.Copy(md5_checksum, fp); err != nil {
+	md5Checksum := md5.New()
+	if _, err := io.Copy(md5Checksum, fp); err != nil {
 		h.Error(w, r, fmt.Sprintf("Error during checksum: %s", err.Error()), "Processing error", 128, http.StatusInternalServerError)
 		return
 	}
-	md5_checksum_string := fmt.Sprintf("%x", md5_checksum.Sum(nil))
+	md5ChecksumString := fmt.Sprintf("%x", md5Checksum.Sum(nil))
 	if inputMD5 != "" {
-		if md5_checksum_string != inputMD5 {
-			h.Error(w, r, fmt.Sprintf("Rejecting upload for file %s to bin %s due to wrong MD5 checksum (got %s and calculated %s)", inputFilename, bin.Id, inputMD5, md5_checksum_string), "MD5 checksum did not match", 129, http.StatusBadRequest)
+		if md5ChecksumString != inputMD5 {
+			h.Error(w, r, fmt.Sprintf("Rejecting upload for file %s to bin %s due to wrong MD5 checksum (got %s and calculated %s)", inputFilename, bin.Id, inputMD5, md5ChecksumString), "MD5 checksum did not match", 129, http.StatusBadRequest)
 			return
 		}
 	}
 	fp.Seek(0, 0)
 
-	sha256_checksum := sha256.New()
-	if _, err := io.Copy(sha256_checksum, fp); err != nil {
+	sha256Checksum := sha256.New()
+	if _, err := io.Copy(sha256Checksum, fp); err != nil {
 		h.Error(w, r, fmt.Sprintf("Error during checksum: %s", err.Error()), "Processing error", 130, http.StatusInternalServerError)
 		return
 	}
-	sha256_checksum_string := fmt.Sprintf("%x", sha256_checksum.Sum(nil))
+	sha256ChecksumString := fmt.Sprintf("%x", sha256Checksum.Sum(nil))
 	if inputSHA256 != "" {
-		if sha256_checksum_string != inputSHA256 {
-			h.Error(w, r, fmt.Sprintf("Rejecting upload for file %s to bin %s due to wrong SHA256 checksum (got %s and calculated %s)", inputFilename, bin.Id, inputSHA256, sha256_checksum_string), "SHA256 checksum did not match", 130, http.StatusBadRequest)
+		if sha256ChecksumString != inputSHA256 {
+			h.Error(w, r, fmt.Sprintf("Rejecting upload for file %s to bin %s due to wrong SHA256 checksum (got %s and calculated %s)", inputFilename, bin.Id, inputSHA256, sha256ChecksumString), "SHA256 checksum did not match", 130, http.StatusBadRequest)
 			return
 		}
 	}
@@ -320,8 +320,8 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 
 	file.Bytes = inputBytes
 	file.Mime = mime.String()
-	file.SHA256 = sha256_checksum_string
-	file.MD5 = md5_checksum_string
+	file.SHA256 = sha256ChecksumString
+	file.MD5 = md5ChecksumString
 	if err := h.dao.File().ValidateInput(&file); err != nil {
 		fmt.Printf("Rejected upload of filename %s to bin %s due to failed input validation: %s\n", inputFilename, bin.Id, err.Error())
 		http.Error(w, "Input validation failed", http.StatusBadRequest)
@@ -331,8 +331,8 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 	var nonce []byte
 
 	// Retry if the S3 upload fails
-	retry_limit := 3
-	retry_counter := 1
+	retryLimit := 3
+	retryCounter := 1
 
 	for {
 		fp.Seek(0, 0)
@@ -343,18 +343,18 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 			break
 		} else {
 			// Completed with error
-			if retry_counter >= retry_limit {
+			if retryCounter >= retryLimit {
 				// Give up after a few attempts
-				fmt.Printf("Gave up uploading to S3 after %d/%d attempts: %s\n", retry_counter, retry_limit, err.Error())
+				fmt.Printf("Gave up uploading to S3 after %d/%d attempts: %s\n", retryCounter, retryLimit, err.Error())
 				http.Error(w, "Failed to store the object in S3, please try again later", http.StatusInternalServerError)
 				return
 			}
-			fmt.Printf("Failed attempt to upload to S3 (%d/%d): %s\n", retry_counter, retry_limit, err.Error())
+			fmt.Printf("Failed attempt to upload to S3 (%d/%d): %s\n", retryCounter, retryLimit, err.Error())
 
-			retry_counter = retry_counter + 1
+			retryCounter = retryCounter + 1
 
 			// Sleep a little before retrying
-			time.Sleep(time.Duration(retry_counter) * time.Second)
+			time.Sleep(time.Duration(retryCounter) * time.Second)
 
 			// Get some more debug data in case the retry also fails
 			h.s3.SetTrace(true)
@@ -414,9 +414,9 @@ func (h *HTTP) DeleteFile(w http.ResponseWriter, r *http.Request) {
 	inputBin := params["bin"]
 	inputFilename := params["filename"]
 
-	bin, found, err := h.dao.Bin().GetById(inputBin)
+	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
-		fmt.Printf("Unable to GetById(%s): %s\n", inputBin, err.Error())
+		fmt.Printf("Unable to GetByID(%s): %s\n", inputBin, err.Error())
 		http.Error(w, "Errno 110", http.StatusInternalServerError)
 		return
 	}

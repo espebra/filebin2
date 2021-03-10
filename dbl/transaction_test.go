@@ -14,16 +14,16 @@ func TestGetByBin(t *testing.T) {
 	}
 	defer tearDown(dao)
 
-	bin_id := "1234567890"
+	binID := "1234567890"
 	bin := &ds.Bin{}
-	bin.Id = bin_id
+	bin.Id = binID
 	err = dao.Bin().Insert(bin)
 	if err != nil {
 		t.Error(err)
 	}
 
 	tr := &ds.Transaction{}
-	tr.BinId = bin_id
+	tr.BinId = binID
 	tr.Method = "GET"
 	tr.Path = "/foo/bar"
 	tr.IP = "1.2.3.4"

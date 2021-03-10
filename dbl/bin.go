@@ -127,7 +127,7 @@ func (d *BinDao) GetPendingDelete() (bins []ds.Bin, err error) {
 	return bins, nil
 }
 
-func (d *BinDao) GetById(id string) (bin ds.Bin, found bool, err error) {
+func (d *BinDao) GetByID(id string) (bin ds.Bin, found bool, err error) {
 	// Get bin info
 	sqlStatement := "SELECT bin.id, bin.readonly, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(file.filename), bin.updated_at, bin.created_at, bin.approved_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id = file.bin_id AND file.in_storage=true AND file.deleted_at IS NULL WHERE bin.id = $1 GROUP BY bin.id LIMIT 1"
 	err = d.db.QueryRow(sqlStatement, id).Scan(&bin.Id, &bin.Readonly, &bin.Downloads, &bin.Bytes, &bin.Files, &bin.UpdatedAt, &bin.CreatedAt, &bin.ApprovedAt, &bin.ExpiredAt, &bin.DeletedAt)
@@ -213,7 +213,7 @@ func (d *BinDao) Upsert(bin *ds.Bin) (err error) {
 		bin.Readonly = readonly
 	}
 
-	b, found, err := d.GetById(bin.Id)
+	b, found, err := d.GetByID(bin.Id)
 	if err != nil {
 		return err
 	}

@@ -80,7 +80,7 @@ func TestGetFileById(t *testing.T) {
 		t.Error(errors.New("Expected id > 0"))
 	}
 
-	dbFile, found, err := dao.File().GetById(file.Id)
+	dbFile, found, err := dao.File().GetByID(file.Id)
 	if err != nil {
 		t.Error(err)
 	}
@@ -107,7 +107,7 @@ func TestGetFileById(t *testing.T) {
 		t.Errorf("Was expecting default value for trace, got %s instead.", dbFile.Trace)
 	}
 
-	dbBin, found, err := dao.Bin().GetById(dbFile.Bin)
+	dbBin, found, err := dao.Bin().GetByID(dbFile.Bin)
 	if err != nil {
 		t.Error(err)
 	}
@@ -209,7 +209,7 @@ func TestInsertDuplicatedFile(t *testing.T) {
 		t.Error(err)
 	}
 
-	_, _, err = dao.File().GetById(file.Id)
+	_, _, err = dao.File().GetByID(file.Id)
 
 	if err != nil {
 		t.Error(err)
@@ -265,7 +265,7 @@ func TestGetAllFiles(t *testing.T) {
 		t.Errorf("Was expecting to find %d files, got %d instead.", count, len(files))
 	}
 
-	dbBin, _, err := dao.Bin().GetById(bin.Id)
+	dbBin, _, err := dao.Bin().GetByID(bin.Id)
 	if err != nil {
 		t.Error(err)
 	}
@@ -304,7 +304,7 @@ func TestDeleteFile(t *testing.T) {
 		t.Error(err)
 	}
 
-	dbFile, _, err := dao.File().GetById(file.Id)
+	dbFile, _, err := dao.File().GetByID(file.Id)
 
 	if err != nil {
 		t.Error(err)
@@ -316,7 +316,7 @@ func TestDeleteFile(t *testing.T) {
 		t.Error(err)
 	}
 
-	_, found, err := dao.File().GetById(file.Id)
+	_, found, err := dao.File().GetByID(file.Id)
 	if err != nil {
 		t.Errorf("Did not expect an error even though the file was deleted: " + err.Error())
 	}
@@ -352,7 +352,7 @@ func TestUpdateFile(t *testing.T) {
 		t.Error(err)
 	}
 
-	dbFile, _, err := dao.File().GetById(file.Id)
+	dbFile, _, err := dao.File().GetByID(file.Id)
 	if err != nil {
 		t.Error(err)
 	}
@@ -366,7 +366,7 @@ func TestUpdateFile(t *testing.T) {
 		t.Error(err)
 	}
 
-	updatedFile, _, err := dao.File().GetById(file.Id)
+	updatedFile, _, err := dao.File().GetByID(file.Id)
 	if err != nil {
 		t.Error(err)
 	}

@@ -45,15 +45,14 @@ func (d *FileDao) ValidateInput(file *ds.File) error {
 	return nil
 }
 
-func (d *FileDao) GetById(id int) (file ds.File, found bool, err error) {
+func (d *FileDao) GetByID(id int) (file ds.File, found bool, err error) {
 	sqlStatement := "SELECT id, bin_id, filename, in_storage, mime, bytes, md5, sha256, downloads, updates, ip, trace, updated_at, created_at, deleted_at FROM file WHERE id = $1 LIMIT 1"
 	err = d.db.QueryRow(sqlStatement, id).Scan(&file.Id, &file.Bin, &file.Filename, &file.InStorage, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updates, &file.IP, &file.Trace, &file.UpdatedAt, &file.CreatedAt, &file.DeletedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return file, false, nil
-		} else {
-			return file, false, err
 		}
+		return file, false, err
 	}
 	// https://github.com/lib/pq/issues/329
 	file.UpdatedAt = file.UpdatedAt.UTC()
@@ -74,9 +73,8 @@ func (d *FileDao) GetByName(bin string, filename string) (file ds.File, found bo
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return file, false, nil
-		} else {
-			return file, false, err
 		}
+		return file, false, err
 	}
 	// https://github.com/lib/pq/issues/329
 	file.UpdatedAt = file.UpdatedAt.UTC()
@@ -97,7 +95,7 @@ func (d *FileDao) Insert(file *ds.File) (err error) {
 		return err
 	}
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	in_storage := false
+	inStorage := false
 	downloads := 0
 	updates := 0
 
@@ -114,7 +112,7 @@ func (d *FileDao) Insert(file *ds.File) (err error) {
 	if err != nil {
 		return err
 	}
-	file.InStorage = in_storage
+	file.InStorage = inStorage
 	file.Downloads = uint64(downloads)
 	file.Updates = uint64(updates)
 	file.UpdatedAt = now
@@ -129,9 +127,9 @@ func (d *FileDao) Insert(file *ds.File) (err error) {
 	return nil
 }
 
-func (d *FileDao) GetByBin(id string, in_storage bool) (files []ds.File, err error) {
+func (d *FileDao) GetByBin(id string, inStorage bool) (files []ds.File, err error) {
 	sqlStatement := "SELECT id, bin_id, filename, in_storage, mime, bytes, md5, sha256, downloads, updates, ip, trace, nonce, updated_at, created_at, deleted_at FROM file WHERE bin_id = $1 AND in_storage = $2 AND deleted_at IS NULL ORDER BY filename ASC"
-	rows, err := d.db.Query(sqlStatement, id, in_storage)
+	rows, err := d.db.Query(sqlStatement, id, inStorage)
 	if err != nil {
 		return files, err
 	}
@@ -244,9 +242,8 @@ func (d *FileDao) Delete(file *ds.File) (err error) {
 	}
 	if count == 0 {
 		return errors.New("File does not exist")
-	} else {
-		return nil
 	}
+	return nil
 }
 
 func (d *FileDao) RegisterDownload(file *ds.File) (err error) {

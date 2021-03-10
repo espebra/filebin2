@@ -15,4 +15,6 @@ require (
 	github.com/minio/sio v0.2.0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	golang.org/x/crypto v0.0.0-20200709230013-948cd5f35899
+	golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5 // indirect
+	golang.org/x/tools v0.1.0 // indirect
 )

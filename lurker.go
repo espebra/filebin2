@@ -59,12 +59,12 @@ func (l *Lurker) DeletePendingFiles() {
 			if err := l.s3.RemoveObject(file.Bin, file.Filename); err != nil {
 				fmt.Printf("Unable to delete file %s from bin %s from S3.\n", file.Filename, file.Bin)
 				return
-			} else {
-				file.InStorage = false
-				if err := l.dao.File().Update(&file); err != nil {
-					fmt.Printf("Unable to update filename %s (id %d) in bin %s: %s\n", file.Filename, file.Id, file.Bin, err.Error())
-					return
-				}
+			}
+
+			file.InStorage = false
+			if err := l.dao.File().Update(&file); err != nil {
+				fmt.Printf("Unable to update filename %s (id %d) in bin %s: %s\n", file.Filename, file.Id, file.Bin, err.Error())
+				return
 			}
 		}
 	}
@@ -89,13 +89,13 @@ func (l *Lurker) DeletePendingBins() {
 				if err := l.s3.RemoveObject(file.Bin, file.Filename); err != nil {
 					fmt.Printf("Unable to delete file %s from bin %s from S3.\n", file.Filename, file.Bin)
 					return
-				} else {
-					fmt.Printf("Removing file %s from bin %s\n", file.Filename, bin.Id)
-					file.InStorage = false
-					if err := l.dao.File().Update(&file); err != nil {
-						fmt.Printf("Unable to update filename %s (id %d) in bin %s: %s\n", file.Filename, file.Id, file.Bin, err.Error())
-						return
-					}
+				}
+
+				fmt.Printf("Removing file %s from bin %s\n", file.Filename, bin.Id)
+				file.InStorage = false
+				if err := l.dao.File().Update(&file); err != nil {
+					fmt.Printf("Unable to update filename %s (id %d) in bin %s: %s\n", file.Filename, file.Id, file.Bin, err.Error())
+					return
 				}
 			}
 			if err := l.dao.Bin().Update(&bin); err != nil {

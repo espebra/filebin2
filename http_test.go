@@ -61,7 +61,7 @@ func tearDown(dao dbl.DAO) error {
 	return err
 }
 
-func startHttpServer(l net.Listener, wg *sync.WaitGroup, h http.Handler) {
+func startHTTPServer(l net.Listener, wg *sync.WaitGroup, h http.Handler) {
 	server := &http.Server{Addr: l.Addr().String(), Handler: h}
 	wg.Done()
 	server.Serve(l)
@@ -94,7 +94,7 @@ func TestMain(m *testing.M) {
 	}
 	tcpListener, _ := net.Listen("tcp", fmt.Sprintf("%s:%d", h.config.HttpHost, h.config.HttpPort))
 	waitForServer.Add(1)
-	go startHttpServer(tcpListener, &waitForServer, h.router)
+	go startHTTPServer(tcpListener, &waitForServer, h.router)
 	retCode := m.Run()
 	tcpListener.Close()
 	tearDown(dao)
