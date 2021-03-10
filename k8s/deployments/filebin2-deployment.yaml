@@ -1,0 +1,85 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: filebin2
+  namespace: filebin2
+  selfLink: /apis/apps/v1/namespaces/filebin2/deployments/filebin2
+  uid: d4d0ec9e-70f2-4e6c-80bb-add812ed3833
+  resourceVersion: '241509'
+  generation: 10
+  creationTimestamp: '2021-02-26T04:05:56Z'
+  labels:
+    k8s-app: filebin2
+  annotations:
+    deployment.kubernetes.io/revision: '7'
+    description: filebin2
+spec:
+  replicas: <number of replicas>
+  selector:
+    matchLabels:
+      k8s-app: filebin2
+  template:
+    metadata:
+      name: filebin2
+      labels:
+        k8s-app: filebin2
+      annotations:
+        description: filebin2
+    spec:
+      containers:
+        - name: filebin2
+          image: <cconstab/filebin2 or your docker image>
+          command:
+            - /usr/local/bin/filebin2
+          args:
+            - '-db-host'
+            - <database hostname>
+            - '-db-name'
+            - <database name>
+            - '-db-password'
+            - <database password>
+            - '-db-port'
+            - <database port number>
+            - '-db-username'
+            - <database username>
+            - '-listen-host'
+            - 0.0.0.0
+            - '--baseurl'
+            - <baseurl>
+          env:
+            - name: S3_ENDPOINT
+              value: <DNS location of bucket>
+            - name: S3_REGION
+              value: <s3 region>
+            - name: S3_BUCKET
+              value: <bucket name>
+            - name: S3_ACCESS_KEY
+              value: <s3 access key>
+            - name: S3_SECRET_KEY
+              value: <s3 secret key>
+            - name: S3_ENCRYPTION_KEY
+              value: <s3 encryption key>
+            - name: ADMIN_USERNAME
+              value: <admin username>
+            - name: ADMIN_PASSWORD
+              value: <admin password>
+          resources:
+            requests:
+              cpu: 250m
+              memory: 25Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: Always
+          securityContext:
+            privileged: false
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      securityContext: {}
+      schedulerName: default-scheduler
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+  revisionHistoryLimit: 10
