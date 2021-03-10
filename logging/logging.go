@@ -7,15 +7,15 @@
 package logging
 
 import (
+	"bufio"
 	"fmt"
 	"net"
-	"bufio"
 	"net/http"
 	"net/url"
 	"time"
-        //"github.com/gorilla/mux"
-	"github.com/felixge/httpsnoop"
+	//"github.com/gorilla/mux"
 	"github.com/espebra/filebin2/dbl"
+	"github.com/felixge/httpsnoop"
 )
 
 // responseLogger is wrapper of http.ResponseWriter that keeps track of its HTTP
@@ -66,7 +66,7 @@ type RequestInfo struct {
 type LogFormatter func(dao *dbl.DAO, info RequestInfo)
 
 type loggingHandler struct {
-	dao    *dbl.DAO
+	dao       *dbl.DAO
 	handler   http.Handler
 	formatter LogFormatter
 }
@@ -105,13 +105,12 @@ func makeLogger(w http.ResponseWriter) (*responseLogger, http.ResponseWriter) {
 }
 
 func writeCombinedLog(dao *dbl.DAO, info RequestInfo) {
-         _, err := dao.Transaction().Register(info.Request, info.TimeStamp, info.StatusCode, info.Size)
-         if err != nil {
-               fmt.Printf("Unable to register the transaction: %s\n", err.Error())
-         }
+	_, err := dao.Transaction().Register(info.Request, info.TimeStamp, info.StatusCode, info.Size)
+	if err != nil {
+		fmt.Printf("Unable to register the transaction: %s\n", err.Error())
+	}
 }
 
 func CombinedLoggingHandler(dao *dbl.DAO, h http.Handler) http.Handler {
 	return loggingHandler{dao, h, writeCombinedLog}
 }
-
