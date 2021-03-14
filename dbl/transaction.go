@@ -6,8 +6,8 @@ import (
 	"net"
 	"net/http"
 	"net/http/httputil"
-	"net/url"
 	"path"
+	"strconv"
 	"time"
 
 	"github.com/espebra/filebin2/ds"
@@ -22,20 +22,6 @@ type TransactionDao struct {
 
 func (d *TransactionDao) Register(r *http.Request, timestamp time.Time, status int, size int) (transaction *ds.Transaction, err error) {
 	// Clean up before logging
-	inputBin := r.Header.Get("bin")
-	inputFilename := r.Header.Get("filename")
-
-	if inputBin == "" {
-		fmt.Printf("Skip logging\n")
-		// No need to log a transaction that is not related to a bin
-		return
-	}
-
-	if inputFilename == "" {
-		fmt.Printf("Skip logging\n")
-		// No need to log a transaction that is not related to a bin
-		return
-	}
 
 	//u, err := url.Parse(r.RequestURI)
 	//if err != nil {
@@ -43,8 +29,8 @@ func (d *TransactionDao) Register(r *http.Request, timestamp time.Time, status i
 	//}
 
 	tr := &ds.Transaction{}
-	tr.BinId = inputBin
-	tr.Filename = inputFilename
+	//tr.BinId = inputBin
+	//tr.Filename = inputFilename
 	tr.Method = r.Method
 	tr.Path = r.URL.String()
 	tr.IP = r.RemoteAddr
@@ -55,14 +41,28 @@ func (d *TransactionDao) Register(r *http.Request, timestamp time.Time, status i
 		tr.IP = host
 	}
 
-	reqTrace, err := httputil.DumpRequest(r, false)
+	reqHeaders, err := httputil.DumpRequest(r, false)
 	if err != nil {
 		fmt.Printf("Unable to parse request: %s\n", err.Error())
 	}
-	tr.Trace = string(reqTrace)
+	tr.Headers = string(reqHeaders)
 	tr.Timestamp = timestamp
 	tr.Status = status
-	tr.Bytes = size
+	tr.RespBytes = size
+
+	// XXX: It would be nice to count request body bytes instead
+	if r.Header.Get("content-length") != "" {
+		i, err := strconv.Atoi(r.Header.Get("content-length"))
+		if err != nil {
+			// Did not get a valid content-length header, so
+			// set the log entry to -1 bytes to show that
+			// something is wrong. The request should be
+			// aborted, but the logging should not.
+			tr.ReqBytes = -1
+		}
+		tr.ReqBytes = i
+	}
+
 	err = d.Insert(tr)
 	return tr, err
 }
@@ -81,42 +81,19 @@ func (d *TransactionDao) Register(r *http.Request, timestamp time.Time, status i
 //}
 
 func (d *TransactionDao) GetByBin(bin string) (transactions []ds.Transaction, err error) {
-	sqlStatement := "SELECT id, bin_id, filename, method, path, ip, trace, timestamp, bytes, status FROM transaction WHERE bin_id = $1 ORDER BY timestamp DESC"
+	sqlStatement := "SELECT id, bin_id, filename, operation, method, path, ip, headers, timestamp, req_bytes, resp_bytes, status FROM transaction WHERE bin_id = $1 ORDER BY timestamp DESC"
 	rows, err := d.db.Query(sqlStatement, bin)
 	if err != nil {
 		return transactions, err
 	}
 	for rows.Next() {
 		var t ds.Transaction
-		err = rows.Scan(&t.Id, &t.BinId, &t.Filename, &t.Method, &t.Path, &t.IP, &t.Trace, &t.Timestamp, &t.Bytes, &t.Status)
+		err = rows.Scan(&t.Id, &t.BinId, &t.Filename, &t.Operation, &t.Method, &t.Path, &t.IP, &t.Headers, &t.Timestamp, &t.ReqBytes, &t.RespBytes, &t.Status)
 		if err != nil {
 			return transactions, err
 		}
 		t.TimestampRelative = humanize.Time(t.Timestamp)
 
-		u, err := url.Parse(t.Path)
-		if err != nil {
-			fmt.Printf("Unable to parse path: %s: %s\n", t.Path, err.Error())
-		}
-
-		// Ignore these since they are not actually downloading or uploading file content
-		if t.Method == "HEAD" {
-			continue
-		}
-
-		if t.Method == "POST" && u.Path == "/" {
-			t.Type = "file-upload"
-		} else if t.Method == "GET" && u.Path == path.Join("/", t.BinId, t.Filename) {
-			t.Type = "file-download"
-		} else if u.Path == path.Join("/archive", t.BinId, "zip") {
-			t.Type = "zip-download"
-		} else if u.Path == path.Join("/archive", t.BinId, "tar") {
-			t.Type = "tar-download"
-		} else if t.Method == "DELETE" && u.Path == path.Join("/", t.BinId) && t.Filename == "" {
-			t.Type = "bin-delete"
-		} else if t.Method == "DELETE" && u.Path == path.Join("/", t.BinId, t.Filename) && t.Filename != "" {
-			t.Type = "file-delete"
-		}
 		transactions = append(transactions, t)
 	}
 	return transactions, nil
@@ -125,8 +102,30 @@ func (d *TransactionDao) GetByBin(bin string) (transactions []ds.Transaction, er
 func (d *TransactionDao) Insert(t *ds.Transaction) (err error) {
 	//now := time.Now().UTC().Truncate(time.Microsecond)
 	//t.FinishedAt.Time = now
-	sqlStatement := "INSERT INTO transaction (bin_id, filename, method, path, ip, trace, timestamp, status, bytes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id"
-	if err := d.db.QueryRow(sqlStatement, t.BinId, t.Filename, t.Method, t.Path, t.IP, t.Trace, t.Timestamp, t.Status, t.Bytes).Scan(&t.Id); err != nil {
+
+	// Ignore these since they are not actually downloading or uploading file content
+	if t.Method == "HEAD" {
+		return nil
+	}
+
+	if t.Method == "POST" && t.Path == path.Join("/", t.BinId, t.Filename) {
+		t.Operation = "file-upload"
+	} else if t.Method == "GET" && t.Path == path.Join("/", t.BinId, t.Filename) {
+		t.Operation = "file-download"
+	} else if t.Path == path.Join("/archive", t.BinId, "zip") {
+		t.Operation = "zip-download"
+	} else if t.Path == path.Join("/archive", t.BinId, "tar") {
+		t.Operation = "tar-download"
+	} else if t.Method == "DELETE" && t.Path == path.Join("/", t.BinId) && t.Filename == "" {
+		t.Operation = "bin-delete"
+	} else if t.Method == "DELETE" && t.Path == path.Join("/", t.BinId, t.Filename) && t.Filename != "" {
+		t.Operation = "file-delete"
+	} else if t.Method == "PUT" && t.Path == path.Join("/", t.BinId) && t.Filename == "" {
+		t.Operation = "bin-lock"
+	}
+
+	sqlStatement := "INSERT INTO transaction (bin_id, filename, operation, method, path, ip, headers, timestamp, status, req_bytes, resp_bytes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id"
+	if err := d.db.QueryRow(sqlStatement, t.BinId, t.Filename, t.Operation, t.Method, t.Path, t.IP, t.Headers, t.Timestamp, t.Status, t.ReqBytes, t.RespBytes).Scan(&t.Id); err != nil {
 		return err
 	}
 	t.TimestampRelative = humanize.Time(t.Timestamp)
@@ -136,8 +135,8 @@ func (d *TransactionDao) Insert(t *ds.Transaction) (err error) {
 func (d *TransactionDao) Update(t *ds.Transaction) (err error) {
 	var id string
 	//now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "UPDATE transaction SET trace = $1 WHERE id = $2 RETURNING id"
-	err = d.db.QueryRow(sqlStatement, t.Trace, t.Id).Scan(&id)
+	sqlStatement := "UPDATE transaction SET headers = $1 WHERE id = $2 RETURNING id"
+	err = d.db.QueryRow(sqlStatement, t.Headers, t.Id).Scan(&id)
 	if err != nil {
 		return err
 	}

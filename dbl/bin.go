@@ -20,10 +20,6 @@ type BinDao struct {
 }
 
 func (d *BinDao) ValidateInput(bin *ds.Bin) error {
-	// Generate the bin if it is not set
-	if bin.Id == "" {
-		bin.Id = d.GenerateId()
-	}
 	// Reject invalid bins
 	if invalidBin.MatchString(bin.Id) {
 		return errors.New("The bin contains invalid characters.")

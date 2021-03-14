@@ -1,4 +1,4 @@
- CREATE TABLE bin (
+CREATE TABLE bin (
 	id		VARCHAR(64) NOT NULL PRIMARY KEY,
 	readonly	BOOLEAN NOT NULL,
 	updated_at	TIMESTAMP NOT NULL,
@@ -22,7 +22,7 @@ CREATE TABLE file (
 	downloads	BIGINT NOT NULL,
 	updates 	BIGINT NOT NULL,
 	ip		VARCHAR(128) NOT NULL,
-	trace		TEXT NOT NULL,
+	headers		TEXT NOT NULL,
 	nonce		VARCHAR(128) NOT NULL,
 	updated_at	TIMESTAMP NOT NULL,
 	created_at	TIMESTAMP NOT NULL,
@@ -33,13 +33,15 @@ CREATE TABLE file (
 CREATE TABLE transaction (
 	id		BIGSERIAL NOT NULL PRIMARY KEY,
 	bin_id		VARCHAR(64) NOT NULL,
+	operation	TEXT NOT NULL,
 	timestamp	TIMESTAMP NOT NULL,
 	ip		VARCHAR(128) NOT NULL,
 	method		VARCHAR(128) NOT NULL,
 	path		TEXT NOT NULL,
 	filename	TEXT,
-	trace		TEXT NOT NULL,
+	headers		TEXT NOT NULL,
 	status		INT NOT NULL,
-	bytes		INT NOT NULL,
+	req_bytes	INT NOT NULL,
+	resp_bytes	INT NOT NULL,
 	UNIQUE(id)
 );

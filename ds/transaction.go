@@ -12,10 +12,12 @@ type Transaction struct {
 	Path              string    `json:"path"`
 	IP                string    `json:"ip"`
 	Status            int       `json:"status"`
-	Bytes             int       `json:"bytes"`
-	SizeRelative      string    `json:"size_readable"`
-	Type              string    `json:"-"`
-	Trace             string    `json:"trace"`
+	ReqBytes          int       `json:"req_bytes"`
+	ReqBytesReadable  string    `json:"request-bytes-readable"`
+	RespBytes         int       `json:"resp_bytes"`
+	RespBytesReadable string    `json:"response-bytes-readable"`
+	Operation         string    `json:"-"`
+	Headers           string    `json:"trace"`
 	Timestamp         time.Time `json:"timestamp"`
 	TimestampRelative string    `json:"timestamp_relative"`
 }

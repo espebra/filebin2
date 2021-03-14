@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -127,31 +128,26 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
-	t0 := time.Now()
-
+func (h *HTTP) UploadFileDeprecated(w http.ResponseWriter, r *http.Request) {
 	inputBin := r.Header.Get("bin")
 	inputFilename := r.Header.Get("filename")
+
+	if inputBin == "" {
+		inputBin = h.dao.Bin().GenerateId()
+	}
+
+	u := path.Join("/", inputBin, inputFilename)
+	http.Redirect(w, r, u, 307)
+}
+
+func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
+	t0 := time.Now()
+
+	params := mux.Vars(r)
+	inputBin := params["bin"]
+	inputFilename := params["filename"]
 	inputMD5 := r.Header.Get("Content-MD5")
 	inputSHA256 := r.Header.Get("Content-SHA256")
-
-	//var inputBin string
-	//var inputFilename string
-	//var inputMD5 string
-	//var inputSHA256 string
-
-	//if strings.HasPrefix(r.Header.Get("content-type"), "multipart/form-data") {
-	//	// Multipart
-	//	inputBin = r.FormValue("bin")
-	//	inputFilename = r.FormValue("filename")
-	//	inputMD5 = r.FormValue("Content-MD5")
-	//	inputSHA256 = r.FormValue("Content-SHA256")
-	//} else {
-	//	inputBin = r.Header.Get("bin")
-	//	inputFilename = r.Header.Get("filename")
-	//	inputMD5 = r.Header.Get("Content-MD5")
-	//	inputSHA256 = r.Header.Get("Content-SHA256")
-	//}
 
 	inputBytes, err := strconv.ParseUint(r.Header.Get("content-length"), 10, 64)
 	if err != nil {
@@ -171,6 +167,13 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 		// Bin does not exist, so create it here
 		bin = ds.Bin{}
 		bin.Id = inputBin
+
+		// Abort early if the bin is invalid
+		if err := h.dao.Bin().ValidateInput(&bin); err != nil {
+			h.Error(w, r, fmt.Sprintf("Input validation error on upload: %s", err.Error()), err.Error(), 623, http.StatusBadRequest)
+			return
+		}
+
 		bin.ExpiredAt = time.Now().UTC().Add(h.config.ExpirationDuration)
 		if err := h.dao.Bin().Upsert(&bin); err != nil {
 			h.Error(w, r, fmt.Sprintf("Unable to upsert bin %s: %s", inputBin, err.Error()), "Database error", 121, http.StatusInternalServerError)
@@ -300,7 +303,7 @@ func (h *HTTP) Upload(w http.ResponseWriter, r *http.Request) {
 		h.Error(w, r, "Failed to dump request", "Parse error", 135, http.StatusInternalServerError)
 		return
 	}
-	file.Trace = string(dump)
+	file.Headers = string(dump)
 
 	// Extract client IP
 	ip, err := extractIP(r.RemoteAddr)

@@ -62,12 +62,39 @@ paths:
           description: The file was not found. The bin may be expired or it did never exist in the first place.
           content:
             application/json: {}
-  /:
     post:
       tags:
         - file
       summary: Upload a file to a bin
       description: Upload a file to a new or existing bin. The bin will be created if it does not exist prior to the upload.
+      requestBody:
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+      responses:
+        '201':
+          description: Successful upload.
+          content:
+            application/json: {}
+        '400':
+          description: Invalid input, typically invalid bin or filename specified.
+          content:
+            application/json: {}
+        '403':
+          description: The storage limitation was reached.
+          content:
+            application/json: {}
+        '405':
+          description: The bin is locked and can not be written to
+          content:
+            application/json: {}
+  /:
+    post:
+      tags:
+        - file
+      summary: Upload a file to a bin (Deprecated)
+      description: This is kept to achieve backwards compatibility with a redirect.
       parameters:
         - in: header
           name: bin
@@ -82,21 +109,13 @@ paths:
           schema:
             type: string
       requestBody:
-        content: 
+        content:
           application/octet-stream:
             schema:
               type: string
       responses:
-        '201':
-          description: Successful upload
-          content:
-            application/json: {}
-        '403':
-          description: The storage limitation was reached.
-          content:
-            application/json: {}
-        '405':
-          description: The bin is locked and can not be written to
+        '307':
+          description: Redirect to the new location
           content:
             application/json: {}
   '/{bin}':

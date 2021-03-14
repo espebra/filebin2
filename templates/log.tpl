@@ -26,8 +26,9 @@
                     <th>Relative start time</th>
                     <th>IP</th>
                     <th>Operation</th>
-                    <th>Object</th>
-                    <th>Bytes</th>
+                    <th>Path</th>
+                    <th>Request bytes</th>
+                    <th>Response bytes</th>
                     <th>Status</th>
                     <th>Details</th>
                 </tr>
@@ -53,34 +54,15 @@
                         {{ .TimestampRelative }}
                     </td>
                     <td>{{ .IP }}</td>
-                    <td>{{ .Type }}</td>
+                    <td>{{ .Operation }}</td>
                     <td>
-                        {{ if eq .Type "file-upload" }}
-                            <a href="/{{ .BinId }}/{{ .Filename }}">{{ .Filename }}</a>
-                        {{ end }}
-
-                        {{ if eq .Type "file-delete" }}
-                            {{ .Filename }}
-                        {{ end }}
-
-                        {{ if eq .Type "bin-delete" }}
-                            -
-                        {{ end }}
-
-                        {{ if eq .Type "zip-download" }}
-                            <a href="/archive/{{ .BinId }}/zip">Zip archive</a>
-                        {{ end }}
-
-                        {{ if eq .Type "tar-download" }}
-                            <a href="/archive/{{ .BinId }}/tar">Tar archive</a>
-                        {{ end }}
-
-                        {{ if eq .Type "file-download" }}
-                            <a href="/{{ .BinId }}/{{ .Filename }}">{{ .Filename }}</a>
-                        {{ end }}
+                        <a href="{{ .Path }}">{{ .Path }}</a>
                     </td>
                     <td>
-                        {{ .Bytes }}
+                        {{ .ReqBytes }}
+                    </td>
+                    <td>
+                        {{ .RespBytes }}
                     </td>
                     <td>
                         {{ .Status }}
@@ -90,13 +72,13 @@
                     </td>
                 </tr>
                 <tr class="collapse" id="collapse{{ $index }}">
-                    <td colspan="5">
+                    <td colspan="9">
                         <div class="card">
                             <div class="card-header">
                                     Request headers as submitted by the client
                             </div>
                             <div class="card-body pb-0">
-                                    <code><pre>{{- .Trace -}}</pre></code>
+                                    <code><pre>{{- .Headers -}}</pre></code>
                             </div>
                         </div>
                     </td>

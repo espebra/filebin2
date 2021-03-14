@@ -19,7 +19,7 @@ type File struct {
 	Downloads         uint64       `json:"-"`
 	Updates           uint64       `json:"-"`
 	IP                string       `json:"-"`
-	Trace             string       `json:"-"`
+	Headers           string       `json:"-"`
 	Nonce             []byte       `json:"-"`
 	UpdatedAt         time.Time    `json:"updated_at"`
 	UpdatedAtRelative string       `json:"updated_at_relative"`

@@ -284,14 +284,19 @@ function FileAPI (c, t, d, f, bin, uploadURL, binURL) {
                 updateFileCount();
             };
 
-            console.log("Uploading filename " + file.name + " (" + file.size + " bytes) to bin " + bin + " at " + uploadURL);
+            filename = file.name.replace(/[^A-Za-z0-9-_=,.]/g, "_");
+
+            // XXX: Do this properly using a path join function
+            uploadURL = "/" + bin + "/" + filename;
+
+            console.log("Uploading filename " + filename + " (" + file.size + " bytes) to bin " + bin + " at " + uploadURL);
             xhr.open(
                 "POST",
                 uploadURL
             );
             xhr.setRequestHeader("Cache-Control", "no-cache");
             xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
-            xhr.setRequestHeader("Filename", file.name.replace(/[^A-Za-z0-9-_=,.]/g, "_"));
+            xhr.setRequestHeader("Filename", filename);
             xhr.setRequestHeader("Size", file.size);
             xhr.setRequestHeader("Bin", bin);
             xhr.send(file);

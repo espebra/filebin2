@@ -98,14 +98,14 @@
             <p>
                 <ul class="nav nav-pills">
                     <li class="nav-item me-3">
-                        <a class="nav-link btn btn-primary" href="" data-bs-toggle="modal" data-bs-target="#modalArchive">
+                        <a class="btn btn-primary" href="" data-bs-toggle="modal" data-bs-target="#modalArchive">
                             <i class="fas fa-fw fa-cloud-download-alt"></i> Download files
                         </a>
                     </li>
 
                     <li class="nav-item">
                         <div class="dropdown">
-                                <a class="nav-link btn btn-primary dropdown-toggle text-white" id="dropdownBinMenuButton" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <a class="btn btn-primary dropdown-toggle text-white" id="dropdownBinMenuButton" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                     More
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownBinMenuButton">
@@ -152,7 +152,7 @@
         {{ end }}
 
         {{ if .Files }}
-            <table class="table">
+            <table class="table table-hover">
                 <thead>
                     <tr>
                         <th scope="col">Filename</th>
@@ -228,10 +228,10 @@
 
                         <ul class="nav nav-pills">
                             <li class="nav-item me-3">
-                                <a class="nav-link btn-primary" href="/archive/{{ $.Bin.Id }}/tar"><i class="fas fa-fw fa-file-archive"></i> Tar</a>
+                                <a class="btn btn-primary" href="/archive/{{ $.Bin.Id }}/tar"><i class="fas fa-fw fa-file-archive"></i> Tar</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link btn-primary" href="/archive/{{ $.Bin.Id }}/zip"><i class="fas fa-fw fa-file-archive"></i> Zip</a>
+                                <a class="btn btn-primary" href="/archive/{{ $.Bin.Id }}/zip"><i class="fas fa-fw fa-file-archive"></i> Zip</a>
                             </li>
                         </ul>
                     </div>

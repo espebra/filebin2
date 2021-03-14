@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -32,13 +33,11 @@ func httpRequest(tc TestCase) (statuscode int, body string, err error) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if tc.Method != "POST" {
-		if tc.Bin != "" && tc.Filename == "" {
-			u.Path = path.Join(u.Path, tc.Bin)
-		}
-		if tc.Bin != "" && tc.Filename != "" {
-			u.Path = path.Join(tc.Bin, tc.Filename)
-		}
+	if tc.Bin != "" {
+		u.Path = path.Join(u.Path, tc.Bin)
+	}
+	if tc.Filename != "" {
+		u.Path = path.Join(u.Path, tc.Filename)
 	}
 
 	var req *http.Request
@@ -49,12 +48,6 @@ func httpRequest(tc TestCase) (statuscode int, body string, err error) {
 	}
 	if err != nil {
 		return -1, "", err
-	}
-	if tc.Filename != "" {
-		req.Header.Set("Filename", tc.Filename)
-	}
-	if tc.Bin != "" {
-		req.Header.Set("Bin", tc.Bin)
 	}
 	if tc.SHA256 != "" {
 		req.Header.Set("Content-SHA256", tc.SHA256)
@@ -83,17 +76,20 @@ func runTests(tcs []TestCase, t *testing.T) {
 		if err != nil {
 			t.Errorf("Test case %d: Did not expect http request to fail: %s\n", i, err.Error())
 			t.Errorf("%s\n", tc.String())
+			os.Exit(1)
 		}
 		if tc.StatusCode != statusCode {
 			t.Errorf("Test case %d\n", i)
 			t.Errorf("  Expected response code %d, got %d\n", tc.StatusCode, statusCode)
 			t.Errorf("  Response body: %s\n", body)
 			t.Errorf("  %s\n", tc.String())
+			os.Exit(1)
 		}
 		if tc.DownloadContent != "" {
 			if tc.DownloadContent != body {
 				t.Errorf("Test case %d: Expected body %s, got %s\n", i, tc.DownloadContent, body)
 				t.Errorf("%s\n", tc.String())
+				os.Exit(1)
 			}
 		}
 	}
@@ -123,7 +119,7 @@ func TestUploadFile(t *testing.T) {
 			Bin:           "mytestbin",
 			Filename:      "",
 			UploadContent: "some content",
-			StatusCode:    400,
+			StatusCode:    405,
 		}, {
 			Description:   "No content should fail",
 			Method:        "POST",
@@ -455,7 +451,7 @@ func TestBinInputValidation(t *testing.T) {
 			Bin:           "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
 			Filename:      "a",
 			UploadContent: "content a",
-			StatusCode:    500,
+			StatusCode:    400,
 		},
 		{
 			Description:   "Too short bin",
@@ -463,7 +459,31 @@ func TestBinInputValidation(t *testing.T) {
 			Bin:           "yyyy",
 			Filename:      "a",
 			UploadContent: "content a",
-			StatusCode:    500,
+			StatusCode:    400,
+		},
+		{
+			Description:   "Bin with invalid characters",
+			Method:        "POST",
+			Bin:           "asdf$%&=^*",
+			Filename:      "a",
+			UploadContent: "content a",
+			StatusCode:    404,
+		},
+		{
+			Description:   "Bin with reserved name (/admin/)",
+			Method:        "POST",
+			Bin:           "admin",
+			Filename:      "a",
+			UploadContent: "content a",
+			StatusCode:    400,
+		},
+		{
+			Description:   "Bin with reserved name (/archive/)",
+			Method:        "POST",
+			Bin:           "archive",
+			Filename:      "a",
+			UploadContent: "content a",
+			StatusCode:    400,
 		},
 	}
 	runTests(tcs, t)

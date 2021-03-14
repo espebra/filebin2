@@ -27,7 +27,7 @@ func TestGetByBin(t *testing.T) {
 	tr.Method = "GET"
 	tr.Path = "/foo/bar"
 	tr.IP = "1.2.3.4"
-	tr.Trace = "trace"
+	tr.Headers = "headers"
 	err = dao.Transaction().Insert(tr)
 	if err != nil {
 		t.Error(err)
@@ -36,18 +36,18 @@ func TestGetByBin(t *testing.T) {
 		t.Errorf("Was expecting bin id != 0, got %d.\n", tr.Id)
 	}
 
-	if tr.Trace != "trace" {
-		t.Errorf("Trace was unexpected: %s\n", tr.Trace)
+	if tr.Headers != "headers" {
+		t.Errorf("Headers was unexpected: %s\n", tr.Headers)
 	}
 
-	tr.Trace = "trace2"
+	tr.Headers = "headers2"
 	err = dao.Transaction().Update(tr)
 	if err != nil {
 		t.Error(err)
 	}
 
-	if tr.Trace != "trace2" {
-		t.Errorf("Trace was unexpected: %s\n", tr.Trace)
+	if tr.Headers != "headers2" {
+		t.Errorf("Headers was unexpected: %s\n", tr.Headers)
 	}
 
 	trs, err := dao.Transaction().GetByBin(tr.BinId)

@@ -103,8 +103,8 @@ func TestGetFileById(t *testing.T) {
 	if dbFile.IP != "N/A" {
 		t.Errorf("Was expecting default value for IP, got %s instead.", dbFile.IP)
 	}
-	if dbFile.Trace != "N/A" {
-		t.Errorf("Was expecting default value for trace, got %s instead.", dbFile.Trace)
+	if dbFile.Headers != "N/A" {
+		t.Errorf("Was expecting default value for headers, got %s instead.", dbFile.Headers)
 	}
 
 	dbBin, found, err := dao.Bin().GetByID(dbFile.Bin)
@@ -144,7 +144,7 @@ func TestGetFileByName(t *testing.T) {
 	file.Bytes = 1
 	file.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	file.IP = "127.0.0.1"
-	file.Trace = "some trace"
+	file.Headers = "some headers"
 	err = dao.File().Insert(file)
 	if err != nil {
 		t.Error(err)
@@ -174,8 +174,8 @@ func TestGetFileByName(t *testing.T) {
 	if dbFile.IP != "127.0.0.1" {
 		t.Errorf("Was expecting IP 127.0.0.1, got %s instead.", dbFile.IP)
 	}
-	if dbFile.Trace != "some trace" {
-		t.Errorf("Was expecting trace 'some trace', got %s instead.", dbFile.Trace)
+	if dbFile.Headers != "some headers" {
+		t.Errorf("Was expecting headers 'some headers', got %s instead.", dbFile.Headers)
 	}
 }
 
@@ -346,7 +346,7 @@ func TestUpdateFile(t *testing.T) {
 	file.Bytes = 1
 	file.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	file.IP = "127.0.0.1"
-	file.Trace = "first trace"
+	file.Headers = "first headers"
 	err = dao.File().Insert(file)
 	if err != nil {
 		t.Error(err)
@@ -360,7 +360,7 @@ func TestUpdateFile(t *testing.T) {
 	dbFile.Bytes = 2
 	dbFile.SHA256 = "ff0350c8a7fea1087c5300e9ae922a7ab453648b1c156d5c58437d9f4565244b"
 	dbFile.IP = "127.0.0.2"
-	dbFile.Trace = "second trace"
+	dbFile.Headers = "second headers"
 	err = dao.File().Update(&dbFile)
 	if err != nil {
 		t.Error(err)
@@ -379,8 +379,8 @@ func TestUpdateFile(t *testing.T) {
 	if updatedFile.IP != "127.0.0.2" {
 		t.Errorf("Was expecting the updated IP 127.0.0.2, got %s instead.", updatedFile.IP)
 	}
-	if updatedFile.Trace != "second trace" {
-		t.Errorf("Was expecting the updated trace 'second trace', got %s instead.", updatedFile.Trace)
+	if updatedFile.Headers != "second headers" {
+		t.Errorf("Was expecting the updated headers 'second headers', got %s instead.", updatedFile.Headers)
 	}
 }
 
