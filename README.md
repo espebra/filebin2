@@ -36,4 +36,6 @@ This will make:
 
 #### `--manual-approval` (default: not set)
 
-If this argument is set, then an administrator needs to approve new bins before files and archives can be downloaded. Bin and file operations except downloading are accepted while a bin is pending approval. This is a mechanism added to limit abuse.
+If this argument is set, then an administrator needs to manually approve new bins before files and archives can be downloaded. Bin and file operations except downloading are accepted while a bin is pending approval. This is a mechanism added to limit abuse.
+
+The API request used to approve a bin is an authenticated `PUT /admin/approve/{bin}`
