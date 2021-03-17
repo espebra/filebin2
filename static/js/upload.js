@@ -385,3 +385,38 @@ function lockBin (bin, messageBoxID) {
 
     xhr.send();
 };
+
+function approveBin (bin, messageBoxID) {
+    console.log("Approve bin: " + bin);
+    var xhr = new XMLHttpRequest();
+    var box = document.getElementById(messageBoxID);
+
+    box.textContent = "Approve operation in progress ..."
+    box.className = "alert alert-dark";
+
+    xhr.onload = function(e) {
+        if (xhr.status == 200 && xhr.readyState == 4) {
+            console.log("Approved successfully");
+            box.textContent = "Approved successfully.";
+            box.className = "alert alert-success";
+        } else if (xhr.status  == 409 && xhr.readyState == 4) {
+            box.textContent = "The bin is already approved.";
+            box.className = "alert alert-success";
+        } else {
+            console.log("Failed to approve");
+            box.textContent = "Error " + xhr.status + ". Unable to verify the operation.";
+            box.className = "alert alert-danger";
+        }
+    };
+
+    xhr.onerror = function (e) {
+        console.log("onerror: status: " + xhr.status + ", readystate: " + xhr.readyState);
+    };
+
+    xhr.open(
+        "PUT",
+        "/admin/approve/" + bin
+    );
+
+    xhr.send();
+};

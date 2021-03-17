@@ -3,7 +3,6 @@ package dbl
 import (
 	"database/sql"
 	"errors"
-	//"fmt"
 	"github.com/dustin/go-humanize"
 	"github.com/espebra/filebin2/ds"
 	"math/rand"
@@ -163,14 +162,20 @@ func (d *BinDao) Insert(bin *ds.Bin) (err error) {
 	updates := uint64(0)
 	readonly := false
 	bin.ExpiredAt = bin.ExpiredAt.UTC().Truncate(time.Microsecond)
-	sqlStatement := "INSERT INTO bin (id, readonly, downloads, updates, updated_at, created_at, expired_at) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id"
-	if err := d.db.QueryRow(sqlStatement, bin.Id, readonly, downloads, updates, now, now, bin.ExpiredAt).Scan(&bin.Id); err != nil {
+	if bin.IsApproved() {
+		bin.ApprovedAt.Time = bin.ApprovedAt.Time.UTC().Truncate(time.Microsecond)
+	}
+	sqlStatement := "INSERT INTO bin (id, readonly, downloads, updates, updated_at, created_at, approved_at, expired_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id"
+	if err := d.db.QueryRow(sqlStatement, bin.Id, readonly, downloads, updates, now, now, bin.ApprovedAt, bin.ExpiredAt).Scan(&bin.Id); err != nil {
 		return err
 	}
 	bin.UpdatedAt = now
 	bin.CreatedAt = now
 	bin.UpdatedAtRelative = humanize.Time(bin.UpdatedAt)
 	bin.CreatedAtRelative = humanize.Time(bin.CreatedAt)
+	if bin.IsApproved() {
+		bin.ApprovedAtRelative = humanize.Time(bin.ApprovedAt.Time)
+	}
 	bin.ExpiredAtRelative = humanize.Time(bin.ExpiredAt)
 	if bin.IsDeleted() {
 		bin.DeletedAtRelative = humanize.Time(bin.DeletedAt.Time)
@@ -190,6 +195,9 @@ func (d *BinDao) Upsert(bin *ds.Bin) (err error) {
 	updates := uint64(0)
 	readonly := false
 	bin.ExpiredAt = bin.ExpiredAt.UTC().Truncate(time.Microsecond)
+	if bin.IsApproved() {
+		bin.ApprovedAt.Time = bin.ApprovedAt.Time.UTC().Truncate(time.Microsecond)
+	}
 	sqlStatement := "INSERT INTO bin (id, readonly, downloads, updates, updated_at, created_at, approved_at, expired_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id"
 	err = d.db.QueryRow(sqlStatement, bin.Id, readonly, downloads, updates, now, now, bin.ApprovedAt, bin.ExpiredAt).Scan(&bin.Id)
 	if err == nil {

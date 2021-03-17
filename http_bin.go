@@ -289,3 +289,41 @@ func (h *HTTP) LockBin(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "Bin locked successfully.", http.StatusOK)
 	return
 }
+
+func (h *HTTP) ApproveBin(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	inputBin := params["bin"]
+
+	bin, found, err := h.dao.Bin().GetByID(inputBin)
+	if err != nil {
+		fmt.Printf("Unable to GetByID(%s): %s\n", inputBin, err.Error())
+		http.Error(w, "Errno 205", http.StatusInternalServerError)
+		return
+	}
+	if found == false {
+		http.Error(w, "Bin does not exist", http.StatusNotFound)
+		return
+	}
+
+	if bin.IsReadable() == false {
+		http.Error(w, "This bin is no longer available", http.StatusNotFound)
+		return
+	}
+
+	// No need to set the bin to approved twice
+	if bin.IsApproved() {
+		http.Error(w, "This bin is already approved", http.StatusOK)
+		return
+	}
+
+	// Set bin as approved with the current timestamp
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	bin.ApprovedAt.Scan(now)
+	if err := h.dao.Bin().Update(&bin); err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	http.Error(w, "Bin approved successfully.", http.StatusOK)
+	return
+}

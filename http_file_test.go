@@ -1,12 +1,12 @@
 package main
 
 import (
-	"os"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"strings"
 	"testing"

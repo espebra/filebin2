@@ -12,7 +12,7 @@
         <link rel="stylesheet" href="/static/css/custom.css"/>
         <title>Filebin | {{ .Bin.Id }}</title>
         <script src="/static/js/upload.js"></script>
-	{{ if eq .Bin.Readonly false }}
+        {{ if eq .Bin.Readonly false }}
         <script>
             window.onload = function () {
                 if (typeof FileReader == "undefined") alert ("Your browser \
@@ -43,14 +43,14 @@
                 }
             }
         </script>
-	{{ end }}
+        {{ end }}
     </head>
     <body class="container-xl">
 
         {{template "topbar" .}}
 
         <h1>Filebin</h1>
-	{{ if eq .Bin.Readonly false }}
+        {{ if eq .Bin.Readonly false }}
             <!-- Drop zone -->
             <span id="fileDrop">Drop files to upload</span>
 
@@ -59,34 +59,34 @@
 
             <!-- Upload status -->
             <span id="fileCount"></span>
-	{{ end }}
+        {{ end }}
 
         {{ $numfiles := .Files | len }}
         
         <p class="lead">
-	    {{ if isAvailable .Bin }}
-                {{ if eq $numfiles 0 }}
-	            {{ if eq .Bin.Readonly false }}
-                        <p>This bin is empty. To upload files, click <em>Upload files</em> below or drag-and-drop the files into this browser window.</p>
+        {{ if isAvailable .Bin }}
+            {{ if eq $numfiles 0 }}
+                {{ if eq .Bin.Readonly false }}
+                    <p>This bin is empty. To upload files, click <em>Upload files</em> below or drag-and-drop the files into this browser window.</p>
 
-                        <p class="fileUpload btn btn-primary">
-                            <span><i class="fa fa-cloud-upload"></i> Upload files</span>
-                            <input type="file" class="upload" id="fileField" multiple>
-                        </p>
-                    {{ else }}
-                        <p>This bin is empty. Files can not be uploaded to it since it is locked.</p>
-                    {{ end }}
+                    <p class="fileUpload btn btn-primary">
+                        <span><i class="fa fa-cloud-upload"></i> Upload files</span>
+                        <input type="file" class="upload" id="fileField" multiple>
+                    </p>
                 {{ else }}
-                    The bin <a class="link-primary link-custom" href="/{{ .Bin.Id }}">{{ .Bin.Id }}</a> was created {{ .Bin.CreatedAtRelative }}
+                    <p>This bin is empty. Files can not be uploaded to it since it is locked.</p>
+                {{ end }}
+            {{ else }}
+                The bin <a class="link-primary link-custom" href="/{{ .Bin.Id }}">{{ .Bin.Id }}</a> was created {{ .Bin.CreatedAtRelative }}
 
-                    {{- if ne .Bin.CreatedAtRelative .Bin.UpdatedAtRelative -}}
+                {{- if ne .Bin.CreatedAtRelative .Bin.UpdatedAtRelative -}}
                     , updated {{ .Bin.UpdatedAtRelative }}
-                    {{ end }}
+                {{ end }}
 
-                    and it expires {{ .Bin.ExpiredAtRelative }}.
-                    It contains {{ .Files | len }}
+                and it expires {{ .Bin.ExpiredAtRelative }}.
+                It contains {{ .Files | len }}
 
-                    {{ if eq $numfiles 1 }}file at {{ .Bin.BytesReadable }}.{{ end }}
+                {{ if eq $numfiles 1 }}file at {{ .Bin.BytesReadable }}.{{ end }}
                     {{ if gt $numfiles 1 }}files at {{ .Bin.BytesReadable }} in total.{{ end }}
                 {{ end }}
             {{ else }}
@@ -175,7 +175,11 @@
                                         <i class="far fa-fw fa-file"></i>
                                     {{ end }}
                                 {{ end }}
-                                <a class="link-primary link-custom" href="{{ .URL }}">{{ .Filename }}</a>
+                    {{ if isApproved $.Bin }}
+                                    <a class="link-primary link-custom" href="{{ .URL }}">{{ .Filename }}</a>
+                                {{ else }}
+                                    {{ .Filename }}
+                                {{ end }}
                             </td>
                             <td>
                                 {{ .Mime }}
@@ -192,9 +196,11 @@
                                         More
                                     </a>
                                     <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownFileMenuButton">
-                                        <a class="dropdown-item" href="{{ .URL }}">
-                                            <i class="fas fa-fw fa-cloud-download-alt text-primary"></i> Download file
-                                        </a>
+                            {{ if isApproved $.Bin }}
+                                            <a class="dropdown-item" href="{{ .URL }}">
+                                                <i class="fas fa-fw fa-cloud-download-alt text-primary"></i> Download file
+                                            </a>
+                            {{ end }}
                                         <a class="dropdown-item" href="" data-bs-toggle="modal" data-bs-target="#modalFileProperties-{{ $index }}">
                                             <i class="fas fa-fw fa-info-circle text-primary"></i> File properties
                                         </a>
@@ -224,16 +230,20 @@
                             The files in this bin can be downloaded as a single file archive. The default filename of the archive is <code>{{ .Bin.Id }}</code> and the size is {{ .Bin.BytesReadable }} uncompressed.
                         </p>
 
-                        <p class="lead">Select archive format to download:</p>
+                        {{ if isApproved $.Bin }}
+                            <p class="lead">Select archive format to download:</p>
 
-                        <ul class="nav nav-pills">
-                            <li class="nav-item me-3">
-                                <a class="btn btn-primary" href="/archive/{{ $.Bin.Id }}/tar"><i class="fas fa-fw fa-file-archive"></i> Tar</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="btn btn-primary" href="/archive/{{ $.Bin.Id }}/zip"><i class="fas fa-fw fa-file-archive"></i> Zip</a>
-                            </li>
-                        </ul>
+                            <ul class="nav nav-pills">
+                                <li class="nav-item me-3">
+                                    <a class="btn btn-primary" href="/archive/{{ $.Bin.Id }}/tar"><i class="fas fa-fw fa-file-archive"></i> Tar</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="btn btn-primary" href="/archive/{{ $.Bin.Id }}/zip"><i class="fas fa-fw fa-file-archive"></i> Zip</a>
+                                </li>
+                            </ul>
+                        {{ else }}
+                            <p>Downloads are not allowed as the bin is pending approval.</p>
+                        {{ end }}
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -302,16 +312,26 @@
                             <dt class="col-sm-3">Status</dt>
                             <dd class="col-sm-9">
                                 {{ if $.Bin.Readonly }}
-	        			Locked (Read only)
-	        		{{ else }}
-	        			Unlocked
-	        		{{ end }}
+                        Locked, which means that new files can not be uploaded and existing files can not be updated.
+                    {{ else }}
+                        Unlocked, which means that files can be uploaded and updated.
+                    {{ end }}
                             </dd>
 
                             <dt class="col-sm-3">Created</dt>
                             <dd class="col-sm-9">
                                 {{ $.Bin.CreatedAtRelative }}
                                 ({{ $.Bin.CreatedAt.Format "2006-01-02 15:04:05 UTC" }})
+                            </dd>
+
+                            <dt class="col-sm-3">Approved</dt>
+                            <dd class="col-sm-9">
+                                {{ if isApproved $.Bin }}
+                                    {{ $.Bin.ApprovedAtRelative }}
+                                    ({{ $.Bin.ApprovedAt.Time.Format "2006-01-02 15:04:05 UTC" }})
+                    {{ else }}
+                        Pending approval, which means that file downloads are not yet allowed.
+                    {{ end }}
                             </dd>
 
                             <dt class="col-sm-3">Last updated</dt>
@@ -370,7 +390,7 @@
                     </div>
                     <div class="modal-body">
                         <p>The bin is currently unlocked, which means that new files can be added to it and existing files can be updated. If the bin is locked, the bin will become read only and no more file uploads will be allowed. Note that a locked bin can still be deleted.</p>
-	        	<p>This action is not reversible.</p>
+                <p>This action is not reversible.</p>
 
                         <p class="lead">Do you want to lock bin <a class="link-primary" href="/{{ $.Bin.Id }}">{{ $.Bin.Id }}</a>?</p>
 
@@ -401,7 +421,13 @@
                             <p>You are free to delete any file in this bin. However you are encouraged to delete the files that you have uploaded only, or files with obvious malicious or illegal content.</p>
                             <p>This action is not reversible.</p>
 
-                            <p class="lead">Delete the file <a class="link-primary" href="/{{ $.Bin.Id }}/{{ .Filename }}">{{ .Filename }}</a>?</p>
+                            <p class="lead">Delete the file
+                            {{ if isApproved $.Bin }}
+                                    <a class="link-primary" href="/{{ $.Bin.Id }}/{{ .Filename }}">{{ .Filename }}</a>
+                            {{ else }}
+                                    {{ .Filename }}
+                            {{ end }}
+                            ?</p>
 
                             <div id="deleteStatus-{{ $index }}"></div>
                         </div>
@@ -430,9 +456,11 @@
                             <ul class="row">
                                 <dt class="col-sm-3">Filename</dt>
                                 <dd class="col-sm-9">
-                                    <a class="link-primary link-custom" href="{{ .URL }}">
+                                    {{ if isApproved $.Bin }}
+                                        <a class="link-primary link-custom" href="{{ .URL }}">{{ .Filename }}</a>
+                                    {{ else }}
                                         {{ .Filename }}
-                                    </a>
+                                    {{ end }}
                                 </dd>
 
                                 <dt class="col-sm-3">Bin</dt>

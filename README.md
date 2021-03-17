@@ -29,3 +29,11 @@ This will make:
 * MinIO available on [http://localhost:9000/](http://localhost:9000/).
 * PostgreSQL available on `localhost:5432`.
 
+
+## Usage
+
+### Command line arguments
+
+#### `--manual-approval` (default: not set)
+
+If this argument is set, then an administrator needs to approve new bins before files and archives can be downloaded. Bin and file operations except downloading are accepted while a bin is pending approval. This is a mechanism added to limit abuse.

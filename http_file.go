@@ -45,6 +45,15 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// If approvals are required, then
+	if h.config.RequireApproval {
+		// Reject downloads from bins that are not approved
+		if bin.IsApproved() == false {
+			h.Error(w, r, "", "This bin requires approval before files can be downloaded.", 521, http.StatusForbidden)
+			return
+		}
+	}
+
 	file, found, err := h.dao.File().GetByName(inputBin, inputFilename)
 	if err != nil {
 		h.Error(w, r, fmt.Sprintf("Failed to select file by bin %s and filename %s: %s", inputBin, inputFilename, err.Error()), "Database error", 115, http.StatusInternalServerError)
@@ -167,6 +176,12 @@ func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
 		// Bin does not exist, so create it here
 		bin = ds.Bin{}
 		bin.Id = inputBin
+
+		// Since manual approval is not needed, then just set the approval time at the time of the upload
+		if h.config.RequireApproval == false {
+			now := time.Now().UTC().Truncate(time.Microsecond)
+			bin.ApprovedAt.Scan(now)
+		}
 
 		// Abort early if the bin is invalid
 		if err := h.dao.Bin().ValidateInput(&bin); err != nil {
