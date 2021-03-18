@@ -89,6 +89,11 @@
                 {{ if eq $numfiles 1 }}file at {{ .Bin.BytesReadable }}.{{ end }}
                     {{ if gt $numfiles 1 }}files at {{ .Bin.BytesReadable }} in total.{{ end }}
                 {{ end }}
+
+                {{ if isApproved $.Bin }}
+                {{ else }}
+                    It is pending approval <a href="" data-bs-toggle="modal" data-bs-target="#modalApprovalInfo"><i class="far fa-question-circle"></i></a>.
+                {{ end }}
             {{ else }}
                 <p>This bin is no longer available.</p>
             {{ end }}
@@ -512,6 +517,26 @@
             </div>
         {{ end }}
         <!-- File properties modal end -->
+
+        <!-- Approval Info Modal start -->
+        <div class="modal fade" id="modalApprovalInfo" tabindex="-1" role="dialog" aria-labelledby="modalApprovalInfoTitle" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header alert-secondary">
+                        <h5 class="modal-title" id="modelApprovalInfoTitle">Pending approval</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>This bin is pending administrator approval.</p>
+                        <p>While the bin is pending approval, files can be added, updated and deleted as normal and the bin can also be locked. File downloads and archive downloads, however, will be rejected until the bin is approved.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Approval Info Modal stop -->
 
         {{ template "footer" . }}
         <script src="/static/js/popper.min.js"></script>
