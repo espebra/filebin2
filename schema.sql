@@ -35,6 +35,7 @@ CREATE TABLE transaction (
 	bin_id		VARCHAR(64) NOT NULL,
 	operation	TEXT NOT NULL,
 	timestamp	TIMESTAMP NOT NULL,
+	completed	TIMESTAMP NOT NULL,
 	ip		VARCHAR(128) NOT NULL,
 	method		VARCHAR(128) NOT NULL,
 	path		TEXT NOT NULL,

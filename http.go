@@ -1,7 +1,6 @@
 package main
 
 import (
-	//"encoding/json"
 	"database/sql"
 	"fmt"
 	"html/template"
@@ -12,12 +11,11 @@ import (
 	"path"
 	"strings"
 	"time"
-	//"encoding/json"
 	"github.com/GeertJohan/go.rice"
 	"github.com/espebra/filebin2/dbl"
 	"github.com/espebra/filebin2/ds"
-	"github.com/espebra/filebin2/logging"
 	"github.com/espebra/filebin2/s3"
+	"github.com/felixge/httpsnoop"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
@@ -47,21 +45,43 @@ func (h *HTTP) Init() (err error) {
 	h.router.HandleFunc("/privacy", h.Privacy).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/terms", h.Terms).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/log/{bin:[A-Za-z0-9_-]+}", h.Auth(h.ViewAdminLog)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/admin/approve/{bin:[A-Za-z0-9_-]+}", h.Auth(h.ApproveBin)).Methods("PUT")
+	h.router.HandleFunc("/admin/approve/{bin:[A-Za-z0-9_-]+}", h.Log(h.Auth(h.ApproveBin))).Methods("PUT")
 	h.router.HandleFunc("/admin", h.Auth(h.ViewAdminDashboard)).Methods(http.MethodHead, http.MethodGet)
 	//h.router.HandleFunc("/admin/cleanup", h.Auth(h.ViewAdminCleanup)).Methods(http.MethodHead, http.MethodGet)
 	h.router.Handle("/static/{path:.*}", http.StripPrefix("/static/", http.FileServer(h.staticBox.HTTPBox()))).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/archive/{bin:[A-Za-z0-9_-]+}/{format:[a-z]+}", h.Archive).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/archive/{bin:[A-Za-z0-9_-]+}/{format:[a-z]+}", h.Log(h.Archive)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/qr/{bin:[A-Za-z0-9_-]+}", h.BinQR).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.ViewBin).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.DeleteBin).Methods(http.MethodDelete)
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.LockBin).Methods("PUT")
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.GetFile).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.DeleteFile).Methods(http.MethodDelete)
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.UploadFile).Methods(http.MethodPost)
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.Log(h.ViewBin)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.Log(h.DeleteBin)).Methods(http.MethodDelete)
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.Log(h.LockBin)).Methods("PUT")
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.Log(h.GetFile)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.Log(h.DeleteFile)).Methods(http.MethodDelete)
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.Log(h.UploadFile)).Methods(http.MethodPost)
 
 	h.config.ExpirationDuration = time.Second * time.Duration(h.config.Expiration)
 	return err
+}
+
+func (h *HTTP) Log(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t0 := time.Now()
+
+		params := mux.Vars(r)
+		bin := params["bin"]
+		filename := params["filename"]
+
+		metrics := httpsnoop.CaptureMetricsFn(w, func(w http.ResponseWriter) {
+			fn(w, r)
+		})
+
+		completed := t0.Add(metrics.Duration)
+
+		fmt.Printf("Metrics: %v\n", metrics)
+		_, err := h.dao.Transaction().Register(r, bin, filename, t0, completed, metrics.Code, metrics.Written)
+		if err != nil {
+			fmt.Printf("Unable to register the transaction: %s\n", err.Error())
+		}
+	})
 }
 
 func (h *HTTP) Auth(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
@@ -111,9 +131,6 @@ func (h *HTTP) Run() {
 	if h.config.HttpProxyHeaders {
 		handler = handlers.ProxyHeaders(handler)
 	}
-
-	// Transaction logging
-	handler = logging.CombinedLoggingHandler(h.dao, handler)
 
 	// Set up the server
 	srv := &http.Server{

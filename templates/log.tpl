@@ -10,7 +10,7 @@
         <link rel="stylesheet" href="/static/css/custom.css"/>
         <title>Filebin | Log</title>
     </head>
-    <body class="container-xl">
+    <body class="container-fluid">
 
         {{template "adminbar" .}}
 
@@ -25,11 +25,10 @@
                     <th>Timestamp</th>
                     <th>Relative start time</th>
                     <th>IP</th>
-                    <th>Operation</th>
-                    <th>Path</th>
-                    <th>Request bytes</th>
+                    <th>Request</th>
                     <th>Response bytes</th>
                     <th>Status</th>
+                    <th>Duration</th>
                     <th>Details</th>
                 </tr>
             </thead>
@@ -46,6 +45,9 @@
                         {{ if eq .Method "DELETE" }}
                                 <i class="fas fa-trash-alt text-danger"></i>
                         {{ end }}
+                        {{ if eq .Method "PUT" }}
+                                <i class="far life-ring text-warning"></i>
+                        {{ end }}
                     </td>
                     <td>
                         {{ .Timestamp.Format "2006-01-02 15:04:05 UTC" }}
@@ -54,18 +56,17 @@
                         {{ .TimestampRelative }}
                     </td>
                     <td>{{ .IP }}</td>
-                    <td>{{ .Operation }}</td>
                     <td>
-                        <a href="{{ .Path }}">{{ .Path }}</a>
+                        <code>{{ .Method }} <a href="{{ .Path }}">{{ .Path }}</a></code>
                     </td>
                     <td>
-                        {{ .ReqBytes }}
-                    </td>
-                    <td>
-                        {{ .RespBytes }}
+                        {{ .RespBytesReadable }}
                     </td>
                     <td>
                         {{ .Status }}
+                    </td>
+                    <td>
+                        {{ .Duration }}
                     </td>
                     <td>
                         <a href="#" data-bs-toggle="collapse" data-bs-target="#collapse{{ $index }}" aria-expanded="false" aria-controls="collapse{{ $index }}"><i class="far fa-window-maximize"></i></a>

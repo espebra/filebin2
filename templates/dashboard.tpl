@@ -12,7 +12,7 @@
         <script src="/static/js/upload.js"></script>
         <title>Filebin | Dashboard</title>
     </head>
-    <body class="container-xl">
+    <body class="container-fluid">
 
         {{template "adminbar" .}}
 
