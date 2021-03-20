@@ -206,6 +206,9 @@ func (h *HTTP) ParseTemplates() *template.Template {
 			}
 			return false
 		},
+		"durationInSeconds": func(dur time.Duration) string {
+			return fmt.Sprintf("%.3f", dur.Seconds())
+		},
 		"join": func(s ...string) string {
 			return path.Join(s...)
 		},

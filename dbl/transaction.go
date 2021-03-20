@@ -26,7 +26,7 @@ func (d *TransactionDao) Register(r *http.Request, bin string, filename string, 
 	tr.BinId = bin
 	tr.Filename = filename
 	tr.Method = r.Method
-	tr.Path = r.URL.String()
+	tr.Path = r.URL.Path
 	tr.IP = r.RemoteAddr
 
 	// Remove the port if it's part of RemoteAddr
@@ -37,8 +37,9 @@ func (d *TransactionDao) Register(r *http.Request, bin string, filename string, 
 
 	reqHeaders, err := httputil.DumpRequest(r, false)
 	if err != nil {
-		fmt.Printf("Unable to parse request: %s\n", err.Error())
+		fmt.Printf("Unable to dump request: %s\n", err.Error())
 	}
+
 	tr.Headers = string(reqHeaders)
 	tr.Timestamp = timestamp
 	tr.CompletedAt = completed
