@@ -16,13 +16,12 @@
 
         <h1>Log</h1>
 
-	<p class="lead">Transactions logged for bin <a href="/{{ .Bin.Id }}">{{ .Bin.Id }}</a>.</p>
-
         <table class="table table-sm">
             <thead>
                 <tr>
                     <th>Timestamp</th>
                     <th>Source IP</th>
+                    <th>Bin</th>
                     <th>Request</th>
                     <th>Response bytes</th>
                     <th>Code</th>
@@ -50,7 +49,8 @@
                             {{ .Timestamp.Format "2006-01-02 15:04:05 UTC" }}
                         </div>
                     </td>
-                    <td>{{ .IP }}</td>
+                    <td><a href="/admin/log/{{ .IP }}">{{ .IP }}</a></td>
+                    <td><a href="/admin/log/{{ .BinId }}">{{ .BinId }}</a></td>
                     <td>
                         <code>{{ .Method }} <a href="{{ .Path }}">{{ .Path }}</a></code>
                     </td>

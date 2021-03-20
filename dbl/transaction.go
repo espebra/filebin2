@@ -76,6 +76,28 @@ func (d *TransactionDao) Register(r *http.Request, bin string, filename string, 
 //	return nil
 //}
 
+func (d *TransactionDao) GetByIP(ip string) (transactions []ds.Transaction, err error) {
+	sqlStatement := "SELECT id, bin_id, filename, operation, method, path, ip, headers, timestamp, req_bytes, resp_bytes, status, completed FROM transaction WHERE ip = $1 ORDER BY timestamp DESC"
+	rows, err := d.db.Query(sqlStatement, ip)
+	if err != nil {
+		return transactions, err
+	}
+	for rows.Next() {
+		var t ds.Transaction
+		err = rows.Scan(&t.Id, &t.BinId, &t.Filename, &t.Operation, &t.Method, &t.Path, &t.IP, &t.Headers, &t.Timestamp, &t.ReqBytes, &t.RespBytes, &t.Status, &t.CompletedAt)
+		if err != nil {
+			return transactions, err
+		}
+		t.TimestampRelative = humanize.Time(t.Timestamp)
+		t.ReqBytesReadable = humanize.Bytes(uint64(t.ReqBytes))
+		t.RespBytesReadable = humanize.Bytes(uint64(t.RespBytes))
+		t.Duration = t.CompletedAt.Sub(t.Timestamp)
+
+		transactions = append(transactions, t)
+	}
+	return transactions, nil
+}
+
 func (d *TransactionDao) GetByBin(bin string) (transactions []ds.Transaction, err error) {
 	sqlStatement := "SELECT id, bin_id, filename, operation, method, path, ip, headers, timestamp, req_bytes, resp_bytes, status, completed FROM transaction WHERE bin_id = $1 ORDER BY timestamp DESC"
 	rows, err := d.db.Query(sqlStatement, bin)

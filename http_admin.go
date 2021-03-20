@@ -68,29 +68,31 @@ func (h *HTTP) ViewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HTTP) ViewAdminLog(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	inputBin := params["bin"]
-	trs, err := h.dao.Transaction().GetByBin(inputBin)
-	if err != nil {
-		http.Error(w, "Errno 361", http.StatusInternalServerError)
-		return
-	}
 	type Data struct {
 		Transactions []ds.Transaction `json:"transactions"`
-		Bin          ds.Bin           `json:"bin"`
 	}
-
 	var data Data
-	data.Transactions = trs
 
-	bin, _, err := h.dao.Bin().GetByID(inputBin)
-	if err != nil {
-		fmt.Printf("Unable to GetByID(): %s\n", err.Error())
-		http.Error(w, "Errno 200", http.StatusInternalServerError)
-		return
+	params := mux.Vars(r)
+	inputBin := params["bin"]
+	if inputBin != "" {
+		trs, err := h.dao.Transaction().GetByBin(inputBin)
+		if err != nil {
+			http.Error(w, "Errno 361", http.StatusInternalServerError)
+			return
+		}
+		data.Transactions = trs
 	}
 
-	data.Bin = bin
+	inputIP := params["ip"]
+	if inputIP != "" {
+		trs, err := h.dao.Transaction().GetByIP(inputIP)
+		if err != nil {
+			http.Error(w, "Errno 369", http.StatusInternalServerError)
+			return
+		}
+		data.Transactions = trs
+	}
 
 	if err := h.templates.ExecuteTemplate(w, "log", data); err != nil {
 		fmt.Printf("Failed to execute template: %s\n", err.Error())

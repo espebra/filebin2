@@ -45,6 +45,7 @@ func (h *HTTP) Init() (err error) {
 	h.router.HandleFunc("/privacy", h.Privacy).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/terms", h.Terms).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/log/{bin:[A-Za-z0-9_-]+}", h.Auth(h.ViewAdminLog)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin/log/{ip:[0-9.:]+}", h.Auth(h.ViewAdminLog)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/approve/{bin:[A-Za-z0-9_-]+}", h.Log(h.Auth(h.ApproveBin))).Methods("PUT")
 	h.router.HandleFunc("/admin", h.Auth(h.ViewAdminDashboard)).Methods(http.MethodHead, http.MethodGet)
 	//h.router.HandleFunc("/admin/cleanup", h.Auth(h.ViewAdminCleanup)).Methods(http.MethodHead, http.MethodGet)
