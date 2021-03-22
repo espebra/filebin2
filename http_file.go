@@ -121,10 +121,6 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Disposition", "attachment; filename=\""+file.Filename+"\"")
 	}
 
-	if err := h.dao.Bin().RegisterDownload(&bin); err != nil {
-		fmt.Printf("Unable to update bin %s: %s\n", inputBin, err.Error())
-	}
-
 	if err := h.dao.File().RegisterDownload(&file); err != nil {
 		fmt.Printf("Unable to update file %s in bin %s: %s\n", inputFilename, inputBin, err.Error())
 	}

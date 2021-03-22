@@ -1,4 +1,4 @@
-{{ define "dashboard" }}<!doctype html>
+{{ define "admin_bins" }}<!doctype html>
 <html lang="en">
     <head>
         <meta charset="utf-8">
@@ -10,67 +10,23 @@
         <link rel="stylesheet" href="/static/css/custom.css"/>
         <script src="/static/js/sorttable.js"></script>
         <script src="/static/js/upload.js"></script>
-        <title>Filebin | Dashboard</title>
+        <title>Filebin | Bins</title>
     </head>
     <body class="container-fluid">
 
         {{template "adminbar" .}}
 
-        <h1>Dashboard</h1>
+        <h1>Bins</h1>
 
-        <table class="table">
-            <thead>
-                <tr>
-                    <th></th>
-                    <th>Storage (S3) incomplete</th>
-                    <th>Storage (S3) current</th>
-                    <th>Database current</th>
-                    <th>Database total</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <th>Number of bytes</th>
-                    <td>{{ .BucketInfo.IncompleteObjectsSizeReadable }}</td>
-                    <td>{{ .BucketInfo.ObjectsSizeReadable }}</td>
-                    <td>{{ .DBInfo.CurrentBytesReadable }}</td>
-                    <td>{{ .DBInfo.TotalBytesReadable }}</td>
-                </tr>
-                <tr>
-                    <th>Number of files</th>
-                    <td>{{ .BucketInfo.IncompleteObjectsReadable }}</td>
-                    <td>{{ .BucketInfo.ObjectsReadable }}</td>
-                    <td>{{ .DBInfo.CurrentFilesReadable }}</td>
-                    <td>{{ .DBInfo.TotalFilesReadable }}</td>
-                </tr>
-                <tr>
-                    <th>Number of bins</th>
-                    <td></td>
-                    <td></td>
-                    <td>{{ .DBInfo.CurrentBinsReadable }}</td>
-                    <td>{{ .DBInfo.TotalBinsReadable }}</td>
-                </tr>
-                <tr>
-                    <th>Log entries</th>
-                    <td></td>
-                    <td></td>
-                    <td>{{ .DBInfo.CurrentLogEntries }}</td>
-                    <td></td>
-                </tr>
-            </tbody>
-        </table>
-
-        <h2>Bins available</h2>
         <table class="table sortable">
             <tr>
                 <th>Bin</th>
                 <th>Approved?</th>
                 <th>Updated</th>
                 <th>Created</th>
+                <th>Expires</th>
                 <th>Bytes</th>
                 <th>Files</th>
-                <th>Downloads</th>
-                <th>Updates</th>
                 <th>Locked</th>
                 <th>Log</th>
             </tr>
@@ -86,10 +42,9 @@
                     </td>
                     <td sorttable_customkey="{{ .UpdatedAt }}">{{ .UpdatedAtRelative }}</td>
                     <td sorttable_customkey="{{ .CreatedAt }}">{{ .CreatedAtRelative }}</td>
+                    <td sorttable_customkey="{{ .ExpiredAt }}">{{ .ExpiredAtRelative }}</td>
                     <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
                     <td>{{ .Files }}</td>
-                    <td>{{ .Downloads }}</td>
-                    <td>{{ .Updates }}</td>
                     <td>
                         {{ if eq .Readonly true }}
                             <i class="fas fa-fw fa-lock text-muted"></i>

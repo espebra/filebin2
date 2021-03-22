@@ -46,8 +46,9 @@ func (h *HTTP) Init() (err error) {
 	h.router.HandleFunc("/terms", h.Terms).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/log/{bin:[A-Za-z0-9_-]+}", h.Auth(h.ViewAdminLog)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/log/{ip:[0-9a-f.:]+}", h.Auth(h.ViewAdminLog)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/admin/approve/{bin:[A-Za-z0-9_-]+}", h.Log(h.Auth(h.ApproveBin))).Methods("PUT")
+	h.router.HandleFunc("/admin/bins", h.Auth(h.ViewAdminBins)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin", h.Auth(h.ViewAdminDashboard)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin/approve/{bin:[A-Za-z0-9_-]+}", h.Log(h.Auth(h.ApproveBin))).Methods("PUT")
 	//h.router.HandleFunc("/admin/cleanup", h.Auth(h.ViewAdminCleanup)).Methods(http.MethodHead, http.MethodGet)
 	h.router.Handle("/static/{path:.*}", http.StripPrefix("/static/", http.FileServer(h.staticBox.HTTPBox()))).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/archive/{bin:[A-Za-z0-9_-]+}/{format:[a-z]+}", h.Log(h.Archive)).Methods(http.MethodHead, http.MethodGet)
@@ -77,7 +78,6 @@ func (h *HTTP) Log(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc
 
 		completed := t0.Add(metrics.Duration)
 
-		fmt.Printf("Metrics: %v\n", metrics)
 		_, err := h.dao.Transaction().Register(r, bin, filename, t0, completed, metrics.Code, metrics.Written)
 		if err != nil {
 			fmt.Printf("Unable to register the transaction: %s\n", err.Error())

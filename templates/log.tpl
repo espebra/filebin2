@@ -25,7 +25,7 @@
                     <th>Request</th>
                     <th>Response bytes</th>
                     <th>Code</th>
-                    <th>Elapsed</th>
+                    <th>Duration</th>
                     <th>Details</th>
                 </tr>
             </thead>

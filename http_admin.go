@@ -59,7 +59,61 @@ func (h *HTTP) ViewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		io.WriteString(w, string(out))
 	} else {
-		if err := h.templates.ExecuteTemplate(w, "dashboard", data); err != nil {
+		if err := h.templates.ExecuteTemplate(w, "admin_dashboard", data); err != nil {
+			fmt.Printf("Failed to execute template: %s\n", err.Error())
+			http.Error(w, "Errno 203", http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+func (h *HTTP) ViewAdminBins(w http.ResponseWriter, r *http.Request) {
+	type Bins struct {
+		Available []ds.Bin `json:"available"`
+	}
+
+	type Data struct {
+		Bins Bins `json:"bins"`
+		//Files []ds.File `json:"files"`
+		BucketInfo s3.BucketInfo `json:"bucketinfo"`
+		Page       string        `json:"page"`
+		DBInfo     ds.Info       `json:"db_info"`
+	}
+	var data Data
+	//data.Page = "about"
+	//data.BucketInfo = h.s3.GetBucketInfo()
+	//info, err := h.dao.Info().GetInfo()
+	//if err != nil {
+	//	fmt.Printf("Unable to GetInfo(): %s\n", err.Error())
+	//	http.Error(w, "Errno 326", http.StatusInternalServerError)
+	//	return
+	//}
+	//data.DBInfo = info
+
+	binsAvailable, err := h.dao.Bin().GetAll()
+	if err != nil {
+		fmt.Printf("Unable to GetAll(): %s\n", err.Error())
+		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		return
+	}
+
+	var bins Bins
+	bins.Available = binsAvailable
+
+	data.Bins = bins
+
+	if r.Header.Get("accept") == "application/json" {
+		w.Header().Set("Content-Type", "application/json")
+		out, err := json.MarshalIndent(data, "", "    ")
+		if err != nil {
+			fmt.Printf("Failed to parse json: %s\n", err.Error())
+			http.Error(w, "Errno 201", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(200)
+		io.WriteString(w, string(out))
+	} else {
+		if err := h.templates.ExecuteTemplate(w, "admin_bins", data); err != nil {
 			fmt.Printf("Failed to execute template: %s\n", err.Error())
 			http.Error(w, "Errno 203", http.StatusInternalServerError)
 			return

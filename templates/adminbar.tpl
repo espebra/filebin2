@@ -6,7 +6,7 @@
                 <a class="nav-link" href="/admin">Dashboard</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="/admin/cleanup">Cleanup</a>
+                <a class="nav-link" href="/admin/bins">Bins</a>
             </li>
         </ul>
     </div>
