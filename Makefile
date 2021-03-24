@@ -25,4 +25,3 @@ fmt:
 	gofmt -w ds/*.go
 	gofmt -w s3/*.go
 	gofmt -w dbl/*.go
-	gofmt -w logging/*.go

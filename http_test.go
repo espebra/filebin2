@@ -17,7 +17,7 @@ import (
 
 const (
 	testLimitFileDownloads = 2
-	testLimitStorage       = 1
+	testLimitStorage       = 10000000
 	testExpiredAt          = 5
 	testHTTPHost           = "localhost"
 	testHTTPPort           = 8080
@@ -76,7 +76,7 @@ func TestMain(m *testing.M) {
 	templateBox := rice.MustFindBox("templates")
 	c := ds.Config{
 		LimitFileDownloads: testLimitFileDownloads,
-		LimitStorage:       testLimitStorage,
+		LimitStorageBytes:  testLimitStorage,
 		Expiration:         testExpiredAt,
 		HttpHost:           testHTTPHost,
 		HttpPort:           testHTTPPort,

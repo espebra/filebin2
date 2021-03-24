@@ -149,7 +149,7 @@ func (d *FileDao) GetByBin(id string, inStorage bool) (files []ds.File, err erro
 			file.DeletedAtRelative = humanize.Time(file.DeletedAt.Time)
 		}
 		file.BytesReadable = humanize.Bytes(file.Bytes)
-		file.URL = path.Join(file.Bin, file.Filename)
+		file.URL = path.Join("/", file.Bin, file.Filename)
 		setCategory(&file)
 		files = append(files, file)
 	}

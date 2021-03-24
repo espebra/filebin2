@@ -222,8 +222,8 @@ func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
 	// Storage limit
 	// 0 disables the limit
 	// >= 1 enforces a limit, in number of gigabytes stored
-	if h.config.LimitStorage > 0 {
-		if uint64(info.CurrentBytes) >= (h.config.LimitStorage * 1024 * 1024 * 1024) {
+	if h.config.LimitStorageBytes > 0 {
+		if uint64(info.CurrentBytes) >= h.config.LimitStorageBytes {
 			h.Error(w, r, fmt.Sprintf("Storage limit reached (currently consuming %s)", humanize.Bytes(uint64(info.CurrentBytes))), "Storage limit reached. Please try again later.\n", 633, http.StatusForbidden)
 			return
 		}

@@ -3,6 +3,13 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"github.com/GeertJohan/go.rice"
+	"github.com/espebra/filebin2/dbl"
+	"github.com/espebra/filebin2/ds"
+	"github.com/espebra/filebin2/s3"
+	"github.com/felixge/httpsnoop"
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
 	"html/template"
 	"io"
 	"net"
@@ -11,13 +18,6 @@ import (
 	"path"
 	"strings"
 	"time"
-	"github.com/GeertJohan/go.rice"
-	"github.com/espebra/filebin2/dbl"
-	"github.com/espebra/filebin2/ds"
-	"github.com/espebra/filebin2/s3"
-	"github.com/felixge/httpsnoop"
-	"github.com/gorilla/handlers"
-	"github.com/gorilla/mux"
 )
 
 type funcHandler func(http.ResponseWriter, *http.Request)

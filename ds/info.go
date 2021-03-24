@@ -10,6 +10,9 @@ type Info struct {
 	CurrentBins          int64  `json:"current_bins"`
 	CurrentBinsReadable  string `json:"current_bins_readable"`
 
+	FreeBytes         int64  `json:"-"`
+	FreeBytesReadable string `json:"-"`
+
 	TotalBytes         int64  `json:"total_bytes"`
 	TotalBytesReadable string `json:"total_bytes_readable"`
 	TotalFiles         int64  `json:"total_files"`

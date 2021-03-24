@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"github.com/dustin/go-humanize"
 	"github.com/gorilla/mux"
 	"io"
 	"net/http"
@@ -14,18 +15,16 @@ import (
 )
 
 func (h *HTTP) ViewAdminDashboard(w http.ResponseWriter, r *http.Request) {
-	type Bins struct {
-		Available []ds.Bin `json:"available"`
-	}
-
 	type Data struct {
-		Bins Bins `json:"bins"`
+		//Bins Bins `json:"bins"`
 		//Files []ds.File `json:"files"`
 		BucketInfo s3.BucketInfo `json:"bucketinfo"`
 		Page       string        `json:"page"`
 		DBInfo     ds.Info       `json:"db_info"`
+		Config     ds.Config     `json:"-"`
 	}
 	var data Data
+	data.Config = *h.config
 	data.Page = "about"
 	data.BucketInfo = h.s3.GetBucketInfo()
 	info, err := h.dao.Info().GetInfo()
@@ -35,18 +34,24 @@ func (h *HTTP) ViewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	data.DBInfo = info
-
-	binsAvailable, err := h.dao.Bin().GetAll()
-	if err != nil {
-		fmt.Printf("Unable to GetAll(): %s\n", err.Error())
-		http.Error(w, "Errno 200", http.StatusInternalServerError)
-		return
+	freeBytes := int64(h.config.LimitStorageBytes) - info.CurrentBytes
+	if freeBytes < 0 {
+		freeBytes = 0
 	}
+	data.DBInfo.FreeBytes = freeBytes
+	data.DBInfo.FreeBytesReadable = humanize.Bytes(uint64(freeBytes))
 
-	var bins Bins
-	bins.Available = binsAvailable
+	//binsAvailable, err := h.dao.Bin().GetAll()
+	//if err != nil {
+	//	fmt.Printf("Unable to GetAll(): %s\n", err.Error())
+	//	http.Error(w, "Errno 200", http.StatusInternalServerError)
+	//	return
+	//}
 
-	data.Bins = bins
+	//var bins Bins
+	//bins.Available = binsAvailable
+
+	//data.Bins = bins
 
 	if r.Header.Get("accept") == "application/json" {
 		w.Header().Set("Content-Type", "application/json")

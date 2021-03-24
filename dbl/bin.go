@@ -81,7 +81,7 @@ func (d *BinDao) GetAll() (bins []ds.Bin, err error) {
 			bin.DeletedAtRelative = humanize.Time(bin.DeletedAt.Time)
 		}
 		bin.BytesReadable = humanize.Bytes(bin.Bytes)
-		bin.URL = path.Join(bin.Id)
+		bin.URL = path.Join("/", bin.Id)
 		bins = append(bins, bin)
 	}
 	return bins, nil
@@ -116,7 +116,7 @@ func (d *BinDao) GetPendingDelete() (bins []ds.Bin, err error) {
 			bin.DeletedAtRelative = humanize.Time(bin.DeletedAt.Time)
 		}
 		bin.BytesReadable = humanize.Bytes(bin.Bytes)
-		bin.URL = path.Join(bin.Id)
+		bin.URL = path.Join("/", bin.Id)
 		bins = append(bins, bin)
 	}
 	return bins, nil
@@ -149,7 +149,7 @@ func (d *BinDao) GetByID(id string) (bin ds.Bin, found bool, err error) {
 		bin.DeletedAt.Time = bin.DeletedAt.Time.UTC()
 		bin.DeletedAtRelative = humanize.Time(bin.DeletedAt.Time)
 	}
-	bin.URL = path.Join(bin.Id)
+	bin.URL = path.Join("/", bin.Id)
 	return bin, true, nil
 }
 

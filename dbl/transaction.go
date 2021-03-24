@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"net/http/httputil"
 	//"path"
+	"github.com/dustin/go-humanize"
+	"github.com/espebra/filebin2/ds"
 	"strconv"
 	"time"
-	"github.com/espebra/filebin2/ds"
-	"github.com/dustin/go-humanize"
 	//"github.com/gorilla/mux"
 )
 

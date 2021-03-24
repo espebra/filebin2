@@ -7,6 +7,7 @@ import (
 	"strconv"
 	//"github.com/espebra/filebin2/ds"
 	"github.com/GeertJohan/go.rice"
+	"github.com/dustin/go-humanize"
 	"github.com/espebra/filebin2/dbl"
 	"github.com/espebra/filebin2/ds"
 	"github.com/espebra/filebin2/s3"
@@ -24,7 +25,7 @@ var (
 
 	// Limits
 	limitFileDownloadsFlag = flag.Uint64("limit-file-downloads", 0, "Limit the number of downloads per file. 0 disables this limit.")
-	limitStorageFlag       = flag.Uint64("limit-storage", 0, "Limit the storage capacity to use, in number of gigabytes. 0 disables this limit.")
+	limitStorageFlag       = flag.String("limit-storage", "0", "Limit the storage capacity to use (examples: 100MB, 20GB, 2TB). 0 disables this limit.")
 
 	// HTTP
 	listenHostFlag   = flag.String("listen-host", "127.0.0.1", "Listen host")
@@ -108,7 +109,6 @@ func main() {
 	config := &ds.Config{
 		Expiration:         *expirationFlag,
 		LimitFileDownloads: *limitFileDownloadsFlag,
-		LimitStorage:       *limitStorageFlag,
 		HttpHost:           *listenHostFlag,
 		HttpPort:           *listenPortFlag,
 		HttpProxyHeaders:   *proxyHeadersFlag,
@@ -119,6 +119,13 @@ func main() {
 		RequireApproval:    *requireApprovalFlag,
 		BaseUrl:            *u,
 	}
+
+	config.LimitStorageBytes, err = humanize.ParseBytes(*limitStorageFlag)
+	if err != nil {
+		fmt.Printf("Unable to parse the --limit-storage parameter: %s\n", *baseURLFlag)
+		os.Exit(2)
+	}
+	config.LimitStorageReadable = humanize.Bytes(config.LimitStorageBytes)
 
 	h := &HTTP{
 		staticBox:   staticBox,
