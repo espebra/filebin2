@@ -92,7 +92,9 @@
 
                 {{ if isApproved $.Bin }}
                 {{ else }}
-                    It is pending approval <a href="" data-bs-toggle="modal" data-bs-target="#modalApprovalInfo"><i class="far fa-question-circle"></i></a>.
+                    {{ if gt $numfiles 0 }}
+                        It is pending approval <a href="" data-bs-toggle="modal" data-bs-target="#modalApprovalInfo"><i class="far fa-question-circle"></i></a>.
+                    {{ end }}
                 {{ end }}
             {{ else }}
                 <p>This bin is no longer available.</p>
