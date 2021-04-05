@@ -23,6 +23,7 @@
                     <th>Source IP</th>
                     <th>Bin</th>
                     <th>Request</th>
+                    <th>Request bytes</th>
                     <th>Response bytes</th>
                     <th>Code</th>
                     <th>Duration</th>
@@ -53,6 +54,9 @@
                     <td><a href="/admin/log/{{ .BinId }}">{{ .BinId }}</a></td>
                     <td>
                         <code>{{ .Method }} <a href="{{ .Path }}">{{ .Path }}</a></code>
+                    </td>
+                    <td>
+                        {{ .ReqBytesReadable }}
                     </td>
                     <td>
                         {{ .RespBytesReadable }}
