@@ -161,7 +161,10 @@ func (s S3AO) RemoveKey(key string) error {
 	t0 := time.Now()
 
 	opts := minio.RemoveObjectOptions{
-		GovernanceBypass: true,
+		// The following is used in the Minio SDK documentation,
+		// but it seems not all S3 server side implementations
+		// support this. One example is DigitalOcean Spaces.
+		//GovernanceBypass: true,
 	}
 
 	err := s.client.RemoveObject(context.Background(), s.bucket, key, opts)
