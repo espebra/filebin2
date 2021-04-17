@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-        <meta name="description" content="Upload files and make them available for your friends. Think of it as Pastebin for files. Registration is not required. Large files are supported.">
+        <meta name="description" content="Convenient file sharing. Think of it as Pastebin for files. Registration is not required. Large files are supported.">
         <meta name="author" content="Espen Braastad">
         <link rel="icon" href="/static/img/favicon.png">
         <link rel="stylesheet" href="/static/css/bootstrap.min.css"/>
@@ -69,6 +69,12 @@
             <strong>3.</strong>
             Distribute the unique <a href="/{{ .Bin.Id }}">URL</a> to share access to the files.
         </p>
+
+        {{ if eq .AvailableStorage false }}
+            <div class="alert alert-warning" role="alert">
+                The storage is currently full. Please come back later.
+            </div>
+        {{ end }}
 
         <!-- Menu -->
         <p class="fileUpload btn btn-primary">

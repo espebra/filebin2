@@ -14,7 +14,8 @@ func (h *HTTP) Index(w http.ResponseWriter, r *http.Request) {
 
 	type Data struct {
 		ds.Common
-		Bin ds.Bin `json:"bin"`
+		Bin              ds.Bin `json:"bin"`
+		AvailableStorage bool   `json:"available_storage"`
 	}
 	var data Data
 
@@ -25,6 +26,23 @@ func (h *HTTP) Index(w http.ResponseWriter, r *http.Request) {
 	bin.ExpiredAtRelative = humanize.Time(bin.ExpiredAt)
 	bin.Id = h.dao.Bin().GenerateId()
 	data.Bin = *bin
+
+	info, err := h.dao.Info().GetInfo()
+	if err != nil {
+		fmt.Printf("Unable to GetInfo(): %s\n", err.Error())
+		http.Error(w, "Errno 326", http.StatusInternalServerError)
+		return
+	}
+
+	// Storage limit
+	// 0 disables the limit
+	// >= 1 enforces a limit, in number of gigabytes stored
+	data.AvailableStorage = true
+	if h.config.LimitStorageBytes > 0 {
+		if uint64(info.CurrentBytes) >= h.config.LimitStorageBytes {
+			data.AvailableStorage = false
+		}
+	}
 
 	if err := h.templates.ExecuteTemplate(w, "index", data); err != nil {
 		fmt.Printf("Failed to execute template: %s\n", err.Error())
