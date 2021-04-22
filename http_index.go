@@ -25,6 +25,11 @@ func (h *HTTP) Index(w http.ResponseWriter, r *http.Request) {
 	bin.ExpiredAt = time.Now().UTC().Add(h.config.ExpirationDuration)
 	bin.ExpiredAtRelative = humanize.Time(bin.ExpiredAt)
 	bin.Id = h.dao.Bin().GenerateId()
+	if err := bin.GenerateURL(h.config.BaseUrl); err != nil {
+		fmt.Printf("Unable to generate URL: %s\n", err.Error())
+		http.Error(w, "Errno 9824", http.StatusInternalServerError)
+		return
+	}
 	data.Bin = *bin
 
 	info, err := h.dao.Info().GetInfo()

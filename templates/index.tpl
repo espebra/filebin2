@@ -51,23 +51,26 @@
 
         <!-- Only show the howto if there are no files in the bin -->
         <p class="lead">
-            Convenient file sharing without
-            registration. Simply upload files and share
-            the URL. The files will expire automatically
-            {{ .Bin.ExpiredAtRelative }}.
+            Convenient file sharing in three steps without
+            registration.
+        </p>
+        <p class="lead pt-3">
+            <strong class="ps-2 pe-2"><span class="badge rounded-pill bg-secondary">1</span></strong>
+            <span class="fileUpload btn btn-primary"><label>Select files to upload<input type="file" id="upload-button" class="upload" id="fileField" multiple></label></span> or <em>drag-and-drop</em> the files into this browser window.
         </p>
         <p class="lead">
-            <strong>1.</strong>
-            Click <em>Upload files</em> below and select files, or drag-and-drop the files
-            into this browser window.
-        </p>
-        <p class="lead">
-            <strong>2.</strong>
+            <strong class="ps-2 pe-2"><span class="badge rounded-pill bg-secondary">2</span></strong>
             Wait until the file uploads complete.
         </p>
         <p class="lead">
-            <strong>3.</strong>
-            Distribute the unique <a href="/{{ .Bin.Id }}">URL</a> to share access to the files.
+            <strong class="ps-2 pe-2"><span class="badge rounded-pill bg-secondary">3</span></strong>
+            The files are now available at <a href="{{ .Bin.URL }}">{{ .Bin.URL }}</a> which you can share.
+        </p>
+
+        <p class="pt-3 text-muted">
+            <em>
+            The files can be deleted manually at any time and will in any case be deleted automatically {{ .Bin.ExpiredAtRelative }}.
+            </em>
         </p>
 
         {{ if eq .AvailableStorage false }}
@@ -75,12 +78,6 @@
                 The storage is currently full. Please come back later.
             </div>
         {{ end }}
-
-        <!-- Menu -->
-        <p class="fileUpload btn btn-primary">
-            <span><i class="fa fa-cloud-upload"></i> Upload files</span>
-            <input type="file" class="upload" id="fileField" multiple>
-        </p>
 
         <!-- Drop zone -->
         <div id="fileDrop">Drop files to upload</div>

@@ -2,6 +2,8 @@ package ds
 
 import (
 	"database/sql"
+	"net/url"
+	"path"
 	"time"
 )
 
@@ -73,4 +75,10 @@ func (b *Bin) IsDeleted() bool {
 		}
 	}
 	return false
+}
+
+func (b *Bin) GenerateURL(u url.URL) error {
+	u.Path = path.Join(u.Path, b.Id)
+	b.URL = u.String()
+	return nil
 }

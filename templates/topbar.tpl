@@ -18,7 +18,7 @@
         <ul class="navbar-nav">
 	    {{ if eq .Page "bin" }}
                 <li class="nav-item">
-                    <a class="nav-link" href="" data-bs-toggle="modal" data-bs-target="#modalTakedown">Takedown</a>
+                    <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#modalTakedown">Takedown</a>
                 </li>
 	    {{ end }}
         </ul>
@@ -43,7 +43,7 @@
 
                 <p>There is an opportunity to abuse this to share illegal, copyrighted or malicious content, even though this is against the <a href="/terms">Terms and conditions</a>. There is no automatic moderation of such content, but anyone familiar with the location of the files can delete them at their own will.</p>
 
-                <p>If this bin contains files that should not be here, please <a href="" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#modalDeleteBin">delete the bin</a>. This will immediately make the files unavailable, and is faster than sending a takedown request to the service owner.</p>
+                <p>If this bin contains files that should not be here, please <a href="#" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#modalDeleteBin">delete the bin</a>. This will immediately make the files unavailable, and is faster than sending a takedown request to the service owner.</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-danger" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#modalDeleteBin">
