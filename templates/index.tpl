@@ -54,17 +54,17 @@
             Convenient file sharing in three steps without
             registration.
         </p>
-        <p class="lead ps-2 pt-1">
+        <p class="lead pt-1">
             <strong class="mt-2 pe-2"><span class="rounded-pill bg-secondary btn btn-sm text-light" style="width: 2rem; height:2rem;">1</span></strong>
             <br class="mobile-break">
-            <span class="fileUpload btn btn-primary mt-2 mb-2"><label>Select files to upload<input type="file" id="upload-button" class="upload" id="fileField" multiple></label></span> or <em>drag-and-drop</em> the files into this browser window.
+            <span class="fileUpload btn btn-primary mt-2 mb-2"><label>Select files to upload<input type="file" id="upload-button" class="upload" id="fileField" multiple></label></span> or <em>drag-and-drop</em> files into this browser window.
         </p>
-        <p class="lead ps-2">
+        <p class="lead">
             <strong class="mt-2 pe-2"><span class="rounded-pill bg-secondary btn btn-sm text-light" style="width: 2rem; height:2rem;">2</span></strong>
             <br class="mobile-break">
             <span>Wait until the file uploads complete.</span>
         </p>
-        <p class="lead ps-2">
+        <p class="lead">
             <strong class="mt-2 pe-2"><span class="rounded-pill bg-secondary btn btn-sm text-light" style="width: 2rem; height:2rem;">3</span></strong>
             <br class="mobile-break">
             <span>The files will be available at <a href="{{ .Bin.URL }}">{{ .Bin.URL }}</a> which you can share.</span>
