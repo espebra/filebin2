@@ -54,17 +54,20 @@
             Convenient file sharing in three steps without
             registration.
         </p>
-        <p class="lead pt-3">
-            <strong class="ps-2 pe-2"><span class="badge rounded-pill bg-secondary">1</span></strong>
-            <span class="fileUpload btn btn-primary"><label>Select files to upload<input type="file" id="upload-button" class="upload" id="fileField" multiple></label></span> or <em>drag-and-drop</em> the files into this browser window.
+        <p class="lead ps-2 pt-1">
+            <strong class="mt-2 pe-2"><span class="rounded-pill bg-secondary btn btn-sm text-light" style="width: 2rem; height:2rem;">1</span></strong>
+            <br class="mobile-break">
+            <span class="fileUpload btn btn-primary mt-2 mb-2"><label>Select files to upload<input type="file" id="upload-button" class="upload" id="fileField" multiple></label></span> or <em>drag-and-drop</em> the files into this browser window.
         </p>
-        <p class="lead">
-            <strong class="ps-2 pe-2"><span class="badge rounded-pill bg-secondary">2</span></strong>
-            Wait until the file uploads complete.
+        <p class="lead ps-2">
+            <strong class="mt-2 pe-2"><span class="rounded-pill bg-secondary btn btn-sm text-light" style="width: 2rem; height:2rem;">2</span></strong>
+            <br class="mobile-break">
+            <span>Wait until the file uploads complete.</span>
         </p>
-        <p class="lead">
-            <strong class="ps-2 pe-2"><span class="badge rounded-pill bg-secondary">3</span></strong>
-            The files are now available at <a href="{{ .Bin.URL }}">{{ .Bin.URL }}</a> which you can share.
+        <p class="lead ps-2">
+            <strong class="mt-2 pe-2"><span class="rounded-pill bg-secondary btn btn-sm text-light" style="width: 2rem; height:2rem;">3</span></strong>
+            <br class="mobile-break">
+            <span>The files will be available at <a href="{{ .Bin.URL }}">{{ .Bin.URL }}</a> which you can share.</span>
         </p>
 
         <p class="pt-3 text-muted">
