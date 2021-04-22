@@ -6,10 +6,15 @@
         <meta name="description" content="Convenient file sharing. Think of it as Pastebin for files. Registration is not required. Large files are supported.">
         <meta name="author" content="Espen Braastad">
         <link rel="icon" href="/static/img/favicon.png">
+
+        <link rel="preload" href="/static/webfonts/fa-regular-400.woff2" as="font">
+        <link rel="preload" href="/static/webfonts/fa-solid-900.woff2" as="font">
+
         <link rel="stylesheet" href="/static/css/bootstrap.min.css"/>
         <link rel="stylesheet" href="/static/css/fontawesome.all.min.css"/>
         <link rel="stylesheet" href="/static/css/upload.css"/>
         <link rel="stylesheet" href="/static/css/custom.css"/>
+
         <title>Filebin | {{ .Bin.Id }}</title>
         <script src="/static/js/upload.js"></script>
         {{ if eq .Bin.Readonly false }}
@@ -93,7 +98,7 @@
                 {{ if isApproved $.Bin }}
                 {{ else }}
                     {{ if gt $numfiles 0 }}
-                        It is pending approval <a href="" data-bs-toggle="modal" data-bs-target="#modalApprovalInfo"><i class="far fa-question-circle"></i></a>.
+                        It is pending approval <a href="#" data-bs-toggle="modal" data-bs-target="#modalApprovalInfo"><i class="far fa-question-circle"></i></a>.
                     {{ end }}
                 {{ end }}
             {{ else }}
@@ -105,14 +110,14 @@
             <p>
                 <ul class="nav nav-pills">
                     <li class="nav-item me-3">
-                        <a class="btn btn-primary" href="" data-bs-toggle="modal" data-bs-target="#modalArchive">
+                        <a class="btn btn-primary" href="#" data-bs-toggle="modal" data-bs-target="#modalArchive">
                             <i class="fas fa-fw fa-cloud-download-alt"></i> Download files
                         </a>
                     </li>
 
                     <li class="nav-item">
                         <div class="dropdown">
-                                <a class="btn btn-primary dropdown-toggle text-white" id="dropdownBinMenuButton" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <a class="btn btn-primary dropdown-toggle text-white" href="#" id="dropdownBinMenuButton" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                     More
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownBinMenuButton">
@@ -127,12 +132,12 @@
                                         </li>
                                     {{ end }}
                                     <li>
-                                        <a class="dropdown-item" href="" data-bs-toggle="modal" data-bs-target="#modalBinProperties" aria-haspopup="true" aria-expanded="false">
+                                        <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalBinProperties" aria-haspopup="true" aria-expanded="false">
                                             <i class="fas fa-fw fa-info-circle text-primary"></i> Bin properties
                                         </a>
                                     </li>
                                     <li>
-                                        <a class="dropdown-item" href="" data-bs-toggle="modal" data-bs-target="#modalBinQR" aria-haspopup="true" aria-expanded="false">
+                                        <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalBinQR" aria-haspopup="true" aria-expanded="false">
                                             <i class="fas fa-fw fa-qrcode text-primary"></i> QR code
                                         </a>
                                     </li>
@@ -141,13 +146,13 @@
                                     </li>
                                     {{ if eq .Bin.Readonly false }}
                                     <li>
-                                        <a class="dropdown-item" href="" data-bs-toggle="modal" data-bs-target="#modalLockBin" aria-haspopup="true" aria-expanded="false">
+                                        <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalLockBin" aria-haspopup="true" aria-expanded="false">
                                             <i class="fas fa-fw fa-lock text-warning"></i> Lock bin
                                         </a>
                                     </li>
                                     {{ end }}
                                     <li>
-                                    <a class="dropdown-item" href="" data-bs-toggle="modal" data-bs-target="#modalDeleteBin">
+                                    <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalDeleteBin">
                                         <i class="far fa-fw fa-trash-alt text-danger"></i> Delete bin
                                     </a>
                                     </li>
@@ -199,7 +204,7 @@
                             </td>
                             <td>
                                 <div class="dropdown">
-                                    <a class="dropdown-toggle small link-custom" id="dropdownFileMenuButton" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    <a class="dropdown-toggle small link-custom" href="#" id="dropdownFileMenuButton" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                         More
                                     </a>
                                     <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownFileMenuButton">
@@ -208,11 +213,11 @@
                                                 <i class="fas fa-fw fa-cloud-download-alt text-primary"></i> Download file
                                             </a>
                             {{ end }}
-                                        <a class="dropdown-item" href="" data-bs-toggle="modal" data-bs-target="#modalFileProperties-{{ $index }}">
+                                        <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalFileProperties-{{ $index }}">
                                             <i class="fas fa-fw fa-info-circle text-primary"></i> File properties
                                         </a>
                                         <div class="dropdown-divider"></div>
-                                        <a class="dropdown-item" href="" data-bs-toggle="modal" data-bs-target="#modalDeleteFile-{{ $index }}">
+                                        <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalDeleteFile-{{ $index }}">
                                             <i class="far fa-fw fa-trash-alt text-danger"></i> Delete file
                                         </a>
                                     </div>
