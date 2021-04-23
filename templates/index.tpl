@@ -67,7 +67,7 @@
         <p class="lead">
             <strong class="mt-2 pe-2"><span class="rounded-pill bg-secondary btn btn-sm text-light" style="width: 2rem; height:2rem;">3</span></strong>
             <br class="mobile-break">
-            <span>The files will be available at <a href="{{ .Bin.URL }}">{{ .Bin.URL }}</a> which you can share.</span>
+            <span>The files will be available at <a href="{{ .Bin.URL }}">{{ .Bin.URL }}</a> which is a link you can share.</span>
         </p>
 
         <p class="pt-3 text-muted">
