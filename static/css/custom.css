@@ -28,7 +28,7 @@
     filter: alpha(opacity=0);
 }
 
-@media screen and (min-width: 600px)  {
+@media screen and (min-width: 576px)  {
     .mobile-break {
         display: none;
     }
