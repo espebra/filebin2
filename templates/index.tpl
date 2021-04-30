@@ -24,6 +24,7 @@
                 var bin = "{{ .Bin.Id }}";
                 var uploadURL = "/";
                 var binURL = "/{{ .Bin.Id }}";
+                var client = new ClientJS();
                 FileAPI = new FileAPI(
                     fileCount,
                     fileList,
@@ -31,7 +32,8 @@
                     fileField,
                     bin,
                     uploadURL,
-                    binURL
+                    binURL,
+                    client.getFingerprint()
                 );
                 FileAPI.init();
                 // Automatically start upload when using the drop zone
@@ -95,6 +97,7 @@
 
         <script src="/static/js/popper.min.js"></script>
         <script src="/static/js/bootstrap.min.js"></script>
+        <script src="/static/js/client.min.js"></script>
     </body>
 </html>
 {{ end }}

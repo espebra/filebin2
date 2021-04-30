@@ -32,6 +32,11 @@
                 <td><a href="https://getbootstrap.com/">https://getbootstrap.com/</a></td>
             </tr>
             <tr>
+                <td>ClientJS</td>
+                <td>Apache 2.0</td>
+                <td><a href="https://github.com/jackspirou/clientjs">https://github.com/jackspirou/clientjs</a></td>
+            </tr>
+            <tr>
                 <td>Font Awesome</td>
                 <td>CC BY 4.0, SIL OFL 1.1, MIT License</td>
                 <td><a href="https://fontawesome.com/">https://fontawesome.com/</a></td>

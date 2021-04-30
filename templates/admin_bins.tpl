@@ -52,7 +52,7 @@
                             <i class="fas fa-fw fa-lock-open text-success"></i>
                         {{ end }}
                     </td>
-                    <td><a href="/admin/log/{{ .Id }}">Log</a></td>
+                    <td><a href="/admin/log/bin/{{ .Id }}">Log</a></td>
                 </tr>
             {{ end }}
         </table>

@@ -133,21 +133,30 @@ func (h *HTTP) ViewAdminLog(w http.ResponseWriter, r *http.Request) {
 	var data Data
 
 	params := mux.Vars(r)
-	inputBin := params["bin"]
-	if inputBin != "" {
-		trs, err := h.dao.Transaction().GetByBin(inputBin)
+	inputCategory := params["category"]
+	inputFilter := params["filter"]
+
+	if inputCategory == "bin" {
+		bin := inputFilter
+		trs, err := h.dao.Transaction().GetByBin(bin)
 		if err != nil {
 			http.Error(w, "Errno 361", http.StatusInternalServerError)
 			return
 		}
 		data.Transactions = trs
-	}
-
-	inputIP := params["ip"]
-	if inputIP != "" {
-		trs, err := h.dao.Transaction().GetByIP(inputIP)
+	} else if inputCategory == "ip" {
+		ip := inputFilter
+		trs, err := h.dao.Transaction().GetByIP(ip)
 		if err != nil {
-			http.Error(w, "Errno 369", http.StatusInternalServerError)
+			http.Error(w, "Errno 361", http.StatusInternalServerError)
+			return
+		}
+		data.Transactions = trs
+	} else if inputCategory == "cid" {
+		cid := inputFilter
+		trs, err := h.dao.Transaction().GetByClientId(cid)
+		if err != nil {
+			http.Error(w, "Errno 361", http.StatusInternalServerError)
 			return
 		}
 		data.Transactions = trs

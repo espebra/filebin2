@@ -21,6 +21,7 @@
                 <tr>
                     <th>Timestamp</th>
                     <th>Source IP</th>
+                    <th>Client ID</th>
                     <th>Bin</th>
                     <th>Request</th>
                     <th>Request bytes</th>
@@ -50,8 +51,9 @@
                             {{ .Timestamp.Format "2006-01-02 15:04:05 UTC" }}
                         </div>
                     </td>
-                    <td><a href="/admin/log/{{ .IP }}">{{ .IP }}</a></td>
-                    <td><a href="/admin/log/{{ .BinId }}">{{ .BinId }}</a></td>
+                    <td><a href="/admin/log/ip/{{ .IP }}">{{ .IP }}</a></td>
+                    <td><a href="/admin/log/cid/{{ .ClientId }}">{{ .ClientId }}</a></td>
+                    <td><a href="/admin/log/bin/{{ .BinId }}">{{ .BinId }}</a></td>
                     <td>
                         <code>{{ .Method }} <a href="{{ .Path }}">{{ .Path }}</a></code>
                     </td>

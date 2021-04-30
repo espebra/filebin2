@@ -72,6 +72,13 @@ paths:
           application/octet-stream:
             schema:
               type: string
+      parameters:
+        - in: header
+          name: cid
+          description: A custom id of the client uploading
+          required: false
+          schema:
+            type: string
       responses:
         '201':
           description: Successful upload.
