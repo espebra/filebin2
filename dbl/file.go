@@ -133,6 +133,7 @@ func (d *FileDao) GetByBin(id string, inStorage bool) (files []ds.File, err erro
 	if err != nil {
 		return files, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var file ds.File
 		err = rows.Scan(&file.Id, &file.Bin, &file.Filename, &file.InStorage, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updates, &file.IP, &file.ClientId, &file.Headers, &file.Nonce, &file.UpdatedAt, &file.CreatedAt, &file.DeletedAt)
@@ -162,6 +163,7 @@ func (d *FileDao) GetAll(available bool) (files []ds.File, err error) {
 	if err != nil {
 		return files, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var file ds.File
 		err = rows.Scan(&file.Id, &file.Bin, &file.Filename, &file.InStorage, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updates, &file.IP, &file.ClientId, &file.Headers, &file.Nonce, &file.UpdatedAt, &file.CreatedAt, &file.DeletedAt)
@@ -190,6 +192,7 @@ func (d *FileDao) GetPendingDelete() (files []ds.File, err error) {
 	if err != nil {
 		return files, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var file ds.File
 		err = rows.Scan(&file.Id, &file.Bin, &file.Filename, &file.InStorage, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updates, &file.IP, &file.ClientId, &file.Headers, &file.Nonce, &file.UpdatedAt, &file.CreatedAt, &file.DeletedAt)

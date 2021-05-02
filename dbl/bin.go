@@ -59,6 +59,7 @@ func (d *BinDao) GetAll() (bins []ds.Bin, err error) {
 	if err != nil {
 		return bins, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var bin ds.Bin
 		err = rows.Scan(&bin.Id, &bin.Readonly, &bin.Downloads, &bin.Bytes, &bin.Files, &bin.Updates, &bin.UpdatedAt, &bin.CreatedAt, &bin.ApprovedAt, &bin.ExpiredAt, &bin.DeletedAt)
@@ -94,6 +95,7 @@ func (d *BinDao) GetPendingDelete() (bins []ds.Bin, err error) {
 	if err != nil {
 		return bins, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var bin ds.Bin
 		err = rows.Scan(&bin.Id, &bin.Readonly, &bin.Downloads, &bin.Bytes, &bin.Files, &bin.UpdatedAt, &bin.CreatedAt, &bin.ApprovedAt, &bin.ExpiredAt, &bin.DeletedAt)

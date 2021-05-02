@@ -82,6 +82,7 @@ func (dao DAO) Transaction() *TransactionDao {
 
 func (dao DAO) Status() bool {
 	if err := dao.db.Ping(); err != nil {
+		fmt.Printf("Database status check returned: %s\n", err.Error())
 		return false
 	}
 	return true
