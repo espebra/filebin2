@@ -19,6 +19,8 @@ import (
 )
 
 func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "max-age=0")
+
 	params := mux.Vars(r)
 	inputBin := params["bin"]
 
@@ -90,6 +92,8 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HTTP) BinQR(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "max-age=0")
+
 	params := mux.Vars(r)
 	inputBin := params["bin"]
 
@@ -115,6 +119,8 @@ func (h *HTTP) BinQR(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "max-age=0")
+
 	params := mux.Vars(r)
 	inputBin := params["bin"]
 	inputFormat := params["format"]
@@ -221,6 +227,8 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HTTP) DeleteBin(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "max-age=0")
+
 	params := mux.Vars(r)
 	inputBin := params["bin"]
 
@@ -254,6 +262,8 @@ func (h *HTTP) DeleteBin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HTTP) LockBin(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "max-age=0")
+
 	params := mux.Vars(r)
 	inputBin := params["bin"]
 
@@ -291,6 +301,8 @@ func (h *HTTP) LockBin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HTTP) ApproveBin(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "max-age=0")
+
 	params := mux.Vars(r)
 	inputBin := params["bin"]
 

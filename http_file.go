@@ -23,6 +23,8 @@ import (
 )
 
 func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "max-age=0")
+
 	t0 := time.Now()
 	params := mux.Vars(r)
 	inputBin := params["bin"]
@@ -93,7 +95,6 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Bin", file.Bin)
 	w.Header().Set("Filename", file.Filename)
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", file.Bytes))
-	//w.Header().Set("Cache-Control", "s-maxage=1")
 
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", file.Bytes))
 
@@ -134,6 +135,8 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HTTP) UploadFileDeprecated(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "max-age=0")
+
 	inputBin := r.Header.Get("bin")
 	inputFilename := r.Header.Get("filename")
 
@@ -146,6 +149,8 @@ func (h *HTTP) UploadFileDeprecated(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "max-age=0")
+
 	t0 := time.Now()
 
 	params := mux.Vars(r)
@@ -426,6 +431,8 @@ func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HTTP) DeleteFile(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "max-age=0")
+
 	params := mux.Vars(r)
 	inputBin := params["bin"]
 	inputFilename := params["filename"]

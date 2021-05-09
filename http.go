@@ -39,6 +39,7 @@ func (h *HTTP) Init() (err error) {
 	h.router.HandleFunc("/", h.Index).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/", h.UploadFileDeprecated).Methods(http.MethodPost)
 	h.router.HandleFunc("/filebin-status", h.FilebinStatus).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/robots.txt", h.Robots).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/about", h.About).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/api", h.API).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/api.yaml", h.APISpec).Methods(http.MethodHead, http.MethodGet)

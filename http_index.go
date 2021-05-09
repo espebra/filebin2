@@ -11,6 +11,7 @@ import (
 )
 
 func (h *HTTP) Index(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "max-age=0")
 
 	type Data struct {
 		ds.Common
@@ -57,7 +58,7 @@ func (h *HTTP) Index(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HTTP) About(w http.ResponseWriter, r *http.Request) {
-	//w.Header().Set("Cache-Control", "max-age=900")
+	w.Header().Set("Cache-Control", "max-age=900")
 	type Data struct {
 		ds.Common
 	}
@@ -72,7 +73,7 @@ func (h *HTTP) About(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HTTP) Privacy(w http.ResponseWriter, r *http.Request) {
-	//w.Header().Set("Cache-Control", "max-age=900")
+	w.Header().Set("Cache-Control", "max-age=900")
 	type Data struct {
 		ds.Common
 		Bin ds.Bin `json:"bin"`
@@ -88,7 +89,7 @@ func (h *HTTP) Privacy(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HTTP) Terms(w http.ResponseWriter, r *http.Request) {
-	//w.Header().Set("Cache-Control", "max-age=900")
+	w.Header().Set("Cache-Control", "max-age=900")
 	type Data struct {
 		ds.Common
 		Bin ds.Bin `json:"bin"`
@@ -104,6 +105,8 @@ func (h *HTTP) Terms(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HTTP) API(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "max-age=900")
+
 	type Data struct {
 		ds.Common
 		Bin ds.Bin `json:"bin"`
@@ -111,7 +114,6 @@ func (h *HTTP) API(w http.ResponseWriter, r *http.Request) {
 	var data Data
 	data.Page = "api"
 
-	//w.Header().Set("Cache-Control", "max-age=900")
 	if err := h.templates.ExecuteTemplate(w, "api", data); err != nil {
 		fmt.Printf("Failed to execute template: %s\n", err.Error())
 		http.Error(w, "Errno 302", http.StatusInternalServerError)
@@ -120,6 +122,7 @@ func (h *HTTP) API(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HTTP) APISpec(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "max-age=900")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	type Data struct {
@@ -139,6 +142,8 @@ func (h *HTTP) APISpec(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HTTP) FilebinStatus(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "max-age=1")
+
 	type Data struct {
 		AppStatus bool `json:"app-status"`
 		DbStatus  bool `json:"db-status"`
@@ -174,4 +179,14 @@ func (h *HTTP) FilebinStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(code)
 	io.WriteString(w, string(out))
+}
+
+func (h *HTTP) Robots(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "max-age=3600")
+
+	if err := h.templates.ExecuteTemplate(w, "robots", nil); err != nil {
+		fmt.Printf("Failed to execute template: %s\n", err.Error())
+		http.Error(w, "Errno 302", http.StatusInternalServerError)
+		return
+	}
 }

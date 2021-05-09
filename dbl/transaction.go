@@ -100,7 +100,6 @@ func (d *TransactionDao) GetByClientId(id string) (transactions []ds.Transaction
 	return transactions, nil
 }
 
-
 func (d *TransactionDao) GetByIP(ip string) (transactions []ds.Transaction, err error) {
 	sqlStatement := "SELECT id, bin_id, filename, operation, method, path, ip, client_id, headers, timestamp, req_bytes, resp_bytes, status, completed FROM transaction WHERE ip = $1 ORDER BY timestamp DESC"
 	rows, err := d.db.Query(sqlStatement, ip)
