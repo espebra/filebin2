@@ -44,7 +44,9 @@ CREATE TABLE transaction (
 	filename	TEXT,
 	headers		TEXT NOT NULL,
 	status		INT NOT NULL,
-	req_bytes	INT NOT NULL,
-	resp_bytes	INT NOT NULL,
+	req_bytes	BIGINT NOT NULL,
+	resp_bytes	BIGINT NOT NULL,
 	UNIQUE(id)
 );
+
+CREATE INDEX idx_bin_id ON transaction(bin_id);
