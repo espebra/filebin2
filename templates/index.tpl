@@ -22,8 +22,7 @@
                 var fileDrop = document.getElementById("fileDrop");
                 var fileField = document.getElementById("fileField");
                 var bin = "{{ .Bin.Id }}";
-                var uploadURL = "/";
-                var binURL = "/{{ .Bin.Id }}";
+                var binURL = "/{{ .Bin.Id }}/";
                 var client = new ClientJS();
                 FileAPI = new FileAPI(
                     fileCount,
@@ -31,7 +30,6 @@
                     fileDrop,
                     fileField,
                     bin,
-                    uploadURL,
                     binURL,
                     client.getFingerprint()
                 );

@@ -125,7 +125,7 @@ paths:
           description: Redirect to the new location
           content:
             application/json: {}
-  '/{bin}':
+  '/{bin}/':
     get:
       tags:
         - bin

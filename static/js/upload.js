@@ -1,4 +1,4 @@
-function FileAPI (c, t, d, f, bin, uploadURL, binURL, client) {
+function FileAPI (c, t, d, f, bin, binURL, client) {
 
     var fileCount = c,
         fileList = t,
@@ -381,7 +381,7 @@ function lockBin (bin, messageBoxID) {
 
     xhr.open(
         "PUT",
-        "/" + bin
+        "/" + bin + "/"
     );
 
     xhr.send();
