@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/sha256"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/dustin/go-humanize"
@@ -21,6 +22,7 @@ func (h *HTTP) ViewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 		BucketInfo s3.BucketInfo `json:"bucketinfo"`
 		Page       string        `json:"page"`
 		DBInfo     ds.Info       `json:"db_info"`
+		DBStats    sql.DBStats   `json:"db_stats"`
 		Config     ds.Config     `json:"-"`
 	}
 	var data Data
@@ -40,6 +42,8 @@ func (h *HTTP) ViewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 	data.DBInfo.FreeBytes = freeBytes
 	data.DBInfo.FreeBytesReadable = humanize.Bytes(uint64(freeBytes))
+
+	data.DBStats = h.dao.Stats()
 
 	//binsAvailable, err := h.dao.Bin().GetAll()
 	//if err != nil {

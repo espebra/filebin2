@@ -34,7 +34,7 @@ func httpRequest(tc TestCase) (statuscode int, body string, err error) {
 		log.Fatal(err)
 	}
 	if tc.Bin != "" {
-		u.Path = path.Join(u.Path, tc.Bin) + "/"
+		u.Path = path.Join(u.Path, tc.Bin)
 	}
 	if tc.Filename != "" {
 		u.Path = path.Join(u.Path, tc.Filename)

@@ -117,6 +117,18 @@
             </tbody>
         </table>
 
+        <ul>
+            <li>Maximum number of open connections to the database: {{ .DBStats.MaxOpenConnections}}</li>
+            <li>The number of established connections both in use and idle: {{ .DBStats.OpenConnections}}</li>
+            <li>The number of connections currently in use: {{ .DBStats.InUse}}</li>
+            <li>The number of idle connections: {{ .DBStats.Idle}}</li>
+            <li>The total number of connections waited for: {{ .DBStats.WaitCount}}</li>
+            <li>The total time blocked waiting for a new connection: {{ .DBStats.WaitDuration}}</li>
+            <li>The total number of connections closed due to SetMaxIdleConns: {{ .DBStats.MaxIdleClosed}}</li>
+            <li>The total number of connections closed due to SetConnMaxIdleTime: {{ .DBStats.MaxIdleTimeClosed}}</li>
+            <li>The total number of connections closed due to SetConnMaxLifetime: {{ .DBStats.MaxLifetimeClosed}}</li>
+        </ul>
+
         <script src="/static/js/popper.min.js"></script>
         <script src="/static/js/bootstrap.min.js"></script>
 

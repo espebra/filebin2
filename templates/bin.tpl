@@ -28,7 +28,7 @@
                 var fileDrop = document.getElementById("fileDrop");
                 var fileField = document.getElementById("fileField");
                 var bin = "{{ .Bin.Id }}";
-                var binURL = "/{{ .Bin.Id }}/";
+                var binURL = "/{{ .Bin.Id }}";
                 var client = new ClientJS();
                 FileAPI = new FileAPI(
                     fileCount,
@@ -55,15 +55,16 @@
         {{template "topbar" .}}
 
         <h1>Filebin</h1>
+
         {{ if eq .Bin.Readonly false }}
+            <!-- Upload status -->
+            <span id="fileCount"></span>
+
             <!-- Drop zone -->
             <span id="fileDrop">Drop files to upload</span>
 
             <!-- Upload queue -->
             <span id="fileList"></span>
-
-            <!-- Upload status -->
-            <span id="fileCount"></span>
         {{ end }}
 
         {{ $numfiles := .Files | len }}
@@ -82,7 +83,7 @@
                     <p>This bin is empty. Files can not be uploaded to it since it is locked.</p>
                 {{ end }}
             {{ else }}
-                The bin <a class="link-primary link-custom" href="/{{ .Bin.Id }}/">{{ .Bin.Id }}</a> was created {{ .Bin.CreatedAtRelative }}
+                The bin <a class="link-primary link-custom" href="/{{ .Bin.Id }}">{{ .Bin.Id }}</a> was created {{ .Bin.CreatedAtRelative }}
 
                 {{- if ne .Bin.CreatedAtRelative .Bin.UpdatedAtRelative -}}
                     , updated {{ .Bin.UpdatedAtRelative }}
@@ -278,15 +279,15 @@
 
                         <p>This action is not reversible.</p>
 
-                        <p class="lead">Delete the bin <a class="link-primary" href="/{{ $.Bin.Id }}/">{{ $.Bin.Id }}</a> and all of its files?</p>
+                        <p class="lead">Delete the bin <a class="link-primary" href="/{{ $.Bin.Id }}">{{ $.Bin.Id }}</a> and all of its files?</p>
 
                         <div id="deleteStatus"></div>
                     </div>
                     <div class="modal-footer">
                         <div class="pull-left">
-                        <button type="button" class="btn btn-danger" id="deleteButton" onclick="deleteURL('/{{ $.Bin.Id }}/','deleteStatus')"><i class="fas fa-fw fa-trash-alt"></i> Confirm</button>
+                        <button type="button" class="btn btn-danger" id="deleteButton" onclick="deleteURL('/{{ $.Bin.Id }}','deleteStatus')"><i class="fas fa-fw fa-trash-alt"></i> Confirm</button>
                         </div>
-                        <a class="btn btn-secondary" href="/{{ $.Bin.Id }}/" class="btn btn-secondary"><i class="fa fa-close"></i> Close</a>
+                        <a class="btn btn-secondary" href="/{{ $.Bin.Id }}" class="btn btn-secondary"><i class="fa fa-close"></i> Close</a>
                     </div>
                 </div>
             </div>
@@ -305,7 +306,7 @@
                         <ul class="row">
                             <dt class="col-sm-3">Bin</dt>
                             <dd class="col-sm-9">
-                                <a class="link-primary link-custom" href="/{{ $.Bin.Id }}/">
+                                <a class="link-primary link-custom" href="/{{ $.Bin.Id }}">
                                     {{ $.Bin.Id }}
                                 </a>
                             </dd>
@@ -404,7 +405,7 @@
                         <p>The bin is currently unlocked, which means that new files can be added to it and existing files can be updated. If the bin is locked, the bin will become read only and no more file uploads will be allowed. Note that a locked bin can still be deleted.</p>
                 <p>This action is not reversible.</p>
 
-                        <p class="lead">Do you want to lock bin <a class="link-primary" href="/{{ $.Bin.Id }}/">{{ $.Bin.Id }}</a>?</p>
+                        <p class="lead">Do you want to lock bin <a class="link-primary" href="/{{ $.Bin.Id }}">{{ $.Bin.Id }}</a>?</p>
 
                         <div id="lockStatus"></div>
                     </div>

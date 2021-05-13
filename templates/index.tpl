@@ -22,8 +22,8 @@
                 var fileDrop = document.getElementById("fileDrop");
                 var fileField = document.getElementById("fileField");
                 var bin = "{{ .Bin.Id }}";
-                var binURL = "/{{ .Bin.Id }}/";
-                var client = new ClientJS();
+                var binURL = "/{{ .Bin.Id }}";
+                var cid = "";
                 FileAPI = new FileAPI(
                     fileCount,
                     fileList,
@@ -31,7 +31,7 @@
                     fileField,
                     bin,
                     binURL,
-                    client.getFingerprint()
+                    cid
                 );
                 FileAPI.init();
                 // Automatically start upload when using the drop zone
@@ -54,6 +54,13 @@
             Convenient file sharing in three steps without
             registration.
         </p>
+
+        {{ if eq .AvailableStorage false }}
+            <div class="alert alert-warning" role="alert">
+                The storage capacity is reached and new file uploads will be rejected. Please come back later.
+            </div>
+        {{ end }}
+
         <p class="lead pt-1">
             <strong class="mt-2 pe-2"><span class="rounded-pill bg-secondary btn btn-sm text-light" style="width: 2rem; height:2rem;">1</span></strong>
             <br class="mobile-break">
@@ -64,38 +71,32 @@
             <br class="mobile-break">
             <span>Wait until the file uploads complete.</span>
         </p>
+
+        <!-- Upload status -->
+        <span id="fileCount"></span>
+
+        <!-- Drop zone -->
+        <span id="fileDrop">Drop files to upload</span>
+
+        <!-- Upload queue -->
+        <span id="fileList"></span>
+
         <p class="lead">
             <strong class="mt-2 pe-2"><span class="rounded-pill bg-secondary btn btn-sm text-light" style="width: 2rem; height:2rem;">3</span></strong>
             <br class="mobile-break">
             <span>The files will be available at <a href="{{ .Bin.URL }}">{{ .Bin.URL }}</a> which is a link you can share.</span>
         </p>
 
-        <p class="pt-3 text-muted">
+        <p class="pt-2 text-muted">
             <em>
-            The files can be deleted manually at any time and will in any case be deleted automatically {{ .Bin.ExpiredAtRelative }}.
+                The files can be deleted manually at any time and will in any case be deleted automatically {{ .Bin.ExpiredAtRelative }}.
             </em>
         </p>
-
-        {{ if eq .AvailableStorage false }}
-            <div class="alert alert-warning" role="alert">
-                The storage is currently full. Please come back later.
-            </div>
-        {{ end }}
-
-        <!-- Drop zone -->
-        <div id="fileDrop">Drop files to upload</div>
-
-        <!-- Upload queue -->
-        <div id="fileList"></div>
-
-        <!-- Upload status -->
-        <div id="fileCount"></div>
 
         {{ template "footer" . }}
 
         <script src="/static/js/popper.min.js"></script>
         <script src="/static/js/bootstrap.min.js"></script>
-        <script src="/static/js/client.min.js"></script>
     </body>
 </html>
 {{ end }}

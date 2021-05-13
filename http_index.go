@@ -12,6 +12,7 @@ import (
 
 func (h *HTTP) Index(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=0")
+	w.Header().Set("X-Robots-Tag", "index, noarchive")
 
 	type Data struct {
 		ds.Common

@@ -22,6 +22,7 @@ import (
 // to exclude from robots.txt
 func (h *HTTP) ViewBinRedirect(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=3600")
+	w.Header().Set("X-Robots-Tag", "noindex")
 
 	params := mux.Vars(r)
 	inputBin := params["bin"]
@@ -30,11 +31,12 @@ func (h *HTTP) ViewBinRedirect(w http.ResponseWriter, r *http.Request) {
 	binURL.Scheme = h.config.BaseUrl.Scheme
 	binURL.Host = h.config.BaseUrl.Host
 	binURL.Path = path.Join(h.config.BaseUrl.Path, inputBin)
-	http.Redirect(w, r, binURL.String() + "/", 301)
+	http.Redirect(w, r, binURL.String(), 301)
 }
 
 func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=0")
+	w.Header().Set("X-Robots-Tag", "noindex")
 
 	params := mux.Vars(r)
 	inputBin := params["bin"]
@@ -52,7 +54,7 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 	binURL.Scheme = h.config.BaseUrl.Scheme
 	binURL.Host = h.config.BaseUrl.Host
 	binURL.Path = path.Join(h.config.BaseUrl.Path, inputBin)
-	data.BinUrl = binURL.String() + "/"
+	data.BinUrl = binURL.String()
 
 	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
@@ -108,6 +110,7 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 
 func (h *HTTP) BinQR(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=0")
+	w.Header().Set("X-Robots-Tag", "noindex")
 
 	params := mux.Vars(r)
 	inputBin := params["bin"]
@@ -118,7 +121,7 @@ func (h *HTTP) BinQR(w http.ResponseWriter, r *http.Request) {
 	binURL.Path = path.Join(h.config.BaseUrl.Path, inputBin)
 
 	var png []byte
-	png, err := qrcode.Encode(binURL.String() + "/", qrcode.Medium, 256)
+	png, err := qrcode.Encode(binURL.String(), qrcode.Medium, 256)
 	if err != nil {
 		fmt.Printf("Error generating qr code %s: %s\n", binURL.String(), err.Error())
 		http.Error(w, "Unable to generate QR code", http.StatusInternalServerError)
@@ -135,6 +138,7 @@ func (h *HTTP) BinQR(w http.ResponseWriter, r *http.Request) {
 
 func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=0")
+	w.Header().Set("X-Robots-Tag", "noindex")
 
 	params := mux.Vars(r)
 	inputBin := params["bin"]

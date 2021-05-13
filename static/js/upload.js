@@ -60,18 +60,19 @@ function FileAPI (c, t, d, f, bin, binURL, client) {
         }
         text = text + " uploaded";
         if (counter_failed > 0) {
-            text = text + ". " + counter_failed + " failed.";
+            text = text + ". " + counter_failed + " failed, please retry.";
             box.className = "alert alert-danger";
         } else if (counter_completed == counter_queue) {
             text = text + ", all done!";
             box.className = "alert alert-success";
 
             // Automatic refresh when uploads complete
-            window.location.assign(binURL)
+            //window.location.assign(binURL)
+            window.location.href = binURL;
         }
 
         if ((counter_completed + counter_failed) != counter_queue) {
-            text = text + "...";
+            text = text + "... please wait.";
             box.className = "alert alert-info";
         }
 
@@ -381,7 +382,7 @@ function lockBin (bin, messageBoxID) {
 
     xhr.open(
         "PUT",
-        "/" + bin + "/"
+        "/" + bin
     );
 
     xhr.send();

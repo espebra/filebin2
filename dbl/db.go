@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	_ "github.com/lib/pq"
+	"time"
 )
 
 type DAO struct {
@@ -31,6 +32,11 @@ func Init(dbHost string, dbPort int, dbName, dbUser, dbPassword string) (DAO, er
 	if err := db.Ping(); err != nil {
 		return dao, errors.New(fmt.Sprintf("Unable to ping the database: %s:%d\n", dbHost, dbPort))
 	}
+
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(25)
+	db.SetConnMaxLifetime(5 * time.Minute)
+
 	dao = DAO{db: db}
 	dao.ConnStr = connStr
 	dao.binDao = &BinDao{db: db}
@@ -86,4 +92,8 @@ func (dao DAO) Status() bool {
 		return false
 	}
 	return true
+}
+
+func (dao DAO) Stats() sql.DBStats {
+	return dao.db.Stats()
 }
