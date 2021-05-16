@@ -58,6 +58,9 @@
         {{ if eq .AvailableStorage false }}
             <div class="alert alert-warning" role="alert">
                 The storage capacity is reached and new file uploads will be rejected. Please come back later.
+                <a href="#" data-bs-toggle="modal" data-bs-target="#modalStorageLimit" aria-haspopup="true" aria-expanded="false">
+                    <i class="fas fa-fw fa-info-circle text-secondary"></i>
+                </a>
             </div>
         {{ end }}
 
@@ -94,6 +97,32 @@
         </p>
 
         {{ template "footer" . }}
+
+        <!-- Storage Limit Modal start -->
+        <div class="modal fade" id="modalStorageLimit" tabindex="-1" role="dialog" aria-labelledby="modalStorageLimitTitle" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header alert-secondary">
+                        <h5 class="modal-title" id="modelStorageLimitTitle">Storage capacity reached</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="lead">What is this?</p>
+                        <p>This service has a storage capacity limit in place. When overall usage is above this limit, new file uploads will be rejected until usage is below the limit again.</p>
+
+                        <p class="lead">How to get below the limit?</p>
+                        <p>Usage is reduced as files uploaded earlier are deleted. Files are deleted after a period of time after being uploaded, which is an automatic and continuous process. In addition, usage is reduced whenever existing files are manually deleted which users can do at any time.</p>
+
+                        <p class="lead">What to do now?</p>
+                        <p>If you need to upload files and the storage capacity is reached, check back soon again. Maybe then usage is below the limit and new file uploads will be accepted.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Storage Limit Modal stop -->
 
         <script src="/static/js/popper.min.js"></script>
         <script src="/static/js/bootstrap.min.js"></script>
