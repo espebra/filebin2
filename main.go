@@ -10,6 +10,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/espebra/filebin2/dbl"
 	"github.com/espebra/filebin2/ds"
+	"github.com/espebra/filebin2/geoip"
 	"github.com/espebra/filebin2/s3"
 	"math/rand"
 	"net/url"
@@ -22,6 +23,7 @@ var (
 	tmpdirFlag          = flag.String("tmpdir", os.TempDir(), "Directory for temporary files for upload and download")
 	baseURLFlag         = flag.String("baseurl", "https://filebin.net", "The base URL to use. Required for self-hosted instances.")
 	requireApprovalFlag = flag.Bool("manual-approval", false, "Require manual admin approval of new bins before files can be downloaded.")
+	mmdbPathFlag        = flag.String("mmdb", "/var/lib/filebin/GeoLite2-City.mmdb", "The path to an mmdb formatted geoip database like GeoLite2-City.mmdb.")
 
 	// Limits
 	limitFileDownloadsFlag = flag.Uint64("limit-file-downloads", 0, "Limit the number of downloads per file. 0 disables this limit.")
@@ -61,6 +63,12 @@ var (
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 	flag.Parse()
+
+	// mmdb path
+	geodb, err := geoip.Init(*mmdbPathFlag)
+	if err != nil {
+		fmt.Printf("Unable to load geoip database: %s\n", err.Error())
+	}
 
 	// Set database port to 5432 if not set or invalid
 	dbport, err := strconv.Atoi(*dbPortFlag)
@@ -132,6 +140,7 @@ func main() {
 		templateBox: templateBox,
 		dao:         &daoconn,
 		s3:          &s3conn,
+		geodb:       &geodb,
 		config:      config,
 	}
 

@@ -50,3 +50,19 @@ CREATE TABLE transaction (
 );
 
 CREATE INDEX idx_bin_id ON transaction(bin_id);
+CREATE INDEX idx_file_deleted_at_in_storage ON file(deleted_at, in_storage);
+CREATE INDEX idx_bin_deleted_at_expired_at ON bin(expired_at, deleted_at);
+
+CREATE TABLE ban (
+	id		BIGSERIAL NOT NULL PRIMARY KEY,
+	ip		VARCHAR(64) NOT NULL,
+	fingerprint	VARCHAR(64) NOT NULL,
+	network		VARCHAR(64) NOT NULL,
+	continent	VARCHAR(64) NOT NULL,
+	country		VARCHAR(64) NOT NULL,
+	city		VARCHAR(64) NOT NULL,
+	active		BOOLEAN NOT NULL,
+	counter		BIGINT NOT NULL,
+	created_at	TIMESTAMP NOT NULL,
+	UNIQUE(id)
+);

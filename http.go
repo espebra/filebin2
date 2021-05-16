@@ -7,6 +7,7 @@ import (
 	"github.com/espebra/filebin2/dbl"
 	"github.com/espebra/filebin2/ds"
 	"github.com/espebra/filebin2/s3"
+	"github.com/espebra/filebin2/geoip"
 	"github.com/felixge/httpsnoop"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -29,6 +30,7 @@ type HTTP struct {
 	templates   *template.Template
 	dao         *dbl.DAO
 	s3          *s3.S3AO
+	geodb       *geoip.DAO
 	config      *ds.Config
 }
 
@@ -36,33 +38,48 @@ func (h *HTTP) Init() (err error) {
 	h.router = mux.NewRouter()
 	h.templates = h.ParseTemplates()
 
-	h.router.HandleFunc("/", h.Index).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/", h.UploadFileDeprecated).Methods(http.MethodPost)
+	h.router.HandleFunc("/", h.BanLookup(h.Index)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/", h.BanLookup(h.UploadFileDeprecated)).Methods(http.MethodPost)
 	h.router.HandleFunc("/filebin-status", h.FilebinStatus).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/robots.txt", h.Robots).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/about", h.About).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/api", h.API).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/api.yaml", h.APISpec).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/privacy", h.Privacy).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/terms", h.Terms).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/about", h.BanLookup(h.About)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/api", h.BanLookup(h.API)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/api.yaml", h.BanLookup(h.APISpec)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/privacy", h.BanLookup(h.Privacy)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/terms", h.BanLookup(h.Terms)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/log/{category:[a-z]+}/{filter:[A-Za-z0-9.:_-]+}", h.Auth(h.ViewAdminLog)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/bins", h.Auth(h.ViewAdminBins)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin", h.Auth(h.ViewAdminDashboard)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/approve/{bin:[A-Za-z0-9_-]+}", h.Log(h.Auth(h.ApproveBin))).Methods("PUT")
 	//h.router.HandleFunc("/admin/cleanup", h.Auth(h.ViewAdminCleanup)).Methods(http.MethodHead, http.MethodGet)
 	h.router.Handle("/static/{path:.*}", http.StripPrefix("/static/", http.FileServer(h.staticBox.HTTPBox()))).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/archive/{bin:[A-Za-z0-9_-]+}/{format:[a-z]+}", h.Log(h.Archive)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/qr/{bin:[A-Za-z0-9_-]+}", h.BinQR).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/", h.Log(h.ViewBinRedirect)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.Log(h.ViewBin)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.Log(h.DeleteBin)).Methods(http.MethodDelete)
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.Log(h.LockBin)).Methods("PUT")
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.Log(h.GetFile)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.Log(h.DeleteFile)).Methods(http.MethodDelete)
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.Log(h.UploadFile)).Methods(http.MethodPost)
+	h.router.HandleFunc("/archive/{bin:[A-Za-z0-9_-]+}/{format:[a-z]+}", h.Log(h.BanLookup(h.Archive))).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/qr/{bin:[A-Za-z0-9_-]+}", h.BanLookup(h.BinQR)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/", h.Log(h.BanLookup(h.ViewBinRedirect))).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.Log(h.BanLookup(h.ViewBin))).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.Log(h.BanLookup(h.DeleteBin))).Methods(http.MethodDelete)
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.Log(h.BanLookup(h.LockBin))).Methods("PUT")
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.Log(h.BanLookup(h.GetFile))).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.Log(h.BanLookup(h.DeleteFile))).Methods(http.MethodDelete)
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.Log(h.BanLookup(h.UploadFile))).Methods(http.MethodPost)
 
 	h.config.ExpirationDuration = time.Second * time.Duration(h.config.Expiration)
 	return err
+}
+
+func (h *HTTP) BanLookup(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ip := net.ParseIP(r.RemoteAddr)
+
+		client, err := h.geodb.Lookup(ip)
+		if err != nil {
+			fmt.Printf("Unable to look up geoip details for %s: %s\n", r.RemoteAddr, err.Error())
+		}
+
+		// Check the client details against the ban filter here
+		fmt.Printf("Request: %s %s, client: %s\n", r.Method, r.URL.String(), client.String())
+		fn(w, r)
+	})
 }
 
 func (h *HTTP) Log(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {

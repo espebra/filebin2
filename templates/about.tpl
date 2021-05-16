@@ -32,9 +32,9 @@
                 <td><a href="https://getbootstrap.com/">https://getbootstrap.com/</a></td>
             </tr>
             <tr>
-                <td>ClientJS</td>
-                <td>Apache 2.0</td>
-                <td><a href="https://github.com/jackspirou/clientjs">https://github.com/jackspirou/clientjs</a></td>
+                <td>FingerprintJS</td>
+                <td>MIT</td>
+                <td><a href="https://github.com/fingerprintjs/fingerprintjs">https://github.com/fingerprintjs/fingerprintjs</a></td>
             </tr>
             <tr>
                 <td>Font Awesome</td>
