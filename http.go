@@ -69,15 +69,15 @@ func (h *HTTP) Init() (err error) {
 
 func (h *HTTP) BanLookup(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ip := net.ParseIP(r.RemoteAddr)
+		//ip := net.ParseIP(r.RemoteAddr)
 
-		client, err := h.geodb.Lookup(ip)
-		if err != nil {
-			fmt.Printf("Unable to look up geoip details for %s: %s\n", r.RemoteAddr, err.Error())
-		}
+		//client, err := h.geodb.Lookup(ip)
+		//if err != nil {
+		//	fmt.Printf("Unable to look up geoip details for %s: %s\n", r.RemoteAddr, err.Error())
+		//}
 
-		// Check the client details against the ban filter here
-		fmt.Printf("Request: %s %s, client: %s\n", r.Method, r.URL.String(), client.String())
+		//// Check the client details against the ban filter here
+		//fmt.Printf("Request: %s %s, client: %s\n", r.Method, r.URL.String(), client.String())
 		fn(w, r)
 	})
 }

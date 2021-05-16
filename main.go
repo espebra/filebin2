@@ -23,7 +23,7 @@ var (
 	tmpdirFlag          = flag.String("tmpdir", os.TempDir(), "Directory for temporary files for upload and download")
 	baseURLFlag         = flag.String("baseurl", "https://filebin.net", "The base URL to use. Required for self-hosted instances.")
 	requireApprovalFlag = flag.Bool("manual-approval", false, "Require manual admin approval of new bins before files can be downloaded.")
-	mmdbPathFlag        = flag.String("mmdb", "/var/lib/filebin/GeoLite2-City.mmdb", "The path to an mmdb formatted geoip database like GeoLite2-City.mmdb.")
+	mmdbPathFlag        = flag.String("mmdb", "", "The path to an mmdb formatted geoip database like GeoLite2-City.mmdb.")
 
 	// Limits
 	limitFileDownloadsFlag = flag.Uint64("limit-file-downloads", 0, "Limit the number of downloads per file. 0 disables this limit.")
