@@ -156,7 +156,7 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if found == false {
-		h.Error(w, r, "", fmt.Sprintf("The bin %s does not exist.", inputBin), 201, http.StatusNotFound)
+		h.Error(w, r, "", "The bin does not exist.", 201, http.StatusNotFound)
 		return
 	}
 
