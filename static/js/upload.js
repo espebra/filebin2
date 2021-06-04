@@ -243,7 +243,7 @@ function FileAPI (c, t, d, f, bin, binURL, client) {
                         if (isNaN(bps)) {
                             speedText = "Uploading... (" + filesize + ")";
                         } else {
-                            speedText = "Uploading at " + humanizeBytesPerSecond(bps) + " (" + progress_in_percent.toFixed(1) + "% of " + filesize + ")";
+                            speedText = "Uploading at " + humanizeBytesPerSecond(bps) + " (" + progress_in_percent.toFixed(2) + "% of " + filesize + ")";
                         }
                     } else {
                         // Upload just initiated
