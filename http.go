@@ -6,8 +6,8 @@ import (
 	"github.com/GeertJohan/go.rice"
 	"github.com/espebra/filebin2/dbl"
 	"github.com/espebra/filebin2/ds"
-	"github.com/espebra/filebin2/s3"
 	"github.com/espebra/filebin2/geoip"
+	"github.com/espebra/filebin2/s3"
 	"github.com/felixge/httpsnoop"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -15,6 +15,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/pprof"
 	"os"
 	"path"
 	"strings"
@@ -38,6 +39,12 @@ func (h *HTTP) Init() (err error) {
 	h.router = mux.NewRouter()
 	h.templates = h.ParseTemplates()
 
+	//h.router.HandleFunc("/debug/pprof/", pprof.Index)
+	//h.router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	//h.router.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	//h.router.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	h.router.PathPrefix("/debug/pprof/").HandlerFunc(h.Auth(pprof.Index))
+
 	h.router.HandleFunc("/", h.BanLookup(h.Index)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/", h.BanLookup(h.UploadFileDeprecated)).Methods(http.MethodPost)
 	h.router.HandleFunc("/filebin-status", h.FilebinStatus).Methods(http.MethodHead, http.MethodGet)
@@ -52,7 +59,7 @@ func (h *HTTP) Init() (err error) {
 	h.router.HandleFunc("/admin", h.Auth(h.ViewAdminDashboard)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/approve/{bin:[A-Za-z0-9_-]+}", h.Log(h.Auth(h.ApproveBin))).Methods("PUT")
 	//h.router.HandleFunc("/admin/cleanup", h.Auth(h.ViewAdminCleanup)).Methods(http.MethodHead, http.MethodGet)
-	h.router.Handle("/static/{path:.*}", http.StripPrefix("/static/", http.FileServer(h.staticBox.HTTPBox()))).Methods(http.MethodHead, http.MethodGet)
+	h.router.Handle("/static/{path:.*}", http.StripPrefix("/static/", CacheControl(http.FileServer(h.staticBox.HTTPBox())))).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/archive/{bin:[A-Za-z0-9_-]+}/{format:[a-z]+}", h.Log(h.BanLookup(h.Archive))).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/qr/{bin:[A-Za-z0-9_-]+}", h.BanLookup(h.BinQR)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/", h.Log(h.BanLookup(h.ViewBinRedirect))).Methods(http.MethodHead, http.MethodGet)
@@ -65,6 +72,13 @@ func (h *HTTP) Init() (err error) {
 
 	h.config.ExpirationDuration = time.Second * time.Duration(h.config.Expiration)
 	return err
+}
+
+func CacheControl(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "must-revalidate, public, max-age=604800")
+		h.ServeHTTP(w, r)
+	})
 }
 
 func (h *HTTP) BanLookup(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {

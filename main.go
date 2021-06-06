@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	_ "net/http/pprof"
 	"os"
 	"strconv"
 	//"github.com/espebra/filebin2/ds"

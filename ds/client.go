@@ -1,8 +1,8 @@
 package ds
 
 import (
-	"net"
 	"fmt"
+	"net"
 )
 
 type Client struct {
@@ -12,7 +12,7 @@ type Client struct {
 	City        string `json:"city"`
 	Country     string `json:"country"`
 	Continent   string `json:"continent"`
-	Proxy       bool `json:"proxy"`
+	Proxy       bool   `json:"proxy"`
 }
 
 func (c *Client) String() string {

@@ -2,9 +2,9 @@ package geoip
 
 import (
 	"fmt"
-	"net"
 	"github.com/espebra/filebin2/ds"
 	"github.com/oschwald/maxminddb-golang"
+	"net"
 )
 
 type DAO struct {
@@ -13,19 +13,19 @@ type DAO struct {
 
 type record struct {
 	Network struct {
-		Network     string `maxminddb:"network"`
+		Network string `maxminddb:"network"`
 	} `maxminddb:"network"`
 	City struct {
-		Names     map[string]string `maxminddb:"names"`
+		Names map[string]string `maxminddb:"names"`
 	} `maxminddb:"city"`
 	Country struct {
-		Names           map[string]string            `maxminddb:"names"`
+		Names map[string]string `maxminddb:"names"`
 	} `maxminddb:"country"`
 	Continent struct {
-		Names     map[string]string        `maxminddb:"names"`
+		Names map[string]string `maxminddb:"names"`
 	} `maxminddb:"continent"`
 	Traits struct {
-		IsAnonymousProxy    bool `maxminddb:"is_anonymous_proxy"`
+		IsAnonymousProxy bool `maxminddb:"is_anonymous_proxy"`
 	} `maxminddb:"traits"`
 }
 
