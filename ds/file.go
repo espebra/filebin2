@@ -21,7 +21,6 @@ type File struct {
 	IP                string       `json:"-"`
 	ClientId          string       `json:"-"`
 	Headers           string       `json:"-"`
-	Nonce             []byte       `json:"-"`
 	UpdatedAt         time.Time    `json:"updated_at"`
 	UpdatedAtRelative string       `json:"updated_at_relative"`
 	CreatedAt         time.Time    `json:"created_at"`

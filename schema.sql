@@ -24,7 +24,6 @@ CREATE TABLE file (
 	ip		VARCHAR(128) NOT NULL,
 	client_id	VARCHAR(128) NOT NULL,
 	headers		TEXT NOT NULL,
-	nonce		VARCHAR(128) NOT NULL,
 	updated_at	TIMESTAMP NOT NULL,
 	created_at	TIMESTAMP NOT NULL,
 	deleted_at	TIMESTAMP,

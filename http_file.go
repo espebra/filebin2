@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/md5"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,7 +13,7 @@ import (
 	"os"
 	"path"
 	"strconv"
-	"strings"
+	//"strings"
 	"time"
 
 	"github.com/espebra/filebin2/ds"
@@ -85,54 +86,24 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	fp, err := h.s3.GetObject(inputBin, inputFilename, file.Nonce, 0, 0)
-	if err != nil {
-		h.Error(w, r, fmt.Sprintf("Failed to fetch object by bin %s and filename %s: %s", inputBin, inputFilename, err.Error()), "Storage error", 118, http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Expires", bin.ExpiredAt.Format(http.TimeFormat))
-	w.Header().Set("Last-Modified", file.UpdatedAt.Format(http.TimeFormat))
-	w.Header().Set("Bin", file.Bin)
-	w.Header().Set("Filename", file.Filename)
-	w.Header().Set("Content-Length", fmt.Sprintf("%d", file.Bytes))
-
-	w.Header().Set("Content-Length", fmt.Sprintf("%d", file.Bytes))
-
-	if file.MD5 != "" {
-		w.Header().Set("Content-MD5", file.MD5)
-	}
-
-	if file.SHA256 != "" {
-		w.Header().Set("Content-SHA256", file.SHA256)
-	}
-
-	if file.Mime != "" {
-		w.Header().Set("Content-Type", file.Mime)
-	}
-
-	// Handling of specific content-types
-	if strings.HasPrefix(file.Mime, "video") {
-		w.Header().Set("Content-Disposition", "inline")
-	} else if strings.HasPrefix(file.Mime, "image") {
-		w.Header().Set("Content-Disposition", "inline")
-	} else if strings.HasPrefix(file.Mime, "text/plain") {
-		w.Header().Set("Content-Disposition", "inline")
-	} else {
-		// Tell the client to tread any other content types as attachment
-		w.Header().Set("Content-Disposition", "attachment; filename=\""+file.Filename+"\"")
-	}
-
 	if err := h.dao.File().RegisterDownload(&file); err != nil {
 		fmt.Printf("Unable to update file %s in bin %s: %s\n", inputFilename, inputBin, err.Error())
 	}
 
-	fmt.Printf("Downloaded file %s (%s) from bin %s in %.3fs (%d downloads)\n", inputFilename, humanize.Bytes(file.Bytes), inputBin, time.Since(t0).Seconds(), file.Downloads)
-
-	if bytes, err := io.Copy(w, fp); err != nil {
-		fmt.Printf("The client cancelled the download of bin %s and filename %s after %s of %s\n", inputBin, inputFilename, humanize.Bytes(uint64(bytes)), humanize.Bytes(file.Bytes))
+	// Redirect the client to a presigned URL for this fetch, which is more efficient
+	// than proxying the request through filebin.
+	presignedURL, err := h.s3.PresignedGetObject(inputBin, inputFilename, file.Mime)
+	if err != nil {
+		h.Error(w, r, fmt.Sprintf("Unable to generate presigned URL for bin %s and filename %s: %s", inputBin, inputFilename, err.Error()), "Unable to presign URL for object", 1351, http.StatusInternalServerError)
 		return
 	}
+	w.Header().Set("Location", presignedURL.String())
+	//w.WriteHeader(http.StatusFound)
+	w.WriteHeader(http.StatusSeeOther)
+	io.WriteString(w, "")
+
+	fmt.Printf("Downloaded file %s (%s) from bin %s in %.3fs (%d downloads)\n", inputFilename, humanize.Bytes(file.Bytes), inputBin, time.Since(t0).Seconds(), file.Downloads)
+	return
 }
 
 func (h *HTTP) UploadFileDeprecated(w http.ResponseWriter, r *http.Request) {
@@ -271,7 +242,7 @@ func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
 		h.Error(w, r, fmt.Sprintf("Error during checksum: %s", err.Error()), "Processing error", 128, http.StatusInternalServerError)
 		return
 	}
-	md5ChecksumString := fmt.Sprintf("%x", md5Checksum.Sum(nil))
+	md5ChecksumString := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%x", md5Checksum.Sum(nil))))
 	if inputMD5 != "" {
 		if md5ChecksumString != inputMD5 {
 			h.Error(w, r, fmt.Sprintf("Rejecting upload for file %s to bin %s due to wrong MD5 checksum (got %s and calculated %s)", inputFilename, bin.Id, inputMD5, md5ChecksumString), "MD5 checksum did not match", 129, http.StatusBadRequest)
@@ -350,15 +321,13 @@ func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var nonce []byte
-
 	// Retry if the S3 upload fails
 	retryLimit := 3
 	retryCounter := 1
 
 	for {
 		fp.Seek(0, 0)
-		nonce, err = h.s3.PutObject(file.Bin, file.Filename, fp, nBytes)
+		err := h.s3.PutObject(file.Bin, file.Filename, fp, nBytes)
 		if err == nil {
 			// Completed successfully
 			h.s3.SetTrace(false)
@@ -384,7 +353,6 @@ func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 	t4 := time.Now()
 
-	file.Nonce = nonce
 	file.InStorage = true
 
 	if found {

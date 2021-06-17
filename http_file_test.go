@@ -1,10 +1,12 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	//"net/http/httputil"
 	"net/url"
 	"os"
 	"path"
@@ -45,22 +47,39 @@ func httpRequest(tc TestCase) (statuscode int, body string, err error) {
 		req, err = http.NewRequest(tc.Method, u.String(), nil)
 	} else {
 		req, err = http.NewRequest(tc.Method, u.String(), strings.NewReader(tc.UploadContent))
+		if tc.SHA256 != "" {
+			fmt.Printf("Content-SHA256 request header: %s\n", tc.SHA256)
+			req.Header.Set("Content-SHA256", tc.SHA256)
+		}
+		if tc.MD5 != "" {
+			checksum := string(base64.StdEncoding.EncodeToString([]byte(tc.MD5)))
+			fmt.Printf("Content-MD5 request header: %s\n", checksum)
+			req.Header.Set("Content-MD5", checksum)
+		}
 	}
 	if err != nil {
 		return -1, "", err
 	}
-	if tc.SHA256 != "" {
-		req.Header.Set("Content-SHA256", tc.SHA256)
+
+	for name, values := range req.Header {
+		for _, value := range values {
+			fmt.Printf("Request header: %s=%s\n", name, value)
+		}
 	}
-	if tc.MD5 != "" {
-		req.Header.Set("Content-MD5", tc.MD5)
-	}
+
 	req.Close = true
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		return -2, "", err
 	}
+
+	//dump, err := httputil.DumpResponse(resp, true)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+
+	//fmt.Printf("Response headers: %q", dump)
 	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return -3, "", err
@@ -163,8 +182,6 @@ func TestUploadFile(t *testing.T) {
 			Bin:             "mytestbin",
 			Filename:        "a",
 			DownloadContent: "content a",
-			SHA256:          "0069ffe8481777aa403982d9e9b3fa48957015a07cfa0f66dae32050b95bda54",
-			MD5:             "d8114b361885ee54897e52ce2308e274",
 			StatusCode:      200,
 		}, {
 			Description: "Try to download non-existing file",

@@ -5,8 +5,8 @@ services:
     hostname: "storage"
     restart: "no"
     environment:
-      - MINIO_ACCESS_KEY=s3accesskey
-      - MINIO_SECRET_KEY=s3secretkey
+      - MINIO_ROOT_USER=s3accesskey
+      - MINIO_ROOT_PASSWORD=s3secretkey
     expose:
       - "9000"
     ports:

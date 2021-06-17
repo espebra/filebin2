@@ -31,7 +31,6 @@ const (
 	testS3Bucket           = "testbin"
 	testS3AccessKey        = "s3accesskey"
 	testS3SecretKey        = "s3secretkey"
-	testS3EncryptionKey    = "encryptionkey"
 )
 
 var (
@@ -46,10 +45,11 @@ func tearUp() (dao dbl.DAO, s3ao s3.S3AO, err error) {
 	if err := dao.ResetDB(); err != nil {
 		return dao, s3ao, err
 	}
-	s3ao, err = s3.Init(testS3Endpoint, testS3Bucket, testS3Region, testS3AccessKey, testS3SecretKey, testS3EncryptionKey, false)
+	s3ao, err = s3.Init(testS3Endpoint, testS3Bucket, testS3Region, testS3AccessKey, testS3SecretKey, false)
 	if err != nil {
 		return dao, s3ao, err
 	}
+	s3ao.SetTrace(true)
 	return dao, s3ao, nil
 }
 

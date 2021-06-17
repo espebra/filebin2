@@ -107,8 +107,8 @@ func (d *FileDao) Insert(file *ds.File) (err error) {
 		file.Headers = "N/A"
 	}
 
-	sqlStatement := "INSERT INTO file (bin_id, filename, in_storage, mime, bytes, md5, sha256, downloads, updates, ip, client_id, headers, nonce, updated_at, created_at, deleted_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING id"
-	err = d.db.QueryRow(sqlStatement, file.Bin, file.Filename, file.InStorage, file.Mime, file.Bytes, file.MD5, file.SHA256, downloads, updates, file.IP, file.ClientId, file.Headers, file.Nonce, now, now, file.DeletedAt).Scan(&file.Id)
+	sqlStatement := "INSERT INTO file (bin_id, filename, in_storage, mime, bytes, md5, sha256, downloads, updates, ip, client_id, headers, updated_at, created_at, deleted_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING id"
+	err = d.db.QueryRow(sqlStatement, file.Bin, file.Filename, file.InStorage, file.Mime, file.Bytes, file.MD5, file.SHA256, downloads, updates, file.IP, file.ClientId, file.Headers, now, now, file.DeletedAt).Scan(&file.Id)
 	if err != nil {
 		return err
 	}
@@ -128,7 +128,7 @@ func (d *FileDao) Insert(file *ds.File) (err error) {
 }
 
 func (d *FileDao) GetByBin(id string, inStorage bool) (files []ds.File, err error) {
-	sqlStatement := "SELECT id, bin_id, filename, in_storage, mime, bytes, md5, sha256, downloads, updates, ip, client_id, headers, nonce, updated_at, created_at, deleted_at FROM file WHERE bin_id = $1 AND in_storage = $2 AND deleted_at IS NULL ORDER BY filename ASC"
+	sqlStatement := "SELECT id, bin_id, filename, in_storage, mime, bytes, md5, sha256, downloads, updates, ip, client_id, headers, updated_at, created_at, deleted_at FROM file WHERE bin_id = $1 AND in_storage = $2 AND deleted_at IS NULL ORDER BY filename ASC"
 	rows, err := d.db.Query(sqlStatement, id, inStorage)
 	if err != nil {
 		return files, err
@@ -136,7 +136,7 @@ func (d *FileDao) GetByBin(id string, inStorage bool) (files []ds.File, err erro
 	defer rows.Close()
 	for rows.Next() {
 		var file ds.File
-		err = rows.Scan(&file.Id, &file.Bin, &file.Filename, &file.InStorage, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updates, &file.IP, &file.ClientId, &file.Headers, &file.Nonce, &file.UpdatedAt, &file.CreatedAt, &file.DeletedAt)
+		err = rows.Scan(&file.Id, &file.Bin, &file.Filename, &file.InStorage, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updates, &file.IP, &file.ClientId, &file.Headers, &file.UpdatedAt, &file.CreatedAt, &file.DeletedAt)
 		if err != nil {
 			return files, err
 		}
@@ -158,7 +158,7 @@ func (d *FileDao) GetByBin(id string, inStorage bool) (files []ds.File, err erro
 }
 
 func (d *FileDao) GetAll(available bool) (files []ds.File, err error) {
-	sqlStatement := "SELECT id, bin_id, filename, in_storage, mime, bytes, md5, sha256, downloads, updates, ip, client_id, headers, nonce, updated_at, created_at, deleted_at FROM file WHERE in_storage = $1 AND deleted_at IS NULL ORDER BY filename ASC"
+	sqlStatement := "SELECT id, bin_id, filename, in_storage, mime, bytes, md5, sha256, downloads, updates, ip, client_id, headers, updated_at, created_at, deleted_at FROM file WHERE in_storage = $1 AND deleted_at IS NULL ORDER BY filename ASC"
 	rows, err := d.db.Query(sqlStatement, available)
 	if err != nil {
 		return files, err
@@ -166,7 +166,7 @@ func (d *FileDao) GetAll(available bool) (files []ds.File, err error) {
 	defer rows.Close()
 	for rows.Next() {
 		var file ds.File
-		err = rows.Scan(&file.Id, &file.Bin, &file.Filename, &file.InStorage, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updates, &file.IP, &file.ClientId, &file.Headers, &file.Nonce, &file.UpdatedAt, &file.CreatedAt, &file.DeletedAt)
+		err = rows.Scan(&file.Id, &file.Bin, &file.Filename, &file.InStorage, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updates, &file.IP, &file.ClientId, &file.Headers, &file.UpdatedAt, &file.CreatedAt, &file.DeletedAt)
 		if err != nil {
 			return files, err
 		}
@@ -187,7 +187,7 @@ func (d *FileDao) GetAll(available bool) (files []ds.File, err error) {
 }
 
 func (d *FileDao) GetPendingDelete() (files []ds.File, err error) {
-	sqlStatement := "SELECT id, bin_id, filename, in_storage, mime, bytes, md5, sha256, downloads, updates, ip, client_id, headers, nonce, updated_at, created_at, deleted_at FROM file WHERE in_storage = true AND deleted_at IS NOT NULL ORDER BY filename ASC"
+	sqlStatement := "SELECT id, bin_id, filename, in_storage, mime, bytes, md5, sha256, downloads, updates, ip, client_id, headers, updated_at, created_at, deleted_at FROM file WHERE in_storage = true AND deleted_at IS NOT NULL ORDER BY filename ASC"
 	rows, err := d.db.Query(sqlStatement)
 	if err != nil {
 		return files, err
@@ -195,7 +195,7 @@ func (d *FileDao) GetPendingDelete() (files []ds.File, err error) {
 	defer rows.Close()
 	for rows.Next() {
 		var file ds.File
-		err = rows.Scan(&file.Id, &file.Bin, &file.Filename, &file.InStorage, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updates, &file.IP, &file.ClientId, &file.Headers, &file.Nonce, &file.UpdatedAt, &file.CreatedAt, &file.DeletedAt)
+		err = rows.Scan(&file.Id, &file.Bin, &file.Filename, &file.InStorage, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updates, &file.IP, &file.ClientId, &file.Headers, &file.UpdatedAt, &file.CreatedAt, &file.DeletedAt)
 		if err != nil {
 			return files, err
 		}
@@ -218,8 +218,8 @@ func (d *FileDao) GetPendingDelete() (files []ds.File, err error) {
 func (d *FileDao) Update(file *ds.File) (err error) {
 	var id int
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "UPDATE file SET filename = $1, in_storage = $2, mime = $3, bytes = $4, md5 = $5, sha256 = $6, nonce = $7, updates = $8, updated_at = $9, deleted_at = $10, ip = $11, headers = $12, client_id = $13 WHERE id = $14 RETURNING id"
-	err = d.db.QueryRow(sqlStatement, file.Filename, file.InStorage, file.Mime, file.Bytes, file.MD5, file.SHA256, file.Nonce, file.Updates, now, file.DeletedAt, file.IP, file.Headers, file.ClientId, file.Id).Scan(&id)
+	sqlStatement := "UPDATE file SET filename = $1, in_storage = $2, mime = $3, bytes = $4, md5 = $5, sha256 = $6, updates = $7, updated_at = $8, deleted_at = $9, ip = $10, headers = $11, client_id = $12 WHERE id = $13 RETURNING id"
+	err = d.db.QueryRow(sqlStatement, file.Filename, file.InStorage, file.Mime, file.Bytes, file.MD5, file.SHA256, file.Updates, now, file.DeletedAt, file.IP, file.Headers, file.ClientId, file.Id).Scan(&id)
 	if err != nil {
 		return err
 	}

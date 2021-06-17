@@ -24,7 +24,7 @@
 
                 <p>Meta data about transactions, including the source IP address of clients uploading and downloading files, is logged for abuse handling purposes and may be shared with third parties in this context.</p>
 
-                <p>This service is using <a href="https://en.wikipedia.org/wiki/HTTPS">HTTPS</a> to secure <a href="https://en.wikipedia.org/wiki/Data_in_transit">data in transit</a> and server side encryption to secure <a href="https://en.wikipedia.org/wiki/Data_at_rest">data at rest</a> (file content but not meta data). These mechanisms provide data protection from a limited set of scenarios such as man-in-the-middle attacks and data leaks from the object storage service. The content is, however, not encrypted while <a href="https://en.wikipedia.org/wiki/Data_in_use">data in use</a> and the application can decrypt the files as needed for delivery.</p>
+                <p>This service is using <a href="https://en.wikipedia.org/wiki/HTTPS">HTTPS</a> to secure <a href="https://en.wikipedia.org/wiki/Data_in_transit">data in transit</a>. This mechanism provide data protection from a limited set of scenarios such as man-in-the-middle attacks. The content is, however, not encrypted on the server side. It is recommended that the client encrypts the content prior to uploading it.</p>
             </div>
         </div>
 

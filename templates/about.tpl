@@ -72,11 +72,6 @@
                 <td><a href="https://github.com/minio/minio-go/">https://github.com/minio/minio-go/</a></td>
             </tr>
             <tr>
-                <td>MinIO Secure IO</td>
-                <td>Apache 2.0</td>
-                <td><a href="https://github.com/minio/sio/">https://github.com/minio/sio/</a></td>
-            </tr>
-            <tr>
                 <td>Popper</td>
                 <td>MIT</td>
                 <td><a href="https://popper.js.org/">https://popper.js.org/</a></td>

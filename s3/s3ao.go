@@ -2,24 +2,21 @@ package s3
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
-	"golang.org/x/crypto/hkdf"
 	"io"
+	"net/url"
 	"path"
 	"time"
 
 	"github.com/dustin/go-humanize"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/minio/sio"
 )
 
 type S3AO struct {
-	client        *minio.Client
-	bucket        string
-	encryptionKey string
+	client *minio.Client
+	bucket string
 }
 
 type BucketInfo struct {
@@ -34,7 +31,7 @@ type BucketInfo struct {
 }
 
 // Initialize S3AO
-func Init(endpoint, bucket, region, accessKey, secretKey, encryptionKey string, secure bool) (S3AO, error) {
+func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool) (S3AO, error) {
 	var s3ao S3AO
 
 	// Set up client for S3AO
@@ -45,11 +42,10 @@ func Init(endpoint, bucket, region, accessKey, secretKey, encryptionKey string, 
 	if err != nil {
 		return s3ao, err
 	}
-	minioClient.SetAppInfo("filebin", "2.0.0")
+	minioClient.SetAppInfo("filebin", "2.0.1")
 
 	s3ao.client = minioClient
 	s3ao.bucket = bucket
-	s3ao.encryptionKey = encryptionKey
 
 	fmt.Printf("Established session to S3AO at %s\n", endpoint)
 
@@ -92,63 +88,27 @@ func (s S3AO) SetTrace(trace bool) {
 	}
 }
 
-func (s S3AO) GenerateNonce() []byte {
-	var nonce []byte
-	if _, err := io.ReadFull(rand.Reader, nonce[:]); err != nil {
-		fmt.Printf("Failed to read random data: %v", err) // add error handling
-	}
-	return nonce
-}
-
-func (s S3AO) PutObject(bin string, filename string, data io.Reader, size int64) ([]byte, error) {
-	//t0 := time.Now()
+func (s S3AO) PutObject(bin string, filename string, data io.Reader, size int64) (err error) {
+	t0 := time.Now()
 
 	// Hash the path in S3
 	objectKey := s.GetObjectKey(bin, filename)
 
-	// the master key used to derive encryption keys
-	// this key must be keep secret
-	//masterkey, err := hex.DecodeString(s.encryptionKey) // use your own key here
-	//if err != nil {
-	//	fmt.Printf("Cannot decode hex key: %v", err) // add error handling
-	//	return err
-	//}
-	// TODO: Should this be hex?
-	masterkey := []byte(s.encryptionKey)
+	var objectSize uint64
+	var content io.Reader
 
-	// generate a random nonce to derive an encryption key from the master key
-	// this nonce must be saved to be able to decrypt the data again - it is not
-	// required to keep it secret
-	nonce := s.GenerateNonce()
+	// Do not encrypt the content during upload. This allows for presigned downloads.
+	content = data
+	objectSize = uint64(size)
 
-	// derive an encryption key from the master key and the nonce
-	var key [32]byte
-	kdf := hkdf.New(sha256.New, masterkey, nonce[:], nil)
-	if _, err := io.ReadFull(kdf, key[:]); err != nil {
-		fmt.Printf("Failed to derive encryption key: %v", err) // add error handling
-		return nonce, err
-	}
-
-	encrypted, err := sio.EncryptReader(data, sio.Config{Key: key[:]})
-	if err != nil {
-		fmt.Printf("Failed to encrypted reader: %v", err) // add error handling
-		return nonce, err
-	}
-
-	encryptedSize, err := sio.EncryptedSize(uint64(size))
-	if err != nil {
-		fmt.Printf("Failed to compute size of encrypted object: %v", err) // add error handling
-		return nonce, err
-	}
-
-	_, err = s.client.PutObject(context.Background(), s.bucket, objectKey, encrypted, int64(encryptedSize), minio.PutObjectOptions{ContentType: "application/octet-stream"})
+	_, err = s.client.PutObject(context.Background(), s.bucket, objectKey, content, int64(objectSize), minio.PutObjectOptions{ContentType: "application/octet-stream"})
 	if err != nil {
 		fmt.Printf("Unable to put object: %s\n", err.Error())
-		return nonce, err
+		return err
 	}
-	//s3size := info.Size
-	//fmt.Printf("Stored object: %s (%d bytes) in %.3fs\n", objectKey, s3size, time.Since(t0).Seconds())
-	return nonce, nil
+
+	fmt.Printf("Stored object: %s (%d bytes) in %.3fs\n", objectKey, objectSize, time.Since(t0).Seconds())
+	return nil
 }
 
 func (s S3AO) RemoveObject(bin string, filename string) error {
@@ -218,7 +178,7 @@ func (s S3AO) RemoveBucket() error {
 	return nil
 }
 
-func (s S3AO) GetObject(bin string, filename string, nonce []byte, start int64, end int64) (io.Reader, error) {
+func (s S3AO) GetObject(bin string, filename string, start int64, end int64) (io.Reader, error) {
 	t0 := time.Now()
 
 	// Hash the path in S3
@@ -228,23 +188,6 @@ func (s S3AO) GetObject(bin string, filename string, nonce []byte, start int64, 
 	f.Write([]byte(filename))
 	objectKey := path.Join(fmt.Sprintf("%x", b.Sum(nil)), fmt.Sprintf("%x", f.Sum(nil)))
 	var object io.Reader
-
-	// the master key used to derive encryption keys
-	//masterkey, err := hex.DecodeString(s.encryptionKey) // use your own key here
-	//if err != nil {
-	//	fmt.Printf("Cannot decode hex key: %v", err) // add error handling
-	//	return object, err
-	//}
-	// TODO: Should this be hex?
-	masterkey := []byte(s.encryptionKey)
-
-	// derive the encryption key from the master key and the nonce
-	var key [32]byte
-	kdf := hkdf.New(sha256.New, masterkey, nonce[:], nil)
-	if _, err := io.ReadFull(kdf, key[:]); err != nil {
-		fmt.Printf("Failed to derive encryption key: %v", err) // add error handling
-		return object, err
-	}
 
 	opts := minio.GetObjectOptions{}
 
@@ -257,17 +200,32 @@ func (s S3AO) GetObject(bin string, filename string, nonce []byte, start int64, 
 		return object, err
 	}
 
-	decryptedObject, err := sio.DecryptReader(object, sio.Config{Key: key[:]})
-	if err != nil {
-		if _, ok := err.(sio.Error); ok {
-			fmt.Printf("Malformed encrypted data: %v", err) // add error handling - here we know that the data is malformed/not authentic.
-			return object, err
-		}
-		fmt.Printf("Failed to decrypt data: %v", err) // add error handling
-		return object, err
-	}
 	fmt.Printf("Fetched object: %s in %.3fs\n", objectKey, time.Since(t0).Seconds())
-	return decryptedObject, err
+	return object, err
+}
+
+// This only works with objects that are not encrypted
+func (s S3AO) PresignedGetObject(bin string, filename string, mime string) (presignedURL *url.URL, err error) {
+	// Hash the path in S3
+	b := sha256.New()
+	b.Write([]byte(bin))
+	f := sha256.New()
+	f.Write([]byte(filename))
+	objectKey := path.Join(fmt.Sprintf("%x", b.Sum(nil)), fmt.Sprintf("%x", f.Sum(nil)))
+
+	// Presigned GET URLs expire after this amount of seconds
+	// TODO: Make configurable
+	expiry := time.Second * 60
+
+	reqParams := make(url.Values)
+	reqParams.Set("response-content-type", mime)
+
+	presignedURL, err = s.client.PresignedGetObject(context.Background(), s.bucket, objectKey, expiry, reqParams)
+	if err != nil {
+		return presignedURL, err
+	}
+
+	return presignedURL, nil
 }
 
 func (s S3AO) GetBucketInfo() (info BucketInfo) {
