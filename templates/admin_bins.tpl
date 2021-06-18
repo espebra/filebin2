@@ -6,7 +6,6 @@
         <link rel="icon" href="/static/img/favicon.png">
         <link rel="stylesheet" href="/static/css/bootstrap.min.css"/>
         <link rel="stylesheet" href="/static/css/fontawesome.all.min.css"/>
-        <link rel="stylesheet" href="/static/css/upload.css"/>
         <link rel="stylesheet" href="/static/css/custom.css"/>
         <script src="/static/js/sorttable.js"></script>
         <script src="/static/js/upload.js"></script>

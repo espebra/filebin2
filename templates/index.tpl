@@ -8,7 +8,6 @@
         <link rel="icon" href="/static/img/favicon.png">
         <link rel="stylesheet" href="/static/css/bootstrap.min.css"/>
         <link rel="stylesheet" href="/static/css/fontawesome.all.min.css"/>
-        <link rel="stylesheet" href="/static/css/upload.css"/>
         <link rel="stylesheet" href="/static/css/custom.css"/>
         <title>Filebin</title>
         <script src="/static/js/upload.js"></script>
@@ -79,7 +78,7 @@
         <span id="fileCount"></span>
 
         <!-- Drop zone -->
-        <span id="fileDrop">Drop files to upload</span>
+        <span id="fileDrop"></span>
 
         <!-- Upload queue -->
         <span id="fileList"></span>
