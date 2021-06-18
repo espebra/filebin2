@@ -34,19 +34,14 @@ func (h *HTTP) Index(w http.ResponseWriter, r *http.Request) {
 	}
 	data.Bin = *bin
 
-	info, err := h.dao.Info().GetInfo()
-	if err != nil {
-		fmt.Printf("Unable to GetInfo(): %s\n", err.Error())
-		http.Error(w, "Errno 326", http.StatusInternalServerError)
-		return
-	}
-
 	// Storage limit
 	// 0 disables the limit
 	// >= 1 enforces a limit, in number of gigabytes stored
 	data.AvailableStorage = true
 	if h.config.LimitStorageBytes > 0 {
-		if uint64(info.CurrentBytes) >= h.config.LimitStorageBytes {
+		totalBytesConsumed := h.dao.Info().StorageBytesAllocated()
+		//fmt.Printf("Using %d bytes, limit is %d bytes\n", totalBytesConsumed, h.config.LimitStorageBytes)
+		if totalBytesConsumed >= h.config.LimitStorageBytes {
 			data.AvailableStorage = false
 		}
 	}

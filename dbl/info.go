@@ -3,6 +3,7 @@ package dbl
 import (
 	"database/sql"
 	//"fmt"
+	"fmt"
 	"github.com/dustin/go-humanize"
 	"github.com/espebra/filebin2/ds"
 	"time"
@@ -10,6 +11,16 @@ import (
 
 type InfoDao struct {
 	db *sql.DB
+}
+
+func (d *InfoDao) StorageBytesAllocated() (totalBytes uint64) {
+	// Assume that each file consumes at least 256KB, to align with minimum billable object size in AWS.
+	minBytes := 262144
+	sqlStatement := "SELECT COALESCE((SELECT SUM(GREATEST(bytes, $1)) FROM file WHERE in_storage = true AND deleted_at IS NULL), 0)"
+	if err := d.db.QueryRow(sqlStatement, minBytes).Scan(&totalBytes); err != nil {
+		fmt.Printf("Unable to calculate total storage bytes allocated: %s\n", err.Error())
+	}
+	return totalBytes
 }
 
 func (d *InfoDao) GetInfo() (info ds.Info, err error) {

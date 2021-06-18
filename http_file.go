@@ -190,19 +190,20 @@ func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	info, err := h.dao.Info().GetInfo()
-	if err != nil {
-		fmt.Printf("Unable to GetInfo(): %s\n", err.Error())
-		http.Error(w, "Errno 326", http.StatusInternalServerError)
-		return
-	}
+	//info, err := h.dao.Info().GetInfo()
+	//if err != nil {
+	//	fmt.Printf("Unable to GetInfo(): %s\n", err.Error())
+	//	http.Error(w, "Errno 326", http.StatusInternalServerError)
+	//	return
+	//}
 
 	// Storage limit
 	// 0 disables the limit
 	// >= 1 enforces a limit, in number of gigabytes stored
 	if h.config.LimitStorageBytes > 0 {
-		if uint64(info.CurrentBytes) >= h.config.LimitStorageBytes {
-			h.Error(w, r, fmt.Sprintf("Storage limit reached (currently consuming %s)", humanize.Bytes(uint64(info.CurrentBytes))), "Storage limit reached. Please try again later.\n", 633, http.StatusForbidden)
+		totalBytesConsumed := h.dao.Info().StorageBytesAllocated()
+		if totalBytesConsumed >= h.config.LimitStorageBytes {
+			h.Error(w, r, fmt.Sprintf("Storage limit reached (currently consuming %s)", humanize.Bytes(totalBytesConsumed)), "Storage limit reached. Please try again later.\n", 633, http.StatusForbidden)
 			return
 		}
 	}
