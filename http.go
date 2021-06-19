@@ -76,7 +76,7 @@ func (h *HTTP) Init() (err error) {
 
 func CacheControl(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "must-revalidate, public, max-age=604800")
+		w.Header().Set("Cache-Control", "must-revalidate, public, max-age=86400")
 		h.ServeHTTP(w, r)
 	})
 }
