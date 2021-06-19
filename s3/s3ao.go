@@ -220,6 +220,7 @@ func (s S3AO) PresignedGetObject(bin string, filename string, mime string) (pres
 	reqParams := make(url.Values)
 	reqParams.Set("response-content-type", mime)
 	reqParams.Set("response-content-disposition", fmt.Sprintf("filename=\"%s\"", filename))
+	reqParams.Set("response-cache-control", fmt.Sprintf("max-age=%.0f", expiry.Seconds()))
 
 	presignedURL, err = s.client.PresignedGetObject(context.Background(), s.bucket, objectKey, expiry, reqParams)
 	if err != nil {
