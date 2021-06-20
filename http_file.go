@@ -203,7 +203,7 @@ func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
 	if h.config.LimitStorageBytes > 0 {
 		totalBytesConsumed := h.dao.Info().StorageBytesAllocated()
 		if totalBytesConsumed >= h.config.LimitStorageBytes {
-			h.Error(w, r, fmt.Sprintf("Storage limit reached (currently consuming %s)", humanize.Bytes(totalBytesConsumed)), "Storage limit reached. Please try again later.\n", 633, http.StatusForbidden)
+			h.Error(w, r, fmt.Sprintf("Storage limit reached (currently consuming %s)", humanize.Bytes(totalBytesConsumed)), "Insufficient storage\n", 633, http.StatusInsufficientStorage)
 			return
 		}
 	}

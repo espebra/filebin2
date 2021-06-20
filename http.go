@@ -13,6 +13,7 @@ import (
 	"github.com/gorilla/mux"
 	"html/template"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/pprof"
@@ -185,29 +186,17 @@ func (h *HTTP) Error(w http.ResponseWriter, r *http.Request, internal string, ex
 		fmt.Printf("Errno %d: %s\n", errno, internal)
 	}
 
+	// Disregard any request body there is
+	io.Copy(ioutil.Discard, r.Body)
+	defer r.Body.Close()
+
 	//var msg ds.Message
 	//msg.Id = errno
 	//msg.Text = external
 
 	w.WriteHeader(statusCode)
 	io.WriteString(w, external)
-
-	//if r.Header.Get("accept") == "application/json" {
-	//	w.Header().Set("Content-Type", "application/json")
-	//	out, err := json.MarshalIndent(msg, "", "    ")
-	//	if err != nil {
-	//		fmt.Printf("Failed to parse json: %s\n", err.Error())
-	//		http.Error(w, "Errno 1000", http.StatusInternalServerError)
-	//		return
-	//	}
-	//	io.WriteString(w, string(out))
-	//} else {
-	//	if err := h.templates.ExecuteTemplate(w, "message", msg); err != nil {
-	//		fmt.Printf("Failed to execute template: %s\n", err.Error())
-	//		http.Error(w, "Errno 1001", http.StatusInternalServerError)
-	//		return
-	//	}
-	//}
+	return
 }
 
 // Parse all templates
