@@ -12,7 +12,7 @@ import (
 
 func (h *HTTP) Index(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=0")
-	w.Header().Set("X-Robots-Tag", "index, noarchive")
+	w.Header().Set("X-Robots-Tag", "index, follow, noarchive")
 
 	type Data struct {
 		ds.Common
@@ -54,7 +54,7 @@ func (h *HTTP) Index(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HTTP) About(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "max-age=900")
+	w.Header().Set("Cache-Control", "max-age=3600")
 	w.Header().Set("X-Robots-Tag", "index, follow")
 
 	type Data struct {
@@ -71,7 +71,7 @@ func (h *HTTP) About(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HTTP) Privacy(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "max-age=900")
+	w.Header().Set("Cache-Control", "max-age=3600")
 	w.Header().Set("X-Robots-Tag", "index, follow")
 
 	type Data struct {
@@ -89,7 +89,7 @@ func (h *HTTP) Privacy(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HTTP) Terms(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "max-age=900")
+	w.Header().Set("Cache-Control", "max-age=3600")
 	w.Header().Set("X-Robots-Tag", "index, follow")
 
 	type Data struct {
@@ -107,7 +107,7 @@ func (h *HTTP) Terms(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HTTP) API(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "max-age=900")
+	w.Header().Set("Cache-Control", "max-age=3600")
 	w.Header().Set("X-Robots-Tag", "index, follow")
 
 	type Data struct {
@@ -125,7 +125,7 @@ func (h *HTTP) API(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HTTP) APISpec(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "max-age=900")
+	w.Header().Set("Cache-Control", "max-age=3600")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	type Data struct {
