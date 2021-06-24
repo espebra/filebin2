@@ -1,0 +1,17 @@
+---
+apiVersion: "v1"
+kind: "Service"
+metadata:
+  name: "filebin2-service"
+  namespace: "default"
+  labels:
+    k8s-app: "filebin2"
+spec:
+  ports:
+  - protocol: "TCP"
+    port: 80
+    targetPort: 8080
+  selector:
+    k8s-app: "filebin2"
+  type: "NodePort"
+
