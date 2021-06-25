@@ -40,15 +40,15 @@ var (
 	dbHostFlag     = flag.String("db-host", os.Getenv("DATABASE_HOST"), "Database host")
 	dbPortFlag     = flag.String("db-port", os.Getenv("DATABASE_PORT"), "Database port")
 	dbNameFlag     = flag.String("db-name", os.Getenv("DATABASE_NAME"), "Name of the database")
-	dbUsernameFlag = flag.String("db-username", os.Getenv("DATABASE_USERNAME"), "Database username")
-	dbPasswordFlag = flag.String("db-password", os.Getenv("DATABASE_PASSWORD"), "Database password")
+	dbUsernameFlag = flag.String("db-username", "", "Database username")
+	dbPasswordFlag = flag.String("db-password", "", "Database password")
 
 	// S3
 	s3EndpointFlag  = flag.String("s3-endpoint", os.Getenv("S3_ENDPOINT"), "S3 endpoint")
 	s3BucketFlag    = flag.String("s3-bucket", os.Getenv("S3_BUCKET"), "S3 bucket")
 	s3RegionFlag    = flag.String("s3-region", os.Getenv("S3_REGION"), "S3 region")
-	s3AccessKeyFlag = flag.String("s3-access-key", os.Getenv("S3_ACCESS_KEY"), "S3 access key")
-	s3SecretKeyFlag = flag.String("s3-secret-key", os.Getenv("S3_SECRET_KEY"), "S3 secret key")
+	s3AccessKeyFlag = flag.String("s3-access-key", "", "S3 access key")
+	s3SecretKeyFlag = flag.String("s3-secret-key", "", "S3 secret key")
 	s3TraceFlag     = flag.Bool("s3-trace", false, "Enable S3 HTTP tracing for debugging")
 	s3SecureFlag    = flag.Bool("s3-secure", true, "Use TLS when connecting to S3")
 
@@ -56,13 +56,33 @@ var (
 	lurkerIntervalFlag = flag.Int("lurker-interval", 300, "Lurker interval is the delay to sleep between each run in seconds")
 
 	// Auth
-	adminUsernameFlag = flag.String("admin-username", os.Getenv("ADMIN_USERNAME"), "Admin username")
-	adminPasswordFlag = flag.String("admin-password", os.Getenv("ADMIN_PASSWORD"), "Admin password")
+	adminUsernameFlag = flag.String("admin-username", "", "Admin username")
+	adminPasswordFlag = flag.String("admin-password", "", "Admin password")
 )
 
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 	flag.Parse()
+
+	// Set some default values that should not be exposed by flag.PrintDefaults()
+	if *dbUsernameFlag == "" {
+		*dbUsernameFlag = os.Getenv("DATABASE_USERNAME")
+	}
+	if *dbPasswordFlag == "" {
+		*dbPasswordFlag = os.Getenv("DATABASE_PASSWORD")
+	}
+	if *s3AccessKeyFlag == "" {
+		*s3AccessKeyFlag = os.Getenv("S3_ACCESS_KEY")
+	}
+	if *s3SecretKeyFlag == "" {
+		*s3SecretKeyFlag = os.Getenv("S3_SECRET_KEY")
+	}
+	if *adminUsernameFlag == "" {
+		*adminUsernameFlag = os.Getenv("ADMIN_USERNAME")
+	}
+	if *adminPasswordFlag == "" {
+		*adminPasswordFlag = os.Getenv("ADMIN_PASSWORD")
+	}
 
 	// mmdb path
 	geodb, err := geoip.Init(*mmdbPathFlag)
