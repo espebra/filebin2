@@ -52,78 +52,6 @@ func (d *BinDao) GenerateId() string {
 	return string(id)
 }
 
-func (d *BinDao) GetAll() (bins []ds.Bin, err error) {
-	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "SELECT bin.id, bin.readonly, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(file.filename), bin.updates, bin.updated_at, bin.created_at, bin.approved_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id=file.bin_id AND file.deleted_at IS NULL AND file.in_storage = true WHERE bin.expired_at > $1 AND bin.deleted_at IS NULL GROUP BY bin.id ORDER BY bin.updated_at DESC"
-	rows, err := d.db.Query(sqlStatement, now)
-	if err != nil {
-		return bins, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var bin ds.Bin
-		err = rows.Scan(&bin.Id, &bin.Readonly, &bin.Downloads, &bin.Bytes, &bin.Files, &bin.Updates, &bin.UpdatedAt, &bin.CreatedAt, &bin.ApprovedAt, &bin.ExpiredAt, &bin.DeletedAt)
-		if err != nil {
-			return bins, err
-		}
-		// https://github.com/lib/pq/issues/329
-		bin.UpdatedAt = bin.UpdatedAt.UTC()
-		bin.CreatedAt = bin.CreatedAt.UTC()
-		bin.ExpiredAt = bin.ExpiredAt.UTC()
-		bin.UpdatedAtRelative = humanize.Time(bin.UpdatedAt)
-		bin.CreatedAtRelative = humanize.Time(bin.CreatedAt)
-		if bin.IsApproved() {
-			bin.ApprovedAt.Time = bin.ApprovedAt.Time.UTC()
-			bin.ApprovedAtRelative = humanize.Time(bin.ApprovedAt.Time)
-		}
-		bin.ExpiredAtRelative = humanize.Time(bin.ExpiredAt)
-		if bin.IsDeleted() {
-			bin.DeletedAt.Time = bin.DeletedAt.Time.UTC()
-			bin.DeletedAtRelative = humanize.Time(bin.DeletedAt.Time)
-		}
-		bin.BytesReadable = humanize.Bytes(bin.Bytes)
-		bin.URL = path.Join("/", bin.Id)
-		bins = append(bins, bin)
-	}
-	return bins, nil
-}
-
-func (d *BinDao) GetPendingDelete() (bins []ds.Bin, err error) {
-	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "SELECT bin.id, bin.readonly, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(filename) AS files, bin.updated_at, bin.created_at, bin.approved_at, bin.expired_at, bin.deleted_at FROM bin INNER JOIN file ON bin.id = file.bin_id AND file.in_storage=true WHERE bin.expired_at < $1 OR bin.deleted_at IS NOT NULL GROUP BY bin.id"
-	rows, err := d.db.Query(sqlStatement, now)
-	if err != nil {
-		return bins, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var bin ds.Bin
-		err = rows.Scan(&bin.Id, &bin.Readonly, &bin.Downloads, &bin.Bytes, &bin.Files, &bin.UpdatedAt, &bin.CreatedAt, &bin.ApprovedAt, &bin.ExpiredAt, &bin.DeletedAt)
-		if err != nil {
-			return bins, err
-		}
-		// https://github.com/lib/pq/issues/329
-		bin.UpdatedAt = bin.UpdatedAt.UTC()
-		bin.CreatedAt = bin.CreatedAt.UTC()
-		bin.ExpiredAt = bin.ExpiredAt.UTC()
-		bin.UpdatedAtRelative = humanize.Time(bin.UpdatedAt)
-		bin.CreatedAtRelative = humanize.Time(bin.CreatedAt)
-		if bin.IsApproved() {
-			bin.ApprovedAt.Time = bin.ApprovedAt.Time.UTC()
-			bin.ApprovedAtRelative = humanize.Time(bin.ApprovedAt.Time)
-		}
-		bin.ExpiredAtRelative = humanize.Time(bin.ExpiredAt)
-		if bin.IsDeleted() {
-			bin.DeletedAt.Time = bin.DeletedAt.Time.UTC()
-			bin.DeletedAtRelative = humanize.Time(bin.DeletedAt.Time)
-		}
-		bin.BytesReadable = humanize.Bytes(bin.Bytes)
-		bin.URL = path.Join("/", bin.Id)
-		bins = append(bins, bin)
-	}
-	return bins, nil
-}
-
 func (d *BinDao) GetByID(id string) (bin ds.Bin, found bool, err error) {
 	// Get bin info
 	sqlStatement := "SELECT bin.id, bin.readonly, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(file.filename), bin.updated_at, bin.created_at, bin.approved_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id = file.bin_id AND file.in_storage=true AND file.deleted_at IS NULL WHERE bin.id = $1 GROUP BY bin.id LIMIT 1"
@@ -290,4 +218,52 @@ func (d *BinDao) RegisterUpdate(bin *ds.Bin) (err error) {
 	}
 	bin.UpdatedAtRelative = humanize.Time(bin.UpdatedAt)
 	return nil
+}
+
+func (d *BinDao) GetAll() (bins []ds.Bin, err error) {
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	sqlStatement := "SELECT bin.id, bin.readonly, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(file.filename), bin.updates, bin.updated_at, bin.created_at, bin.approved_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id=file.bin_id AND file.deleted_at IS NULL AND file.in_storage = true WHERE bin.expired_at > $1 AND bin.deleted_at IS NULL GROUP BY bin.id ORDER BY bin.updated_at DESC"
+	bins, err = d.binQuery(sqlStatement, now)
+	return bins, err
+}
+
+func (d *BinDao) GetPendingDelete() (bins []ds.Bin, err error) {
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	sqlStatement := "SELECT bin.id, bin.readonly, bin.downloads, COALESCE(SUM(file.bytes), 0), COUNT(filename) AS files, bin.updates, bin.updated_at, bin.created_at, bin.approved_at, bin.expired_at, bin.deleted_at FROM bin INNER JOIN file ON bin.id = file.bin_id AND file.in_storage=true WHERE bin.expired_at < $1 OR bin.deleted_at IS NOT NULL GROUP BY bin.id"
+	bins, err = d.binQuery(sqlStatement, now)
+	return bins, nil
+}
+
+func (d *BinDao) binQuery(sqlStatement string, params ...interface{}) (bins []ds.Bin, err error) {
+	rows, err := d.db.Query(sqlStatement, params...)
+	if err != nil {
+		return bins, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var bin ds.Bin
+		err = rows.Scan(&bin.Id, &bin.Readonly, &bin.Downloads, &bin.Bytes, &bin.Files, &bin.Updates, &bin.UpdatedAt, &bin.CreatedAt, &bin.ApprovedAt, &bin.ExpiredAt, &bin.DeletedAt)
+		if err != nil {
+			return bins, err
+		}
+		// https://github.com/lib/pq/issues/329
+		bin.UpdatedAt = bin.UpdatedAt.UTC()
+		bin.CreatedAt = bin.CreatedAt.UTC()
+		bin.ExpiredAt = bin.ExpiredAt.UTC()
+		bin.UpdatedAtRelative = humanize.Time(bin.UpdatedAt)
+		bin.CreatedAtRelative = humanize.Time(bin.CreatedAt)
+		if bin.IsApproved() {
+			bin.ApprovedAt.Time = bin.ApprovedAt.Time.UTC()
+			bin.ApprovedAtRelative = humanize.Time(bin.ApprovedAt.Time)
+		}
+		bin.ExpiredAtRelative = humanize.Time(bin.ExpiredAt)
+		if bin.IsDeleted() {
+			bin.DeletedAt.Time = bin.DeletedAt.Time.UTC()
+			bin.DeletedAtRelative = humanize.Time(bin.DeletedAt.Time)
+		}
+		bin.BytesReadable = humanize.Bytes(bin.Bytes)
+		bin.URL = path.Join("/", bin.Id)
+		bins = append(bins, bin)
+	}
+	return bins, nil
 }

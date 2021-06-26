@@ -127,94 +127,6 @@ func (d *FileDao) Insert(file *ds.File) (err error) {
 	return nil
 }
 
-func (d *FileDao) GetByBin(id string, inStorage bool) (files []ds.File, err error) {
-	sqlStatement := "SELECT id, bin_id, filename, in_storage, mime, bytes, md5, sha256, downloads, updates, ip, client_id, headers, updated_at, created_at, deleted_at FROM file WHERE bin_id = $1 AND in_storage = $2 AND deleted_at IS NULL ORDER BY filename ASC"
-	rows, err := d.db.Query(sqlStatement, id, inStorage)
-	if err != nil {
-		return files, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var file ds.File
-		err = rows.Scan(&file.Id, &file.Bin, &file.Filename, &file.InStorage, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updates, &file.IP, &file.ClientId, &file.Headers, &file.UpdatedAt, &file.CreatedAt, &file.DeletedAt)
-		if err != nil {
-			return files, err
-		}
-		// https://github.com/lib/pq/issues/329
-		file.UpdatedAt = file.UpdatedAt.UTC()
-		file.CreatedAt = file.CreatedAt.UTC()
-		file.UpdatedAtRelative = humanize.Time(file.UpdatedAt)
-		file.CreatedAtRelative = humanize.Time(file.CreatedAt)
-		if file.IsDeleted() {
-			file.DeletedAt.Time = file.DeletedAt.Time.UTC()
-			file.DeletedAtRelative = humanize.Time(file.DeletedAt.Time)
-		}
-		file.BytesReadable = humanize.Bytes(file.Bytes)
-		file.URL = path.Join("/", file.Bin, file.Filename)
-		setCategory(&file)
-		files = append(files, file)
-	}
-	return files, nil
-}
-
-func (d *FileDao) GetAll(available bool) (files []ds.File, err error) {
-	sqlStatement := "SELECT id, bin_id, filename, in_storage, mime, bytes, md5, sha256, downloads, updates, ip, client_id, headers, updated_at, created_at, deleted_at FROM file WHERE in_storage = $1 AND deleted_at IS NULL ORDER BY filename ASC"
-	rows, err := d.db.Query(sqlStatement, available)
-	if err != nil {
-		return files, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var file ds.File
-		err = rows.Scan(&file.Id, &file.Bin, &file.Filename, &file.InStorage, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updates, &file.IP, &file.ClientId, &file.Headers, &file.UpdatedAt, &file.CreatedAt, &file.DeletedAt)
-		if err != nil {
-			return files, err
-		}
-		// https://github.com/lib/pq/issues/329
-		file.UpdatedAt = file.UpdatedAt.UTC()
-		file.CreatedAt = file.CreatedAt.UTC()
-		file.UpdatedAtRelative = humanize.Time(file.UpdatedAt)
-		file.CreatedAtRelative = humanize.Time(file.CreatedAt)
-		if file.IsDeleted() {
-			file.DeletedAt.Time = file.DeletedAt.Time.UTC()
-			file.DeletedAtRelative = humanize.Time(file.DeletedAt.Time)
-		}
-		file.BytesReadable = humanize.Bytes(file.Bytes)
-		setCategory(&file)
-		files = append(files, file)
-	}
-	return files, nil
-}
-
-func (d *FileDao) GetPendingDelete() (files []ds.File, err error) {
-	sqlStatement := "SELECT id, bin_id, filename, in_storage, mime, bytes, md5, sha256, downloads, updates, ip, client_id, headers, updated_at, created_at, deleted_at FROM file WHERE in_storage = true AND deleted_at IS NOT NULL ORDER BY filename ASC"
-	rows, err := d.db.Query(sqlStatement)
-	if err != nil {
-		return files, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var file ds.File
-		err = rows.Scan(&file.Id, &file.Bin, &file.Filename, &file.InStorage, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updates, &file.IP, &file.ClientId, &file.Headers, &file.UpdatedAt, &file.CreatedAt, &file.DeletedAt)
-		if err != nil {
-			return files, err
-		}
-		// https://github.com/lib/pq/issues/329
-		file.UpdatedAt = file.UpdatedAt.UTC()
-		file.CreatedAt = file.CreatedAt.UTC()
-		file.UpdatedAtRelative = humanize.Time(file.UpdatedAt)
-		file.CreatedAtRelative = humanize.Time(file.CreatedAt)
-		if file.IsDeleted() {
-			file.DeletedAt.Time = file.DeletedAt.Time.UTC()
-			file.DeletedAtRelative = humanize.Time(file.DeletedAt.Time)
-		}
-		file.BytesReadable = humanize.Bytes(file.Bytes)
-		setCategory(&file)
-		files = append(files, file)
-	}
-	return files, nil
-}
-
 func (d *FileDao) Update(file *ds.File) (err error) {
 	var id int
 	now := time.Now().UTC().Truncate(time.Microsecond)
@@ -256,4 +168,57 @@ func (d *FileDao) RegisterDownload(file *ds.File) (err error) {
 		return err
 	}
 	return nil
+}
+
+func (d *FileDao) GetByBin(id string, inStorage bool) (files []ds.File, err error) {
+	sqlStatement := "SELECT id, bin_id, filename, in_storage, mime, bytes, md5, sha256, downloads, updates, ip, client_id, headers, updated_at, created_at, deleted_at FROM file WHERE bin_id = $1 AND in_storage = $2 AND deleted_at IS NULL ORDER BY filename ASC"
+	files, err = d.fileQuery(sqlStatement, id, inStorage)
+	return files, err
+}
+
+func (d *FileDao) GetAll(available bool) (files []ds.File, err error) {
+	sqlStatement := "SELECT id, bin_id, filename, in_storage, mime, bytes, md5, sha256, downloads, updates, ip, client_id, headers, updated_at, created_at, deleted_at FROM file WHERE in_storage = $1 AND deleted_at IS NULL ORDER BY filename ASC"
+	files, err = d.fileQuery(sqlStatement, available)
+	return files, err
+}
+
+func (d *FileDao) GetPendingDelete() (files []ds.File, err error) {
+	sqlStatement := "SELECT id, bin_id, filename, in_storage, mime, bytes, md5, sha256, downloads, updates, ip, client_id, headers, updated_at, created_at, deleted_at FROM file WHERE in_storage = true AND deleted_at IS NOT NULL ORDER BY filename ASC"
+	files, err = d.fileQuery(sqlStatement)
+	return files, err
+}
+
+func (d *FileDao) GetTopDownloads(limit int) (files []ds.File, err error) {
+	sqlStatement := "SELECT id, bin_id, filename, in_storage, mime, bytes, md5, sha256, downloads, updates, ip, client_id, headers, updated_at, created_at, deleted_at FROM file WHERE in_storage = true AND deleted_at IS NULL ORDER BY downloads DESC LIMIT $1"
+	files, err = d.fileQuery(sqlStatement, limit)
+	return files, err
+}
+
+func (d *FileDao) fileQuery(sqlStatement string, params ...interface{}) (files []ds.File, err error) {
+	rows, err := d.db.Query(sqlStatement, params...)
+	if err != nil {
+		return files, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var file ds.File
+		err = rows.Scan(&file.Id, &file.Bin, &file.Filename, &file.InStorage, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updates, &file.IP, &file.ClientId, &file.Headers, &file.UpdatedAt, &file.CreatedAt, &file.DeletedAt)
+		if err != nil {
+			return files, err
+		}
+		// https://github.com/lib/pq/issues/329
+		file.UpdatedAt = file.UpdatedAt.UTC()
+		file.CreatedAt = file.CreatedAt.UTC()
+		file.UpdatedAtRelative = humanize.Time(file.UpdatedAt)
+		file.CreatedAtRelative = humanize.Time(file.CreatedAt)
+		if file.IsDeleted() {
+			file.DeletedAt.Time = file.DeletedAt.Time.UTC()
+			file.DeletedAtRelative = humanize.Time(file.DeletedAt.Time)
+		}
+		file.BytesReadable = humanize.Bytes(file.Bytes)
+		file.URL = path.Join("/", file.Bin, file.Filename)
+		setCategory(&file)
+		files = append(files, file)
+	}
+	return files, nil
 }
