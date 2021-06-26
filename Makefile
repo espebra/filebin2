@@ -21,8 +21,8 @@ run: linux
 	artifacts/filebin2-linux-amd64 --listen-host 0.0.0.0 --lurker-interval 10 --expiration 3600 --access-log=foo.log --s3-secure=false --db-host=db
 
 fmt:
-	gofmt -w *.go
-	gofmt -w ds/*.go
-	gofmt -w s3/*.go
-	gofmt -w dbl/*.go
-	gofmt -w geoip/*.go
+	gofmt -w -s *.go
+	gofmt -w -s ds/*.go
+	gofmt -w -s s3/*.go
+	gofmt -w -s dbl/*.go
+	gofmt -w -s geoip/*.go
