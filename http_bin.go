@@ -172,6 +172,12 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(files) == 0 {
+		// The bin does not contain any files
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+
 	if inputFormat == "zip" {
 		w.Header().Set("Content-Type", "application/zip")
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s.zip\"", bin.Id))
