@@ -55,12 +55,17 @@
         </p>
 
         {{ if eq .AvailableStorage false }}
-            <div class="alert alert-warning" role="alert">
-                The storage capacity is reached and new file uploads will be rejected. Please come back later.
-                <a href="#" data-bs-toggle="modal" data-bs-target="#modalStorageLimit" aria-haspopup="true" aria-expanded="false">
-                    <i class="fas fa-fw fa-info-circle text-secondary"></i>
-                </a>
-            </div>
+            <span data-nosnippet>
+                <!--
+                  This is to instruct search engines to ignore this block.
+                -->
+                <div class="alert alert-warning" role="alert">
+                    The storage capacity is reached and new file uploads will be rejected. Please come back later.
+                    <a href="#" data-bs-toggle="modal" data-bs-target="#modalStorageLimit" aria-haspopup="true" aria-expanded="false">
+                        <i class="fas fa-fw fa-info-circle text-secondary"></i>
+                    </a>
+                </div>
+            </span>
         {{ end }}
 
         <p class="lead pt-1">
