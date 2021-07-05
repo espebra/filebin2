@@ -1,0 +1,30 @@
+FROM golang:buster AS build
+RUN export DEBIAN_FRONTEND=noninteractive && \
+  apt-get install -y make gcc libc-dev git
+WORKDIR /app
+RUN go get -u github.com/jstemmer/go-junit-report
+RUN go get -u github.com/GeertJohan/go.rice/rice
+COPY . .
+RUN go build -tags netgo -ldflags '-extldflags "-static"'
+
+FROM debian:stable-slim
+ENV HOMEDIR=/home/filebin2
+ENV USER_ID=1024
+ENV GROUP_ID=1024
+RUN apt-get update && \
+  apt-get upgrade -y && \
+  apt-get install ca-certificates -y && \
+  update-ca-certificates && \
+  mkdir -p $HOMEDIR && \
+  mkdir -p /var/log/filebin && \
+  addgroup --gid $GROUP_ID filebin2 && \
+  useradd --system --uid $USER_ID --gid $GROUP_ID --shell /bin/bash \
+    --home $HOMEDIR filebin2 && \
+  chown -R filebin2:filebin2 $HOMEDIR && \
+  chown -R filebin2:filebin2 /var/log/filebin
+COPY --from=build --chown=filebin2:filebin2 /app/filebin2 \
+  /usr/local/bin/filebin2
+COPY --chown=filebin2:filebin2 ./static $HOMEDIR/static
+WORKDIR $HOMEDIR
+USER filebin2
+ENTRYPOINT ["/usr/local/bin/filebin2"]

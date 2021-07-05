@@ -1,0 +1,72 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    description: filebin2
+  labels:
+    k8s-app: filebin2
+  name: filebin2
+  namespace: default
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 2
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      k8s-app: filebin2
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        description: filebin2
+      labels:
+        k8s-app: filebin2
+      name: filebin2
+    spec:
+      containers:
+      - env:
+        - name: S3_ENDPOINT
+          value: storage.googleapis.com
+        - name: S3_REGION
+          value: us-east-1
+        - name: S3_BUCKET
+          value: atfilebin2
+        - name: DATABASE_NAME
+          value: filebin2
+        - name: DATABASE_HOST
+          value: 10.113.224.5
+        - name: DATABASE_PORT
+          value: '5432'
+        - name: DATABASE_USERNAME
+          value: postgres
+        envFrom:
+        - secretRef:
+            name: fb2secrets
+        image: atsigncompany/filebin2:manual
+        args: 
+        - '-baseurl'
+        - 'https://obscureurl.atsign.com'
+        - '-listen-host'
+        - '0.0.0.0'
+        - '-expiration'
+        - '604801'
+        imagePullPolicy: Always
+        name: filebin2
+        resources:
+          requests:
+            cpu: 250m
+            memory: 25Mi
+        securityContext:
+          privileged: false
+        terminationMessagePath: "/dev/termination-log"
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30

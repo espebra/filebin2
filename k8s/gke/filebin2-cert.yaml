@@ -1,0 +1,7 @@
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: filebin2-cert
+spec:
+  domains:
+    - obscureurl.atsign.com
