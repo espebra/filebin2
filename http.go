@@ -67,7 +67,7 @@ func (h *HTTP) Init() (err error) {
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.BanLookup(h.ViewBin)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.Log(h.BanLookup(h.DeleteBin))).Methods(http.MethodDelete)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.Log(h.BanLookup(h.LockBin))).Methods("PUT")
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.Log(h.BanLookup(h.GetFile))).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.Log(h.BanLookup(h.GetFile))).Methods(http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.Log(h.BanLookup(h.DeleteFile))).Methods(http.MethodDelete)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.Log(h.BanLookup(h.UploadFile))).Methods(http.MethodPost, http.MethodPut)
 
