@@ -16,13 +16,12 @@ type Lurker struct {
 	dao      *dbl.DAO
 	s3       *s3.S3AO
 	interval time.Duration
+	retention uint64
 }
 
-func (l *Lurker) Init(interval int) (err error) {
+func (l *Lurker) Init(interval int, retention uint64) (err error) {
 	l.interval = time.Second * time.Duration(interval)
-	if err != nil {
-		return err
-	}
+	l.retention = retention
 	return nil
 }
 
@@ -107,7 +106,7 @@ func (l *Lurker) DeletePendingBins() {
 }
 
 func (l *Lurker) CleanTransactions() {
-	count, err := l.dao.Transaction().Cleanup()
+	count, err := l.dao.Transaction().Cleanup(l.retention)
 	if err != nil {
 		fmt.Printf("Unable to Transactions().Cleanup(): %s\n", err.Error())
 		return

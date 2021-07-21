@@ -184,25 +184,14 @@ func (d *TransactionDao) Update(t *ds.Transaction) (err error) {
 	return nil
 }
 
-func (d *TransactionDao) Cleanup() (count int64, err error) {
-	sqlStatement := "DELETE FROM transaction USING bin WHERE transaction.bin_id=bin.id AND bin.deleted_at IS NOT NULL AND bin.deleted_at < NOW() - INTERVAL '30 days'"
+func (d *TransactionDao) Cleanup(retention uint64) (count int64, err error) {
+	sqlStatement := fmt.Sprintf("DELETE FROM transaction WHERE timestamp < NOW() - INTERVAL '%d days'", retention)
 	res, err := d.db.Exec(sqlStatement)
 	if err != nil {
 		return count, err
 	}
 	n, err := res.RowsAffected()
 	count = n
-	if err != nil {
-		return count, err
-	}
-
-	sqlStatement = "DELETE FROM transaction WHERE NOT bin_id IN (SELECT id FROM bin)"
-	res, err = d.db.Exec(sqlStatement)
-	if err != nil {
-		return count, err
-	}
-	n, err = res.RowsAffected()
-	count = count + n
 	if err != nil {
 		return count, err
 	}
