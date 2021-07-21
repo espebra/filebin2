@@ -72,14 +72,14 @@
         {{ if isAvailable .Bin }}
             {{ if eq $numfiles 0 }}
                 {{ if eq .Bin.Readonly false }}
-                    <p>This bin is empty. To upload files, click <em>Upload files</em> below or drag-and-drop the files into this browser window.</p>
+                    <div>This bin is empty. To upload files, click <em>Upload files</em> below or drag-and-drop the files into this browser window.</div>
 
-                    <p class="fileUpload btn btn-primary">
+                    <div class="mt-3 fileUpload btn btn-primary">
                         <span><i class="fa fa-cloud-upload"></i> Upload files</span>
-                        <input type="file" class="upload" id="fileField" multiple>
-                    </p>
+                        <input type="file" class="upload" id="fileField" multiple/>
+                    </div>
                 {{ else }}
-                    <p>This bin is empty. Files can not be uploaded to it since it is locked.</p>
+                    <div>This bin is empty. Files can not be uploaded to it since it is locked.</div>
                 {{ end }}
             {{ else }}
                 The bin <a class="link-primary link-custom" href="/{{ .Bin.Id }}">{{ .Bin.Id }}</a> was created {{ .Bin.CreatedAtRelative }}
@@ -102,7 +102,7 @@
                     {{ end }}
                 {{ end }}
             {{ else }}
-                <p>This bin is no longer available.</p>
+                <div>This bin is no longer available.</div>
             {{ end }}
         </p>
 
@@ -127,7 +127,7 @@
                                                 <span>
                                                     <i class="fas fa-fw fa-cloud-upload-alt text-primary"></i> Upload more files
                                                 </span>
-                                                <input type="file" class="upload" id="fileField" multiple>
+                                                <input type="file" class="upload" id="fileField" multiple/>
                                             </span>
                                         </li>
                                     {{ end }}
@@ -302,7 +302,7 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <ul class="row">
+                        <dl class="row">
                             <dt class="col-sm-3">Bin</dt>
                             <dd class="col-sm-9">
                                 <a class="link-primary link-custom" href="/{{ $.Bin.Id }}">
@@ -358,7 +358,7 @@
                                 {{ end }}
                                 ({{ $.Bin.ExpiredAt.Format "2006-01-02 15:04:05 UTC" }})
                             </dd>
-                        </ul>
+                        </dl>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -465,7 +465,7 @@
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                            <ul class="row">
+                            <dl class="row">
                                 <dt class="col-sm-3">Filename</dt>
                                 <dd class="col-sm-9">
                                     {{ if isApproved $.Bin }}
@@ -513,7 +513,7 @@
                                     {{ end }}
                                     ({{ $.Bin.ExpiredAt.Format "2006-01-02 15:04:05 UTC" }})
                                 </dd>
-                            </ul>
+                            </dl>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
