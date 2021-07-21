@@ -380,7 +380,7 @@
                         <p>The URL to this bin is <a href="{{ .BinUrl }}">{{ .BinUrl }}</a>, which is embedded in the QR code below. This can be used to conveniently share the URL across mobile devices without having to type out the URL.</p>
 
                         <div class="text-center">
-                            <img src="/qr/{{ $.Bin.Id }}"/>
+                            <img src="/qr/{{ $.Bin.Id }}" alt="QR code for {{ .BinUrl }}"/>
                         </div>
                     </div>
                     <div class="modal-footer">
