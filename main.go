@@ -54,7 +54,7 @@ var (
 
 	// Lurker
 	lurkerIntervalFlag = flag.Int("lurker-interval", 300, "Lurker interval is the delay to sleep between each run in seconds")
-	logRetentionFlag = flag.Uint64("log-retention", 7, "The number of days to keep log entries before removed by the lurker.")
+	logRetentionFlag   = flag.Uint64("log-retention", 7, "The number of days to keep log entries before removed by the lurker.")
 
 	// Auth
 	adminUsernameFlag = flag.String("admin-username", "", "Admin username")
