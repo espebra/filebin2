@@ -13,9 +13,9 @@ import (
 )
 
 type Lurker struct {
-	dao      *dbl.DAO
-	s3       *s3.S3AO
-	interval time.Duration
+	dao       *dbl.DAO
+	s3        *s3.S3AO
+	interval  time.Duration
 	retention uint64
 }
 
