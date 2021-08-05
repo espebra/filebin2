@@ -18,6 +18,7 @@ import (
 type S3AO struct {
 	client *minio.Client
 	bucket string
+	expiry time.Duration
 }
 
 type BucketInfo struct {
@@ -32,7 +33,7 @@ type BucketInfo struct {
 }
 
 // Initialize S3AO
-func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool) (S3AO, error) {
+func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool, presignExpiry time.Duration) (S3AO, error) {
 	var s3ao S3AO
 
 	// Set up client for S3AO
@@ -47,6 +48,7 @@ func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool) (S
 
 	s3ao.client = minioClient
 	s3ao.bucket = bucket
+	s3ao.expiry = presignExpiry
 
 	fmt.Printf("Established session to S3AO at %s\n", endpoint)
 
@@ -214,10 +216,6 @@ func (s S3AO) PresignedGetObject(bin string, filename string, mime string) (pres
 	f.Write([]byte(filename))
 	objectKey := path.Join(fmt.Sprintf("%x", b.Sum(nil)), fmt.Sprintf("%x", f.Sum(nil)))
 
-	// Presigned GET URLs expire after this amount of seconds
-	// TODO: Make configurable
-	expiry := time.Second * 60
-
 	reqParams := make(url.Values)
 	reqParams.Set("response-content-type", mime)
 
@@ -231,9 +229,9 @@ func (s S3AO) PresignedGetObject(bin string, filename string, mime string) (pres
 		reqParams.Set("response-content-disposition", fmt.Sprintf("filename=\"%s\"", filename))
 	}
 
-	reqParams.Set("response-cache-control", fmt.Sprintf("max-age=%.0f", expiry.Seconds()))
+	reqParams.Set("response-cache-control", fmt.Sprintf("max-age=%.0f", s.expiry.Seconds()))
 
-	presignedURL, err = s.client.PresignedGetObject(context.Background(), s.bucket, objectKey, expiry, reqParams)
+	presignedURL, err = s.client.PresignedGetObject(context.Background(), s.bucket, objectKey, s.expiry, reqParams)
 	if err != nil {
 		return presignedURL, err
 	}

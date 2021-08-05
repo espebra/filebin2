@@ -51,6 +51,7 @@ var (
 	s3SecretKeyFlag = flag.String("s3-secret-key", "", "S3 secret key")
 	s3TraceFlag     = flag.Bool("s3-trace", false, "Enable S3 HTTP tracing for debugging")
 	s3SecureFlag    = flag.Bool("s3-secure", true, "Use TLS when connecting to S3")
+	s3UrlTtlFlag    = flag.String("s3-url-ttl", "1m", "The time to live for presigned S3 URLs, for example 30s or 5m")
 
 	// Lurker
 	lurkerIntervalFlag = flag.Int("lurker-interval", 300, "Lurker interval is the delay to sleep between each run in seconds")
@@ -107,7 +108,14 @@ func main() {
 		fmt.Printf("Unable to create Schema: %s\n", err.Error())
 	}
 
-	s3conn, err := s3.Init(*s3EndpointFlag, *s3BucketFlag, *s3RegionFlag, *s3AccessKeyFlag, *s3SecretKeyFlag, *s3SecureFlag)
+	s3UrlTtl, err := time.ParseDuration(*s3UrlTtlFlag)
+	if err != nil {
+		fmt.Printf("Unable to parse --s3-url-ttl: %s\n", err.Error())
+		os.Exit(2)
+	}
+	fmt.Printf("TTL for presigned S3 URLs: %s\n", s3UrlTtl.String())
+
+	s3conn, err := s3.Init(*s3EndpointFlag, *s3BucketFlag, *s3RegionFlag, *s3AccessKeyFlag, *s3SecretKeyFlag, *s3SecureFlag, s3UrlTtl)
 	if err != nil {
 		fmt.Printf("Unable to initialize S3 connection: %s\n", err.Error())
 		os.Exit(2)
@@ -168,7 +176,7 @@ func main() {
 	if err := h.Init(); err != nil {
 		fmt.Printf("Unable to start the HTTP server: %s\n", err.Error())
 	}
-	fmt.Printf("Expiration: %s\n", config.ExpirationDuration.String())
+	fmt.Printf("Uploaded files expiration: %s\n", config.ExpirationDuration.String())
 
 	// Start the http server
 	h.Run()

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+	"time"
 )
 
 const (
@@ -15,7 +16,8 @@ const (
 )
 
 func tearUp() (S3AO, error) {
-	s3ao, err := Init(ENDPOINT, BUCKET, REGION, ACCESS_KEY, SECRET_KEY, false)
+	expiry := time.Second * 10
+	s3ao, err := Init(ENDPOINT, BUCKET, REGION, ACCESS_KEY, SECRET_KEY, false, expiry)
 	if err != nil {
 		return s3ao, err
 	}
@@ -50,7 +52,8 @@ func TestInit(t *testing.T) {
 }
 
 func TestFailingInit(t *testing.T) {
-	_, err := Init("", "", "", "", "", false)
+	expiry := time.Second * 10
+	_, err := Init("", "", "", "", "", false, expiry)
 	if err == nil {
 		t.Error("Was expecting to fail here, invalid user and db name were provided.")
 	}
