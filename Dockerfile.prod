@@ -5,6 +5,9 @@ WORKDIR /app
 RUN go get -u github.com/jstemmer/go-junit-report
 RUN go get -u github.com/GeertJohan/go.rice/rice
 COPY . .
+RUN go mod tidy
+RUN go mod vendor
+RUN rice embed-go
 RUN go build -tags netgo -ldflags '-extldflags "-static"'
 
 FROM debian:stable-slim
