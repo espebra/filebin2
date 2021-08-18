@@ -128,24 +128,25 @@ func (d *BinDao) Upsert(bin *ds.Bin) (err error) {
 	if bin.IsApproved() {
 		bin.ApprovedAt.Time = bin.ApprovedAt.Time.UTC().Truncate(time.Microsecond)
 	}
-	sqlStatement := "INSERT INTO bin (id, readonly, downloads, updates, updated_at, created_at, approved_at, expired_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id"
-	err = d.db.QueryRow(sqlStatement, bin.Id, readonly, downloads, updates, now, now, bin.ApprovedAt, bin.ExpiredAt).Scan(&bin.Id)
-	if err == nil {
-		bin.UpdatedAt = now
-		bin.CreatedAt = now
-		bin.UpdatedAtRelative = humanize.Time(bin.UpdatedAt)
-		bin.CreatedAtRelative = humanize.Time(bin.CreatedAt)
-		if bin.IsApproved() {
-			bin.ApprovedAt.Time = bin.ApprovedAt.Time.UTC()
-			bin.ApprovedAtRelative = humanize.Time(bin.ApprovedAt.Time)
-		}
-		bin.ExpiredAtRelative = humanize.Time(bin.ExpiredAt)
-		if bin.IsDeleted() {
-			bin.DeletedAtRelative = humanize.Time(bin.DeletedAt.Time)
-		}
-		bin.Downloads = downloads
-		bin.Readonly = readonly
+	sqlStatement := "INSERT INTO bin (id, readonly, downloads, updates, updated_at, created_at, approved_at, expired_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT(id) DO UPDATE SET updated_at=$9 RETURNING id"
+	if err := d.db.QueryRow(sqlStatement, bin.Id, readonly, downloads, updates, now, now, bin.ApprovedAt, bin.ExpiredAt, now).Scan(&bin.Id); err != nil {
+		return err
 	}
+
+	bin.UpdatedAt = now
+	bin.CreatedAt = now
+	bin.UpdatedAtRelative = humanize.Time(bin.UpdatedAt)
+	bin.CreatedAtRelative = humanize.Time(bin.CreatedAt)
+	if bin.IsApproved() {
+		bin.ApprovedAt.Time = bin.ApprovedAt.Time.UTC()
+		bin.ApprovedAtRelative = humanize.Time(bin.ApprovedAt.Time)
+	}
+	bin.ExpiredAtRelative = humanize.Time(bin.ExpiredAt)
+	if bin.IsDeleted() {
+		bin.DeletedAtRelative = humanize.Time(bin.DeletedAt.Time)
+	}
+	bin.Downloads = downloads
+	bin.Readonly = readonly
 
 	b, found, err := d.GetByID(bin.Id)
 	if err != nil {
