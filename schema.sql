@@ -49,6 +49,7 @@ CREATE TABLE transaction (
 );
 
 CREATE INDEX idx_bin_id ON transaction(bin_id);
+CREATE INDEX idx_transaction_timestamp ON transaction(timestamp);
 CREATE INDEX idx_file_deleted_at_in_storage ON file(deleted_at, in_storage);
 CREATE INDEX idx_bin_deleted_at_expired_at ON bin(expired_at, deleted_at);
 
