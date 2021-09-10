@@ -22,7 +22,7 @@ import (
 // to exclude from robots.txt
 func (h *HTTP) ViewBinRedirect(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=3600")
-	w.Header().Set("X-Robots-Tag", "none, noarchive")
+	w.Header().Set("X-Robots-Tag", "noindex")
 
 	params := mux.Vars(r)
 	inputBin := params["bin"]
@@ -36,7 +36,7 @@ func (h *HTTP) ViewBinRedirect(w http.ResponseWriter, r *http.Request) {
 
 func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=0")
-	w.Header().Set("X-Robots-Tag", "none, noarchive")
+	w.Header().Set("X-Robots-Tag", "noindex")
 
 	params := mux.Vars(r)
 	inputBin := params["bin"]
@@ -82,16 +82,17 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 		// Intentional slowdown to make crawling less efficient
 		time.Sleep(1 * time.Second)
 	}
+
 	data.Bin = bin
 
-	if bin.IsReadable() {
-		w.WriteHeader(200)
-	} else {
-		w.WriteHeader(404)
+	code := 200
+	if bin.IsReadable() == false {
+		code = 404
 	}
 
 	if r.Header.Get("accept") == "application/json" {
 		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(code)
 		out, err := json.MarshalIndent(data, "", "    ")
 		if err != nil {
 			fmt.Printf("Failed to parse json: %s\n", err.Error())
@@ -100,6 +101,8 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 		}
 		io.WriteString(w, string(out))
 	} else {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(code)
 		if err := h.templates.ExecuteTemplate(w, "bin", data); err != nil {
 			fmt.Printf("Failed to execute template: %s\n", err.Error())
 			http.Error(w, "Errno 203", http.StatusInternalServerError)
@@ -110,7 +113,7 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 
 func (h *HTTP) BinQR(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=0")
-	w.Header().Set("X-Robots-Tag", "none, noarchive")
+	w.Header().Set("X-Robots-Tag", "noindex")
 
 	params := mux.Vars(r)
 	inputBin := params["bin"]
@@ -138,7 +141,7 @@ func (h *HTTP) BinQR(w http.ResponseWriter, r *http.Request) {
 
 func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=0")
-	w.Header().Set("X-Robots-Tag", "none, noarchive")
+	w.Header().Set("X-Robots-Tag", "noindex")
 
 	params := mux.Vars(r)
 	inputBin := params["bin"]
@@ -161,7 +164,7 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if bin.IsReadable() == false {
-		h.Error(w, r, "", fmt.Sprintf("The bin %s is no longer available.", inputBin), 202, http.StatusNotFound)
+		h.Error(w, r, "", "This bin is no longer available", 202, http.StatusNotFound)
 		return
 	}
 
@@ -204,7 +207,7 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				fmt.Println(err)
 			}
-			fmt.Printf("Added %d bytes to the zip archive\n", bytes)
+			fmt.Printf("Added file %s at %s (%d bytes) to the zip archive for bin %s\n", file.Filename, humanize.Bytes(uint64(bytes)), bytes, bin.Id)
 		}
 		if err := zw.Close(); err != nil {
 			fmt.Println(err)
@@ -239,7 +242,7 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				fmt.Println(err)
 			}
-			fmt.Printf("Added %d bytes to the tar archive\n", bytes)
+			fmt.Printf("Added file %s at %s (%d bytes) to the tar archive for bin %s\n", file.Filename, humanize.Bytes(uint64(bytes)), bytes, bin.Id)
 		}
 		if err := tw.Close(); err != nil {
 			fmt.Println(err)

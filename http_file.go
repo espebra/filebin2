@@ -25,7 +25,7 @@ import (
 
 func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=0")
-	w.Header().Set("X-Robots-Tag", "noindex")
+	//w.Header().Set("X-Robots-Tag", "noindex")
 
 	t0 := time.Now()
 	params := mux.Vars(r)
@@ -64,15 +64,15 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if found == false {
-		h.Error(w, r, "", fmt.Sprintf("The file %s does not exist.\n", inputFilename), 116, http.StatusNotFound)
+		h.Error(w, r, "", "The file does not exist.", 116, http.StatusNotFound)
 		return
 	}
 	if file.IsReadable() == false {
-		h.Error(w, r, "", fmt.Sprintf("The file %s is no longer available.\n", inputFilename), 117, http.StatusNotFound)
+		h.Error(w, r, "", "The file is no longer available.", 117, http.StatusNotFound)
 		return
 	}
 	if file.InStorage == false {
-		h.Error(w, r, "", fmt.Sprintf("The file %s is not available.\n", inputFilename), 118, http.StatusNotFound)
+		h.Error(w, r, "", "The file is not available.", 118, http.StatusNotFound)
 		return
 	}
 
@@ -81,7 +81,7 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 	// >= 1 enforces a limit
 	if h.config.LimitFileDownloads > 0 {
 		if file.Downloads >= h.config.LimitFileDownloads {
-			h.Error(w, r, "", fmt.Sprintf("The file %s has been requested too many times.\n", inputFilename), 421, http.StatusForbidden)
+			h.Error(w, r, "", "The file has been requested too many times.", 421, http.StatusForbidden)
 			return
 		}
 	}
@@ -98,11 +98,10 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Location", presignedURL.String())
-	//w.WriteHeader(http.StatusFound)
-	w.WriteHeader(http.StatusSeeOther)
+	w.WriteHeader(http.StatusFound)
 	io.WriteString(w, "")
 
-	fmt.Printf("Downloaded file %s (%s) from bin %s in %.3fs (%d downloads)\n", inputFilename, humanize.Bytes(file.Bytes), inputBin, time.Since(t0).Seconds(), file.Downloads)
+	fmt.Printf("Presigned download of file %s (%s) from bin %s in %.3fs (%d downloads)\n", inputFilename, humanize.Bytes(file.Bytes), inputBin, time.Since(t0).Seconds(), file.Downloads)
 	return
 }
 
@@ -203,7 +202,7 @@ func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
 	if h.config.LimitStorageBytes > 0 {
 		totalBytesConsumed := h.dao.Info().StorageBytesAllocated()
 		if totalBytesConsumed >= h.config.LimitStorageBytes {
-			h.Error(w, r, fmt.Sprintf("Storage limit reached (currently consuming %s)", humanize.Bytes(totalBytesConsumed)), "Insufficient storage\n", 633, http.StatusInsufficientStorage)
+			h.Error(w, r, fmt.Sprintf("Storage limit reached (currently consuming %s) when trying to upload file %s to bin %s", humanize.Bytes(totalBytesConsumed), inputFilename, inputBin), "Insufficient storage\n", 633, http.StatusInsufficientStorage)
 			return
 		}
 	}
@@ -223,7 +222,7 @@ func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
 
 	nBytes, err := io.Copy(fp, r.Body)
 	if err != nil {
-		h.Error(w, r, fmt.Sprintf("Failed to write temporary upload file %s after %d bytes: %s", fp.Name(), nBytes, err.Error()), "Storage error", 125, http.StatusInternalServerError)
+		h.Error(w, r, fmt.Sprintf("File upload of file %s bin %s aborted at %s of %s, upload started %s: %s (%s)", inputFilename, bin.Id, humanize.Bytes(uint64(nBytes)), humanize.Bytes(inputBytes), humanize.Time(t0), err.Error(), fp.Name()), "Storage error", 125, http.StatusInternalServerError)
 		return
 	}
 	if uint64(nBytes) != inputBytes {

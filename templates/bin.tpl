@@ -89,7 +89,7 @@
                 {{ end }}
 
                 and it expires {{ .Bin.ExpiredAtRelative }}.
-                It contains {{ .Files | len }}
+                It contains {{ .Files | len }} uploaded
 
                 {{ if eq $numfiles 1 }}file at {{ .Bin.BytesReadable }}.{{ end }}
                     {{ if gt $numfiles 1 }}files at {{ .Bin.BytesReadable }} in total.{{ end }}
