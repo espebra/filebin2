@@ -39,3 +39,7 @@ This will make:
 If this argument is set, then an administrator needs to manually approve new bins before files and archives can be downloaded. Bin and file operations except downloading are accepted while a bin is pending approval. This is a mechanism added to limit abuse.
 
 The API request used to approve a bin is an authenticated `PUT /admin/approve/{bin}`
+
+#### `--allow-robots` (default: not set)
+
+If this argument is set, then the `X-Robots-Tag` response header will allow search engines to index and show Filebin in search results.

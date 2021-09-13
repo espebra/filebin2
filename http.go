@@ -276,3 +276,11 @@ func inStringSlice(needle string, haystack []string) bool {
 	}
 	return false
 }
+
+func setRobotsPermissions(w http.ResponseWriter, allow bool) {
+	if allow {
+		w.Header().Set("X-Robots-Tag", "index, follow, noarchive")
+	} else {
+		w.Header().Set("X-Robots-Tag", "none")
+	}
+}

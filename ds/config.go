@@ -19,5 +19,6 @@ type Config struct {
 	AdminPassword        string
 	Tmpdir               string
 	RequireApproval      bool
+	AllowRobots          bool
 	BaseUrl              url.URL
 }

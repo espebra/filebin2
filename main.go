@@ -25,6 +25,7 @@ var (
 	baseURLFlag         = flag.String("baseurl", "https://filebin.net", "The base URL to use. Required for self-hosted instances.")
 	requireApprovalFlag = flag.Bool("manual-approval", false, "Require manual admin approval of new bins before files can be downloaded.")
 	mmdbPathFlag        = flag.String("mmdb", "", "The path to an mmdb formatted geoip database like GeoLite2-City.mmdb.")
+	allowRobotsFlag     = flag.Bool("allow-robots", false, "Allow robots to crawl and index the site (using X-Robots-Tag response header).")
 
 	// Limits
 	limitFileDownloadsFlag = flag.Uint64("limit-file-downloads", 0, "Limit the number of downloads per file. 0 disables this limit.")
@@ -154,6 +155,7 @@ func main() {
 		AdminPassword:      *adminPasswordFlag,
 		Tmpdir:             *tmpdirFlag,
 		RequireApproval:    *requireApprovalFlag,
+		AllowRobots:        *allowRobotsFlag,
 		BaseUrl:            *u,
 	}
 
