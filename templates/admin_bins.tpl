@@ -79,7 +79,7 @@
                             <div class="pull-left">
                             <button type="button" class="btn btn-success" id="approveButton" onclick="approveBin('{{ .Id }}','approveStatus')"><i class="fas fa-fw fa-thumbs-up"></i> Approve</button>
                             </div>
-                            <a class="btn btn-secondary" href="/admin">Go back</a>
+                            <a class="btn btn-secondary" href="/admin/bins">Go back</a>
                         </div>
                     </div>
                 </div>
