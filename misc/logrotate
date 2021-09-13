@@ -1,0 +1,12 @@
+#
+# Requires filebin to be started with the argument:
+#   --access-log /var/log/filebin/access.log
+#
+/var/log/filebin/access.log {
+    compress
+    copytruncate
+    daily
+    dateext
+    rotate 30
+    missingok
+}
