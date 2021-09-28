@@ -61,6 +61,11 @@ var (
 	// Auth
 	adminUsernameFlag = flag.String("admin-username", "", "Admin username")
 	adminPasswordFlag = flag.String("admin-password", "", "Admin password")
+
+	// Slack integration
+	slackSecretFlag  = flag.String("slack-secret", "", "Slack secret (currently used to approve new bins via Slack if manual approval is enabled)")
+	slackDomainFlag  = flag.String("slack-domain", os.Getenv("SLACK_DOMAIN"), "Slack domain")
+	slackChannelFlag = flag.String("slack-channel", os.Getenv("SLACK_CHANNEL"), "Slack channel")
 )
 
 func main() {
@@ -85,6 +90,9 @@ func main() {
 	}
 	if *adminPasswordFlag == "" {
 		*adminPasswordFlag = os.Getenv("ADMIN_PASSWORD")
+	}
+	if *slackSecretFlag == "" {
+		*slackSecretFlag = os.Getenv("SLACK_SECRET")
 	}
 
 	// mmdb path
@@ -145,18 +153,21 @@ func main() {
 	}
 
 	config := &ds.Config{
-		Expiration:         *expirationFlag,
-		LimitFileDownloads: *limitFileDownloadsFlag,
-		HttpHost:           *listenHostFlag,
-		HttpPort:           *listenPortFlag,
-		HttpProxyHeaders:   *proxyHeadersFlag,
-		HttpAccessLog:      *accessLogFlag,
-		AdminUsername:      *adminUsernameFlag,
 		AdminPassword:      *adminPasswordFlag,
-		Tmpdir:             *tmpdirFlag,
-		RequireApproval:    *requireApprovalFlag,
+		AdminUsername:      *adminUsernameFlag,
 		AllowRobots:        *allowRobotsFlag,
 		BaseUrl:            *u,
+		Expiration:         *expirationFlag,
+		HttpHost:           *listenHostFlag,
+		HttpAccessLog:      *accessLogFlag,
+		HttpPort:           *listenPortFlag,
+		HttpProxyHeaders:   *proxyHeadersFlag,
+		LimitFileDownloads: *limitFileDownloadsFlag,
+		RequireApproval:    *requireApprovalFlag,
+		SlackSecret:        *slackSecretFlag,
+		SlackDomain:        *slackDomainFlag,
+		SlackChannel:       *slackChannelFlag,
+		Tmpdir:             *tmpdirFlag,
 	}
 
 	config.LimitStorageBytes, err = humanize.ParseBytes(*limitStorageFlag)

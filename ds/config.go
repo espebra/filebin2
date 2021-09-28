@@ -17,6 +17,9 @@ type Config struct {
 	HttpAccessLog        string
 	AdminUsername        string
 	AdminPassword        string
+	SlackSecret          string
+	SlackDomain          string
+	SlackChannel         string
 	Tmpdir               string
 	RequireApproval      bool
 	AllowRobots          bool
