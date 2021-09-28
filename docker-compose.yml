@@ -16,7 +16,7 @@ services:
       - local
 
   db:
-    image: "postgres:latest"
+    image: "postgres:13"
     hostname: "db"
     restart: "no"
     environment:
@@ -28,7 +28,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - .:/docker-entrypoint-initdb.d:cached
+      - .:/docker-entrypoint-initdb.d:delegated
     networks:
       - local
 
