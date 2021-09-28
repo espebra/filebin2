@@ -4,9 +4,11 @@ orbs:
 jobs:
   build:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-2004:202010-01
     steps:
       - checkout
+      - run: docker --version
+      - run: docker-compose --version
       - run: docker-compose -f ci.yml up --abort-on-container-exit
       - store_artifacts:
           path: artifacts/
