@@ -16,7 +16,7 @@ services:
       - local
 
   db:
-    image: "postgres"
+    image: "postgres:13"
     hostname: "db"
     restart: "no"
     environment:
