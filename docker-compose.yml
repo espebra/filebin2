@@ -11,7 +11,7 @@ services:
       - "9000"
     ports:
       - "9000:9000"
-    entrypoint: ["minio", "server", "/data"]
+    entrypoint: [ "minio", "server", "/data" ]
     networks:
       - local
 
@@ -59,8 +59,7 @@ services:
       - s3
     networks:
       - local
-    entrypoint: ["make", "run"]
-
+    entrypoint: [ "./wait-for-s3.sh", "make", "run" ]
   #varnish:
   #  image: "varnish:stable"
   #  restart: "no"
@@ -74,4 +73,4 @@ services:
   #    - app
 
 networks:
-  local:
+  local: null
