@@ -28,7 +28,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - .:/docker-entrypoint-initdb.d:delegated
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql:delegated
     networks:
       - local
 
