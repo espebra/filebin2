@@ -59,7 +59,7 @@ services:
       - s3
     networks:
       - local
-    entrypoint: [ "./wait-for-s3.sh", "make" ]
+    entrypoint: [ "make" ]
 
   #varnish:
   #  image: "varnish:stable"
