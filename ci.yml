@@ -16,7 +16,7 @@ services:
       - local
 
   db:
-    image: "postgres"
+    image: "postgres:13"
     hostname: "db"
     restart: "no"
     environment:
@@ -28,7 +28,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - .:/docker-entrypoint-initdb.d:delegated
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql:delegated
     networks:
       - local
 
@@ -59,7 +59,7 @@ services:
       - s3
     networks:
       - local
-    entrypoint: ["make"]
+    entrypoint: [ "./wait-for-s3.sh", "make" ]
 
   #varnish:
   #  image: "varnish:stable"
@@ -74,4 +74,4 @@ services:
   #    - app
 
 networks:
-  local:
+  local: null
