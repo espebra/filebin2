@@ -5,5 +5,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && apt-get install -y make gcc libc-de
 RUN go get -u github.com/jstemmer/go-junit-report
 RUN go get -u github.com/GeertJohan/go.rice/rice
 WORKDIR /app
+COPY wait-for-s3.sh .
 EXPOSE 8080
 CMD make run
