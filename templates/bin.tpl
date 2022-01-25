@@ -15,7 +15,7 @@
         <link rel="stylesheet" href="/static/css/custom.css"/>
 
         <title>Filebin | {{ .Bin.Id }}</title>
-        <script src="/static/js/upload.js"></script>
+        <script src="/static/js/filebin2.js"></script>
         {{ if eq .Bin.Readonly false }}
         <script>
             window.onload = function () {

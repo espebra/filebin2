@@ -115,9 +115,11 @@ func (h *HTTP) UploadFileDeprecated(w http.ResponseWriter, r *http.Request) {
 
 	if inputBin == "" {
 		inputBin = h.dao.Bin().GenerateId()
+		fmt.Printf("Auto generated bin: %s\n", inputBin)
 	}
 
 	u := path.Join("/", inputBin, inputFilename)
+	fmt.Printf("Redirecting POST request from deprecated endpoint to %s\n", u)
 	http.Redirect(w, r, u, 307)
 }
 

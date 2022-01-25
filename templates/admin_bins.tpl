@@ -8,7 +8,7 @@
         <link rel="stylesheet" href="/static/css/fontawesome.all.min.css"/>
         <link rel="stylesheet" href="/static/css/custom.css"/>
         <script src="/static/js/sorttable.js"></script>
-        <script src="/static/js/upload.js"></script>
+        <script src="/static/js/filebin2.js"></script>
         <title>Filebin | Bins</title>
     </head>
     <body class="container-fluid">
