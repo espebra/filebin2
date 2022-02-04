@@ -120,6 +120,11 @@ func (h *HTTP) UploadFileDeprecated(w http.ResponseWriter, r *http.Request) {
 
 	u := path.Join("/", inputBin, inputFilename)
 	fmt.Printf("Redirecting POST request from deprecated endpoint to %s\n", u)
+
+	// The request body must be consumed before a response can be sent
+	io.Copy(ioutil.Discard, r.Body)
+	r.Body.Close()
+
 	http.Redirect(w, r, u, 307)
 }
 
