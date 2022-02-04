@@ -47,7 +47,7 @@ func (h *HTTP) Init() (err error) {
 	h.router.PathPrefix("/debug/pprof/").HandlerFunc(h.Auth(pprof.Index))
 
 	h.router.HandleFunc("/", h.BanLookup(h.Index)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/", h.BanLookup(h.UploadFileDeprecated)).Methods(http.MethodPost)
+	h.router.HandleFunc("/", h.BanLookup(h.UploadFile)).Methods(http.MethodPost)
 	h.router.HandleFunc("/filebin-status", h.FilebinStatus).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/robots.txt", h.Robots).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/about", h.BanLookup(h.About)).Methods(http.MethodHead, http.MethodGet)

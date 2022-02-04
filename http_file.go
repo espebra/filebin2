@@ -107,27 +107,6 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (h *HTTP) UploadFileDeprecated(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "max-age=0")
-
-	inputBin := r.Header.Get("bin")
-	inputFilename := r.Header.Get("filename")
-
-	if inputBin == "" {
-		inputBin = h.dao.Bin().GenerateId()
-		fmt.Printf("Auto generated bin: %s\n", inputBin)
-	}
-
-	u := path.Join("/", inputBin, inputFilename)
-	fmt.Printf("Redirecting POST request from deprecated endpoint to %s\n", u)
-
-	// The request body must be consumed before a response can be sent
-	io.Copy(ioutil.Discard, r.Body)
-	r.Body.Close()
-
-	http.Redirect(w, r, u, 307)
-}
-
 func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=0")
 
@@ -136,6 +115,24 @@ func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	inputBin := params["bin"]
 	inputFilename := params["filename"]
+
+	// Deprecated: This block is here to be compatible with the clients that
+	// are written for https://github.com/espebra/filebin, meaning clients that
+	// upload files to / with the request headers bin and filename set instead
+	// of /{bin}/{filename}
+	if inputBin == "" || inputFilename == "" {
+		inputBin = r.Header.Get("bin")
+		inputFilename = r.Header.Get("filename")
+		if inputBin == "" {
+			inputBin = h.dao.Bin().GenerateId()
+			fmt.Printf("Auto generated bin: %s\n", inputBin)
+		}
+		if inputFilename == "" {
+			h.Error(w, r, "Upload failed: missing filename request header", "Missing filename request header", 952, http.StatusBadRequest)
+			return
+		}
+	}
+
 	inputMD5 := r.Header.Get("Content-MD5")
 	inputSHA256 := r.Header.Get("Content-SHA256")
 	inputClientId := r.Header.Get("CID")
