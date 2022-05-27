@@ -3,7 +3,6 @@
 FROM golang:buster
 RUN export DEBIAN_FRONTEND=noninteractive && apt-get install -y make gcc libc-dev git
 RUN go install github.com/jstemmer/go-junit-report@latest
-RUN go install github.com/GeertJohan/go.rice/rice@latest
 WORKDIR /app
 COPY wait-for-s3.sh .
 EXPOSE 8080

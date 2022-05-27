@@ -2,8 +2,8 @@ package main
 
 import (
 	"database/sql"
+	"embed"
 	"fmt"
-	"github.com/GeertJohan/go.rice"
 	"github.com/espebra/filebin2/dbl"
 	"github.com/espebra/filebin2/ds"
 	"github.com/espebra/filebin2/geoip"
@@ -19,7 +19,7 @@ import (
 	"net/http/pprof"
 	"os"
 	"path"
-	"strings"
+	//"strings"
 	"time"
 )
 
@@ -27,8 +27,8 @@ type funcHandler func(http.ResponseWriter, *http.Request)
 
 type HTTP struct {
 	router      *mux.Router
-	templateBox *rice.Box
-	staticBox   *rice.Box
+	templateBox *embed.FS
+	staticBox   *embed.FS
 	templates   *template.Template
 	dao         *dbl.DAO
 	s3          *s3.S3AO
@@ -61,7 +61,7 @@ func (h *HTTP) Init() (err error) {
 	h.router.HandleFunc("/admin", h.Auth(h.ViewAdminDashboard)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/approve/{bin:[A-Za-z0-9_-]+}", h.Log(h.Auth(h.ApproveBin))).Methods("PUT")
 	//h.router.HandleFunc("/admin/cleanup", h.Auth(h.ViewAdminCleanup)).Methods(http.MethodHead, http.MethodGet)
-	h.router.Handle("/static/{path:.*}", http.StripPrefix("/static/", CacheControl(http.FileServer(h.staticBox.HTTPBox())))).Methods(http.MethodHead, http.MethodGet)
+	h.router.Handle("/static/{path:.*}", CacheControl(http.FileServer(http.FS(h.staticBox)))).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/archive/{bin:[A-Za-z0-9_-]+}/{format:[a-z]+}", h.Log(h.BanLookup(h.Archive))).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/qr/{bin:[A-Za-z0-9_-]+}", h.BanLookup(h.BinQR)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/", h.BanLookup(h.ViewBinRedirect)).Methods(http.MethodHead, http.MethodGet)
@@ -236,25 +236,9 @@ func (h *HTTP) ParseTemplates() *template.Template {
 	}
 
 	templ := template.New("").Funcs(fns)
-	err := h.templateBox.Walk("/", func(filepath string, info os.FileInfo, err error) error {
-		if strings.HasSuffix(filepath, ".tpl") {
-			// Read the template
-			f := path.Base(filepath)
-			//log.Println("Loading template: " + f)
-			content, err := h.templateBox.String(f)
-			if err != nil {
-				fmt.Errorf("%s", err.Error())
-			}
-			// Parse the template
-			_, err = templ.Parse(content)
-			if err != nil {
-				fmt.Errorf("%s", err.Error())
-			}
-		}
-		return err
-	})
+	_, err := templ.ParseFS(h.templateBox, "templates/*.html")
 	if err != nil {
-		fmt.Errorf("%s", err.Error())
+		fmt.Errorf("Unable to read templates directory: %s\n", err.Error())
 	}
 	return templ
 }

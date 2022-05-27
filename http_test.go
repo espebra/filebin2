@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/GeertJohan/go.rice"
 	"github.com/espebra/filebin2/dbl"
 	"github.com/espebra/filebin2/ds"
 	"github.com/espebra/filebin2/s3"
@@ -74,8 +73,6 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	staticBox := rice.MustFindBox("static")
-	templateBox := rice.MustFindBox("templates")
 	c := ds.Config{
 		LimitFileDownloads: testLimitFileDownloads,
 		LimitStorageBytes:  testLimitStorage,
@@ -84,8 +81,8 @@ func TestMain(m *testing.M) {
 		HttpPort:           testHTTPPort,
 	}
 	h := &HTTP{
-		staticBox:   staticBox,
-		templateBox: templateBox,
+		staticBox:   &staticBox,
+		templateBox: &templateBox,
 		dao:         &dao,
 		s3:          &s3ao,
 		config:      &c,

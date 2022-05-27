@@ -3,18 +3,15 @@ default: test linux
 
 prepare:
 	go version
-	rm -f templates.rice-box.go static.rice-box.go rice-box.go
 	mkdir -p artifacts tests
 
 test: prepare
 	bash runtests
 
 linux: prepare
-	rice embed-go -v -i .
 	GOOS=linux GOARCH=amd64 go build -mod=vendor -o artifacts/filebin2-linux-amd64
 
 darwin: prepare
-	rice embed-go -v -i .
 	GOOS=darwin GOARCH=amd64 go build -mod=vendor -o artifacts/filebin2-darwin-amd64
 
 run: linux

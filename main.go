@@ -1,13 +1,13 @@
 package main
 
 import (
+	"embed"
 	"flag"
 	"fmt"
 	_ "net/http/pprof"
 	"os"
 	"strconv"
 	//"github.com/espebra/filebin2/ds"
-	"github.com/GeertJohan/go.rice"
 	"github.com/dustin/go-humanize"
 	"github.com/espebra/filebin2/dbl"
 	"github.com/espebra/filebin2/ds"
@@ -66,6 +66,12 @@ var (
 	slackSecretFlag  = flag.String("slack-secret", "", "Slack secret (currently used to approve new bins via Slack if manual approval is enabled)")
 	slackDomainFlag  = flag.String("slack-domain", os.Getenv("SLACK_DOMAIN"), "Slack domain")
 	slackChannelFlag = flag.String("slack-channel", os.Getenv("SLACK_CHANNEL"), "Slack channel")
+
+	//go:embed templates
+	templateBox embed.FS
+
+	//go:embed static
+	staticBox embed.FS
 )
 
 func main() {
@@ -143,9 +149,6 @@ func main() {
 	l.Init(*lurkerIntervalFlag, *logRetentionFlag)
 	l.Run()
 
-	staticBox := rice.MustFindBox("static")
-	templateBox := rice.MustFindBox("templates")
-
 	u, err := url.Parse(*baseURLFlag)
 	if err != nil {
 		fmt.Printf("Unable to parse the baseurl parameter: %s\n", *baseURLFlag)
@@ -178,8 +181,8 @@ func main() {
 	config.LimitStorageReadable = humanize.Bytes(config.LimitStorageBytes)
 
 	h := &HTTP{
-		staticBox:   staticBox,
-		templateBox: templateBox,
+		staticBox:   &staticBox,
+		templateBox: &templateBox,
 		dao:         &daoconn,
 		s3:          &s3conn,
 		geodb:       &geodb,
