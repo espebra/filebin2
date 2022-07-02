@@ -112,9 +112,15 @@ func (h *HTTP) Log(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc
 
 		completed := t0.Add(metrics.Duration)
 
-		_, err := h.dao.Transaction().Register(r, bin, filename, t0, completed, metrics.Code, metrics.Written)
-		if err != nil {
-			fmt.Printf("Unable to register the transaction: %s\n", err.Error())
+		// Only register transactions with a response status lower than 400, which
+		// includes file uploads, archive downloads and presigned downloads from S3.
+		// However, any client or server side errors are skipped to reduce the database
+		// volume needed.
+		if metrics.Code < 400 {
+			_, err := h.dao.Transaction().Register(r, bin, filename, t0, completed, metrics.Code, metrics.Written)
+			if err != nil {
+				fmt.Printf("Unable to register the transaction: %s\n", err.Error())
+			}
 		}
 	})
 }
