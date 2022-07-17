@@ -52,7 +52,7 @@ github.com/minio/sha256-simd
 github.com/modern-go/concurrent
 # github.com/modern-go/reflect2 v1.0.2
 github.com/modern-go/reflect2
-# github.com/oschwald/maxminddb-golang v1.8.0
+# github.com/oschwald/maxminddb-golang v1.9.0
 ## explicit
 github.com/oschwald/maxminddb-golang
 # github.com/rs/xid v1.2.1
@@ -72,7 +72,7 @@ golang.org/x/crypto/blake2b
 golang.org/x/net/http/httpguts
 golang.org/x/net/idna
 golang.org/x/net/publicsuffix
-# golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f
+# golang.org/x/sys v0.0.0-20220325203850-36772127a21f
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix

@@ -11,7 +11,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/lib/pq v1.10.6
 	github.com/minio/minio-go/v7 v7.0.31
-	github.com/oschwald/maxminddb-golang v1.8.0
+	github.com/oschwald/maxminddb-golang v1.9.0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	golang.org/x/net v0.0.0-20201021035429-f5854403a974 // indirect
 )
