@@ -4,7 +4,7 @@ github.com/GeertJohan/go.rice/embedded
 # github.com/dustin/go-humanize v1.0.0
 ## explicit
 github.com/dustin/go-humanize
-# github.com/felixge/httpsnoop v1.0.1
+# github.com/felixge/httpsnoop v1.0.3
 ## explicit
 github.com/felixge/httpsnoop
 # github.com/gabriel-vasile/mimetype v1.0.4
@@ -14,10 +14,10 @@ github.com/gabriel-vasile/mimetype/internal/json
 github.com/gabriel-vasile/mimetype/internal/matchers
 # github.com/google/uuid v1.1.1
 github.com/google/uuid
-# github.com/gorilla/handlers v1.4.2
+# github.com/gorilla/handlers v1.5.1
 ## explicit
 github.com/gorilla/handlers
-# github.com/gorilla/mux v1.7.4
+# github.com/gorilla/mux v1.8.0
 ## explicit
 github.com/gorilla/mux
 # github.com/json-iterator/go v1.1.10
@@ -62,8 +62,6 @@ github.com/rs/xid
 github.com/skip2/go-qrcode
 github.com/skip2/go-qrcode/bitset
 github.com/skip2/go-qrcode/reedsolomon
-# github.com/stretchr/testify v1.7.0
-## explicit
 # golang.org/x/crypto v0.0.0-20200709230013-948cd5f35899
 golang.org/x/crypto/argon2
 golang.org/x/crypto/blake2b
@@ -72,8 +70,7 @@ golang.org/x/crypto/blake2b
 golang.org/x/net/http/httpguts
 golang.org/x/net/idna
 golang.org/x/net/publicsuffix
-# golang.org/x/sys v0.0.0-20210119212857-b64e53b001e4
-## explicit
+# golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
