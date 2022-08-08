@@ -184,6 +184,45 @@ func (h *HTTP) FilebinStatus(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, string(out))
 }
 
+func (h *HTTP) StorageStatus(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("X-Robots-Tag", "none")
+	w.Header().Set("Cache-Control", "max-age=1")
+
+	type Data struct {
+		S3Status  bool `json:"s3-status"`
+		S3Full  bool `json:"s3-full"`
+	}
+	var data Data
+
+	code := 200
+
+	if h.s3.Status() {
+		data.S3Status = true
+	} else {
+		data.S3Status = false
+		fmt.Printf("S3 unavailable during status check\n")
+		code = 503
+	}
+
+        if h.config.LimitStorageBytes > 0 {
+                totalBytesConsumed := h.dao.Info().StorageBytesAllocated()
+                if totalBytesConsumed >= h.config.LimitStorageBytes {
+			data.S3Full = true
+			code = 507
+                }
+        }
+
+	w.Header().Set("Content-Type", "application/json")
+	out, err := json.MarshalIndent(data, "", "    ")
+	if err != nil {
+		fmt.Printf("Failed to parse json: %s\n", err.Error())
+		http.Error(w, "Errno 201", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(code)
+	io.WriteString(w, string(out))
+}
+
 func (h *HTTP) Robots(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=3600")
 
