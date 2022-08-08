@@ -189,8 +189,8 @@ func (h *HTTP) StorageStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=1")
 
 	type Data struct {
-		S3Status  bool `json:"s3-status"`
-		S3Full  bool `json:"s3-full"`
+		S3Status bool `json:"s3-status"`
+		S3Full   bool `json:"s3-full"`
 	}
 	var data Data
 
@@ -204,13 +204,13 @@ func (h *HTTP) StorageStatus(w http.ResponseWriter, r *http.Request) {
 		code = 503
 	}
 
-        if h.config.LimitStorageBytes > 0 {
-                totalBytesConsumed := h.dao.Info().StorageBytesAllocated()
-                if totalBytesConsumed >= h.config.LimitStorageBytes {
+	if h.config.LimitStorageBytes > 0 {
+		totalBytesConsumed := h.dao.Info().StorageBytesAllocated()
+		if totalBytesConsumed >= h.config.LimitStorageBytes {
 			data.S3Full = true
 			code = 507
-                }
-        }
+		}
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	out, err := json.MarshalIndent(data, "", "    ")
