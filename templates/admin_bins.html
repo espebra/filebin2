@@ -16,7 +16,23 @@
         {{template "adminbar" .}}
 
         <h1>Top {{ .Limit }} bins</h1>
-        <h1>By last updated</h1>
+
+        <nav class="navbar navbar-expand-lg bg-light">
+          <div class="container-fluid">
+            <div class="collapse navbar-collapse">
+              <div class="navbar-nav">
+                <a class="nav-link" href="#updated">By last updated at</a>
+                <a class="nav-link" href="#created">By created at</a>
+                <a class="nav-link" href="#bytes">By bytes in total</a>
+                <a class="nav-link" href="#files">By files</a>
+                <a class="nav-link" href="#downloads">By downloads</a>
+              </div>
+            </div>
+          </div>
+        </nav>
+
+        <a id="updated"></a>
+        <h2>By last updated at</h2>
 
         <table class="table sortable">
             <tr>
@@ -26,9 +42,9 @@
                 <th>Created</th>
                 <th>Expires</th>
                 <th>Bytes</th>
+                <th>Files</th>
                 <th>Bin downloads</th>
                 <th>File downloads</th>
-                <th>Files</th>
                 <th>Locked</th>
                 <th>Log</th>
             </tr>
@@ -42,13 +58,13 @@
                             <i class="fas fa-fw fa-circle text-warning"></i> <a href="" data-bs-toggle="modal" data-bs-target="#modalApproveBin-{{ $index }}">Pending</a>
                         {{ end }}
                     </td>
-                    <td sorttable_customkey="{{ .UpdatedAt }}"><strong>{{ .UpdatedAtRelative }}<strong></td>
+                    <td sorttable_customkey="{{ .UpdatedAt }}" class="table-light"><strong>{{ .UpdatedAtRelative }}<strong></td>
                     <td sorttable_customkey="{{ .CreatedAt }}">{{ .CreatedAtRelative }}</td>
                     <td sorttable_customkey="{{ .ExpiredAt }}">{{ .ExpiredAtRelative }}</td>
                     <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
+                    <td>{{ .Files }}</td>
                     <td>{{ .Downloads }}</td>
                     <td>{{ .FileDownloads }}</td>
-                    <td>{{ .Files }}</td>
                     <td>
                         {{ if eq .Readonly true }}
                             <i class="fas fa-fw fa-lock text-muted"></i>
@@ -92,7 +108,8 @@
         {{ end }}
         <!-- Approve bin modal end -->
 
-        <h1>By created</h1>
+        <a id="created"></a>
+        <h2>By created at</h2>
 
         <table class="table sortable">
             <tr>
@@ -102,9 +119,9 @@
                 <th>Created</th>
                 <th>Expires</th>
                 <th>Bytes</th>
+                <th>Files</th>
                 <th>Bin downloads</th>
                 <th>File downloads</th>
-                <th>Files</th>
                 <th>Locked</th>
                 <th>Log</th>
             </tr>
@@ -119,12 +136,12 @@
                         {{ end }}
                     </td>
                     <td sorttable_customkey="{{ .UpdatedAt }}">{{ .UpdatedAtRelative }}</td>
-                    <td sorttable_customkey="{{ .CreatedAt }}"><strong>{{ .CreatedAtRelative }}<strong></td>
+                    <td sorttable_customkey="{{ .CreatedAt }}" class="table-light"><strong>{{ .CreatedAtRelative }}<strong></td>
                     <td sorttable_customkey="{{ .ExpiredAt }}">{{ .ExpiredAtRelative }}</td>
                     <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
+                    <td>{{ .Files }}</td>
                     <td>{{ .Downloads }}</td>
                     <td>{{ .FileDownloads }}</td>
-                    <td>{{ .Files }}</td>
                     <td>
                         {{ if eq .Readonly true }}
                             <i class="fas fa-fw fa-lock text-muted"></i>
@@ -168,7 +185,8 @@
         {{ end }}
         <!-- Approve bin modal end -->
 
-        <h1>By bytes</h1>
+        <a id="bytes"></a>
+        <h2>By bytes</h2>
 
         <table class="table sortable">
             <tr>
@@ -178,9 +196,9 @@
                 <th>Created</th>
                 <th>Expires</th>
                 <th>Bytes</th>
+                <th>Files</th>
                 <th>Bin downloads</th>
                 <th>File downloads</th>
-                <th>Files</th>
                 <th>Locked</th>
                 <th>Log</th>
             </tr>
@@ -197,10 +215,10 @@
                     <td sorttable_customkey="{{ .UpdatedAt }}">{{ .UpdatedAtRelative }}</td>
                     <td sorttable_customkey="{{ .CreatedAt }}">{{ .CreatedAtRelative }}</td>
                     <td sorttable_customkey="{{ .ExpiredAt }}">{{ .ExpiredAtRelative }}</td>
-                    <td sorttable_customkey="{{ .Bytes }}"><strong>{{ .BytesReadable }}</strong></td>
+                    <td sorttable_customkey="{{ .Bytes }}" class="table-light"><strong>{{ .BytesReadable }}</strong></td>
+                    <td>{{ .Files }}</td>
                     <td>{{ .Downloads }}</td>
                     <td>{{ .FileDownloads }}</td>
-                    <td>{{ .Files }}</td>
                     <td>
                         {{ if eq .Readonly true }}
                             <i class="fas fa-fw fa-lock text-muted"></i>
@@ -244,7 +262,8 @@
         {{ end }}
         <!-- Approve bin modal end -->
 
-        <h1>By downloads</h1>
+        <a id="files"></a>
+        <h2>By files</h2>
 
         <table class="table sortable">
             <tr>
@@ -254,85 +273,9 @@
                 <th>Created</th>
                 <th>Expires</th>
                 <th>Bytes</th>
+                <th>Files</th>
                 <th>Bin downloads</th>
                 <th>File downloads</th>
-                <th>Files</th>
-                <th>Locked</th>
-                <th>Log</th>
-            </tr>
-            {{ range $index, $value := .Bins.ByDownloads }}
-                <tr>
-                    <td><code><a href="{{ .URL }}">{{ .Id }}</a></code></td>
-                    <td>
-                        {{ if isApproved . }}
-                            <i class="fas fa-fw fa-check-circle text-success"></i>
-                        {{ else }}
-                            <i class="fas fa-fw fa-circle text-warning"></i> <a href="" data-bs-toggle="modal" data-bs-target="#modalApproveBin-{{ $index }}">Pending</a>
-                        {{ end }}
-                    </td>
-                    <td sorttable_customkey="{{ .UpdatedAt }}">{{ .UpdatedAtRelative }}</td>
-                    <td sorttable_customkey="{{ .CreatedAt }}">{{ .CreatedAtRelative }}</td>
-                    <td sorttable_customkey="{{ .ExpiredAt }}">{{ .ExpiredAtRelative }}</td>
-                    <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
-                    <td><strong>{{ .Downloads }}</strong></td>
-                    <td><strong>{{ .FileDownloads }}</strong></td>
-                    <td>{{ .Files }}</td>
-                    <td>
-                        {{ if eq .Readonly true }}
-                            <i class="fas fa-fw fa-lock text-muted"></i>
-                        {{ else }}
-                            <i class="fas fa-fw fa-lock-open text-success"></i>
-                        {{ end }}
-                    </td>
-                    <td><a href="/admin/log/bin/{{ .Id }}">Log</a></td>
-                </tr>
-            {{ end }}
-        </table>
-
-        <!-- Approve bin modal start -->
-        {{ range $index, $value := .Bins.ByDownloads }}
-            <div class="modal fade" id="modalApproveBin-{{ $index }}" tabindex="-1" role="dialog" aria-labelledby="modalApproveBinTitle" aria-hidden="true">
-                <div class="modal-dialog" role="document">
-                    <div class="modal-content">
-                        <div class="modal-header alert-secondary">
-                            <h5 class="modal-title" id="modelApproveBinTitle">Approve bin</h5>
-                            <!--<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>-->
-                        </div>
-                        <div class="modal-body">
-                            {{ if isApproved . }}
-                                <p>This bin is already approved.</p>
-                            {{ else }}
-                                <p>This bin is pending approval. File downloads and archive downloads are not allowed while the bin is pending approval.<p>
-                                <p class="lead">Approve bin {{ .Id }}?</p>
-                            {{ end }}
-
-                            <div id="approveStatus"></div>
-                        </div>
-                        <div class="modal-footer">
-                            <div class="pull-left">
-                            <button type="button" class="btn btn-success" id="approveButton" onclick="approveBin('{{ .Id }}','approveStatus')"><i class="fas fa-fw fa-thumbs-up"></i> Approve</button>
-                            </div>
-                            <a class="btn btn-secondary" href="/admin/bins">Go back</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        {{ end }}
-        <!-- Approve bin modal end -->
-
-        <h1>By files</h1>
-
-        <table class="table sortable">
-            <tr>
-                <th>Bin</th>
-                <th>Approved?</th>
-                <th>Updated</th>
-                <th>Created</th>
-                <th>Expires</th>
-                <th>Bytes</th>
-                <th>Bin downloads</th>
-                <th>File downloads</th>
-                <th>Files</th>
                 <th>Locked</th>
                 <th>Log</th>
             </tr>
@@ -350,9 +293,9 @@
                     <td sorttable_customkey="{{ .CreatedAt }}">{{ .CreatedAtRelative }}</td>
                     <td sorttable_customkey="{{ .ExpiredAt }}">{{ .ExpiredAtRelative }}</td>
                     <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
+                    <td class="table-light"><strong>{{ .Files }}<strong></td>
                     <td>{{ .Downloads }}</td>
                     <td>{{ .FileDownloads }}</td>
-                    <td><strong>{{ .Files }}<strong></td>
                     <td>
                         {{ if eq .Readonly true }}
                             <i class="fas fa-fw fa-lock text-muted"></i>
@@ -395,6 +338,84 @@
             </div>
         {{ end }}
         <!-- Approve bin modal end -->
+
+        <a id="downloads"></a>
+        <h2>By downloads</h2>
+
+        <table class="table sortable">
+            <tr>
+                <th>Bin</th>
+                <th>Approved?</th>
+                <th>Updated</th>
+                <th>Created</th>
+                <th>Expires</th>
+                <th>Bytes</th>
+                <th>Files</th>
+                <th>Bin downloads</th>
+                <th>File downloads</th>
+                <th>Locked</th>
+                <th>Log</th>
+            </tr>
+            {{ range $index, $value := .Bins.ByDownloads }}
+                <tr>
+                    <td><code><a href="{{ .URL }}">{{ .Id }}</a></code></td>
+                    <td>
+                        {{ if isApproved . }}
+                            <i class="fas fa-fw fa-check-circle text-success"></i>
+                        {{ else }}
+                            <i class="fas fa-fw fa-circle text-warning"></i> <a href="" data-bs-toggle="modal" data-bs-target="#modalApproveBin-{{ $index }}">Pending</a>
+                        {{ end }}
+                    </td>
+                    <td sorttable_customkey="{{ .UpdatedAt }}">{{ .UpdatedAtRelative }}</td>
+                    <td sorttable_customkey="{{ .CreatedAt }}">{{ .CreatedAtRelative }}</td>
+                    <td sorttable_customkey="{{ .ExpiredAt }}">{{ .ExpiredAtRelative }}</td>
+                    <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
+                    <td>{{ .Files }}</td>
+                    <td class="table-light"><strong>{{ .Downloads }}</strong></td>
+                    <td class="table-light"><strong>{{ .FileDownloads }}</strong></td>
+                    <td>
+                        {{ if eq .Readonly true }}
+                            <i class="fas fa-fw fa-lock text-muted"></i>
+                        {{ else }}
+                            <i class="fas fa-fw fa-lock-open text-success"></i>
+                        {{ end }}
+                    </td>
+                    <td><a href="/admin/log/bin/{{ .Id }}">Log</a></td>
+                </tr>
+            {{ end }}
+        </table>
+
+        <!-- Approve bin modal start -->
+        {{ range $index, $value := .Bins.ByDownloads }}
+            <div class="modal fade" id="modalApproveBin-{{ $index }}" tabindex="-1" role="dialog" aria-labelledby="modalApproveBinTitle" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header alert-secondary">
+                            <h5 class="modal-title" id="modelApproveBinTitle">Approve bin</h5>
+                            <!--<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>-->
+                        </div>
+                        <div class="modal-body">
+                            {{ if isApproved . }}
+                                <p>This bin is already approved.</p>
+                            {{ else }}
+                                <p>This bin is pending approval. File downloads and archive downloads are not allowed while the bin is pending approval.<p>
+                                <p class="lead">Approve bin {{ .Id }}?</p>
+                            {{ end }}
+
+                            <div id="approveStatus"></div>
+                        </div>
+                        <div class="modal-footer">
+                            <div class="pull-left">
+                            <button type="button" class="btn btn-success" id="approveButton" onclick="approveBin('{{ .Id }}','approveStatus')"><i class="fas fa-fw fa-thumbs-up"></i> Approve</button>
+                            </div>
+                            <a class="btn btn-secondary" href="/admin/bins">Go back</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {{ end }}
+        <!-- Approve bin modal end -->
+
 
 
         <script src="/static/js/popper.min.js"></script>
