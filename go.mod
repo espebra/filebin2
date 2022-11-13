@@ -3,7 +3,6 @@ module github.com/espebra/filebin2
 go 1.16
 
 require (
-	github.com/GeertJohan/go.rice v1.0.2
 	github.com/dustin/go-humanize v1.0.0
 	github.com/felixge/httpsnoop v1.0.3
 	github.com/gabriel-vasile/mimetype v1.4.1
