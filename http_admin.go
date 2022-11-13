@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/mux"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/espebra/filebin2/ds"
@@ -77,6 +78,102 @@ func (h *HTTP) ViewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HTTP) ViewAdminBins(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	inputLimit := params["limit"]
+
+	// default
+	limit := 20
+
+	i, err := strconv.Atoi(inputLimit)
+	if err == nil {
+		if i >= 1 && i <= 100 {
+			limit = i
+		}
+	}
+
+	type Bins struct {
+		ByLastUpdated []ds.Bin `json:"by-last-updated"`
+		ByBytes       []ds.Bin `json:"by-bytes"`
+		ByDownloads   []ds.Bin `json:"by-downloads"`
+		ByFiles       []ds.Bin `json:"by-files"`
+		ByCreated     []ds.Bin `json:"by-created"`
+	}
+
+	type Data struct {
+		Bins Bins `json:"bins"`
+		//Files []ds.File `json:"files"`
+		BucketInfo s3.BucketInfo `json:"bucketinfo"`
+		Page       string        `json:"page"`
+		DBInfo     ds.Info       `json:"db_info"`
+		Limit      int           `json:"limit"`
+	}
+	var data Data
+	data.Limit = limit
+
+	binsByLastUpdated, err := h.dao.Bin().GetLastUpdated(limit)
+	if err != nil {
+		fmt.Printf("Unable to GetAll(): %s\n", err.Error())
+		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		return
+	}
+
+	binsByBytes, err := h.dao.Bin().GetByBytes(limit)
+	if err != nil {
+		fmt.Printf("Unable to GetByBytes(): %s\n", err.Error())
+		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		return
+	}
+
+	binsByDownloads, err := h.dao.Bin().GetByDownloads(limit)
+	if err != nil {
+		fmt.Printf("Unable to GetByDownloads(): %s\n", err.Error())
+		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		return
+	}
+
+	binsByFiles, err := h.dao.Bin().GetByFiles(limit)
+	if err != nil {
+		fmt.Printf("Unable to GetByFiles(): %s\n", err.Error())
+		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		return
+	}
+
+	binsByCreated, err := h.dao.Bin().GetByCreated(limit)
+	if err != nil {
+		fmt.Printf("Unable to GetByCreated(): %s\n", err.Error())
+		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		return
+	}
+
+	var bins Bins
+	bins.ByLastUpdated = binsByLastUpdated
+	bins.ByBytes = binsByBytes
+	bins.ByDownloads = binsByDownloads
+	bins.ByFiles = binsByFiles
+	bins.ByCreated = binsByCreated
+
+	data.Bins = bins
+
+	if r.Header.Get("accept") == "application/json" {
+		w.Header().Set("Content-Type", "application/json")
+		out, err := json.MarshalIndent(data, "", "    ")
+		if err != nil {
+			fmt.Printf("Failed to parse json: %s\n", err.Error())
+			http.Error(w, "Errno 201", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(200)
+		io.WriteString(w, string(out))
+	} else {
+		if err := h.templates.ExecuteTemplate(w, "admin_bins", data); err != nil {
+			fmt.Printf("Failed to execute template: %s\n", err.Error())
+			http.Error(w, "Errno 203", http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+func (h *HTTP) ViewAdminBinsAll(w http.ResponseWriter, r *http.Request) {
 	type Bins struct {
 		Available []ds.Bin `json:"available"`
 	}
@@ -122,7 +219,7 @@ func (h *HTTP) ViewAdminBins(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		io.WriteString(w, string(out))
 	} else {
-		if err := h.templates.ExecuteTemplate(w, "admin_bins", data); err != nil {
+		if err := h.templates.ExecuteTemplate(w, "admin_bins_all", data); err != nil {
 			fmt.Printf("Failed to execute template: %s\n", err.Error())
 			http.Error(w, "Errno 203", http.StatusInternalServerError)
 			return

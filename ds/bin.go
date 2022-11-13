@@ -11,6 +11,7 @@ type Bin struct {
 	Id                 string       `json:"id"`
 	Readonly           bool         `json:"readonly"`
 	Downloads          uint64       `json:"-"`
+	FileDownloads      uint64       `json:"-"`
 	Updates            uint64       `json:"-"`
 	Bytes              uint64       `json:"bytes"`
 	BytesReadable      string       `json:"bytes_readable"`

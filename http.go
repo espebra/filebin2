@@ -59,6 +59,8 @@ func (h *HTTP) Init() (err error) {
 	h.router.HandleFunc("/integration/slack", h.Log(h.IntegrationSlack)).Methods(http.MethodPost)
 	h.router.HandleFunc("/admin/log/{category:[a-z]+}/{filter:[A-Za-z0-9.:_-]+}", h.Auth(h.ViewAdminLog)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/bins", h.Auth(h.ViewAdminBins)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin/bins/{limit:[0-9]+}", h.Auth(h.ViewAdminBins)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin/bins/all", h.Auth(h.ViewAdminBinsAll)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin", h.Auth(h.ViewAdminDashboard)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/approve/{bin:[A-Za-z0-9_-]+}", h.Log(h.Auth(h.ApproveBin))).Methods("PUT")
 	//h.router.HandleFunc("/admin/cleanup", h.Auth(h.ViewAdminCleanup)).Methods(http.MethodHead, http.MethodGet)
@@ -273,6 +275,6 @@ func setRobotsPermissions(w http.ResponseWriter, allow bool) {
 	if allow {
 		w.Header().Set("X-Robots-Tag", "index, follow, noarchive")
 	} else {
-		w.Header().Set("X-Robots-Tag", "none")
+		w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive")
 	}
 }
