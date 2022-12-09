@@ -12,6 +12,7 @@
         <title>Filebin | Bins</title>
     </head>
     <body class="container-fluid">
+        <a id="top"></a>
 
         {{template "adminbar" .}}
 
@@ -19,19 +20,18 @@
 
         <nav class="navbar navbar-expand-lg bg-light">
           <div class="container-fluid">
-            <div class="collapse navbar-collapse">
-              <div class="navbar-nav">
-                <a class="nav-link" href="#updated">By last updated at</a>
-                <a class="nav-link" href="#created">By created at</a>
-                <a class="nav-link" href="#bytes">By bytes in total</a>
-                <a class="nav-link" href="#files">By files</a>
-                <a class="nav-link" href="#downloads">By downloads</a>
-              </div>
+            <div class="navbar-nav">
+              <a class="nav-link" href="#updated"><span class="btn btn-primary">By last updated at</span></a>
+              <a class="nav-link" href="#created"><span class="btn btn-primary">By created at</span></a>
+              <a class="nav-link" href="#bytes"><span class="btn btn-primary">By bytes in total</span></a>
+              <a class="nav-link" href="#files"><span class="btn btn-primary">By file count</span></a>
+              <a class="nav-link" href="#downloads"><span class="btn btn-primary">By download count</span></a>
             </div>
           </div>
         </nav>
 
         <a id="updated"></a>
+        <div class="text-end"><small><a href="#top">Top</a></small></div>
         <h2>By last updated at</h2>
 
         <table class="table sortable">
@@ -109,6 +109,7 @@
         <!-- Approve bin modal end -->
 
         <a id="created"></a>
+        <div class="text-end"><small><a href="#top">Top</a></small></div>
         <h2>By created at</h2>
 
         <table class="table sortable">
@@ -186,7 +187,8 @@
         <!-- Approve bin modal end -->
 
         <a id="bytes"></a>
-        <h2>By bytes</h2>
+        <div class="text-end"><small><a href="#top">Top</a></small></div>
+        <h2>By bytes in total</h2>
 
         <table class="table sortable">
             <tr>
@@ -263,7 +265,8 @@
         <!-- Approve bin modal end -->
 
         <a id="files"></a>
-        <h2>By files</h2>
+        <div class="text-end"><small><a href="#top">Top</a></small></div>
+        <h2>By file count</h2>
 
         <table class="table sortable">
             <tr>
@@ -340,7 +343,8 @@
         <!-- Approve bin modal end -->
 
         <a id="downloads"></a>
-        <h2>By downloads</h2>
+        <div class="text-end"><small><a href="#top">Top</a></small></div>
+        <h2>By download count</h2>
 
         <table class="table sortable">
             <tr>
