@@ -41,7 +41,7 @@ func (h *HTTP) IntegrationSlack(w http.ResponseWriter, r *http.Request) {
 	epoch := now.Unix()
 	if epoch-60 > ts_int {
 		http.Error(w, "Replay rejected", http.StatusBadRequest)
-		h.Error(w, r, fmt.Sprintf("Replay rejected. Got timestamp: %s, actual timestamp: %d\n", ts, epoch), "Unauthorized", 834, http.StatusUnauthorized)
+		h.Error(w, r, fmt.Sprintf("Replay rejected. Got timestamp: %q, actual timestamp: %d\n", ts, epoch), "Unauthorized", 834, http.StatusUnauthorized)
 		return
 	}
 
@@ -55,19 +55,19 @@ func (h *HTTP) IntegrationSlack(w http.ResponseWriter, r *http.Request) {
 	hash_signature := hex.EncodeToString(hash.Sum(nil))
 	fmt.Printf("Generated hash signature: [%s]\n", hash_signature)
 	if sig != fmt.Sprintf("v0=%s", hash_signature) {
-		h.Error(w, r, fmt.Sprintf("Slack signature not correct: Got %s, generated %s\n", sig, hash_signature), "Unauthorized", 835, http.StatusUnauthorized)
+		h.Error(w, r, fmt.Sprintf("Slack signature not correct: Got %q, generated %q\n", sig, hash_signature), "Unauthorized", 835, http.StatusUnauthorized)
 		return
 	}
 
 	domain := r.PostFormValue("team_domain")
 	if h.config.SlackDomain != domain {
-		h.Error(w, r, fmt.Sprintf("Slack domain not correct: Got %s, requires %s\n", domain, h.config.SlackDomain), "Unauthorized", 835, http.StatusUnauthorized)
+		h.Error(w, r, fmt.Sprintf("Slack domain not correct: Got %q, requires %q\n", domain, h.config.SlackDomain), "Unauthorized", 835, http.StatusUnauthorized)
 		return
 	}
 
 	channel := r.PostFormValue("channel_name")
 	if h.config.SlackChannel != channel {
-		h.Error(w, r, fmt.Sprintf("Slack channel not correct: Got %s, requires %s\n", channel, h.config.SlackChannel), "Unauthorized", 835, http.StatusUnauthorized)
+		h.Error(w, r, fmt.Sprintf("Slack channel not correct: Got %q, requires %q\n", channel, h.config.SlackChannel), "Unauthorized", 835, http.StatusUnauthorized)
 		return
 	}
 

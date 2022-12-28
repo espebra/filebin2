@@ -37,7 +37,7 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 
 	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
-		h.Error(w, r, fmt.Sprintf("Failed to select bin by id %s: %s", inputBin, err.Error()), "Database error", 112, http.StatusInternalServerError)
+		h.Error(w, r, fmt.Sprintf("Failed to select bin by id %q: %s", inputBin, err.Error()), "Database error", 112, http.StatusInternalServerError)
 		return
 	}
 	if found == false {
@@ -61,7 +61,7 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 
 	file, found, err := h.dao.File().GetByName(inputBin, inputFilename)
 	if err != nil {
-		h.Error(w, r, fmt.Sprintf("Failed to select file by bin %s and filename %s: %s", inputBin, inputFilename, err.Error()), "Database error", 115, http.StatusInternalServerError)
+		h.Error(w, r, fmt.Sprintf("Failed to select file by bin %q and filename %q: %s", inputBin, inputFilename, err.Error()), "Database error", 115, http.StatusInternalServerError)
 		return
 	}
 	if found == false {
@@ -95,7 +95,7 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 	// than proxying the request through filebin.
 	presignedURL, err := h.s3.PresignedGetObject(inputBin, inputFilename, file.Mime)
 	if err != nil {
-		h.Error(w, r, fmt.Sprintf("Unable to generate presigned URL for bin %s and filename %s: %s", inputBin, inputFilename, err.Error()), "Unable to presign URL for object", 1351, http.StatusInternalServerError)
+		h.Error(w, r, fmt.Sprintf("Unable to generate presigned URL for bin %q and filename %q: %s", inputBin, inputFilename, err.Error()), "Unable to presign URL for object", 1351, http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Location", presignedURL.String())
@@ -146,7 +146,7 @@ func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
 	// Check if bin exists
 	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
-		h.Error(w, r, fmt.Sprintf("Failed to select bin by id %s: %s", inputBin, err.Error()), "Database error", 112, http.StatusInternalServerError)
+		h.Error(w, r, fmt.Sprintf("Failed to select bin by id %q: %s", inputBin, err.Error()), "Database error", 112, http.StatusInternalServerError)
 		return
 	}
 
@@ -169,7 +169,7 @@ func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
 
 		bin.ExpiredAt = time.Now().UTC().Add(h.config.ExpirationDuration)
 		if err := h.dao.Bin().Upsert(&bin); err != nil {
-			h.Error(w, r, fmt.Sprintf("Unable to upsert bin %s: %s", inputBin, err.Error()), "Database error", 121, http.StatusInternalServerError)
+			h.Error(w, r, fmt.Sprintf("Unable to upsert bin %q: %s", inputBin, err.Error()), "Database error", 121, http.StatusInternalServerError)
 			return
 		}
 		// TODO: Execute new bin created trigger
@@ -177,19 +177,19 @@ func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
 
 	if bin.IsWritable() == false {
 		if bin.IsExpired() {
-			h.Error(w, r, fmt.Sprintf("Upload failed: Bin %s is expired", inputBin), "The bin is no longer available", 122, http.StatusMethodNotAllowed)
+			h.Error(w, r, fmt.Sprintf("Upload failed: Bin %q is expired", inputBin), "The bin is no longer available", 122, http.StatusMethodNotAllowed)
 			return
 		} else if bin.IsDeleted() {
 			// Reject uploads to deleted bins
-			h.Error(w, r, fmt.Sprintf("Upload failed: Bin %s is deleted", inputBin), "The bin is no longer available", 132, http.StatusMethodNotAllowed)
+			h.Error(w, r, fmt.Sprintf("Upload failed: Bin %q is deleted", inputBin), "The bin is no longer available", 132, http.StatusMethodNotAllowed)
 			return
 		} else if bin.Readonly == true {
 			// Reject uploads to readonly bins
 			w.Header().Set("Allow", "GET, HEAD")
-			h.Error(w, r, fmt.Sprintf("Rejected upload of filename %s to readonly bin %s", inputFilename, inputBin), "Uploads to locked binds are not allowed", 123, http.StatusMethodNotAllowed)
+			h.Error(w, r, fmt.Sprintf("Rejected upload of filename %q to readonly bin %q", inputFilename, inputBin), "Uploads to locked binds are not allowed", 123, http.StatusMethodNotAllowed)
 			return
 		} else {
-			h.Error(w, r, fmt.Sprintf("Rejected upload of filename %s to bin %s for unknown reason", inputFilename, inputBin), "Unexpected upload failure", 134, http.StatusInternalServerError)
+			h.Error(w, r, fmt.Sprintf("Rejected upload of filename %q to bin %q for unknown reason", inputFilename, inputBin), "Unexpected upload failure", 134, http.StatusInternalServerError)
 			return
 		}
 	}
@@ -207,7 +207,7 @@ func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
 	if h.config.LimitStorageBytes > 0 {
 		totalBytesConsumed := h.dao.Info().StorageBytesAllocated()
 		if totalBytesConsumed >= h.config.LimitStorageBytes {
-			h.Error(w, r, fmt.Sprintf("Storage limit reached (currently consuming %s) when trying to upload file %s to bin %s", humanize.Bytes(totalBytesConsumed), inputFilename, inputBin), "Insufficient storage\n", 633, http.StatusInsufficientStorage)
+			h.Error(w, r, fmt.Sprintf("Storage limit reached (currently consuming %s) when trying to upload file %q to bin %q", humanize.Bytes(totalBytesConsumed), inputFilename, inputBin), "Insufficient storage\n", 633, http.StatusInsufficientStorage)
 			return
 		}
 	}
@@ -227,11 +227,11 @@ func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
 
 	nBytes, err := io.Copy(fp, r.Body)
 	if err != nil {
-		h.Error(w, r, fmt.Sprintf("File upload of file %s bin %s aborted at %s of %s, upload started %s: %s (%s)", inputFilename, bin.Id, humanize.Bytes(uint64(nBytes)), humanize.Bytes(inputBytes), humanize.Time(t0), err.Error(), fp.Name()), "Storage error", 125, http.StatusInternalServerError)
+		h.Error(w, r, fmt.Sprintf("File upload of file %q bin %q aborted at %s of %s, upload started %s: %s (%s)", inputFilename, bin.Id, humanize.Bytes(uint64(nBytes)), humanize.Bytes(inputBytes), humanize.Time(t0), err.Error(), fp.Name()), "Storage error", 125, http.StatusInternalServerError)
 		return
 	}
 	if uint64(nBytes) != inputBytes {
-		h.Error(w, r, fmt.Sprintf("Rejecting upload for file %s to bin %s since we got %d bytes and should have received %d bytes", inputFilename, bin.Id, nBytes, inputBytes), "Content-length did not match the request body length", 126, http.StatusBadRequest)
+		h.Error(w, r, fmt.Sprintf("Rejecting upload for file %q to bin %q since we got %d bytes and should have received %d bytes", inputFilename, bin.Id, nBytes, inputBytes), "Content-length did not match the request body length", 126, http.StatusBadRequest)
 		return
 	}
 	if nBytes == 0 {
@@ -250,7 +250,7 @@ func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
 	md5ChecksumString := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%x", md5Checksum.Sum(nil))))
 	if inputMD5 != "" {
 		if md5ChecksumString != inputMD5 {
-			h.Error(w, r, fmt.Sprintf("Rejecting upload for file %s to bin %s due to wrong MD5 checksum (got %s and calculated %s)", inputFilename, bin.Id, inputMD5, md5ChecksumString), "MD5 checksum did not match", 129, http.StatusBadRequest)
+			h.Error(w, r, fmt.Sprintf("Rejecting upload for file %q to bin %q due to wrong MD5 checksum (got %s and calculated %s)", inputFilename, bin.Id, inputMD5, md5ChecksumString), "MD5 checksum did not match", 129, http.StatusBadRequest)
 			return
 		}
 	}
@@ -264,7 +264,7 @@ func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
 	sha256ChecksumString := fmt.Sprintf("%x", sha256Checksum.Sum(nil))
 	if inputSHA256 != "" {
 		if sha256ChecksumString != inputSHA256 {
-			h.Error(w, r, fmt.Sprintf("Rejecting upload for file %s to bin %s due to wrong SHA256 checksum (got %s and calculated %s)", inputFilename, bin.Id, inputSHA256, sha256ChecksumString), "SHA256 checksum did not match", 130, http.StatusBadRequest)
+			h.Error(w, r, fmt.Sprintf("Rejecting upload for file %q to bin %q due to wrong SHA256 checksum (got %s and calculated %s)", inputFilename, bin.Id, inputSHA256, sha256ChecksumString), "SHA256 checksum did not match", 130, http.StatusBadRequest)
 			return
 		}
 	}
@@ -272,7 +272,7 @@ func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
 
 	mime, err := mimetype.DetectReader(fp)
 	if err != nil {
-		h.Error(w, r, fmt.Sprintf("Unable to detect mime type on filename %s in bin %s: %s", inputFilename, inputBin, err.Error()), "Processing error", 131, http.StatusInternalServerError)
+		h.Error(w, r, fmt.Sprintf("Unable to detect mime type on filename %q in bin %q: %s", inputFilename, inputBin, err.Error()), "Processing error", 131, http.StatusInternalServerError)
 		return
 	}
 	fp.Seek(0, 0)
