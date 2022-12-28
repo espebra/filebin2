@@ -45,8 +45,8 @@ func (h *HTTP) IntegrationSlack(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Printf("Got timestamp: [%s], actual timestamp: [%d], signature: [%s]\n", ts, epoch, sig)
-	fmt.Printf("Got body: [%s]\n", body)
+	fmt.Printf("Got timestamp: [%q], actual timestamp: [%d], signature: [%q]\n", ts, epoch, sig)
+	fmt.Printf("Got body: [%q]\n", body)
 
 	// Generate signature and compare
 	hash := hmac.New(sha256.New, []byte(h.config.SlackSecret))
@@ -74,10 +74,10 @@ func (h *HTTP) IntegrationSlack(w http.ResponseWriter, r *http.Request) {
 	// Handle commands
 	command := r.PostFormValue("command")
 	text := r.PostFormValue("text")
-	fmt.Printf("Got command: [%s], got text: [%s]\n", command, text)
+	fmt.Printf("Got command: [%q], got text: [%q]\n", command, text)
 
 	if command != "/filebin" {
-		h.Error(w, r, fmt.Sprintf("Unknown command, got: %s\n", command), "Bad Request", 836, http.StatusBadRequest)
+		h.Error(w, r, fmt.Sprintf("Unknown command, got: %q\n", command), "Bad Request", 836, http.StatusBadRequest)
 		return
 	}
 
@@ -88,7 +88,7 @@ func (h *HTTP) IntegrationSlack(w http.ResponseWriter, r *http.Request) {
 				inputBin := s[1]
 				bin, found, err := h.dao.Bin().GetByID(inputBin)
 				if err != nil {
-					fmt.Printf("Unable to GetByID(%s): %s\n", inputBin, err.Error())
+					fmt.Printf("Unable to GetByID(%q): %s\n", bin.Id, err.Error())
 					http.Error(w, "Errno 205", http.StatusInternalServerError)
 					return
 				}

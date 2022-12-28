@@ -60,14 +60,14 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 
 	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
-		fmt.Printf("Unable to GetByID(%s): %s\n", inputBin, err.Error())
+		fmt.Printf("Unable to GetByID(%q): %s\n", inputBin, err.Error())
 		http.Error(w, "Errno 200", http.StatusInternalServerError)
 		return
 	}
 	if found {
 		files, err := h.dao.File().GetByBin(inputBin, true)
 		if err != nil {
-			fmt.Printf("Unable to GetByBin(%s): %s\n", inputBin, err.Error())
+			fmt.Printf("Unable to GetByBin(%q): %s\n", inputBin, err.Error())
 			http.Error(w, "Not found", http.StatusNotFound)
 			return
 		}
@@ -156,7 +156,7 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 
 	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
-		fmt.Printf("Unable to GetByID(%s): %s\n", inputBin, err.Error())
+		fmt.Printf("Unable to GetByID(%q): %s\n", inputBin, err.Error())
 		http.Error(w, "Errno 200", http.StatusInternalServerError)
 		return
 	}
@@ -172,7 +172,7 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 
 	files, err := h.dao.File().GetByBin(inputBin, true)
 	if err != nil {
-		fmt.Printf("Unable to GetByBin(%s): %s\n", inputBin, err.Error())
+		fmt.Printf("Unable to GetByBin(%q): %s\n", inputBin, err.Error())
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
 	}
@@ -215,7 +215,7 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 			fmt.Println(err)
 		}
 		if err := h.dao.Bin().RegisterDownload(&bin); err != nil {
-			fmt.Printf("Unable to update bin %s: %s\n", inputBin, err.Error())
+			fmt.Printf("Unable to update bin %q: %s\n", inputBin, err.Error())
 		}
 		return
 	} else if inputFormat == "tar" {
@@ -250,7 +250,7 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 			fmt.Println(err)
 		}
 		if err := h.dao.Bin().RegisterDownload(&bin); err != nil {
-			fmt.Printf("Unable to update bin %s: %s\n", inputBin, err.Error())
+			fmt.Printf("Unable to update bin %q: %s\n", inputBin, err.Error())
 		}
 		return
 	}
@@ -264,7 +264,7 @@ func (h *HTTP) DeleteBin(w http.ResponseWriter, r *http.Request) {
 
 	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
-		fmt.Printf("Unable to GetByID(%s): %s\n", inputBin, err.Error())
+		fmt.Printf("Unable to GetByID(%q): %s\n", inputBin, err.Error())
 		http.Error(w, "Errno 204", http.StatusInternalServerError)
 		return
 	}
@@ -299,7 +299,7 @@ func (h *HTTP) LockBin(w http.ResponseWriter, r *http.Request) {
 
 	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
-		fmt.Printf("Unable to GetByID(%s): %s\n", inputBin, err.Error())
+		fmt.Printf("Unable to GetByID(%q): %s\n", inputBin, err.Error())
 		http.Error(w, "Errno 205", http.StatusInternalServerError)
 		return
 	}
@@ -338,7 +338,7 @@ func (h *HTTP) ApproveBin(w http.ResponseWriter, r *http.Request) {
 
 	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
-		fmt.Printf("Unable to GetByID(%s): %s\n", inputBin, err.Error())
+		fmt.Printf("Unable to GetByID(%q): %s\n", inputBin, err.Error())
 		http.Error(w, "Errno 205", http.StatusInternalServerError)
 		return
 	}

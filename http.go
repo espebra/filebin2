@@ -195,7 +195,7 @@ func (h *HTTP) Run() {
 
 func (h *HTTP) Error(w http.ResponseWriter, r *http.Request, internal string, external string, errno int, statusCode int) {
 	if internal != "" {
-		fmt.Printf("Errno %d: %s\n", errno, internal)
+		fmt.Printf("Errno %d: %q\n", errno, internal)
 	}
 
 	// Disregard any request body there is
