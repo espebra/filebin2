@@ -9,13 +9,13 @@ test: prepare
 	bash runtests
 
 linux: prepare
-	GOOS=linux GOARCH=amd64 go build -mod=vendor -o artifacts/filebin2-linux-amd64
+	GOOS=linux GOARCH=amd64 go build -mod=vendor -o artifacts/filebin2-linux-amd64 -trimpath -buildvcs=false
 
 darwin: prepare
-	GOOS=darwin GOARCH=amd64 go build -mod=vendor -o artifacts/filebin2-darwin-amd64
+	GOOS=darwin GOARCH=amd64 go build -mod=vendor -o artifacts/filebin2-darwin-amd64 -trimpath -buildvcs=false
 
 run: linux
-	artifacts/filebin2-linux-amd64 --listen-host 0.0.0.0 --lurker-interval 10 --expiration 3600 --access-log=foo.log --s3-secure=false --db-host=db
+	artifacts/filebin2-linux-amd64 --listen-host 0.0.0.0 --lurker-interval 10 --expiration 3600 --access-log=foo.log --s3-secure=false --db-host=db --limit-storage 1G
 
 fmt:
 	gofmt -w -s *.go
