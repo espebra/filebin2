@@ -201,7 +201,7 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 
 			fp, err := h.s3.GetObject(bin.Id, file.Filename, 0, 0)
 			if err != nil {
-				h.Error(w, r, fmt.Sprintf("Failed to archive object in bin %s: filename %s: %s", bin.Id, file.Filename, err.Error()), "Archive error", 300, http.StatusInternalServerError)
+				h.Error(w, r, fmt.Sprintf("Failed to archive object in bin %q: filename %q: %s", bin.Id, file.Filename, err.Error()), "Archive error", 300, http.StatusInternalServerError)
 				return
 			}
 
@@ -236,7 +236,7 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 
 			fp, err := h.s3.GetObject(bin.Id, file.Filename, 0, 0)
 			if err != nil {
-				h.Error(w, r, fmt.Sprintf("Failed to archive object in bin %s: filename %s: %s", bin.Id, file.Filename, err.Error()), "Archive error", 300, http.StatusInternalServerError)
+				h.Error(w, r, fmt.Sprintf("Failed to archive object in bin %q: filename %q: %s", bin.Id, file.Filename, err.Error()), "Archive error", 300, http.StatusInternalServerError)
 				return
 			}
 
