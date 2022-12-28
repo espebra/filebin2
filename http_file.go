@@ -88,7 +88,7 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.dao.File().RegisterDownload(&file); err != nil {
-		fmt.Printf("Unable to update file %s in bin %s: %s\n", inputFilename, inputBin, err.Error())
+		fmt.Printf("Unable to update file %q in bin %q: %s\n", inputFilename, inputBin, err.Error())
 	}
 
 	// Redirect the client to a presigned URL for this fetch, which is more efficient
@@ -102,7 +102,7 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusFound)
 	io.WriteString(w, "")
 
-	fmt.Printf("Presigned download of file %s (%s) from bin %s in %.3fs (%d downloads)\n", inputFilename, humanize.Bytes(file.Bytes), inputBin, time.Since(t0).Seconds(), file.Downloads)
+	fmt.Printf("Presigned download of file %q (%s) from bin %q in %.3fs (%d downloads)\n", inputFilename, humanize.Bytes(file.Bytes), inputBin, time.Since(t0).Seconds(), file.Downloads)
 	return
 }
 
@@ -282,7 +282,7 @@ func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
 	// Check if file exists
 	file, found, err := h.dao.File().GetByName(bin.Id, inputFilename)
 	if err != nil {
-		fmt.Printf("Unable to load file %s in bin %s: %s\n", file.Filename, bin.Id, err.Error())
+		fmt.Printf("Unable to load file %q in bin %q: %s\n", file.Filename, bin.Id, err.Error())
 		http.Error(w, "Errno 106", http.StatusInternalServerError)
 		return
 	}
@@ -321,7 +321,7 @@ func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
 	file.SHA256 = sha256ChecksumString
 	file.MD5 = md5ChecksumString
 	if err := h.dao.File().ValidateInput(&file); err != nil {
-		fmt.Printf("Rejected upload of filename %s to bin %s due to failed input validation: %s\n", inputFilename, bin.Id, err.Error())
+		fmt.Printf("Rejected upload of filename %q to bin %q due to failed input validation: %s\n", inputFilename, bin.Id, err.Error())
 		http.Error(w, "Input validation failed", http.StatusBadRequest)
 		return
 	}
@@ -362,13 +362,13 @@ func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
 
 	if found {
 		if err := h.dao.File().Update(&file); err != nil {
-			fmt.Printf("Unable to update filename %s (id %d) in bin %s: %s\n", file.Filename, file.Id, bin.Id, err.Error())
+			fmt.Printf("Unable to update filename %q (id %d) in bin %q: %s\n", file.Filename, file.Id, bin.Id, err.Error())
 			http.Error(w, "Errno 107", http.StatusInternalServerError)
 			return
 		}
 	} else {
 		if err := h.dao.File().Insert(&file); err != nil {
-			fmt.Printf("Unable to insert file %s in bin %s: %s\n", file.Filename, bin.Id, err.Error())
+			fmt.Printf("Unable to insert file %q in bin %q: %s\n", file.Filename, bin.Id, err.Error())
 			http.Error(w, "Errno 108", http.StatusInternalServerError)
 			return
 		}
@@ -378,12 +378,12 @@ func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
 	// Update bin to set the correct updated timestamp
 	bin.ExpiredAt = time.Now().UTC().Add(h.config.ExpirationDuration)
 	if err := h.dao.Bin().Update(&bin); err != nil {
-		fmt.Printf("Unable to update bin %s: %s\n", bin.Id, err.Error())
+		fmt.Printf("Unable to update bin %q: %s\n", bin.Id, err.Error())
 		http.Error(w, "Errno 109", http.StatusInternalServerError)
 		return
 	}
 
-	fmt.Printf("Uploaded filename %s (%s) to bin %s (db in %.3fs, buffered in %.3fs, checksum in %.3fs, stored in %.3fs, total %.3fs)\n", file.Filename, humanize.Bytes(file.Bytes), bin.Id, t1.Sub(t0).Seconds(), t2.Sub(t1).Seconds(), t3.Sub(t2).Seconds(), t4.Sub(t3).Seconds(), t4.Sub(t0).Seconds())
+	fmt.Printf("Uploaded filename %q (%s) to bin %q (db in %.3fs, buffered in %.3fs, checksum in %.3fs, stored in %.3fs, total %.3fs)\n", file.Filename, humanize.Bytes(file.Bytes), bin.Id, t1.Sub(t0).Seconds(), t2.Sub(t1).Seconds(), t3.Sub(t2).Seconds(), t4.Sub(t3).Seconds(), t4.Sub(t0).Seconds())
 
 	type Data struct {
 		Bin  ds.Bin  `json:"bin"`
@@ -413,7 +413,7 @@ func (h *HTTP) DeleteFile(w http.ResponseWriter, r *http.Request) {
 
 	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
-		fmt.Printf("Unable to GetByID(%s): %s\n", inputBin, err.Error())
+		fmt.Printf("Unable to GetByID(%q): %s\n", inputBin, err.Error())
 		http.Error(w, "Errno 110", http.StatusInternalServerError)
 		return
 	}
@@ -429,7 +429,7 @@ func (h *HTTP) DeleteFile(w http.ResponseWriter, r *http.Request) {
 
 	file, found, err := h.dao.File().GetByName(inputBin, inputFilename)
 	if err != nil {
-		fmt.Printf("Unable to GetByName(%s, %s): %s\n", inputBin, inputFilename, err.Error())
+		fmt.Printf("Unable to GetByName(%q, %q): %s\n", inputBin, inputFilename, err.Error())
 		http.Error(w, "Errno 111", http.StatusInternalServerError)
 		return
 	}
@@ -449,7 +449,7 @@ func (h *HTTP) DeleteFile(w http.ResponseWriter, r *http.Request) {
 	file.DeletedAt.Scan(now)
 
 	if err := h.dao.File().Update(&file); err != nil {
-		fmt.Printf("Unable to update the file (%s, %s): %s\n", inputBin, inputFilename, err.Error())
+		fmt.Printf("Unable to update the file (%q, %q): %s\n", inputBin, inputFilename, err.Error())
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
