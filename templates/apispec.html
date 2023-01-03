@@ -25,8 +25,8 @@ paths:
           schema:
             type: string
       responses:
-        '200':
-          description: Successful download.
+        '301':
+          description: Signed redirect pointing to the object in S3 for direct download.
         '403':
           description: The file download count limitation was reached.
           content:
@@ -73,10 +73,22 @@ paths:
             schema:
               type: string
       parameters:
-        - in: header
-          name: cid
+        - name: cid
+          in: header
           description: A custom id of the client uploading
           required: false
+          schema:
+            type: string
+        - name: bin
+          in: path
+          description: The bin to upload to.
+          required: true
+          schema:
+            type: string
+        - name: filename
+          in: path
+          description: The filename of the uploaded file.
+          required: true
           schema:
             type: string
       responses:
@@ -157,7 +169,8 @@ paths:
           in: path
           description: The bin to lock.
           required: true
-          type: string
+          schema:
+            type: string
       responses:
         '200':
           description: Successful operation
