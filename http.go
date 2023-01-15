@@ -40,10 +40,10 @@ func (h *HTTP) Init() (err error) {
 	h.router = mux.NewRouter()
 	h.templates = h.ParseTemplates()
 
-	//h.router.HandleFunc("/debug/pprof/", pprof.Index)
-	//h.router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-	//h.router.HandleFunc("/debug/pprof/profile", pprof.Profile)
-	//h.router.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	h.router.HandleFunc("/debug/pprof/cmdline", h.Auth(pprof.Cmdline)).Methods(http.MethodGet)
+	h.router.HandleFunc("/debug/pprof/profile", h.Auth(pprof.Profile)).Methods(http.MethodGet)
+	h.router.HandleFunc("/debug/pprof/symbol", h.Auth(pprof.Symbol)).Methods(http.MethodGet)
+	h.router.HandleFunc("/debug/pprof/trace", h.Auth(pprof.Trace)).Methods(http.MethodGet)
 	h.router.PathPrefix("/debug/pprof/").HandlerFunc(h.Auth(pprof.Index))
 
 	h.router.HandleFunc("/", h.BanLookup(h.Index)).Methods(http.MethodHead, http.MethodGet)
