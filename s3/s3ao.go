@@ -181,7 +181,7 @@ func (s S3AO) RemoveBucket() error {
 	return nil
 }
 
-func (s S3AO) GetObject(bin string, filename string, start int64, end int64) (io.Reader, error) {
+func (s S3AO) GetObject(bin string, filename string, start int64, end int64) (*minio.Object, error) {
 	t0 := time.Now()
 
 	// Hash the path in S3
@@ -190,8 +190,6 @@ func (s S3AO) GetObject(bin string, filename string, start int64, end int64) (io
 	f := sha256.New()
 	f.Write([]byte(filename))
 	objectKey := path.Join(fmt.Sprintf("%x", b.Sum(nil)), fmt.Sprintf("%x", f.Sum(nil)))
-	var object io.Reader
-
 	opts := minio.GetObjectOptions{}
 
 	if end > 0 {
