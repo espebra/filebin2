@@ -232,42 +232,42 @@ func (d *BinDao) GetPendingDelete() (bins []ds.Bin, err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	sqlStatement := "SELECT bin.id, bin.readonly, bin.downloads, COALESCE(SUM(file.downloads), 0), COALESCE(SUM(file.bytes), 0), COUNT(filename) AS files, bin.updates, bin.updated_at, bin.created_at, bin.approved_at, bin.expired_at, bin.deleted_at FROM bin INNER JOIN file ON bin.id = file.bin_id AND file.in_storage=true WHERE bin.expired_at < $1 OR bin.deleted_at IS NOT NULL GROUP BY bin.id"
 	bins, err = d.binQuery(sqlStatement, now)
-	return bins, nil
+	return bins, err
 }
 
 func (d *BinDao) GetLastUpdated(limit int) (bins []ds.Bin, err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	sqlStatement := "SELECT bin.id, bin.readonly, bin.downloads, COALESCE(SUM(file.downloads), 0), COALESCE(SUM(file.bytes), 0), COUNT(file.filename), bin.updates, bin.updated_at, bin.created_at, bin.approved_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id=file.bin_id AND file.deleted_at IS NULL AND file.in_storage = true WHERE bin.expired_at > $1 AND bin.deleted_at IS NULL GROUP BY bin.id ORDER BY bin.updated_at DESC LIMIT $2"
 	bins, err = d.binQuery(sqlStatement, now, limit)
-	return bins, nil
+	return bins, err
 }
 
 func (d *BinDao) GetByBytes(limit int) (bins []ds.Bin, err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	sqlStatement := "SELECT bin.id, bin.readonly, bin.downloads, COALESCE(SUM(file.downloads), 0), COALESCE(SUM(file.bytes), 0), COUNT(file.filename), bin.updates, bin.updated_at, bin.created_at, bin.approved_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id=file.bin_id AND file.deleted_at IS NULL AND file.in_storage = true WHERE bin.expired_at > $1 AND bin.deleted_at IS NULL GROUP BY bin.id ORDER BY COALESCE(SUM(file.bytes), 0) DESC LIMIT $2"
 	bins, err = d.binQuery(sqlStatement, now, limit)
-	return bins, nil
+	return bins, err
 }
 
 func (d *BinDao) GetByDownloads(limit int) (bins []ds.Bin, err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	sqlStatement := "SELECT bin.id, bin.readonly, bin.downloads, COALESCE(SUM(file.downloads), 0), COALESCE(SUM(file.bytes), 0), COUNT(file.filename), bin.updates, bin.updated_at, bin.created_at, bin.approved_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id=file.bin_id AND file.deleted_at IS NULL AND file.in_storage = true WHERE bin.expired_at > $1 AND bin.deleted_at IS NULL GROUP BY bin.id ORDER BY bin.downloads + COALESCE(SUM(file.downloads), 0) DESC LIMIT $2"
 	bins, err = d.binQuery(sqlStatement, now, limit)
-	return bins, nil
+	return bins, err
 }
 
 func (d *BinDao) GetByFiles(limit int) (bins []ds.Bin, err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	sqlStatement := "SELECT bin.id, bin.readonly, bin.downloads, COALESCE(SUM(file.downloads), 0), COALESCE(SUM(file.bytes), 0), COUNT(file.filename), bin.updates, bin.updated_at, bin.created_at, bin.approved_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id=file.bin_id AND file.deleted_at IS NULL AND file.in_storage = true WHERE bin.expired_at > $1 AND bin.deleted_at IS NULL GROUP BY bin.id ORDER BY COUNT(file.filename) DESC LIMIT $2"
 	bins, err = d.binQuery(sqlStatement, now, limit)
-	return bins, nil
+	return bins, err
 }
 
 func (d *BinDao) GetByCreated(limit int) (bins []ds.Bin, err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	sqlStatement := "SELECT bin.id, bin.readonly, bin.downloads, COALESCE(SUM(file.downloads), 0), COALESCE(SUM(file.bytes), 0), COUNT(file.filename), bin.updates, bin.updated_at, bin.created_at, bin.approved_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id=file.bin_id AND file.deleted_at IS NULL AND file.in_storage = true WHERE bin.expired_at > $1 AND bin.deleted_at IS NULL GROUP BY bin.id ORDER BY bin.created_at ASC LIMIT $2"
 	bins, err = d.binQuery(sqlStatement, now, limit)
-	return bins, nil
+	return bins, err
 }
 
 func (d *BinDao) binQuery(sqlStatement string, params ...interface{}) (bins []ds.Bin, err error) {
