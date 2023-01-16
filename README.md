@@ -2,7 +2,7 @@
 [![Actions](https://github.com/espebra/filebin2/workflows/Actions/badge.svg)](https://github.com/espebra/filebin2/actions)
 [![Go Report Card](https://goreportcard.com/badge/github.com/espebra/filebin2)](https://goreportcard.com/report/github.com/espebra/filebin2)
 [![codecov](https://codecov.io/gh/espebra/filebin2/branch/master/graph/badge.svg)](https://codecov.io/gh/espebra/filebin2)
-[![CodeQL](https://github.com/espebra/filebin2/actions/workflows/codeql.yml/badge.svg?branch=main&event=push)](https://github.com/espebra/filebin2/actions/workflows/codeql.yml)
+[![CodeQL](https://github.com/espebra/filebin2/actions/workflows/codeql.yml/badge.svg?branch=master&event=push)](https://github.com/espebra/filebin2/actions/workflows/codeql.yml)
 [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat)](https://pkg.go.dev/github.com/espebra/filebin2)
 
 Filebin2 is a web application that facilitates convenient file sharing over the web. It is the software that powers https://filebin.net. It is still in development status and will see breaking changes.
