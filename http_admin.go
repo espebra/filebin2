@@ -16,7 +16,7 @@ import (
 	"github.com/espebra/filebin2/s3"
 )
 
-func (h *HTTP) ViewAdminDashboard(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) viewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	type Data struct {
 		//Bins Bins `json:"bins"`
 		//Files []ds.File `json:"files"`
@@ -77,7 +77,7 @@ func (h *HTTP) ViewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *HTTP) ViewAdminBins(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) viewAdminBins(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	inputLimit := params["limit"]
 
@@ -173,7 +173,7 @@ func (h *HTTP) ViewAdminBins(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *HTTP) ViewAdminBinsAll(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) viewAdminBinsAll(w http.ResponseWriter, r *http.Request) {
 	type Bins struct {
 		Available []ds.Bin `json:"available"`
 	}
@@ -227,7 +227,7 @@ func (h *HTTP) ViewAdminBinsAll(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *HTTP) ViewAdminLog(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) viewAdminLog(w http.ResponseWriter, r *http.Request) {
 	type Data struct {
 		Transactions []ds.Transaction `json:"transactions"`
 	}
@@ -270,7 +270,7 @@ func (h *HTTP) ViewAdminLog(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *HTTP) ViewAdminCleanup(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) viewAdminCleanup(w http.ResponseWriter, r *http.Request) {
 	type Data struct {
 		Objects []string `json:"objects"`
 		////Files []ds.File `json:"files"`

@@ -22,7 +22,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) getFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=0")
 
 	// Files should never be indexed
@@ -106,7 +106,7 @@ func (h *HTTP) GetFile(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=0")
 
 	t0 := time.Now()
@@ -404,7 +404,7 @@ func (h *HTTP) UploadFile(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, string(out))
 }
 
-func (h *HTTP) DeleteFile(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) deleteFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=0")
 
 	params := mux.Vars(r)

@@ -20,7 +20,7 @@ import (
 
 // This handler adds a trailing slash to bin URLs to make them possible
 // to exclude from robots.txt
-func (h *HTTP) ViewBinRedirect(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) viewBinRedirect(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=3600")
 
 	// Bins should never be indexed
@@ -36,7 +36,7 @@ func (h *HTTP) ViewBinRedirect(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, binURL.String(), 301)
 }
 
-func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) viewBin(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=0")
 	w.Header().Set("X-Robots-Tag", "noindex")
 
@@ -113,7 +113,7 @@ func (h *HTTP) ViewBin(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *HTTP) BinQR(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) binQR(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=0")
 	w.Header().Set("X-Robots-Tag", "noindex")
 
@@ -141,7 +141,7 @@ func (h *HTTP) BinQR(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) archive(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=0")
 	w.Header().Set("X-Robots-Tag", "noindex")
 
@@ -258,7 +258,7 @@ func (h *HTTP) Archive(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *HTTP) DeleteBin(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) deleteBin(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=0")
 
 	params := mux.Vars(r)
@@ -293,7 +293,7 @@ func (h *HTTP) DeleteBin(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (h *HTTP) LockBin(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) lockBin(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=0")
 
 	params := mux.Vars(r)
@@ -332,7 +332,7 @@ func (h *HTTP) LockBin(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (h *HTTP) ApproveBin(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) approveBin(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=0")
 
 	params := mux.Vars(r)

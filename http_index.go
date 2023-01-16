@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func (h *HTTP) Index(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) index(w http.ResponseWriter, r *http.Request) {
 	setRobotsPermissions(w, h.config.AllowRobots)
 	w.Header().Set("Cache-Control", "max-age=0")
 
@@ -53,7 +53,7 @@ func (h *HTTP) Index(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *HTTP) About(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) about(w http.ResponseWriter, r *http.Request) {
 	setRobotsPermissions(w, h.config.AllowRobots)
 	w.Header().Set("Cache-Control", "max-age=3600")
 
@@ -70,7 +70,7 @@ func (h *HTTP) About(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *HTTP) Privacy(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) privacy(w http.ResponseWriter, r *http.Request) {
 	setRobotsPermissions(w, h.config.AllowRobots)
 	w.Header().Set("Cache-Control", "max-age=3600")
 
@@ -88,7 +88,7 @@ func (h *HTTP) Privacy(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *HTTP) Terms(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) terms(w http.ResponseWriter, r *http.Request) {
 	setRobotsPermissions(w, h.config.AllowRobots)
 	w.Header().Set("Cache-Control", "max-age=3600")
 
@@ -106,7 +106,7 @@ func (h *HTTP) Terms(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *HTTP) API(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) api(w http.ResponseWriter, r *http.Request) {
 	setRobotsPermissions(w, h.config.AllowRobots)
 	w.Header().Set("Cache-Control", "max-age=3600")
 
@@ -124,7 +124,7 @@ func (h *HTTP) API(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *HTTP) APISpec(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) apiSpec(w http.ResponseWriter, r *http.Request) {
 	setRobotsPermissions(w, h.config.AllowRobots)
 	w.Header().Set("Cache-Control", "max-age=3600")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -144,7 +144,7 @@ func (h *HTTP) APISpec(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *HTTP) FilebinStatus(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) filebinStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Robots-Tag", "none")
 	w.Header().Set("Cache-Control", "max-age=1")
 
@@ -184,7 +184,7 @@ func (h *HTTP) FilebinStatus(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, string(out))
 }
 
-func (h *HTTP) StorageStatus(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) storageStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Robots-Tag", "none")
 	w.Header().Set("Cache-Control", "max-age=1")
 
@@ -223,7 +223,7 @@ func (h *HTTP) StorageStatus(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, string(out))
 }
 
-func (h *HTTP) Robots(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) robots(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=3600")
 
 	if err := h.templates.ExecuteTemplate(w, "robots", nil); err != nil {

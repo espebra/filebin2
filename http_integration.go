@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-func (h *HTTP) IntegrationSlack(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) integrationSlack(w http.ResponseWriter, r *http.Request) {
 	// Interpret empty secret as not enabled, so reject early in this case
 	if h.config.SlackSecret == "" {
 		http.Error(w, "Forbidden", http.StatusForbidden)
@@ -158,11 +158,11 @@ func (h *HTTP) IntegrationSlack(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Print help for any /filebin commands we don't recognize
-	h.SlackHelpText(w, r)
+	h.slackHelpText(w, r)
 	return
 }
 
-func (h *HTTP) SlackHelpText(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) slackHelpText(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "Help for filebin Slack integration\n\n")
 	io.WriteString(w, "Approve bin [string]:\n")
 	io.WriteString(w, "  /filebin approve bin\n\n")

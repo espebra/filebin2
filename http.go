@@ -40,40 +40,40 @@ func (h *HTTP) Init() (err error) {
 	h.router = mux.NewRouter()
 	h.templates = h.ParseTemplates()
 
-	h.router.HandleFunc("/debug/pprof/cmdline", h.Auth(pprof.Cmdline)).Methods(http.MethodGet)
-	h.router.HandleFunc("/debug/pprof/profile", h.Auth(pprof.Profile)).Methods(http.MethodGet)
-	h.router.HandleFunc("/debug/pprof/symbol", h.Auth(pprof.Symbol)).Methods(http.MethodGet)
-	h.router.HandleFunc("/debug/pprof/trace", h.Auth(pprof.Trace)).Methods(http.MethodGet)
-	h.router.PathPrefix("/debug/pprof/").HandlerFunc(h.Auth(pprof.Index))
+	h.router.HandleFunc("/debug/pprof/cmdline", h.auth(pprof.Cmdline)).Methods(http.MethodGet)
+	h.router.HandleFunc("/debug/pprof/profile", h.auth(pprof.Profile)).Methods(http.MethodGet)
+	h.router.HandleFunc("/debug/pprof/symbol", h.auth(pprof.Symbol)).Methods(http.MethodGet)
+	h.router.HandleFunc("/debug/pprof/trace", h.auth(pprof.Trace)).Methods(http.MethodGet)
+	h.router.PathPrefix("/debug/pprof/").HandlerFunc(h.auth(pprof.Index))
 
-	h.router.HandleFunc("/", h.BanLookup(h.Index)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/", h.BanLookup(h.UploadFile)).Methods(http.MethodPost)
-	h.router.HandleFunc("/filebin-status", h.FilebinStatus).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/storage-status", h.StorageStatus).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/robots.txt", h.Robots).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/about", h.BanLookup(h.About)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/api", h.BanLookup(h.API)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/api.yaml", h.BanLookup(h.APISpec)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/privacy", h.BanLookup(h.Privacy)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/terms", h.BanLookup(h.Terms)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/integration/slack", h.Log(h.IntegrationSlack)).Methods(http.MethodPost)
-	h.router.HandleFunc("/admin/log/{category:[a-z]+}/{filter:[A-Za-z0-9.:_-]+}", h.Auth(h.ViewAdminLog)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/admin/bins", h.Auth(h.ViewAdminBins)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/admin/bins/{limit:[0-9]+}", h.Auth(h.ViewAdminBins)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/admin/bins/all", h.Auth(h.ViewAdminBinsAll)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/admin", h.Auth(h.ViewAdminDashboard)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/admin/approve/{bin:[A-Za-z0-9_-]+}", h.Log(h.Auth(h.ApproveBin))).Methods("PUT")
+	h.router.HandleFunc("/", h.banLookup(h.index)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/", h.banLookup(h.uploadFile)).Methods(http.MethodPost)
+	h.router.HandleFunc("/filebin-status", h.filebinStatus).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/storage-status", h.storageStatus).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/robots.txt", h.robots).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/about", h.banLookup(h.about)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/api", h.banLookup(h.api)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/api.yaml", h.banLookup(h.apiSpec)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/privacy", h.banLookup(h.privacy)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/terms", h.banLookup(h.terms)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/integration/slack", h.log(h.integrationSlack)).Methods(http.MethodPost)
+	h.router.HandleFunc("/admin/log/{category:[a-z]+}/{filter:[A-Za-z0-9.:_-]+}", h.auth(h.viewAdminLog)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin/bins", h.auth(h.viewAdminBins)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin/bins/{limit:[0-9]+}", h.auth(h.viewAdminBins)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin/bins/all", h.auth(h.viewAdminBinsAll)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin", h.auth(h.viewAdminDashboard)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin/approve/{bin:[A-Za-z0-9_-]+}", h.log(h.auth(h.approveBin))).Methods("PUT")
 	//h.router.HandleFunc("/admin/cleanup", h.Auth(h.ViewAdminCleanup)).Methods(http.MethodHead, http.MethodGet)
 	h.router.Handle("/static/{path:.*}", CacheControl(http.FileServer(http.FS(h.staticBox)))).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/archive/{bin:[A-Za-z0-9_-]+}/{format:[a-z]+}", h.Log(h.BanLookup(h.Archive))).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/qr/{bin:[A-Za-z0-9_-]+}", h.BanLookup(h.BinQR)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/", h.BanLookup(h.ViewBinRedirect)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.BanLookup(h.ViewBin)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.Log(h.BanLookup(h.DeleteBin))).Methods(http.MethodDelete)
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.Log(h.BanLookup(h.LockBin))).Methods("PUT")
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.Log(h.BanLookup(h.GetFile))).Methods(http.MethodGet)
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.Log(h.BanLookup(h.DeleteFile))).Methods(http.MethodDelete)
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.Log(h.BanLookup(h.UploadFile))).Methods(http.MethodPost, http.MethodPut)
+	h.router.HandleFunc("/archive/{bin:[A-Za-z0-9_-]+}/{format:[a-z]+}", h.log(h.banLookup(h.archive))).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/qr/{bin:[A-Za-z0-9_-]+}", h.banLookup(h.binQR)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/", h.banLookup(h.viewBinRedirect)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.banLookup(h.viewBin)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.log(h.banLookup(h.deleteBin))).Methods(http.MethodDelete)
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.log(h.banLookup(h.lockBin))).Methods("PUT")
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.log(h.banLookup(h.getFile))).Methods(http.MethodGet)
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.log(h.banLookup(h.deleteFile))).Methods(http.MethodDelete)
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.log(h.banLookup(h.uploadFile))).Methods(http.MethodPost, http.MethodPut)
 
 	h.config.ExpirationDuration = time.Second * time.Duration(h.config.Expiration)
 	return err
@@ -86,7 +86,7 @@ func CacheControl(h http.Handler) http.Handler {
 	})
 }
 
-func (h *HTTP) BanLookup(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
+func (h *HTTP) banLookup(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		//ip := net.ParseIP(r.RemoteAddr)
 
@@ -101,7 +101,7 @@ func (h *HTTP) BanLookup(fn func(http.ResponseWriter, *http.Request)) http.Handl
 	})
 }
 
-func (h *HTTP) Log(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
+func (h *HTTP) log(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t0 := time.Now()
 
@@ -128,7 +128,7 @@ func (h *HTTP) Log(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc
 	})
 }
 
-func (h *HTTP) Auth(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
+func (h *HTTP) auth(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Let the client know authentication is required
 		w.Header().Set("WWW-Authenticate", "Basic realm='Filebin'")
@@ -247,7 +247,8 @@ func (h *HTTP) ParseTemplates() *template.Template {
 	templ := template.New("").Funcs(fns)
 	_, err := templ.ParseFS(h.templateBox, "templates/*.html")
 	if err != nil {
-		fmt.Errorf("Unable to read templates directory: %s\n", err.Error())
+		fmt.Printf("Unable to read templates directory: %s\n", err.Error())
+		os.Exit(2)
 	}
 	return templ
 }
