@@ -18,7 +18,7 @@ services:
       - local
 
   db:
-    image: "postgres:13"
+    image: "postgres:13-alpine"
     hostname: "db"
     restart: "no"
     environment:
