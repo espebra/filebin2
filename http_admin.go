@@ -253,14 +253,6 @@ func (h *HTTP) viewAdminLog(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		data.Transactions = trs
-	} else if inputCategory == "cid" {
-		cid := inputFilter
-		trs, err := h.dao.Transaction().GetByClientId(cid)
-		if err != nil {
-			http.Error(w, "Errno 361", http.StatusInternalServerError)
-			return
-		}
-		data.Transactions = trs
 	}
 
 	if err := h.templates.ExecuteTemplate(w, "log", data); err != nil {

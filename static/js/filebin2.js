@@ -1,4 +1,4 @@
-function FileAPI (c, t, d, f, bin, binURL, client) {
+function FileAPI (c, t, d, f, bin, binURL) {
 
     var fileCount = c,
         fileList = t,
@@ -300,7 +300,6 @@ function FileAPI (c, t, d, f, bin, binURL, client) {
             xhr.setRequestHeader("Filename", filename);
             xhr.setRequestHeader("Size", file.size);
             xhr.setRequestHeader("Bin", bin);
-            xhr.setRequestHeader("CID", client);
             xhr.send(file);
         }
     }
