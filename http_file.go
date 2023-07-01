@@ -134,7 +134,6 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 
 	inputMD5 := r.Header.Get("Content-MD5")
 	inputSHA256 := r.Header.Get("Content-SHA256")
-	inputClientId := r.Header.Get("CID")
 
 	inputBytes, err := strconv.ParseUint(r.Header.Get("content-length"), 10, 64)
 	if err != nil {
@@ -315,7 +314,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	// earlier
 	file.DeletedAt.Scan(nil)
 
-	file.ClientId = inputClientId
+	file.ClientId = ""
 	file.Bytes = inputBytes
 	file.Mime = mime.String()
 	file.SHA256 = sha256ChecksumString

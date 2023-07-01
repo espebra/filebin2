@@ -22,15 +22,13 @@
                 var fileField = document.getElementById("fileField");
                 var bin = "{{ .Bin.Id }}";
                 var binURL = "/{{ .Bin.Id }}";
-                var cid = "";
                 FileAPI = new FileAPI(
                     fileCount,
                     fileList,
                     fileDrop,
                     fileField,
                     bin,
-                    binURL,
-                    cid
+                    binURL
                 );
                 FileAPI.init();
                 // Automatically start upload when using the drop zone
