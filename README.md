@@ -80,7 +80,7 @@ The username to use when authenticating to the PostgreSQL database.
 
 Bin expiration time in seconds since the last bin update. Bins will be inaccessible after this time, and files will be removed by the lurker (see `--lurker-interval`).
 
-#### `--limit-file-downloads uint (default: disabled)
+#### `--limit-file-downloads uint` (default: disabled)
 
 This argument can be used to limit the number of downloads per file. 0, which is default, means no limit. If the value is 100, then each file can be downloaded 100 times before further downloads are rejected.
 
