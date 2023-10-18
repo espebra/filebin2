@@ -41,6 +41,22 @@ Filebin requires read write access to an S3 bucket for file storage and a Postgr
 
 The Filebin program itself is written in Go and builds to a single binary that is configured using command line arguments.
 
+### Testing and building
+
+The easiest way to run the test suite is to run it in docker compose. Docker will exit successfully (return code 0) if the tests succeed, and exit with an error code other than 0 if the tests fail.
+
+```bash
+docker-compose -f ci.yml up --abort-on-container-exit
+```
+
+The program can be built using:
+
+```bash
+make linux
+```
+
+The output will be the Filebin program as a single binary in the `artifacts/` folder called `filebin2-linux-amd64`. This binary takes the command line arguments listed below.
+
 ### Command line arguments
 
 #### `--access-log string` (default: "/var/log/filebin/access.log")
