@@ -11,6 +11,8 @@ Filebin2 is a web application that facilitates convenient file sharing over the 
 
 * [Why filebin2?](#why-filebin2)
 * [Development environment](#development-environment)
+* [Usage](#usage)
+* [Integrations](#integrations)
 
 ## Why filebin2?
 
@@ -31,8 +33,13 @@ This will make:
 * MinIO available on [http://localhost:9000/](http://localhost:9000/).
 * PostgreSQL available on `localhost:5432`.
 
-
 ## Usage
+
+Filebin can run in most Linux distributions, and most likely other operating systems like MacOS. It runs fine in Docker, but doesn't need to run in Docker.
+
+Filebin requires read write access to an S3 bucket for file storage and a PostgreSQL database that it will use for meta data.
+
+The Filebin program itself is written in Go and builds to a single binary that is configured using command line arguments.
 
 ### Command line arguments
 
@@ -106,7 +113,7 @@ The lurker is a batch job that runs automatically and in the background to delet
 
 #### `--manual-approval` (default: not set)
 
-If this argument is set, then an administrator needs to manually approve new bins before files and archives can be downloaded. Bin and file operations except downloading are accepted while a bin is pending approval. This is a mechanism added to limit abuse.
+If this argument is set, then the administrator needs to manually approve new bins before files and archives can be downloaded. Bin and file operations except downloading are accepted while a bin is pending approval. This is a mechanism added to limit abuse.
 
 The API request used to approve a bin is an authenticated `PUT /admin/approve/{bin}`
 
@@ -169,3 +176,17 @@ This argument specifies the secret that Slack will need to use when connecting t
 #### `--tmpdir string`
 
 Directory for temporary files for upload and download (default "`/tmp`").
+
+## Integrations
+
+### Slack
+
+This integration may be useful if manual approval is required (see `--manual-approval`). The integration allows members of a Slack channel to list the recently updated bins and approve specific bins directly in the Slack channel using slash commands. The slash commands available are:
+
+| Slash command | Description |
+| ------------- | ----------- |
+| `/filebin approve bin_id` | Approve the bin bin_id |
+| `/filebin lastupdated` | List the 10 last updated bins |
+| `/filebin lastupdated n` | List the n last updated bins |
+
+The documention on how to configure Slack to work with this integration does not exist currently.
