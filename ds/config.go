@@ -24,4 +24,5 @@ type Config struct {
 	RequireApproval      bool
 	AllowRobots          bool
 	BaseUrl              url.URL
+	RejectFileExtensions []string
 }

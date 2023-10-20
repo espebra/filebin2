@@ -60,7 +60,7 @@ function FileAPI (c, t, d, f, bin, binURL) {
         }
         text = text + " uploaded";
         if (counter_failed > 0) {
-            text = text + ". " + counter_failed + " failed, please retry later.";
+            text = text + ". " + counter_failed + " failed.";
             box.className = "alert alert-danger";
         } else if (counter_completed == counter_queue) {
             text = text + ", all done!";

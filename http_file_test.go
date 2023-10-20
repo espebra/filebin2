@@ -502,6 +502,22 @@ func TestBinInputValidation(t *testing.T) {
 			UploadContent: "content a",
 			StatusCode:    400,
 		},
+		{
+			Description:   "File with illegal extension)",
+			Method:        "POST",
+			Bin:           "1234567890",
+			Filename:      "a.illegal1",
+			UploadContent: "content a",
+			StatusCode:    403,
+		},
+		{
+			Description:   "File with illegal extension)",
+			Method:        "POST",
+			Bin:           "1234567890",
+			Filename:      "b.illegal2",
+			UploadContent: "content b",
+			StatusCode:    403,
+		},
 	}
 	runTests(tcs, t)
 }

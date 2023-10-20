@@ -74,11 +74,12 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 	c := ds.Config{
-		LimitFileDownloads: testLimitFileDownloads,
-		LimitStorageBytes:  testLimitStorage,
-		Expiration:         testExpiredAt,
-		HttpHost:           testHTTPHost,
-		HttpPort:           testHTTPPort,
+		LimitFileDownloads:   testLimitFileDownloads,
+		LimitStorageBytes:    testLimitStorage,
+		Expiration:           testExpiredAt,
+		HttpHost:             testHTTPHost,
+		HttpPort:             testHTTPPort,
+		RejectFileExtensions: []string{"illegal1", "illegal2"},
 	}
 	h := &HTTP{
 		staticBox:   &staticBox,
