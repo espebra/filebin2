@@ -6,7 +6,9 @@ import (
 	"fmt"
 	_ "net/http/pprof"
 	"os"
+	"regexp"
 	"strconv"
+	"strings"
 	//"github.com/espebra/filebin2/ds"
 	"github.com/dustin/go-humanize"
 	"github.com/espebra/filebin2/dbl"
@@ -30,6 +32,7 @@ var (
 	// Limits
 	limitFileDownloadsFlag = flag.Uint64("limit-file-downloads", 0, "Limit the number of downloads per file. 0 disables this limit.")
 	limitStorageFlag       = flag.String("limit-storage", "0", "Limit the storage capacity to use (examples: 100MB, 20GB, 2TB). 0 disables this limit.")
+	rejectFileExtensions   = flag.String("reject-file-extensions", "", "A whitespace separated list of file extensions that will be rejected")
 
 	// HTTP
 	listenHostFlag   = flag.String("listen-host", "127.0.0.1", "Listen host")
@@ -130,6 +133,15 @@ func main() {
 	}
 	fmt.Printf("TTL for presigned S3 URLs: %s\n", s3UrlTtl.String())
 
+	filter := regexp.MustCompile(`^[a-zA-Z0-9]+$`)
+	for _, v := range strings.Fields(*rejectFileExtensions) {
+		if !filter.Match([]byte(v)) {
+			fmt.Printf("Extension specified by --reject-file-extensions contains illegal characters: %v\n", v)
+			os.Exit(2)
+		}
+		fmt.Printf("Rejecting file extension: %s\n", v)
+	}
+
 	s3conn, err := s3.Init(*s3EndpointFlag, *s3BucketFlag, *s3RegionFlag, *s3AccessKeyFlag, *s3SecretKeyFlag, *s3SecureFlag, s3UrlTtl)
 	if err != nil {
 		fmt.Printf("Unable to initialize S3 connection: %s\n", err.Error())
@@ -156,21 +168,22 @@ func main() {
 	}
 
 	config := &ds.Config{
-		AdminPassword:      *adminPasswordFlag,
-		AdminUsername:      *adminUsernameFlag,
-		AllowRobots:        *allowRobotsFlag,
-		BaseUrl:            *u,
-		Expiration:         *expirationFlag,
-		HttpHost:           *listenHostFlag,
-		HttpAccessLog:      *accessLogFlag,
-		HttpPort:           *listenPortFlag,
-		HttpProxyHeaders:   *proxyHeadersFlag,
-		LimitFileDownloads: *limitFileDownloadsFlag,
-		RequireApproval:    *requireApprovalFlag,
-		SlackSecret:        *slackSecretFlag,
-		SlackDomain:        *slackDomainFlag,
-		SlackChannel:       *slackChannelFlag,
-		Tmpdir:             *tmpdirFlag,
+		AdminPassword:        *adminPasswordFlag,
+		AdminUsername:        *adminUsernameFlag,
+		AllowRobots:          *allowRobotsFlag,
+		BaseUrl:              *u,
+		Expiration:           *expirationFlag,
+		HttpHost:             *listenHostFlag,
+		HttpAccessLog:        *accessLogFlag,
+		HttpPort:             *listenPortFlag,
+		HttpProxyHeaders:     *proxyHeadersFlag,
+		LimitFileDownloads:   *limitFileDownloadsFlag,
+		RequireApproval:      *requireApprovalFlag,
+		RejectFileExtensions: strings.Fields(*rejectFileExtensions),
+		SlackSecret:          *slackSecretFlag,
+		SlackDomain:          *slackDomainFlag,
+		SlackChannel:         *slackChannelFlag,
+		Tmpdir:               *tmpdirFlag,
 	}
 
 	config.LimitStorageBytes, err = humanize.ParseBytes(*limitStorageFlag)

@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"os"
+	"path"
 	"strconv"
 	//"strings"
 	"time"
@@ -142,6 +143,18 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 	// TODO: Input validation on content-length. Between min:max.
 
+	// Reject file names with certain extensions
+	// Remove the . from the extension
+	thisExtension := path.Ext(inputFilename)
+	if len(thisExtension) > 0 {
+		for _, extension := range h.config.RejectFileExtensions {
+			if "."+extension == thisExtension {
+				h.Error(w, r, fmt.Sprintf("Rejecting file name %s with illegal extension: %s", inputFilename, extension), "Illegal file extension", 992, http.StatusForbidden)
+				return
+			}
+		}
+	}
+
 	// Check if bin exists
 	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
@@ -206,7 +219,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	if h.config.LimitStorageBytes > 0 {
 		totalBytesConsumed := h.dao.Info().StorageBytesAllocated()
 		if totalBytesConsumed >= h.config.LimitStorageBytes {
-			h.Error(w, r, fmt.Sprintf("Storage limit reached (currently consuming %s) when trying to upload file %q to bin %q", humanize.Bytes(totalBytesConsumed), inputFilename, inputBin), "Insufficient storage\n", 633, http.StatusInsufficientStorage)
+			h.Error(w, r, fmt.Sprintf("Storage limit reached (currently consuming %s) when trying to upload file %q to bin %q", humanize.Bytes(totalBytesConsumed), inputFilename, inputBin), "Insufficient storage, please retry later\n", 633, http.StatusInsufficientStorage)
 			return
 		}
 	}

@@ -141,6 +141,10 @@ The path to an mmdb formatted geoip database like GeoLite2-City.mmdb. This is op
 
 If this argument is set, then the client IP will be read from the proxy headers provided in the incoming HTTP requests. This argument should only be set if there is an HTTP proxy running in front of Filebin, that is using the proxy headers to tell Filebin the original client IP address.
 
+#### `--reject-file-extensions string` (default: not set)
+
+A whitespace separated list of file extensions that will be rejected. Example: "exe bat dll".
+
 #### `--s3-access-key string` (default: not set)
 
 The access key to use when connecting to the S3 bucket where files will be stored.
