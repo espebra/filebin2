@@ -6,6 +6,7 @@ import (
 )
 
 type Metrics struct {
+	Id                        string `json:"-"`
 	CurrentLogEntries         int64  `json:"current_log_entries"`
 	CurrentBytes              int64  `json:"current_bytes"`
 	CurrentBytesReadable      string `json:"current_bytes_readable"`

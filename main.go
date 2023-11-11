@@ -66,6 +66,7 @@ var (
 	adminPasswordFlag   = flag.String("admin-password", "", "Admin password")
 	metricsUsernameFlag = flag.String("metrics-username", "", "Metrics username")
 	metricsPasswordFlag = flag.String("metrics-password", "", "Metrics password")
+	metricsIdFlag       = flag.String("metrics-id", os.Getenv("HOSTNAME"), "Metrics identification")
 
 	// Slack integration
 	slackSecretFlag  = flag.String("slack-secret", "", "Slack secret (currently used to approve new bins via Slack if manual approval is enabled)")
@@ -203,6 +204,7 @@ func main() {
 	}
 	config.LimitStorageReadable = humanize.Bytes(config.LimitStorageBytes)
 	metrics := ds.Metrics{}
+	metrics.Id = *metricsIdFlag
 
 	h := &HTTP{
 		staticBox:   &staticBox,
