@@ -247,6 +247,9 @@ func (h *HTTP) ParseTemplates() *template.Template {
 		"join": func(s ...string) string {
 			return path.Join(s...)
 		},
+		"plus": func(a uint64, b uint64) uint64 {
+			return a + b
+		},
 	}
 
 	templ := template.New("").Funcs(fns)

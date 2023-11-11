@@ -1,69 +1,52 @@
-{{ define "metrics" }}HELP data_transfer Approximate data transfer from clients to filebin in bytes, measured by file size
-TYPE data_transfer counter
-data_transfer{instance="{{ .Id }}", direction="client-to-filebin"} {{ .BytesClientToFilebin }}
+{{ define "metrics" }}# HELP filebin_data_transfer_bytes Approximate data transfer in bytes
+# TYPE filebin_data_transfer_bytes counter
+filebin_data_transfer_bytes{id="{{ .Id }}",direction="client_to_filebin"} {{ .BytesClientToFilebin }}
+filebin_data_transfer_bytes{id="{{ .Id }}",direction="filebin_to_storage"} {{ .BytesFilebinToStorage }}
+filebin_data_transfer_bytes{id="{{ .Id }}",direction="storage_to_client"} {{ .BytesStorageToClient }}
+filebin_data_transfer_bytes{id="{{ .Id }}",direction="storage_to_filebin"} {{ .BytesStorageToFilebin }}
+filebin_data_transfer_bytes{id="{{ .Id }}",direction="filebin_to_client"} {{ .BytesFilebinToClient }}
 
-HELP data_transfer Approximate data transfer from filebin to the storage in bytes, measured by file size
-TYPE data_transfer counter
-data_transfer{instance="{{ .Id }}", direction="filebin-to-storage"} {{ .BytesFilebinToStorage }}
+# HELP filebin_file_operations Number of file operations
+# TYPE filebin_file_operations counter
+filebin_file_operations{id="{{ .Id }}",type="upload"} {{ .FileUploadCount }}
+filebin_file_operations{id="{{ .Id }}",type="download"} {{ .FileDownloadCount }}
+filebin_file_operations{id="{{ .Id }}",type="delete"} {{ .FileDeleteCount }}
 
-HELP data_transfer Approximate data transfer from the storage to the clients in bytes, measured by file size assuming that all file downloads are complete
-TYPE data_transfer counter
-data_transfer{instance="{{ .Id }}", direction="storage-to-client"} {{ .BytesStorageToClient }}
+# HELP filebin_bin_operations Number of bin operations
+# TYPE filebin_bin_operations counter
+filebin_bin_operations{id="{{ .Id }}",type="delete"} {{ .BinDeleteCount }}
+filebin_bin_operations{id="{{ .Id }}",type="create"} {{ .NewBinCount }}
 
-HELP data_transfer Approximate data transfer from the storage to the filebin in bytes, measured by file size of files in archive downloads
-TYPE data_transfer counter
-data_transfer{instance="{{ .Id }}", direction="storage-to-filebin"} {{ .BytesStorageToFilebin }}
+# HELP archive_downloads Number of archive downloads
+# TYPE archive_downloads counter
+filebin_archive_downloads{id="{{ .Id }}",format="tar"} {{ .TarArchiveDownloadCount }}
+filebin_archive_downloads{id="{{ .Id }}",format="zip"} {{ .ZipArchiveDownloadCount }}
 
-HELP data_transfer Approximate data transfer from filebin to clients in bytes, measured by file size of files in archive downloads
-TYPE data_transfer counter
-data_transfer{instance="{{ .Id }}", direction="filebin-to-client"} {{ .BytesFilebinToClient }}
+# HELP filebin_page_views Number of page views
+# TYPE filebin_page_views counter
+filebin_page_views{id="{{ .Id }}",page="front"} {{ .FrontPageViewCount }}
+filebin_page_views{id="{{ .Id }}",page="bin"} {{ .BinPageViewCount }}
 
-HELP file_operations Number of file operations
-TYPE file_operations counter
-file_operations{instance="{{ .Id }}", operation="upload"} {{ .FileUploadCount }}
-file_operations{instance="{{ .Id }}", operation="download"} {{ .FileDownloadCount }}
-file_operations{instance="{{ .Id }}", operation="delete" {{ .FileDeleteCount }}
+# HELP filebin_operations_in_progress Number of file uploads from clients to filebin currently in progress
+# TYPE filebin_operations_in_progress gauge
+filebin_operations_in_progress{id="{{ .Id }}",type="file_upload"} {{ .FileUploadInProgress }}
+filebin_operations_in_progress{id="{{ .Id }}",type="storage_upload"} {{ .StorageUploadInProgress }}
+filebin_operations_in_progress{id="{{ .Id }}",type="archive_download"} {{ .ArchiveDownloadInProgress }}
 
-HELP bin_operations Number of bin operations
-TYPE bin_operations counter
-bin_operations{instance="{{ .Id }}", operation="delete"} {{ .BinDeleteCount }}
-bin_operations{instance="{{ .Id }}", operation="create"} {{ .NewBinCount }}
+# HELP filebin_transactions Number of transactions logged in the database
+# TYPE filebin_transactions gauge
+filebin_transactions{id="{{ .Id }}"} {{ .CurrentLogEntries }}
 
-HELP archive_downloads Number of archive downloads
-TYPE archive_downloads counter
-archive_downloads{instance="{{ .Id }}", format="tar"} {{ .TarArchiveDownloadCount }}
-archive_downloads{instance="{{ .Id }}", format="zip"} {{ .ZipArchiveDownloadCount }}
+# HELP filebin_storage_bytes The number of bytes consumed by the files in storage
+# TYPE filebin_storage_bytes gauge
+filebin_storage_bytes{id="{{ .Id }}",type="used"} {{ .CurrentBytes }}
+filebin_storage_bytes{id="{{ .Id }}",type="limit"} {{ .LimitBytes }}
 
-HELP page_views Number of page views
-TYPE page_views counter
-page_views{instance="{{ .Id }}", page="front"} {{ .FrontPageViewCount }}
-page_views{instance="{{ .Id }}", page="bin"} {{ .BinPageViewCount }}
+# HELP filebin_files The number of files in storage
+# TYPE filebin_files gauge
+filebin_files{id="{{ .Id }}"} {{ .CurrentFiles }}
 
-HELP operations_in_progress Number of file uploads from clients to filebin currently in progress
-TYPE operations_in_progress gauge
-operations_in_progress{instance="{{ .Id }}", operation="file-upload"} {{ .FileUploadInProgress }}
-
-HELP operations_in_progress Number of file uploads from filebin to storage currently in progress
-TYPE operations_in_progress gauge
-operations_in_progress{instance="{{ .Id }}", operation="storage-upload"} {{ .StorageUploadInProgress }}
-
-HELP operations_in_progress Number of archive downloads from filebin to clients currently in progress
-TYPE operations_in_progress gauge
-operations_in_progress{instance="{{ .Id }}", operation="archive-download"} {{ .ArchiveDownloadInProgress }}
-
-HELP transactions Number of transactions logged in the database
-TYPE transactions gauge
-transactions{instance="{{ .Id }}"} {{ .CurrentLogEntries }}
-
-HELP storage_used The number of bytes consumed by the files in storage
-TYPE storage_used gauge
-storage_used{instance="{{ .Id }}"} {{ .CurrentBytes }}
-
-HELP file_count The number of files in storage
-TYPE file_count gauge
-file_count{instance="{{ .Id }}"} {{ .CurrentFiles }}
-
-HELP bin_count The number of bins active
-TYPE bin_count gauge
-bin_count{instance="{{ .Id }}"} {{ .CurrentBins }}
+# HELP filebin_bins The number of bins active
+# TYPE filebin_bins gauge
+filebin_bins{id="{{ .Id }}"} {{ .CurrentBins }}
 {{ end }}

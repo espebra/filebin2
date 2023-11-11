@@ -208,6 +208,7 @@ func main() {
 	config.LimitStorageReadable = humanize.Bytes(config.LimitStorageBytes)
 	metrics := ds.Metrics{}
 	metrics.Id = *metricsIdFlag
+	metrics.LimitBytes = config.LimitStorageBytes
 
 	h := &HTTP{
 		staticBox:   &staticBox,
