@@ -77,6 +77,101 @@ func (h *HTTP) viewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *HTTP) viewAdminFiles(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	inputLimit := params["limit"]
+
+	// default
+	limit := 20
+
+	i, err := strconv.Atoi(inputLimit)
+	if err == nil {
+		if i >= 1 && i <= 500 {
+			limit = i
+		}
+	}
+
+	type Files struct {
+		ByChecksum []ds.FileByChecksum `json:"by-checksum"`
+	}
+
+	type Data struct {
+		Files Files `json:"files"`
+		Limit int   `json:"limit"`
+	}
+	var data Data
+	data.Limit = limit
+
+	filesByChecksum, err := h.dao.File().FilesByChecksum(limit)
+	if err != nil {
+		fmt.Printf("Unable to FilesByChecksum(): %s\n", err.Error())
+		http.Error(w, "Errno 493", http.StatusInternalServerError)
+		return
+	}
+
+	var files Files
+	files.ByChecksum = filesByChecksum
+
+	data.Files = files
+
+	if r.Header.Get("accept") == "application/json" {
+		w.Header().Set("Content-Type", "application/json")
+		out, err := json.MarshalIndent(data, "", "    ")
+		if err != nil {
+			fmt.Printf("Failed to parse json: %s\n", err.Error())
+			http.Error(w, "Errno 201", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(200)
+		io.WriteString(w, string(out))
+	} else {
+		if err := h.templates.ExecuteTemplate(w, "admin_files", data); err != nil {
+			fmt.Printf("Failed to execute template: %s\n", err.Error())
+			http.Error(w, "Errno 203", http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+func (h *HTTP) viewAdminFile(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	inputSHA256 := params["sha256"]
+
+	type Data struct {
+		Files  []ds.File `json:"files"`
+		SHA256 string    `json:"sha256"`
+	}
+	var data Data
+	data.SHA256 = inputSHA256
+
+	fileByChecksum, err := h.dao.File().FileByChecksum(inputSHA256)
+	if err != nil {
+		fmt.Printf("Unable to FileByChecksum(): %s\n", err.Error())
+		http.Error(w, "Errno 494", http.StatusInternalServerError)
+		return
+	}
+
+	data.Files = fileByChecksum
+
+	if r.Header.Get("accept") == "application/json" {
+		w.Header().Set("Content-Type", "application/json")
+		out, err := json.MarshalIndent(data, "", "    ")
+		if err != nil {
+			fmt.Printf("Failed to parse json: %s\n", err.Error())
+			http.Error(w, "Errno 201", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(200)
+		io.WriteString(w, string(out))
+	} else {
+		if err := h.templates.ExecuteTemplate(w, "admin_file_by_checksum", data); err != nil {
+			fmt.Printf("Failed to execute template: %s\n", err.Error())
+			http.Error(w, "Errno 203", http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
 func (h *HTTP) viewAdminBins(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	inputLimit := params["limit"]

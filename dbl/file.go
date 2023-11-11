@@ -222,3 +222,30 @@ func (d *FileDao) fileQuery(sqlStatement string, params ...interface{}) (files [
 	}
 	return files, nil
 }
+
+func (d *FileDao) FilesByChecksum(limit int) (files []ds.FileByChecksum, err error) {
+	sqlStatement := "SELECT sha256, COUNT(sha256) as c, mime, bytes, COUNT(sha256) * bytes AS bytes_total, SUM(downloads), SUM(updates) FROM file WHERE in_storage = true AND deleted_at IS NULL GROUP BY sha256, mime, bytes ORDER BY c DESC LIMIT $1"
+
+	rows, err := d.db.Query(sqlStatement, limit)
+	if err != nil {
+		return files, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var file ds.FileByChecksum
+		err = rows.Scan(&file.SHA256, &file.Count, &file.Mime, &file.Bytes, &file.BytesTotal, &file.DownloadsTotal, &file.UpdatesTotal)
+		if err != nil {
+			return files, err
+		}
+		file.BytesReadable = humanize.Bytes(file.Bytes)
+		file.BytesTotalReadable = humanize.Bytes(file.BytesTotal)
+		files = append(files, file)
+	}
+	return files, nil
+}
+
+func (d *FileDao) FileByChecksum(sha256 string) (files []ds.File, err error) {
+	sqlStatement := "SELECT id, bin_id, filename, in_storage, mime, bytes, md5, sha256, downloads, updates, ip, client_id, headers, updated_at, created_at, deleted_at FROM file WHERE sha256 = $1 ORDER BY in_storage DESC NULLS LAST, downloads DESC, updates DESC"
+	files, err = d.fileQuery(sqlStatement, sha256)
+	return files, err
+}

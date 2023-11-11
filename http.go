@@ -34,6 +34,7 @@ type HTTP struct {
 	s3          *s3.S3AO
 	geodb       *geoip.DAO
 	config      *ds.Config
+	metrics     *ds.Metrics
 }
 
 func (h *HTTP) Init() (err error) {
@@ -50,6 +51,7 @@ func (h *HTTP) Init() (err error) {
 	h.router.HandleFunc("/", h.banLookup(h.uploadFile)).Methods(http.MethodPost)
 	h.router.HandleFunc("/filebin-status", h.filebinStatus).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/storage-status", h.storageStatus).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/metrics", h.viewMetrics).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/robots.txt", h.robots).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/about", h.banLookup(h.about)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/api", h.banLookup(h.api)).Methods(http.MethodHead, http.MethodGet)
@@ -61,6 +63,9 @@ func (h *HTTP) Init() (err error) {
 	h.router.HandleFunc("/admin/bins", h.auth(h.viewAdminBins)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/bins/{limit:[0-9]+}", h.auth(h.viewAdminBins)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/bins/all", h.auth(h.viewAdminBinsAll)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin/files", h.auth(h.viewAdminFiles)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin/files/{limit:[0-9]+}", h.auth(h.viewAdminFiles)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin/file/{sha256:[0-9a-z]+}", h.auth(h.viewAdminFile)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin", h.auth(h.viewAdminDashboard)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/approve/{bin:[A-Za-z0-9_-]+}", h.log(h.auth(h.approveBin))).Methods("PUT")
 	//h.router.HandleFunc("/admin/cleanup", h.Auth(h.ViewAdminCleanup)).Methods(http.MethodHead, http.MethodGet)

@@ -46,6 +46,8 @@ func (h *HTTP) index(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	h.metrics.IncrFrontPageViewCount()
+
 	if err := h.templates.ExecuteTemplate(w, "index", data); err != nil {
 		fmt.Printf("Failed to execute template: %s\n", err.Error())
 		http.Error(w, "Errno 302", http.StatusInternalServerError)

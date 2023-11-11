@@ -17,6 +17,8 @@ type Config struct {
 	HttpAccessLog        string
 	AdminUsername        string
 	AdminPassword        string
+	MetricsUsername      string
+	MetricsPassword      string
 	SlackSecret          string
 	SlackDomain          string
 	SlackChannel         string

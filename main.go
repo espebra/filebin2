@@ -62,8 +62,10 @@ var (
 	logRetentionFlag   = flag.Uint64("log-retention", 7, "The number of days to keep log entries before removed by the lurker.")
 
 	// Auth
-	adminUsernameFlag = flag.String("admin-username", "", "Admin username")
-	adminPasswordFlag = flag.String("admin-password", "", "Admin password")
+	adminUsernameFlag   = flag.String("admin-username", "", "Admin username")
+	adminPasswordFlag   = flag.String("admin-password", "", "Admin password")
+	metricsUsernameFlag = flag.String("metrics-username", "", "Metrics username")
+	metricsPasswordFlag = flag.String("metrics-password", "", "Metrics password")
 
 	// Slack integration
 	slackSecretFlag  = flag.String("slack-secret", "", "Slack secret (currently used to approve new bins via Slack if manual approval is enabled)")
@@ -99,6 +101,12 @@ func main() {
 	}
 	if *adminPasswordFlag == "" {
 		*adminPasswordFlag = os.Getenv("ADMIN_PASSWORD")
+	}
+	if *metricsUsernameFlag == "" {
+		*metricsUsernameFlag = os.Getenv("METRICS_USERNAME")
+	}
+	if *metricsPasswordFlag == "" {
+		*metricsPasswordFlag = os.Getenv("METRICS_PASSWORD")
 	}
 	if *slackSecretFlag == "" {
 		*slackSecretFlag = os.Getenv("SLACK_SECRET")
@@ -170,6 +178,8 @@ func main() {
 	config := &ds.Config{
 		AdminPassword:        *adminPasswordFlag,
 		AdminUsername:        *adminUsernameFlag,
+		MetricsPassword:      *metricsPasswordFlag,
+		MetricsUsername:      *metricsUsernameFlag,
 		AllowRobots:          *allowRobotsFlag,
 		BaseUrl:              *u,
 		Expiration:           *expirationFlag,
@@ -192,6 +202,7 @@ func main() {
 		os.Exit(2)
 	}
 	config.LimitStorageReadable = humanize.Bytes(config.LimitStorageBytes)
+	metrics := &ds.Metrics{}
 
 	h := &HTTP{
 		staticBox:   &staticBox,
@@ -200,6 +211,7 @@ func main() {
 		s3:          &s3conn,
 		geodb:       &geodb,
 		config:      config,
+		metrics:     metrics,
 	}
 
 	if err := h.Init(); err != nil {
