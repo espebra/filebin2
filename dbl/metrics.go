@@ -25,53 +25,39 @@ func (d *MetricsDao) StorageBytesAllocated() (totalBytes uint64) {
 func (d *MetricsDao) UpdateMetrics(metrics *ds.Metrics) (err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
 
-	metrics.Lock()
+	tmp := ds.Metrics{}
 
 	// Number of log entries
 	sqlStatement := "SELECT COUNT(Id) FROM transaction"
-	if err := d.db.QueryRow(sqlStatement).Scan(&metrics.CurrentLogEntries); err != nil {
+	if err := d.db.QueryRow(sqlStatement).Scan(&tmp.CurrentLogEntries); err != nil {
 		return err
 	}
 
 	// Number of current files
 	sqlStatement = "SELECT COUNT(Id) FROM file WHERE in_storage = true AND deleted_at IS NULL"
-	if err := d.db.QueryRow(sqlStatement).Scan(&metrics.CurrentFiles); err != nil {
+	if err := d.db.QueryRow(sqlStatement).Scan(&tmp.CurrentFiles); err != nil {
 		return err
 	}
 
 	// Total number of bytes of current files
 	if metrics.CurrentFiles > 0 {
 		sqlStatement = "SELECT SUM(bytes) FROM file WHERE in_storage = true AND deleted_at IS NULL"
-		if err := d.db.QueryRow(sqlStatement).Scan(&metrics.CurrentBytes); err != nil {
+		if err := d.db.QueryRow(sqlStatement).Scan(&tmp.CurrentBytes); err != nil {
 			return err
 		}
 	}
 
 	// Number of current bins
 	sqlStatement = "SELECT COUNT(Id) FROM bin WHERE expired_at > $1 AND deleted_at IS NULL"
-	if err := d.db.QueryRow(sqlStatement, now).Scan(&metrics.CurrentBins); err != nil {
+	if err := d.db.QueryRow(sqlStatement, now).Scan(&tmp.CurrentBins); err != nil {
 		return err
 	}
 
-	// Number of total files since day 1
-	sqlStatement = "SELECT COUNT(Id) FROM file"
-	if err := d.db.QueryRow(sqlStatement).Scan(&metrics.TotalFiles); err != nil {
-		return err
-	}
-
-	// Total number of bytes of all files since day 1
-	if metrics.TotalFiles > 0 {
-		sqlStatement = "SELECT SUM(bytes) FROM file"
-		if err := d.db.QueryRow(sqlStatement).Scan(&metrics.TotalBytes); err != nil {
-			return err
-		}
-	}
-
-	// Total number of bins since day 1
-	sqlStatement = "SELECT COUNT(Id) FROM bin"
-	if err := d.db.QueryRow(sqlStatement).Scan(&metrics.TotalBins); err != nil {
-		return err
-	}
+	metrics.Lock()
+	metrics.CurrentBins = tmp.CurrentBins
+	metrics.CurrentLogEntries = tmp.CurrentLogEntries
+	metrics.CurrentFiles = tmp.CurrentFiles
+	metrics.CurrentBytes = tmp.CurrentBytes
 
 	metrics.CurrentFilesReadable = humanize.Comma(metrics.CurrentFiles)
 	metrics.CurrentBinsReadable = humanize.Comma(metrics.CurrentBins)

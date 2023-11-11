@@ -66,7 +66,7 @@ var (
 	adminPasswordFlag   = flag.String("admin-password", "", "Admin password")
 	metricsUsernameFlag = flag.String("metrics-username", "", "Metrics username")
 	metricsPasswordFlag = flag.String("metrics-password", "", "Metrics password")
-	metricsIdFlag       = flag.String("metrics-id", os.Getenv("HOSTNAME"), "Metrics identification")
+	metricsIdFlag       = flag.String("metrics-id", os.Getenv("METRICS_ID"), "Metrics instance identification")
 
 	// Slack integration
 	slackSecretFlag  = flag.String("slack-secret", "", "Slack secret (currently used to approve new bins via Slack if manual approval is enabled)")
@@ -111,6 +111,9 @@ func main() {
 	}
 	if *slackSecretFlag == "" {
 		*slackSecretFlag = os.Getenv("SLACK_SECRET")
+	}
+	if *metricsIdFlag == "" {
+		*metricsIdFlag = os.Getenv("HOSTNAME")
 	}
 
 	// mmdb path
