@@ -21,7 +21,7 @@ type S3AO struct {
 	expiry time.Duration
 }
 
-type BucketInfo struct {
+type BucketMetrics struct {
 	Objects                       uint64
 	ObjectsReadable               string
 	ObjectsSize                   uint64
@@ -237,7 +237,7 @@ func (s S3AO) PresignedGetObject(bin string, filename string, mime string) (pres
 	return presignedURL, nil
 }
 
-func (s S3AO) GetBucketInfo() (info BucketInfo) {
+func (s S3AO) GetBucketMetrics() (metrics BucketMetrics) {
 	//opts := minio.ListObjectsOptions{
 	//	Prefix:    "",
 	//	Recursive: true,
@@ -249,31 +249,31 @@ func (s S3AO) GetBucketInfo() (info BucketInfo) {
 	//for object := range objectCh {
 	//	if object.Err != nil {
 	//		fmt.Println(object.Err)
-	//		return info
+	//		return metrics
 	//	}
 	//	size = size + object.Size
 	//	numObjects = numObjects + 1
 	//}
 
-	//info.Objects = numObjects
-	//info.ObjectsReadable = humanize.Comma(int64(numObjects))
-	//info.ObjectsSize = uint64(size)
-	//info.ObjectsSizeReadable = humanize.Bytes(info.ObjectsSize)
+	//metrics.Objects = numObjects
+	//metrics.ObjectsReadable = humanize.Comma(int64(numObjects))
+	//metrics.ObjectsSize = uint64(size)
+	//metrics.ObjectsSizeReadable = humanize.Bytes(metrics.ObjectsSize)
 
 	multiPartObjectCh := s.client.ListIncompleteUploads(context.Background(), s.bucket, "", true)
 	for multiPartObject := range multiPartObjectCh {
 		if multiPartObject.Err != nil {
 			fmt.Println(multiPartObject.Err)
-			return info
+			return metrics
 		}
 		size = size + multiPartObject.Size
 		numObjects = numObjects + 1
 	}
-	info.IncompleteObjects = numObjects
-	info.IncompleteObjectsReadable = humanize.Comma(int64(numObjects))
-	info.IncompleteObjectsSize = uint64(size)
-	info.IncompleteObjectsSizeReadable = humanize.Bytes(info.IncompleteObjectsSize)
-	return info
+	metrics.IncompleteObjects = numObjects
+	metrics.IncompleteObjectsReadable = humanize.Comma(int64(numObjects))
+	metrics.IncompleteObjectsSize = uint64(size)
+	metrics.IncompleteObjectsSizeReadable = humanize.Bytes(metrics.IncompleteObjectsSize)
+	return metrics
 }
 
 func (s S3AO) GetObjectKey(bin string, filename string) (key string) {

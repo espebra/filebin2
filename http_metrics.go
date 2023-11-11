@@ -5,8 +5,8 @@ import (
 	//"crypto/hmac"
 	//"crypto/sha256"
 	//"encoding/hex"
-	//"fmt"
-	"io"
+	"fmt"
+	//"io"
 	//"io/ioutil"
 	"net/http"
 	//"strconv"
@@ -37,7 +37,26 @@ func (h *HTTP) viewMetrics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/plain")
-	io.WriteString(w, h.metrics.Prometheus())
+	err := h.dao.Metrics().UpdateMetrics(h.metrics)
+	if err != nil {
+		fmt.Printf("Unable to UpdateMetrics(): %s\n", err.Error())
+		http.Error(w, "Errno 328", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+	w.Header().Set("Cache-Control", "max-age=1")
+
+	//type Data struct {
+	//        ds.Metrics
+	//}
+	h.metrics.Lock()
+	defer h.metrics.Unlock()
+
+	if err := h.templates.ExecuteTemplate(w, "metrics", h.metrics); err != nil {
+		fmt.Printf("Failed to execute template: %s\n", err.Error())
+		http.Error(w, "Errno 302", http.StatusInternalServerError)
+		return
+	}
 	return
 }

@@ -2,18 +2,17 @@ package dbl
 
 import (
 	"database/sql"
-	//"fmt"
 	"fmt"
 	"github.com/dustin/go-humanize"
 	"github.com/espebra/filebin2/ds"
 	"time"
 )
 
-type InfoDao struct {
+type MetricsDao struct {
 	db *sql.DB
 }
 
-func (d *InfoDao) StorageBytesAllocated() (totalBytes uint64) {
+func (d *MetricsDao) StorageBytesAllocated() (totalBytes uint64) {
 	// Assume that each file consumes at least 256KB, to align with minimum billable object size in AWS.
 	minBytes := 262144
 	sqlStatement := "SELECT COALESCE((SELECT SUM(GREATEST(bytes, $1)) FROM file WHERE in_storage = true AND deleted_at IS NULL), 0)"
@@ -23,62 +22,65 @@ func (d *InfoDao) StorageBytesAllocated() (totalBytes uint64) {
 	return totalBytes
 }
 
-func (d *InfoDao) GetInfo() (info ds.Info, err error) {
+func (d *MetricsDao) UpdateMetrics(metrics *ds.Metrics) (err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
+
+	metrics.Lock()
 
 	// Number of log entries
 	sqlStatement := "SELECT COUNT(Id) FROM transaction"
-	if err := d.db.QueryRow(sqlStatement).Scan(&info.CurrentLogEntries); err != nil {
-		return info, err
+	if err := d.db.QueryRow(sqlStatement).Scan(&metrics.CurrentLogEntries); err != nil {
+		return err
 	}
 
 	// Number of current files
 	sqlStatement = "SELECT COUNT(Id) FROM file WHERE in_storage = true AND deleted_at IS NULL"
-	if err := d.db.QueryRow(sqlStatement).Scan(&info.CurrentFiles); err != nil {
-		return info, err
+	if err := d.db.QueryRow(sqlStatement).Scan(&metrics.CurrentFiles); err != nil {
+		return err
 	}
 
 	// Total number of bytes of current files
-	if info.CurrentFiles > 0 {
+	if metrics.CurrentFiles > 0 {
 		sqlStatement = "SELECT SUM(bytes) FROM file WHERE in_storage = true AND deleted_at IS NULL"
-		if err := d.db.QueryRow(sqlStatement).Scan(&info.CurrentBytes); err != nil {
-			return info, err
+		if err := d.db.QueryRow(sqlStatement).Scan(&metrics.CurrentBytes); err != nil {
+			return err
 		}
 	}
 
 	// Number of current bins
 	sqlStatement = "SELECT COUNT(Id) FROM bin WHERE expired_at > $1 AND deleted_at IS NULL"
-	if err := d.db.QueryRow(sqlStatement, now).Scan(&info.CurrentBins); err != nil {
-		return info, err
+	if err := d.db.QueryRow(sqlStatement, now).Scan(&metrics.CurrentBins); err != nil {
+		return err
 	}
 
 	// Number of total files since day 1
 	sqlStatement = "SELECT COUNT(Id) FROM file"
-	if err := d.db.QueryRow(sqlStatement).Scan(&info.TotalFiles); err != nil {
-		return info, err
+	if err := d.db.QueryRow(sqlStatement).Scan(&metrics.TotalFiles); err != nil {
+		return err
 	}
 
 	// Total number of bytes of all files since day 1
-	if info.TotalFiles > 0 {
+	if metrics.TotalFiles > 0 {
 		sqlStatement = "SELECT SUM(bytes) FROM file"
-		if err := d.db.QueryRow(sqlStatement).Scan(&info.TotalBytes); err != nil {
-			return info, err
+		if err := d.db.QueryRow(sqlStatement).Scan(&metrics.TotalBytes); err != nil {
+			return err
 		}
 	}
 
 	// Total number of bins since day 1
 	sqlStatement = "SELECT COUNT(Id) FROM bin"
-	if err := d.db.QueryRow(sqlStatement).Scan(&info.TotalBins); err != nil {
-		return info, err
+	if err := d.db.QueryRow(sqlStatement).Scan(&metrics.TotalBins); err != nil {
+		return err
 	}
 
-	info.CurrentFilesReadable = humanize.Comma(info.CurrentFiles)
-	info.CurrentBinsReadable = humanize.Comma(info.CurrentBins)
-	info.CurrentBytesReadable = humanize.Bytes(uint64(info.CurrentBytes))
+	metrics.CurrentFilesReadable = humanize.Comma(metrics.CurrentFiles)
+	metrics.CurrentBinsReadable = humanize.Comma(metrics.CurrentBins)
+	metrics.CurrentBytesReadable = humanize.Bytes(uint64(metrics.CurrentBytes))
 
-	info.TotalFilesReadable = humanize.Comma(info.TotalFiles)
-	info.TotalBinsReadable = humanize.Comma(info.TotalBins)
-	info.TotalBytesReadable = humanize.Bytes(uint64(info.TotalBytes))
+	metrics.TotalFilesReadable = humanize.Comma(metrics.TotalFiles)
+	metrics.TotalBinsReadable = humanize.Comma(metrics.TotalBins)
+	metrics.TotalBytesReadable = humanize.Bytes(uint64(metrics.TotalBytes))
+	metrics.Unlock()
 
-	return info, nil
+	return nil
 }

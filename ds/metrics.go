@@ -1,30 +1,26 @@
 package ds
 
 import (
-	"fmt"
+	//"fmt"
 	"sync"
 )
 
 type Metrics struct {
-	//CurrentLogEntries int64 `json:"current_log_entries"`
-
-	//CurrentBytes         int64  `json:"current_bytes"`
-	//CurrentBytesReadable string `json:"current_bytes_readable"`
-	//CurrentFiles         int64  `json:"current_files"`
-	//CurrentFilesReadable string `json:"current_files_readable"`
-	//CurrentBins          int64  `json:"current_bins"`
-	//CurrentBinsReadable  string `json:"current_bins_readable"`
-
-	//FreeBytes         int64  `json:"-"`
-	//FreeBytesReadable string `json:"-"`
-
-	//TotalBytes         int64  `json:"total_bytes"`
-	//TotalBytesReadable string `json:"total_bytes_readable"`
-	//TotalFiles         int64  `json:"total_files"`
-	//TotalFilesReadable string `json:"total_files_readable"`
-	//TotalBins          int64  `json:"total_bins"`
-	//TotalBinsReadable  string `json:"total_bins_readable"`
-
+	CurrentLogEntries         int64  `json:"current_log_entries"`
+	CurrentBytes              int64  `json:"current_bytes"`
+	CurrentBytesReadable      string `json:"current_bytes_readable"`
+	CurrentFiles              int64  `json:"current_files"`
+	CurrentFilesReadable      string `json:"current_files_readable"`
+	CurrentBins               int64  `json:"current_bins"`
+	CurrentBinsReadable       string `json:"current_bins_readable"`
+	FreeBytes                 int64  `json:"-"`
+	FreeBytesReadable         string `json:"-"`
+	TotalBytes                int64  `json:"total_bytes"`
+	TotalBytesReadable        string `json:"total_bytes_readable"`
+	TotalFiles                int64  `json:"total_files"`
+	TotalFilesReadable        string `json:"total_files_readable"`
+	TotalBins                 int64  `json:"total_bins"`
+	TotalBinsReadable         string `json:"total_bins_readable"`
 	BytesFilebinToStorage     uint64 `json:"bytes-filebin-to-storage"`
 	BytesStorageToFilebin     uint64 `json:"bytes-storage-to-filebin"`
 	BytesFilebinToClient      uint64 `json:"bytes-filebin-to-client"`
@@ -43,8 +39,6 @@ type Metrics struct {
 	StorageUploadInProgress   uint64 `json:"storage-uploads-in-progress"`
 	ArchiveDownloadInProgress uint64 `json:"archive-downloads-in-progress"`
 	sync.Mutex
-	//LastUpload         time.Time    `json:"updated_at"`
-	//LastUpload         time.Time    `json:"updated_at"`
 }
 
 func (m *Metrics) IncrBytesFilebinToClient(value uint64) {
@@ -165,28 +159,4 @@ func (m *Metrics) DecrStorageUploadInProgress() {
 	m.Lock()
 	m.StorageUploadInProgress = m.StorageUploadInProgress - 1
 	m.Unlock()
-}
-
-func (m *Metrics) Prometheus() string {
-	var output string
-	m.Lock()
-	output = fmt.Sprintf("BytesFilebinToStorage %d\n", m.BytesFilebinToStorage)
-	output = output + fmt.Sprintf("BytesStorageToFilebin %d\n", m.BytesStorageToFilebin)
-	output = output + fmt.Sprintf("BytesFilebinToClient %d\n", m.BytesFilebinToClient)
-	output = output + fmt.Sprintf("BytesClientToFilebin %d\n", m.BytesClientToFilebin)
-	output = output + fmt.Sprintf("BytesStorageToClient %d\n", m.BytesStorageToClient)
-	output = output + fmt.Sprintf("FileUploadCount %d\n", m.FileUploadCount)
-	output = output + fmt.Sprintf("FileDownloadCount %d\n", m.FileDownloadCount)
-	output = output + fmt.Sprintf("FileDeleteCount %d\n", m.FileDeleteCount)
-	output = output + fmt.Sprintf("BinDeleteCount %d\n", m.BinDeleteCount)
-	output = output + fmt.Sprintf("NewBinCount %d\n", m.NewBinCount)
-	output = output + fmt.Sprintf("TarArchiveDownloadCount %d\n", m.TarArchiveDownloadCount)
-	output = output + fmt.Sprintf("ZipArchiveDownloadCount %d\n", m.ZipArchiveDownloadCount)
-	output = output + fmt.Sprintf("FrontPageViewCount %d\n", m.FrontPageViewCount)
-	output = output + fmt.Sprintf("BinPageViewCount %d\n", m.BinPageViewCount)
-	output = output + fmt.Sprintf("FileUploadsInProgress %d\n", m.FileUploadInProgress)
-	output = output + fmt.Sprintf("StorageUploadsInProgress %d\n", m.StorageUploadInProgress)
-	output = output + fmt.Sprintf("ArchiveDownloadsInProgress %d\n", m.ArchiveDownloadInProgress)
-	m.Unlock()
-	return output
 }

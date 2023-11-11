@@ -202,7 +202,7 @@ func main() {
 		os.Exit(2)
 	}
 	config.LimitStorageReadable = humanize.Bytes(config.LimitStorageBytes)
-	metrics := &ds.Metrics{}
+	metrics := ds.Metrics{}
 
 	h := &HTTP{
 		staticBox:   &staticBox,
@@ -211,7 +211,7 @@ func main() {
 		s3:          &s3conn,
 		geodb:       &geodb,
 		config:      config,
-		metrics:     metrics,
+		metrics:     &metrics,
 	}
 
 	if err := h.Init(); err != nil {
