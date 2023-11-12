@@ -145,6 +145,10 @@ The password used for authentication to the `/metrics` endpoint for Prometheus m
 
 The string used as the identification of the filebin instance in the Prometheus metrics. By default, this string is the `$HOSTNAME` environment variable.
 
+#### `--metrics-proxy-url` (default: not set)
+
+When this argument is set, Filebin will fetch the content from the URL specified and merge it with its own output on the `/metrics` endpoint. This can be useful when running another Prometheus exporter in the same operating system instance, for example to capture system metrics.
+
 #### `--mmdb string` (default: not set)
 
 The path to an mmdb formatted geoip database like GeoLite2-City.mmdb. This is optional.
