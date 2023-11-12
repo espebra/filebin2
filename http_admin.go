@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/dustin/go-humanize"
+	//"github.com/dustin/go-humanize"
 	"github.com/gorilla/mux"
 	"io"
 	"net/http"
@@ -20,29 +20,29 @@ func (h *HTTP) viewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	type Data struct {
 		//Bins Bins `json:"bins"`
 		//Files []ds.File `json:"files"`
-		BucketInfo s3.BucketInfo `json:"bucketinfo"`
-		Page       string        `json:"page"`
-		DBInfo     ds.Info       `json:"db_info"`
-		DBStats    sql.DBStats   `json:"db_stats"`
-		Config     ds.Config     `json:"-"`
+		BucketMetrics s3.BucketMetrics `json:"bucketmetrics"`
+		Page          string           `json:"page"`
+		DBMetrics     ds.Metrics       `json:"db_metrics"`
+		DBStats       sql.DBStats      `json:"db_stats"`
+		Config        ds.Config        `json:"-"`
 	}
 	var data Data
 	data.Config = *h.config
 	data.Page = "about"
-	data.BucketInfo = h.s3.GetBucketInfo()
-	info, err := h.dao.Info().GetInfo()
-	if err != nil {
-		fmt.Printf("Unable to GetInfo(): %s\n", err.Error())
-		http.Error(w, "Errno 326", http.StatusInternalServerError)
-		return
-	}
-	data.DBInfo = info
-	freeBytes := int64(h.config.LimitStorageBytes) - info.CurrentBytes
-	if freeBytes < 0 {
-		freeBytes = 0
-	}
-	data.DBInfo.FreeBytes = freeBytes
-	data.DBInfo.FreeBytesReadable = humanize.Bytes(uint64(freeBytes))
+	//data.BucketMetrics = h.s3.GetBucketMetrics()
+	//err := h.dao.Metrics().GetMetrics(h.metrics)
+	//if err != nil {
+	//	fmt.Printf("Unable to GetMetrics(): %s\n", err.Error())
+	//	http.Error(w, "Errno 326", http.StatusInternalServerError)
+	//	return
+	//}
+	//data.DBMetrics = metrics
+	//freeBytes := int64(h.config.LimitStorageBytes) - metrics.CurrentBytes
+	//if freeBytes < 0 {
+	//	freeBytes = 0
+	//}
+	//data.DBMetrics.FreeBytes = freeBytes
+	//data.DBMetrics.FreeBytesReadable = humanize.Bytes(uint64(freeBytes))
 
 	data.DBStats = h.dao.Stats()
 
@@ -77,6 +77,101 @@ func (h *HTTP) viewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *HTTP) viewAdminFiles(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	inputLimit := params["limit"]
+
+	// default
+	limit := 20
+
+	i, err := strconv.Atoi(inputLimit)
+	if err == nil {
+		if i >= 1 && i <= 500 {
+			limit = i
+		}
+	}
+
+	type Files struct {
+		ByChecksum []ds.FileByChecksum `json:"by-checksum"`
+	}
+
+	type Data struct {
+		Files Files `json:"files"`
+		Limit int   `json:"limit"`
+	}
+	var data Data
+	data.Limit = limit
+
+	filesByChecksum, err := h.dao.File().FilesByChecksum(limit)
+	if err != nil {
+		fmt.Printf("Unable to FilesByChecksum(): %s\n", err.Error())
+		http.Error(w, "Errno 493", http.StatusInternalServerError)
+		return
+	}
+
+	var files Files
+	files.ByChecksum = filesByChecksum
+
+	data.Files = files
+
+	if r.Header.Get("accept") == "application/json" {
+		w.Header().Set("Content-Type", "application/json")
+		out, err := json.MarshalIndent(data, "", "    ")
+		if err != nil {
+			fmt.Printf("Failed to parse json: %s\n", err.Error())
+			http.Error(w, "Errno 201", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(200)
+		io.WriteString(w, string(out))
+	} else {
+		if err := h.templates.ExecuteTemplate(w, "admin_files", data); err != nil {
+			fmt.Printf("Failed to execute template: %s\n", err.Error())
+			http.Error(w, "Errno 203", http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+func (h *HTTP) viewAdminFile(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	inputSHA256 := params["sha256"]
+
+	type Data struct {
+		Files  []ds.File `json:"files"`
+		SHA256 string    `json:"sha256"`
+	}
+	var data Data
+	data.SHA256 = inputSHA256
+
+	fileByChecksum, err := h.dao.File().FileByChecksum(inputSHA256)
+	if err != nil {
+		fmt.Printf("Unable to FileByChecksum(): %s\n", err.Error())
+		http.Error(w, "Errno 494", http.StatusInternalServerError)
+		return
+	}
+
+	data.Files = fileByChecksum
+
+	if r.Header.Get("accept") == "application/json" {
+		w.Header().Set("Content-Type", "application/json")
+		out, err := json.MarshalIndent(data, "", "    ")
+		if err != nil {
+			fmt.Printf("Failed to parse json: %s\n", err.Error())
+			http.Error(w, "Errno 201", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(200)
+		io.WriteString(w, string(out))
+	} else {
+		if err := h.templates.ExecuteTemplate(w, "admin_file_by_checksum", data); err != nil {
+			fmt.Printf("Failed to execute template: %s\n", err.Error())
+			http.Error(w, "Errno 203", http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
 func (h *HTTP) viewAdminBins(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	inputLimit := params["limit"]
@@ -102,10 +197,10 @@ func (h *HTTP) viewAdminBins(w http.ResponseWriter, r *http.Request) {
 	type Data struct {
 		Bins Bins `json:"bins"`
 		//Files []ds.File `json:"files"`
-		BucketInfo s3.BucketInfo `json:"bucketinfo"`
-		Page       string        `json:"page"`
-		DBInfo     ds.Info       `json:"db_info"`
-		Limit      int           `json:"limit"`
+		BucketMetrics s3.BucketMetrics `json:"bucketmetrics"`
+		Page          string           `json:"page"`
+		DBMetrics     ds.Metrics       `json:"db_metrics"`
+		Limit         int              `json:"limit"`
 	}
 	var data Data
 	data.Limit = limit
@@ -181,20 +276,20 @@ func (h *HTTP) viewAdminBinsAll(w http.ResponseWriter, r *http.Request) {
 	type Data struct {
 		Bins Bins `json:"bins"`
 		//Files []ds.File `json:"files"`
-		BucketInfo s3.BucketInfo `json:"bucketinfo"`
-		Page       string        `json:"page"`
-		DBInfo     ds.Info       `json:"db_info"`
+		BucketMetrics s3.BucketMetrics `json:"bucketmetrics"`
+		Page          string           `json:"page"`
+		DBMetrics     ds.Metrics       `json:"db_metrics"`
 	}
 	var data Data
 	//data.Page = "about"
-	//data.BucketInfo = h.s3.GetBucketInfo()
-	//info, err := h.dao.Info().GetInfo()
+	//data.BucketMetrics = h.s3.GetBucketMetrics()
+	//metrics, err := h.dao.Metrics().GetMetrics()
 	//if err != nil {
-	//	fmt.Printf("Unable to GetInfo(): %s\n", err.Error())
+	//	fmt.Printf("Unable to GetMetrics(): %s\n", err.Error())
 	//	http.Error(w, "Errno 326", http.StatusInternalServerError)
 	//	return
 	//}
-	//data.DBInfo = info
+	//data.DBMetrics = metrics
 
 	binsAvailable, err := h.dao.Bin().GetAll()
 	if err != nil {
@@ -266,7 +361,7 @@ func (h *HTTP) viewAdminCleanup(w http.ResponseWriter, r *http.Request) {
 	type Data struct {
 		Objects []string `json:"objects"`
 		////Files []ds.File `json:"files"`
-		//BucketInfo s3.BucketInfo `json:"bucketinfo"`
+		//BucketMetrics s3.BucketMetrics `json:"bucketmetrics"`
 		//Page       string        `json:"page"`
 		Bins []ds.Bin `json:"bins"`
 	}

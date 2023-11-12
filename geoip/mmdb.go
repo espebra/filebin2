@@ -36,7 +36,7 @@ func Init(path string) (DAO, error) {
 		return dao, err
 	}
 	dao = DAO{db: db}
-	fmt.Printf("Loading mmdb\n")
+	fmt.Printf("Loading mmdb: %s\n", path)
 	return dao, nil
 }
 

@@ -1,0 +1,56 @@
+{{ define "metrics" }}# HELP filebin_data_transfer_bytes Approximate data transfer in bytes
+# TYPE filebin_data_transfer_bytes counter
+filebin_data_transfer_bytes{id="{{ .Metrics.Id }}",direction="client_to_filebin"} {{ .Metrics.BytesClientToFilebin }}
+filebin_data_transfer_bytes{id="{{ .Metrics.Id }}",direction="filebin_to_storage"} {{ .Metrics.BytesFilebinToStorage }}
+filebin_data_transfer_bytes{id="{{ .Metrics.Id }}",direction="storage_to_client"} {{ .Metrics.BytesStorageToClient }}
+filebin_data_transfer_bytes{id="{{ .Metrics.Id }}",direction="storage_to_filebin"} {{ .Metrics.BytesStorageToFilebin }}
+filebin_data_transfer_bytes{id="{{ .Metrics.Id }}",direction="filebin_to_client"} {{ .Metrics.BytesFilebinToClient }}
+
+# HELP filebin_file_operations Number of file operations
+# TYPE filebin_file_operations counter
+filebin_file_operations{id="{{ .Metrics.Id }}",type="upload"} {{ .Metrics.FileUploadCount }}
+filebin_file_operations{id="{{ .Metrics.Id }}",type="download"} {{ .Metrics.FileDownloadCount }}
+filebin_file_operations{id="{{ .Metrics.Id }}",type="delete"} {{ .Metrics.FileDeleteCount }}
+
+# HELP filebin_bin_operations Number of bin operations
+# TYPE filebin_bin_operations counter
+filebin_bin_operations{id="{{ .Metrics.Id }}",type="delete"} {{ .Metrics.BinDeleteCount }}
+filebin_bin_operations{id="{{ .Metrics.Id }}",type="create"} {{ .Metrics.NewBinCount }}
+
+# HELP archive_downloads Number of archive downloads
+# TYPE archive_downloads counter
+filebin_archive_downloads{id="{{ .Metrics.Id }}",format="tar"} {{ .Metrics.TarArchiveDownloadCount }}
+filebin_archive_downloads{id="{{ .Metrics.Id }}",format="zip"} {{ .Metrics.ZipArchiveDownloadCount }}
+
+# HELP filebin_page_views Number of page views
+# TYPE filebin_page_views counter
+filebin_page_views{id="{{ .Metrics.Id }}",page="front"} {{ .Metrics.FrontPageViewCount }}
+filebin_page_views{id="{{ .Metrics.Id }}",page="bin"} {{ .Metrics.BinPageViewCount }}
+
+# HELP filebin_operations_in_progress Number of file uploads from clients to filebin currently in progress
+# TYPE filebin_operations_in_progress gauge
+filebin_operations_in_progress{id="{{ .Metrics.Id }}",type="file_upload"} {{ .Metrics.FileUploadInProgress }}
+filebin_operations_in_progress{id="{{ .Metrics.Id }}",type="storage_upload"} {{ .Metrics.StorageUploadInProgress }}
+filebin_operations_in_progress{id="{{ .Metrics.Id }}",type="archive_download"} {{ .Metrics.ArchiveDownloadInProgress }}
+
+# HELP filebin_transactions Number of transactions logged in the database
+# TYPE filebin_transactions gauge
+filebin_transactions{id="{{ .Metrics.Id }}"} {{ .Metrics.CurrentLogEntries }}
+
+# HELP filebin_storage_bytes The number of bytes consumed by the files in storage
+# TYPE filebin_storage_bytes gauge
+filebin_storage_bytes{id="{{ .Metrics.Id }}",type="used"} {{ .Metrics.CurrentBytes }}
+filebin_storage_bytes{id="{{ .Metrics.Id }}",type="limit"} {{ .Metrics.LimitBytes }}
+
+# HELP filebin_files The number of files in storage
+# TYPE filebin_files gauge
+filebin_files{id="{{ .Metrics.Id }}"} {{ .Metrics.CurrentFiles }}
+
+# HELP filebin_bins The number of bins active
+# TYPE filebin_bins gauge
+filebin_bins{id="{{ .Metrics.Id }}"} {{ .Metrics.CurrentBins }}
+
+# Proxied /metrics endpoint ({{ .ProxyURL }}) start
+{{ .Proxy | unescapeHTML }}
+# Proxied /metrics endpoint end
+{{ end }}

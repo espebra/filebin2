@@ -1,0 +1,57 @@
+{{ define "admin_file_by_checksum" }}<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <link rel="icon" href="/static/img/favicon.png">
+        <link rel="stylesheet" href="/static/css/bootstrap.min.css"/>
+        <link rel="stylesheet" href="/static/css/fontawesome.all.min.css"/>
+        <link rel="stylesheet" href="/static/css/custom.css"/>
+        <script src="/static/js/sorttable.js"></script>
+        <script src="/static/js/filebin2.js"></script>
+        <title>Filebin | File by SHA25 checksum</title>
+    </head>
+    <body class="container-fluid">
+        <a id="top"></a>
+
+        {{template "admin_bar" .}}
+
+        <h1>File by SHA256 checksum</h1>
+	<p><code>{{ .SHA256 }}</code></p>
+
+        <table class="table sortable">
+            <tr>
+                <th>Filename</th>
+                <th>Bin</th>
+                <th>Content type</th>
+                <th>Size</th>
+                <th>Uploaded</th>
+                <th>Deleted</th>
+                <th>File downloads</th>
+                <th>File updates</th>
+                <th>In storage</th>
+            </tr>
+            {{ range $index, $value := .Files }}
+                {{ if eq .InStorage true }}
+                        <tr class="table">
+                {{ else }}
+                        <tr class="table-danger">
+                {{ end }}
+                    <td><a href="/{{ .Bin }}/{{ .Filename }}">{{ .Filename }}</a></td>
+                    <td><a href="/{{ .Bin }}">{{ .Bin }}</a></td>
+                    <td>{{ .Mime }}</td>
+                    <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
+                    <td sorttable_customkey="{{ .UpdatedAt }}">{{ .UpdatedAtRelative }}</td>
+                    <td sorttable_customkey="{{ .DeletedAt }}">{{ .DeletedAtRelative }}</td>
+                    <td>{{ .Downloads }}</td>
+                    <td>{{ .Updates }}</td>
+                    <td>{{ .InStorage }}</td>
+                </tr>
+            {{ end }}
+        </table>
+
+        <script src="/static/js/popper.min.js"></script>
+        <script src="/static/js/bootstrap.min.js"></script>
+    </body>
+</html>
+{{ end }}

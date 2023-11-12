@@ -92,6 +92,8 @@ func (h *HTTP) viewBin(w http.ResponseWriter, r *http.Request) {
 		code = 404
 	}
 
+	h.metrics.IncrBinPageViewCount()
+
 	if r.Header.Get("accept") == "application/json" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(code)
@@ -144,6 +146,9 @@ func (h *HTTP) binQR(w http.ResponseWriter, r *http.Request) {
 func (h *HTTP) archive(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=0")
 	w.Header().Set("X-Robots-Tag", "noindex")
+
+	h.metrics.IncrArchiveDownloadInProgress()
+	defer h.metrics.DecrArchiveDownloadInProgress()
 
 	params := mux.Vars(r)
 	inputBin := params["bin"]
@@ -205,11 +210,13 @@ func (h *HTTP) archive(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer fp.Close()
+			h.metrics.IncrBytesStorageToFilebin(file.Bytes)
 
 			bytes, err := io.Copy(ze, fp)
 			if err != nil {
 				fmt.Println(err)
 			}
+			h.metrics.IncrBytesFilebinToClient(uint64(bytes))
 			fmt.Printf("Added file %s at %s (%d bytes) to the zip archive for bin %s\n", file.Filename, humanize.Bytes(uint64(bytes)), bytes, bin.Id)
 		}
 		if err := zw.Close(); err != nil {
@@ -218,6 +225,7 @@ func (h *HTTP) archive(w http.ResponseWriter, r *http.Request) {
 		if err := h.dao.Bin().RegisterDownload(&bin); err != nil {
 			fmt.Printf("Unable to update bin %q: %s\n", inputBin, err.Error())
 		}
+		h.metrics.IncrZipArchiveDownloadCount()
 		return
 	} else if inputFormat == "tar" {
 		w.Header().Set("Content-Type", "application/x-tar")
@@ -241,11 +249,13 @@ func (h *HTTP) archive(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer fp.Close()
+			h.metrics.IncrBytesStorageToFilebin(file.Bytes)
 
 			bytes, err := io.Copy(tw, fp)
 			if err != nil {
 				fmt.Println(err)
 			}
+			h.metrics.IncrBytesFilebinToClient(uint64(bytes))
 			fmt.Printf("Added file %s at %s (%d bytes) to the tar archive for bin %s\n", file.Filename, humanize.Bytes(uint64(bytes)), bytes, bin.Id)
 		}
 		if err := tw.Close(); err != nil {
@@ -254,6 +264,7 @@ func (h *HTTP) archive(w http.ResponseWriter, r *http.Request) {
 		if err := h.dao.Bin().RegisterDownload(&bin); err != nil {
 			fmt.Printf("Unable to update bin %q: %s\n", inputBin, err.Error())
 		}
+		h.metrics.IncrTarArchiveDownloadCount()
 		return
 	}
 }
@@ -289,6 +300,7 @@ func (h *HTTP) deleteBin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.metrics.IncrBinDeleteCount()
 	http.Error(w, "Bin deleted successfully ", http.StatusOK)
 	return
 }
@@ -368,6 +380,7 @@ func (h *HTTP) approveBin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.metrics.IncrBinDeleteCount()
 	http.Error(w, "Bin approved successfully.", http.StatusOK)
 	return
 }

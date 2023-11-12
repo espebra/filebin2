@@ -104,6 +104,13 @@ func (h *HTTP) getFile(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "")
 
 	fmt.Printf("Presigned download of file %q (%s) from bin %q in %.3fs (%d downloads)\n", inputFilename, humanize.Bytes(file.Bytes), inputBin, time.Since(t0).Seconds(), file.Downloads)
+
+	// Increment the byte counter here
+	// Assume that the client will download the entire file from S3. This will
+	// not always be the case.
+	h.metrics.IncrBytesStorageToClient(file.Bytes)
+	h.metrics.IncrFileDownloadCount()
+
 	return
 }
 
@@ -115,6 +122,9 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	inputBin := params["bin"]
 	inputFilename := params["filename"]
+
+	h.metrics.IncrFileUploadInProgress()
+	defer h.metrics.DecrFileUploadInProgress()
 
 	// Deprecated: This block is here to be compatible with the clients that
 	// are written for https://github.com/espebra/filebin, meaning clients that
@@ -185,6 +195,8 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// TODO: Execute new bin created trigger
+
+		h.metrics.IncrNewBinCount()
 	}
 
 	if bin.IsWritable() == false {
@@ -206,18 +218,11 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	//info, err := h.dao.Info().GetInfo()
-	//if err != nil {
-	//	fmt.Printf("Unable to GetInfo(): %s\n", err.Error())
-	//	http.Error(w, "Errno 326", http.StatusInternalServerError)
-	//	return
-	//}
-
 	// Storage limit
 	// 0 disables the limit
 	// >= 1 enforces a limit, in number of gigabytes stored
 	if h.config.LimitStorageBytes > 0 {
-		totalBytesConsumed := h.dao.Info().StorageBytesAllocated()
+		totalBytesConsumed := h.dao.Metrics().StorageBytesAllocated()
 		if totalBytesConsumed >= h.config.LimitStorageBytes {
 			h.Error(w, r, fmt.Sprintf("Storage limit reached (currently consuming %s) when trying to upload file %q to bin %q", humanize.Bytes(totalBytesConsumed), inputFilename, inputBin), "Insufficient storage, please retry later\n", 633, http.StatusInsufficientStorage)
 			return
@@ -342,6 +347,9 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	retryLimit := 3
 	retryCounter := 1
 
+	h.metrics.IncrStorageUploadInProgress()
+	defer h.metrics.DecrStorageUploadInProgress()
+
 	for {
 		fp.Seek(0, 0)
 		err := h.s3.PutObject(file.Bin, file.Filename, fp, nBytes)
@@ -396,6 +404,11 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Printf("Uploaded filename %q (%s) to bin %q (db in %.3fs, buffered in %.3fs, checksum in %.3fs, stored in %.3fs, total %.3fs)\n", file.Filename, humanize.Bytes(file.Bytes), bin.Id, t1.Sub(t0).Seconds(), t2.Sub(t1).Seconds(), t3.Sub(t2).Seconds(), t4.Sub(t3).Seconds(), t4.Sub(t0).Seconds())
+
+	// Metrics
+	h.metrics.IncrFileUploadCount()
+	h.metrics.IncrBytesClientToFilebin(file.Bytes)
+	h.metrics.IncrBytesFilebinToStorage(file.Bytes)
 
 	type Data struct {
 		Bin  ds.Bin  `json:"bin"`
@@ -472,6 +485,7 @@ func (h *HTTP) deleteFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.metrics.IncrFileDeleteCount()
 	http.Error(w, "File deleted successfully", http.StatusOK)
 	return
 }

@@ -1,0 +1,66 @@
+{{ define "admin_files" }}<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <link rel="icon" href="/static/img/favicon.png">
+        <link rel="stylesheet" href="/static/css/bootstrap.min.css"/>
+        <link rel="stylesheet" href="/static/css/fontawesome.all.min.css"/>
+        <link rel="stylesheet" href="/static/css/custom.css"/>
+        <script src="/static/js/sorttable.js"></script>
+        <script src="/static/js/filebin2.js"></script>
+        <title>Filebin | Files</title>
+    </head>
+    <body class="container-fluid">
+        <a id="top"></a>
+
+        {{template "admin_bar" .}}
+
+        <h1>Top {{ .Limit }} files</h1>
+
+        <nav class="navbar navbar-expand-lg bg-light">
+          <div class="container-fluid">
+            <div class="navbar-nav">
+              <a class="nav-link" href="#duplicates"><span class="btn btn-primary">By duplication count</span></a>
+<!--
+              <a class="nav-link" href="#created"><span class="btn btn-primary">By created at</span></a>
+              <a class="nav-link" href="#bytes"><span class="btn btn-primary">By bytes in total</span></a>
+              <a class="nav-link" href="#files"><span class="btn btn-primary">By file count</span></a>
+              <a class="nav-link" href="#downloads"><span class="btn btn-primary">By download count</span></a>
+-->
+            </div>
+          </div>
+        </nav>
+
+        <a id="duplicates"></a>
+        <div class="text-end"><small><a href="#top">Top</a></small></div>
+        <h2>By duplication count</h2>
+
+        <table class="table sortable">
+            <tr>
+                <th>Duplicates</th>
+                <th>SHA256 checksum</th>
+                <th>Mime</th>
+                <th>Bytes each</th>
+                <th>Bytes total</th>
+                <th>Downloads total</th>
+                <th>Updates total</th>
+            </tr>
+            {{ range $index, $value := .Files.ByChecksum }}
+                <tr>
+                    <td>{{ .Count }}</td>
+                    <td class="table-light"><code><a href="/admin/file/{{ .SHA256 }}">{{ .SHA256 }}</a></code></td>
+                    <td>{{ .Mime }}</td>
+                    <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
+                    <td sorttable_customkey="{{ .BytesTotal }}">{{ .BytesTotalReadable }}</td>
+                    <td>{{ .DownloadsTotal }}</td>
+                    <td>{{ .UpdatesTotal }}</td>
+                </tr>
+            {{ end }}
+        </table>
+
+        <script src="/static/js/popper.min.js"></script>
+        <script src="/static/js/bootstrap.min.js"></script>
+    </body>
+</html>
+{{ end }}

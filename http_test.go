@@ -81,12 +81,14 @@ func TestMain(m *testing.M) {
 		HttpPort:             testHTTPPort,
 		RejectFileExtensions: []string{"illegal1", "illegal2"},
 	}
+	metrics := ds.Metrics{}
 	h := &HTTP{
 		staticBox:   &staticBox,
 		templateBox: &templateBox,
 		dao:         &dao,
 		s3:          &s3ao,
 		config:      &c,
+		metrics:     &metrics,
 	}
 	if err := h.Init(); err != nil {
 		fmt.Printf("Unable to start the HTTP server: %s\n", err.Error())

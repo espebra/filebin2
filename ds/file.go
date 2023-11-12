@@ -49,3 +49,15 @@ func (f *File) IsDeleted() bool {
 	}
 	return false
 }
+
+type FileByChecksum struct {
+	SHA256             string `json:"sha256"`
+	Count              int    `json:"count"`
+	Mime               string `json:"content-type"`
+	Bytes              uint64 `json:"bytes"`
+	BytesReadable      string `json:"bytes_readable"`
+	BytesTotal         uint64 `json:"bytes_total"`
+	BytesTotalReadable string `json:"bytes_total_readable"`
+	DownloadsTotal     uint64 `json:"downloads_total"`
+	UpdatesTotal       uint64 `json:"updates_total"`
+}
