@@ -250,6 +250,9 @@ func (h *HTTP) ParseTemplates() *template.Template {
 		"plus": func(a uint64, b uint64) uint64 {
 			return a + b
 		},
+		"unescapeHTML": func(s string) template.HTML {
+			return template.HTML(s)
+		},
 	}
 
 	templ := template.New("").Funcs(fns)

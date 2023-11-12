@@ -67,6 +67,7 @@ var (
 	metricsUsernameFlag = flag.String("metrics-username", "", "Metrics username")
 	metricsPasswordFlag = flag.String("metrics-password", "", "Metrics password")
 	metricsIdFlag       = flag.String("metrics-id", os.Getenv("METRICS_ID"), "Metrics instance identification")
+	metricsProxyURLFlag = flag.String("metrics-proxy-url", "", "URL to another Prometheus exporter that we should proxy")
 
 	// Slack integration
 	slackSecretFlag  = flag.String("slack-secret", "", "Slack secret (currently used to approve new bins via Slack if manual approval is enabled)")
@@ -114,6 +115,14 @@ func main() {
 	}
 	if *metricsIdFlag == "" {
 		*metricsIdFlag = os.Getenv("HOSTNAME")
+	}
+
+	if *metricsProxyURLFlag != "" {
+		_, err := url.Parse(*metricsProxyURLFlag)
+		if err != nil {
+			fmt.Printf("Unable to parse --metrics-proxy-url: %s\n", err.Error())
+			os.Exit(2)
+		}
 	}
 
 	// mmdb path
@@ -184,6 +193,7 @@ func main() {
 		AdminUsername:        *adminUsernameFlag,
 		MetricsPassword:      *metricsPasswordFlag,
 		MetricsUsername:      *metricsUsernameFlag,
+		MetricsProxyURL:      *metricsProxyURLFlag,
 		AllowRobots:          *allowRobotsFlag,
 		BaseUrl:              *u,
 		Expiration:           *expirationFlag,
