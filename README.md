@@ -225,7 +225,7 @@ Directory for temporary files for upload and download (default "`/tmp`").
 
 ### Grafana and Prometheus
 
-Filebin2 comes with a `/metrics` endpoint that is compatible with Prometheus. There is an [example dashboard](integrations/filebin.json) that visualizes this data.
+Filebin2 comes with a `/metrics` endpoint that is compatible with Prometheus. There is an [example dashboard](integrations/grafana/filebin.json) that visualizes this data.
 
 ![Dashboard](integrations/grafana/screenshot.png)
 
