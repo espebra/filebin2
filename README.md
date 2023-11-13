@@ -223,6 +223,12 @@ Directory for temporary files for upload and download (default "`/tmp`").
 
 ## Integrations
 
+### Grafana and Prometheus
+
+Filebin2 comes with a `/metrics` endpoint that is compatible with Prometheus. There is an [example dashboard](integrations/filebin.json) that visualizes this data.
+
+![Dashboard](integrations/grafana/screenshot.png)
+
 ### Slack
 
 This integration may be useful if manual approval is required (see `--manual-approval`). The integration allows members of a Slack channel to list the recently updated bins and approve specific bins directly in the Slack channel using slash commands. The slash commands available are:
