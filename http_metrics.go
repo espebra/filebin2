@@ -1,39 +1,39 @@
 package main
 
 import (
-	//"bytes"
-	//"crypto/hmac"
-	//"crypto/sha256"
-	//"encoding/hex"
-	"fmt"
 	"io"
-	//"io/ioutil"
-	"net/http"
-	//"strconv"
-	//"strings"
-	"github.com/espebra/filebin2/ds"
+	"fmt"
 	"time"
+	"net/http"
+	"github.com/espebra/filebin2/ds"
 )
 
 func (h *HTTP) viewMetrics(w http.ResponseWriter, r *http.Request) {
-	// Interpret empty credentials as not enabled, so reject early in this case
-
 	// If metrics are not enabled, exit early
 	if !h.config.Metrics {
-		http.Error(w, "Metrics endpoint not enabled.", http.StatusForbidden)
+		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 
-	if h.config.MetricsAuth == "basic" {
-		username, password, ok := r.BasicAuth()
-		if ok == false || username != h.config.MetricsUsername || password != h.config.MetricsPassword {
-			time.Sleep(3 * time.Second)
-			w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
+	// Check that authentication is enabled
+	if h.config.MetricsAuth != "" {
+		if h.config.MetricsAuth == "basic" {
+			username, password, ok := r.BasicAuth()
+			if ok == false || username != h.config.MetricsUsername || password != h.config.MetricsPassword {
+				time.Sleep(3 * time.Second)
+				w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+		} else {
+			// If an unknown authentication mechanism is specified,
+			// reject the request.
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 	}
 
+	// Get metrics from the database
 	err := h.dao.Metrics().UpdateMetrics(h.metrics)
 	if err != nil {
 		fmt.Printf("Unable to UpdateMetrics(): %s\n", err.Error())
@@ -56,7 +56,9 @@ func (h *HTTP) viewMetrics(w http.ResponseWriter, r *http.Request) {
 	data.Metrics = *h.metrics
 	data.ProxyURL = h.config.MetricsProxyURL
 
+	// Fetch metrics from another URL
 	if h.config.MetricsProxyURL != "" {
+		// XXX: Add support for timeout
 		resp, err := http.Get(h.config.MetricsProxyURL)
 		if err != nil {
 			fmt.Printf("Metrics proxy: Unable to GET %s: %s\n", h.config.MetricsProxyURL, err.Error())
