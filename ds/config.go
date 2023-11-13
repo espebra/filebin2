@@ -19,6 +19,8 @@ type Config struct {
 	AdminPassword        string
 	MetricsUsername      string
 	MetricsPassword      string
+	Metrics              bool
+	MetricsAuth          string
 	MetricsProxyURL      string
 	SlackSecret          string
 	SlackDomain          string

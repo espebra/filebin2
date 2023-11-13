@@ -141,6 +141,14 @@ The username used for authentication to the `/metrics` endpoint for Prometheus m
 
 The password used for authentication to the `/metrics` endpoint for Prometheus metrics. If the username is not set, this endpoint is disabled.
 
+#### `--metrics` (default: false)
+
+Enables the `/metrics` endpoint. If this is not set, the endpoint will not return any metrics.
+
+#### `--metrics-auth` (default: not set)
+
+Enables authentication. Currently only basic auth is supported. If `--metrics-auth` or (env) `METRICS_AUTH` is set to `basic` basic auth will be in play. If not, the endpoint is open to the world.
+
 #### `--metrics-id` (default: hostname)
 
 The string used as the identification of the filebin instance in the Prometheus metrics. By default, this string is the `$HOSTNAME` environment variable.

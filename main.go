@@ -66,6 +66,8 @@ var (
 	adminPasswordFlag   = flag.String("admin-password", "", "Admin password")
 	metricsUsernameFlag = flag.String("metrics-username", "", "Metrics username")
 	metricsPasswordFlag = flag.String("metrics-password", "", "Metrics password")
+	metricsFlag   		= flag.Bool("metrics", false, "Enable the metrics endpoint")
+	metricsAuthFlag     = flag.String("metrics-auth", "", "Set the auth type for the metrics endpoint")
 	metricsIdFlag       = flag.String("metrics-id", os.Getenv("METRICS_ID"), "Metrics instance identification")
 	metricsProxyURLFlag = flag.String("metrics-proxy-url", "", "URL to another Prometheus exporter that we should proxy")
 
@@ -109,6 +111,9 @@ func main() {
 	}
 	if *metricsPasswordFlag == "" {
 		*metricsPasswordFlag = os.Getenv("METRICS_PASSWORD")
+	}
+	if *metricsAuthFlag == "" {
+		*metricsAuthFlag = os.Getenv("METRICS_AUTH")
 	}
 	if *slackSecretFlag == "" {
 		*slackSecretFlag = os.Getenv("SLACK_SECRET")
@@ -193,6 +198,8 @@ func main() {
 		AdminUsername:        *adminUsernameFlag,
 		MetricsPassword:      *metricsPasswordFlag,
 		MetricsUsername:      *metricsUsernameFlag,
+		Metrics:    	  	  *metricsFlag,
+		MetricsAuth:      	  *metricsAuthFlag,
 		MetricsProxyURL:      *metricsProxyURLFlag,
 		AllowRobots:          *allowRobotsFlag,
 		BaseUrl:              *u,
