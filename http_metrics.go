@@ -17,26 +17,21 @@ import (
 
 func (h *HTTP) viewMetrics(w http.ResponseWriter, r *http.Request) {
 	// Interpret empty credentials as not enabled, so reject early in this case
-	if h.config.MetricsUsername == "" {
-		http.Error(w, "Forbidden", http.StatusForbidden)
-		return
-	}
-	if h.config.MetricsPassword == "" {
-		http.Error(w, "Forbidden", http.StatusForbidden)
+
+	// If metrics are not enabled, exit early
+	if !h.config.Metrics {
+		http.Error(w, "Metrics endpoint not enabled.", http.StatusForbidden)
 		return
 	}
 
-	username, password, ok := r.BasicAuth()
-	if ok == false {
-		w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	if username != h.config.MetricsUsername || password != h.config.MetricsPassword {
-		time.Sleep(3 * time.Second)
-		w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
+	if h.config.MetricsAuth == "basic" {
+		username, password, ok := r.BasicAuth()
+		if ok == false || username != h.config.MetricsUsername || password != h.config.MetricsPassword {
+			time.Sleep(3 * time.Second)
+			w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
 	}
 
 	err := h.dao.Metrics().UpdateMetrics(h.metrics)

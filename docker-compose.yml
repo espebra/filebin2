@@ -50,6 +50,9 @@ services:
       - S3_SECRET_KEY=s3secretkey
       - ADMIN_USERNAME=admin
       - ADMIN_PASSWORD=changeme
+      - METRICS_USERNAME=foo
+      - METRICS_PASSWORD=bar
+      - METRICS_AUTH=basic
     expose:
       - "8080"
     ports:
