@@ -1,11 +1,11 @@
 package main
 
 import (
-	"io"
 	"fmt"
-	"time"
-	"net/http"
 	"github.com/espebra/filebin2/ds"
+	"io"
+	"net/http"
+	"time"
 )
 
 func (h *HTTP) viewMetrics(w http.ResponseWriter, r *http.Request) {
