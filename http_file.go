@@ -234,7 +234,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	fp, err := ioutil.TempFile(h.config.Tmpdir, "filebin")
 	// Defer removal of the tempfile to clean up partially uploaded files.
 	if err != nil {
-		h.Error(w, r, fmt.Sprintf("Failed to create temporary upload file %s: %s", fp.Name(), err.Error()), "Storage error", 124, http.StatusInternalServerError)
+		h.Error(w, r, fmt.Sprintf("Failed to create temporary upload file: %s", err.Error()), "Storage error", 124, http.StatusInternalServerError)
 		return
 	}
 	defer os.Remove(fp.Name())
