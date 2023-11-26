@@ -4,13 +4,6 @@ import (
 	"database/sql"
 	"embed"
 	"fmt"
-	"github.com/espebra/filebin2/dbl"
-	"github.com/espebra/filebin2/ds"
-	"github.com/espebra/filebin2/geoip"
-	"github.com/espebra/filebin2/s3"
-	"github.com/felixge/httpsnoop"
-	"github.com/gorilla/handlers"
-	"github.com/gorilla/mux"
 	"html/template"
 	"io"
 	"io/ioutil"
@@ -19,8 +12,17 @@ import (
 	"net/http/pprof"
 	"os"
 	"path"
-	//"strings"
+	"strings"
 	"time"
+
+	"github.com/espebra/filebin2/dbl"
+	"github.com/espebra/filebin2/ds"
+	"github.com/espebra/filebin2/geoip"
+	"github.com/espebra/filebin2/s3"
+
+	"github.com/felixge/httpsnoop"
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
 )
 
 type funcHandler func(http.ResponseWriter, *http.Request)
@@ -199,6 +201,9 @@ func (h *HTTP) Run() {
 }
 
 func (h *HTTP) Error(w http.ResponseWriter, r *http.Request, internal string, external string, errno int, statusCode int) {
+	w.Header().Set("Cache-Control", "max-age=1")
+	w.Header().Set("X-Robots-Tag", "noindex")
+
 	if internal != "" {
 		fmt.Printf("Errno %d: %q\n", errno, internal)
 	}
@@ -206,9 +211,33 @@ func (h *HTTP) Error(w http.ResponseWriter, r *http.Request, internal string, ex
 	// Disregard any request body there is
 	io.Copy(ioutil.Discard, r.Body)
 
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(statusCode)
-	io.WriteString(w, external)
+	type Data struct {
+		ds.Common
+		Text       string
+		ErrNo      int
+		StatusCode int
+	}
+
+	var data Data
+	data.Text = external
+	data.ErrNo = errno
+	data.StatusCode = statusCode
+
+	if strings.Contains(r.Header.Get("Accept"), "text/html") {
+		h.metrics.IncrErrorPageViewCount()
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(statusCode)
+		if err := h.templates.ExecuteTemplate(w, "error", data); err != nil {
+			fmt.Printf("Failed to execute template: %s\n", err.Error())
+			http.Error(w, "Errno 914", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(statusCode)
+		io.WriteString(w, external)
+	}
 	return
 }
 

@@ -26,6 +26,7 @@ filebin_archive_downloads{id="{{ .Metrics.Id }}",format="zip"} {{ .Metrics.ZipAr
 # TYPE filebin_page_views counter
 filebin_page_views{id="{{ .Metrics.Id }}",page="front"} {{ .Metrics.FrontPageViewCount }}
 filebin_page_views{id="{{ .Metrics.Id }}",page="bin"} {{ .Metrics.BinPageViewCount }}
+filebin_page_views{id="{{ .Metrics.Id }}",page="error"} {{ .Metrics.ErrorPageViewCount }}
 
 # HELP filebin_operations_in_progress Number of file uploads from clients to filebin currently in progress
 # TYPE filebin_operations_in_progress gauge

@@ -36,6 +36,7 @@ type Metrics struct {
 	ZipArchiveDownloadCount   uint64 `json:"zip-archive-download-count"`
 	FrontPageViewCount        uint64 `json:"front-page-view-count"`
 	BinPageViewCount          uint64 `json:"bin-page-view-count"`
+	ErrorPageViewCount        uint64 `json:"error-page-view-count"`
 	NewBinCount               uint64 `json:"new-bin-count"`
 	FileUploadInProgress      uint64 `json:"file-uploads-in-progress"`
 	StorageUploadInProgress   uint64 `json:"storage-uploads-in-progress"`
@@ -112,6 +113,12 @@ func (m *Metrics) IncrFrontPageViewCount() {
 func (m *Metrics) IncrBinPageViewCount() {
 	m.Lock()
 	m.BinPageViewCount = m.BinPageViewCount + 1
+	m.Unlock()
+}
+
+func (m *Metrics) IncrErrorPageViewCount() {
+	m.Lock()
+	m.ErrorPageViewCount = m.ErrorPageViewCount + 1
 	m.Unlock()
 }
 

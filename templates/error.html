@@ -1,4 +1,4 @@
-{{ define "message" }}<!doctype html>
+{{ define "error" }}<!doctype html>
 <html lang="en">
     <head>
         <meta charset="utf-8">
@@ -13,16 +13,16 @@
 
         {{ template "topbar" . }}
 
-        <h1 class="display-1">Filebin</h1>
+        <h1>Filebin</h1>
 
-        <p class="lead">
+        <div>
             {{ .Text }}
-        </p>
-
-        <p>
-            <a href="javascript:history.back()">Go Back</a>
-        </p>
+        </div>
  
+	<p></p>
+
+        {{ template "footer" . }}
+
         <script src="/static/js/popper.min.js"></script>
         <script src="/static/js/bootstrap.min.js"></script>
     </body>
