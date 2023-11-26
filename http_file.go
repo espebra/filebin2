@@ -42,7 +42,7 @@ func (h *HTTP) getFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if found == false {
-		h.Error(w, r, "", "The bin does not exist", 113, http.StatusNotFound)
+		h.Error(w, r, "", "The bin does not exist.", 113, http.StatusNotFound)
 		return
 	}
 

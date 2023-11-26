@@ -171,7 +171,7 @@ func (h *HTTP) archive(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if bin.IsReadable() == false {
-		h.Error(w, r, "", "This bin is no longer available", 202, http.StatusNotFound)
+		h.Error(w, r, "", "This bin is no longer available.", 202, http.StatusNotFound)
 		return
 	}
 
