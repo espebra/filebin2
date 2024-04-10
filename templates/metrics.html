@@ -14,6 +14,8 @@ filebin_file_operations{id="{{ .Metrics.Id }}",type="delete"} {{ .Metrics.FileDe
 
 # HELP filebin_bin_operations Number of bin operations
 # TYPE filebin_bin_operations counter
+filebin_bin_operations{id="{{ .Metrics.Id }}",type="ban"} {{ .Metrics.BinBanCount }}
+filebin_bin_operations{id="{{ .Metrics.Id }}",type="lock"} {{ .Metrics.BinLockCount }}
 filebin_bin_operations{id="{{ .Metrics.Id }}",type="delete"} {{ .Metrics.BinDeleteCount }}
 filebin_bin_operations{id="{{ .Metrics.Id }}",type="create"} {{ .Metrics.NewBinCount }}
 

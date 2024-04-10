@@ -32,6 +32,8 @@ type Metrics struct {
 	FileDownloadCount         uint64 `json:"file-download-count"`
 	FileDeleteCount           uint64 `json:"file-delete-count"`
 	BinDeleteCount            uint64 `json:"bin-delete-count"`
+	BinBanCount               uint64 `json:"bin-ban-count"`
+	BinLockCount              uint64 `json:"bin-lock-count"`
 	TarArchiveDownloadCount   uint64 `json:"tar-archive-download-count"`
 	ZipArchiveDownloadCount   uint64 `json:"zip-archive-download-count"`
 	FrontPageViewCount        uint64 `json:"front-page-view-count"`
@@ -131,6 +133,18 @@ func (m *Metrics) IncrNewBinCount() {
 func (m *Metrics) IncrBinDeleteCount() {
 	m.Lock()
 	m.BinDeleteCount = m.BinDeleteCount + 1
+	m.Unlock()
+}
+
+func (m *Metrics) IncrBinBanCount() {
+	m.Lock()
+	m.BinBanCount = m.BinBanCount + 1
+	m.Unlock()
+}
+
+func (m *Metrics) IncrBinLockCount() {
+	m.Lock()
+	m.BinLockCount = m.BinLockCount + 1
 	m.Unlock()
 }
 

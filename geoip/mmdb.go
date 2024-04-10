@@ -1,14 +1,18 @@
 package geoip
 
 import (
+	"errors"
 	"fmt"
-	"github.com/espebra/filebin2/ds"
-	"github.com/oschwald/maxminddb-golang"
 	"net"
+
+	"github.com/espebra/filebin2/ds"
+
+	"github.com/oschwald/maxminddb-golang"
 )
 
 type DAO struct {
-	db *maxminddb.Reader
+	asn  *maxminddb.Reader
+	city *maxminddb.Reader
 }
 
 type record struct {
@@ -29,35 +33,83 @@ type record struct {
 	} `maxminddb:"traits"`
 }
 
-func Init(path string) (DAO, error) {
+func Init(asnPath string, cityPath string) (DAO, error) {
 	var dao DAO
-	db, err := maxminddb.Open(path)
+
+	fmt.Printf("Loading mmdb (ASN): %s\n", asnPath)
+	asn, err := maxminddb.Open(asnPath)
 	if err != nil {
 		return dao, err
 	}
-	dao = DAO{db: db}
-	fmt.Printf("Loading mmdb: %s\n", path)
+	dao = DAO{asn: asn}
+
+	fmt.Printf("Loading mmdb (City): %s\n", cityPath)
+	city, err := maxminddb.Open(cityPath)
+	if err != nil {
+		return dao, err
+	}
+	dao = DAO{city: city}
 	return dao, nil
 }
 
 func (dao DAO) Close() error {
-	return dao.db.Close()
+	if err := dao.asn.Close(); err != nil {
+		return err
+	}
+	if err := dao.city.Close(); err != nil {
+		return err
+	}
+	return nil
 }
 
-func (dao DAO) Lookup(ip net.IP) (client ds.Client, err error) {
+func (dao DAO) LookupASN(ip net.IP, client *ds.Client) error {
+	//var r record
+	//if err := dao.asn.Lookup(ip, &r); err != nil {
+	//	return err
+	//}
+	//fmt.Printf("IP: %v\n", ip)
+	//fmt.Printf("Record: %v\n", r)
+	return nil
+}
+
+func (dao DAO) LookupCity(ip net.IP, client *ds.Client) error {
 	var r record
-	network, found, err := dao.db.LookupNetwork(ip, &r)
+	network, found, err := dao.city.LookupNetwork(ip, &r)
 	if err != nil {
-		return client, err
+		return err
 	}
+
+	// Parsed IP/network only
+	client.IP = ip.String()
+	n := *network
+	client.Network = n.String()
+
+	// MMDB lookup result, if any
 	if found {
-		client.IP = ip
-		client.Network = network.String()
 		client.City = r.City.Names["en"]
 		client.Country = r.Country.Names["en"]
 		client.Continent = r.Continent.Names["en"]
 		client.Proxy = r.Traits.IsAnonymousProxy
 	}
-	//fmt.Printf("The client is: %v\n", client)
-	return client, nil
+	return nil
+}
+
+func (dao DAO) Lookup(remoteAddr string, client *ds.Client) (err error) {
+	// Parse the client IP address
+	host, _, _ := net.SplitHostPort(remoteAddr)
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return errors.New(fmt.Sprintf("Unable to parse remote addr %s", remoteAddr))
+	}
+
+	if err := dao.LookupASN(ip, client); err != nil {
+		//fmt.Printf("ASN lookup error: %s\n", err.Error())
+		return err
+	}
+
+	if err := dao.LookupCity(ip, client); err != nil {
+		//fmt.Printf("City lookup error: %s\n", err.Error())
+		return err
+	}
+	return nil
 }

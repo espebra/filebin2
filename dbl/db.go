@@ -15,6 +15,7 @@ type DAO struct {
 	fileDao        *FileDao
 	metricsDao     *MetricsDao
 	transactionDao *TransactionDao
+	clientDao      *ClientDao
 }
 
 // Init a database connection given
@@ -43,6 +44,7 @@ func Init(dbHost string, dbPort int, dbName, dbUser, dbPassword string) (DAO, er
 	dao.fileDao = &FileDao{db: db}
 	dao.metricsDao = &MetricsDao{db: db}
 	dao.transactionDao = &TransactionDao{db: db}
+	dao.clientDao = &ClientDao{db: db}
 	return dao, nil
 }
 
@@ -59,6 +61,8 @@ func (dao DAO) ResetDB() error {
 	sqlStatements := []string{
 		"DELETE FROM file",
 		"DELETE FROM bin",
+		"DELETE FROM client",
+		"DELETE FROM autonomous_system",
 		"DELETE FROM transaction"}
 
 	for _, s := range sqlStatements {
@@ -84,6 +88,10 @@ func (dao DAO) Metrics() *MetricsDao {
 
 func (dao DAO) Transaction() *TransactionDao {
 	return dao.transactionDao
+}
+
+func (dao DAO) Client() *ClientDao {
+	return dao.clientDao
 }
 
 func (dao DAO) Status() bool {

@@ -4,30 +4,33 @@ import (
 	"embed"
 	"flag"
 	"fmt"
+	"math/rand"
 	_ "net/http/pprof"
+	"net/url"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
+
 	//"github.com/espebra/filebin2/ds"
-	"github.com/dustin/go-humanize"
 	"github.com/espebra/filebin2/dbl"
 	"github.com/espebra/filebin2/ds"
 	"github.com/espebra/filebin2/geoip"
 	"github.com/espebra/filebin2/s3"
-	"math/rand"
-	"net/url"
-	"time"
+
+	"github.com/dustin/go-humanize"
 )
 
 var (
 	// Various
-	expirationFlag      = flag.Int("expiration", 604800, "Bin expiration time in seconds since the last bin update")
-	tmpdirFlag          = flag.String("tmpdir", os.TempDir(), "Directory for temporary files for upload and download")
-	baseURLFlag         = flag.String("baseurl", "https://filebin.net", "The base URL to use. Required for self-hosted instances.")
-	requireApprovalFlag = flag.Bool("manual-approval", false, "Require manual admin approval of new bins before files can be downloaded.")
-	mmdbPathFlag        = flag.String("mmdb", "", "The path to an mmdb formatted geoip database like GeoLite2-City.mmdb.")
-	allowRobotsFlag     = flag.Bool("allow-robots", false, "Allow robots to crawl and index the site (using X-Robots-Tag response header).")
+	expirationFlag = flag.Int("expiration", 604800, "Bin expiration time in seconds since the last bin update")
+	tmpdirFlag     = flag.String("tmpdir", os.TempDir(), "Directory for temporary files for upload and download")
+	baseURLFlag    = flag.String("baseurl", "https://filebin.net", "The base URL to use. Required for self-hosted instances.")
+	//enableBanningFlag = flag.Bool("enable-banning", false, "Enable banning. This will allow anyone to ban client IP addresses that upload files to filebin.")
+	mmdbCityPathFlag = flag.String("mmdb-city", "", "The path to an mmdb formatted geoip database like GeoLite2-City.mmdb.")
+	mmdbASNPathFlag  = flag.String("mmdb-asn", "", "The path to an mmdb formatted geoip database like GeoLite2-ASN.mmdb.")
+	allowRobotsFlag  = flag.Bool("allow-robots", false, "Allow robots to crawl and index the site (using X-Robots-Tag response header).")
 
 	// Limits
 	limitFileDownloadsFlag = flag.Uint64("limit-file-downloads", 0, "Limit the number of downloads per file. 0 disables this limit.")
@@ -131,9 +134,10 @@ func main() {
 	}
 
 	// mmdb path
-	geodb, err := geoip.Init(*mmdbPathFlag)
+	geodb, err := geoip.Init(*mmdbASNPathFlag, *mmdbCityPathFlag)
 	if err != nil {
 		fmt.Printf("Unable to load geoip database: %s\n", err.Error())
+		os.Exit(2)
 	}
 
 	// Set database port to 5432 if not set or invalid

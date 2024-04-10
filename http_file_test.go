@@ -521,3 +521,47 @@ func TestBinInputValidation(t *testing.T) {
 	}
 	runTests(tcs, t)
 }
+
+func TestBinBan(t *testing.T) {
+	tcs := []TestCase{
+		{
+			Description:   "Create new bin",
+			Method:        "POST",
+			Bin:           "mytestbin5",
+			Filename:      "aaa",
+			UploadContent: "content a",
+			StatusCode:    201,
+		}, {
+			Description:     "Get file first time",
+			Method:          "GET",
+			Bin:             "mytestbin5",
+			Filename:        "aaa",
+			DownloadContent: "content a",
+			StatusCode:      200,
+		}, {
+			Description: "Ban bin",
+			Method:      "BAN",
+			Bin:         "mytestbin5",
+			StatusCode:  200,
+		}, {
+			Description: "Get bin after being banned",
+			Method:      "GET",
+			Bin:         "mytestbin5",
+			StatusCode:  403,
+		}, {
+			Description: "Get file after being banned",
+			Method:      "GET",
+			Bin:         "mytestbin5",
+			Filename:    "aaa",
+			StatusCode:  403,
+		}, {
+			Description:   "Create new bin after being banned",
+			Method:        "POST",
+			Bin:           "mytestbin6",
+			Filename:      "aaa",
+			UploadContent: "content a",
+			StatusCode:    403,
+		},
+	}
+	runTests(tcs, t)
+}

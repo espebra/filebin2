@@ -2,9 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/espebra/filebin2/dbl"
-	"github.com/espebra/filebin2/ds"
-	"github.com/espebra/filebin2/s3"
 	"log"
 	"net"
 	"net/http"
@@ -13,6 +10,11 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/espebra/filebin2/dbl"
+	"github.com/espebra/filebin2/ds"
+	"github.com/espebra/filebin2/geoip"
+	"github.com/espebra/filebin2/s3"
 )
 
 const (
@@ -82,11 +84,19 @@ func TestMain(m *testing.M) {
 		RejectFileExtensions: []string{"illegal1", "illegal2"},
 	}
 	metrics := ds.Metrics{}
+
+	geodb, err := geoip.Init("mmdb/GeoLite2-ASN.mmdb", "mmdb/GeoLite2-City.mmdb")
+	if err != nil {
+		fmt.Printf("Unable to load geoip database: %s\n", err.Error())
+		os.Exit(2)
+	}
+
 	h := &HTTP{
 		staticBox:   &staticBox,
 		templateBox: &templateBox,
 		dao:         &dao,
 		s3:          &s3ao,
+		geodb:       &geodb,
 		config:      &c,
 		metrics:     &metrics,
 	}

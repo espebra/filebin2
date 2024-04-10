@@ -201,6 +201,27 @@ paths:
           description: The bin does not exist or is not available
           content:
             application/json: {}
+    ban:
+      tags:
+        - bin
+      summary: Delete an entire bin and all of its files, and ban the client IP address that uploaded the files.
+      description: This is is the same as deleting a bin, except that the client IP addresses that uploaded the files to the bin are banned. Use this endpoint only to reduce abuse, malicious use and sharing of illegal content.
+      parameters:
+        - name: bin
+          in: path
+          description: The bin to ban.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json: {}
+        '404':
+          description: The bin does not exist or is not available
+          content:
+            application/json: {}
   '/qr/{bin}':
     get:
       tags:
