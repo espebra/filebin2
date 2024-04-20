@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"embed"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -321,14 +322,18 @@ func (h *HTTP) ParseTemplates() *template.Template {
 	return templ
 }
 
-func extractIP(addr string) (ip string, err error) {
-	host, _, _ := net.SplitHostPort(addr)
-	//if err != nil {
-	//	fmt.Printf("Error 1: %s\n", err.Error())
-	//	return ip, err
-	//}
-	ipRaw := net.ParseIP(host)
-	return ipRaw.String(), nil
+func extractIP(addr string) (string, error) {
+	host, _, err := net.SplitHostPort(addr)
+	var ip net.IP
+	if err == nil {
+		ip = net.ParseIP(host)
+	} else {
+		ip = net.ParseIP(addr)
+	}
+	if ip == nil {
+		return ip.String(), errors.New(fmt.Sprintf("Unable to parse remote addr %s", addr))
+	}
+	return ip.String(), nil
 }
 
 func inStringSlice(needle string, haystack []string) bool {

@@ -21,8 +21,8 @@
         <table class="table sortable">
             <tr>
                 <th>IP</th>
-                <th>ASN</th>
                 <th>Network</th>
+                <th>ASN</th>
                 <th>City</th>
                 <th>Country</th>
                 <th>Continent</th>
@@ -36,17 +36,17 @@
                 <tr>
                     <td><a href="/admin/log/ip/{{ .IP }}">{{ .IP }}</a></td>
                     <td>
-                        {{ if eq .ASN 0 }}
-                            N/A
-                        {{ else }}
-                            {{ .ASN }}
-                        {{ end }}
-                    </td>
-                    <td>
                         {{ if eq .Network "" }}
                             N/A
                         {{ else }}
                             {{ .Network }}
+                        {{ end }}
+                    </td>
+                    <td>
+                        {{ if eq .ASN 0 }}
+                            N/A
+                        {{ else }}
+                            {{ .ASN }}
                         {{ end }}
                     </td>
                     <td>

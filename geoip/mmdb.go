@@ -96,8 +96,13 @@ func (dao DAO) LookupCity(ip net.IP, client *ds.Client) error {
 
 func (dao DAO) Lookup(remoteAddr string, client *ds.Client) (err error) {
 	// Parse the client IP address
-	host, _, _ := net.SplitHostPort(remoteAddr)
-	ip := net.ParseIP(host)
+	host, _, err := net.SplitHostPort(remoteAddr)
+	var ip net.IP
+	if err == nil {
+		ip = net.ParseIP(host)
+	} else {
+		ip = net.ParseIP(remoteAddr)
+	}
 	if ip == nil {
 		return errors.New(fmt.Sprintf("Unable to parse remote addr %s", remoteAddr))
 	}
