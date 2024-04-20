@@ -71,26 +71,26 @@ func (c *ClientDao) Update(client *ds.Client) (err error) {
 }
 
 func (c *ClientDao) GetAll() (clients []ds.Client, err error) {
-	sqlStatement := "SELECT ip, asn, network, city, country, continent, proxy, requests, first_active_at, last_active_at, banned_at, banned_by FROM client ORDER BY last_active_at ASC"
+	sqlStatement := "SELECT ip, asn, network, city, country, continent, proxy, requests, first_active_at, last_active_at, banned_at, banned_by FROM client ORDER BY last_active_at DESC"
 	clients, err = c.clientQuery(sqlStatement)
 	return clients, err
 }
 
 func (c *ClientDao) GetByLastActiveAt(limit int) (clients []ds.Client, err error) {
-	sqlStatement := "SELECT ip, asn, network, city, country, continent, proxy, requests, first_active_at, last_active_at, banned_at, banned_by FROM client ORDER BY last_active_at ASC LIMIT $1"
+	sqlStatement := "SELECT ip, asn, network, city, country, continent, proxy, requests, first_active_at, last_active_at, banned_at, banned_by FROM client ORDER BY last_active_at DESC LIMIT $1"
 	clients, err = c.clientQuery(sqlStatement, limit)
 	return clients, err
 }
 
 func (c *ClientDao) GetByRequests(limit int) (clients []ds.Client, err error) {
-	sqlStatement := "SELECT ip, asn, network, city, country, continent, proxy, requests, first_active_at, last_active_at, banned_at, banned_by FROM client ORDER BY requests ASC LIMIT $1"
+	sqlStatement := "SELECT ip, asn, network, city, country, continent, proxy, requests, first_active_at, last_active_at, banned_at, banned_by FROM client ORDER BY requests DESC LIMIT $1"
 	clients, err = c.clientQuery(sqlStatement, limit)
 	return clients, err
 }
 
 func (c *ClientDao) GetByBannedAt(limit int) (clients []ds.Client, err error) {
-	sqlStatement := "SELECT ip, asn, network, city, country, continent, proxy, requests, first_active_at, last_active_at, banned_at, banned_by FROM client ORDER BY banned_at ASC LIMIT $1"
-	clients, err = c.clientQuery(sqlStatement, limit)
+	sqlStatement := "SELECT ip, asn, network, city, country, continent, proxy, requests, first_active_at, last_active_at, banned_at, banned_by FROM client WHERE banned_at > $1 ORDER BY banned_at DESC LIMIT $2"
+	clients, err = c.clientQuery(sqlStatement, time.Unix(0, 0), limit)
 	return clients, err
 }
 
