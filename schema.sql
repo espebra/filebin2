@@ -48,6 +48,30 @@ CREATE TABLE transaction (
 	UNIQUE(id)
 );
 
+CREATE TABLE autonomous_system (
+	asn					INT NOT NULL PRIMARY KEY,
+	organization				VARCHAR(128) NOT NULL,
+	requests				BIGINT NOT NULL,
+	first_active_at				TIMESTAMP NOT NULL,
+	last_active_at				TIMESTAMP NOT NULL,
+	banned_at				TIMESTAMP
+);
+
+CREATE TABLE client (
+	ip					VARCHAR(64) NOT NULL PRIMARY KEY,
+	asn					INT NOT NULL,
+	network					VARCHAR(64) NOT NULL,
+	city					VARCHAR(64) NOT NULL,
+	country					VARCHAR(64) NOT NULL,
+	continent				VARCHAR(64) NOT NULL,
+	proxy					BOOLEAN NOT NULL,
+	requests				BIGINT NOT NULL,
+	first_active_at				TIMESTAMP NOT NULL,
+	last_active_at				TIMESTAMP NOT NULL,
+	banned_at				TIMESTAMP,
+	banned_by				VARCHAR(64) NOT NULL
+);
+
 CREATE INDEX idx_bin_id ON transaction(bin_id);
 CREATE INDEX idx_ip ON transaction(ip);
 CREATE INDEX idx_cid ON transaction(client_id);
@@ -55,17 +79,3 @@ CREATE INDEX idx_transaction_timestamp ON transaction(timestamp);
 CREATE INDEX idx_file_deleted_at_in_storage ON file(deleted_at, in_storage);
 CREATE INDEX idx_bin_deleted_at_expired_at ON bin(expired_at, deleted_at);
 CREATE INDEX idx_sha256 ON file(sha256);
-
-CREATE TABLE ban (
-	id		BIGSERIAL NOT NULL PRIMARY KEY,
-	ip		VARCHAR(64) NOT NULL,
-	fingerprint	VARCHAR(64) NOT NULL,
-	network		VARCHAR(64) NOT NULL,
-	continent	VARCHAR(64) NOT NULL,
-	country		VARCHAR(64) NOT NULL,
-	city		VARCHAR(64) NOT NULL,
-	active		BOOLEAN NOT NULL,
-	counter		BIGINT NOT NULL,
-	created_at	TIMESTAMP NOT NULL,
-	UNIQUE(id)
-);

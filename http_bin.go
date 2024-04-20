@@ -340,6 +340,7 @@ func (h *HTTP) lockBin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.metrics.IncrBinLockCount()
 	http.Error(w, "Bin locked successfully.", http.StatusOK)
 	return
 }
@@ -382,5 +383,66 @@ func (h *HTTP) approveBin(w http.ResponseWriter, r *http.Request) {
 
 	h.metrics.IncrBinDeleteCount()
 	http.Error(w, "Bin approved successfully.", http.StatusOK)
+	return
+}
+
+// Ban the client IP addresses that have uploaded files to the given bin
+func (h *HTTP) banBin(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "max-age=0")
+
+	params := mux.Vars(r)
+	inputBin := params["bin"]
+
+	bin, found, err := h.dao.Bin().GetByID(inputBin)
+	if err != nil {
+		// To make brute forcing a little bit less effective
+		time.Sleep(3 * time.Second)
+
+		fmt.Printf("Unable to GetByID(%q): %s\n", inputBin, err.Error())
+		http.Error(w, "Errno 205", http.StatusInternalServerError)
+		return
+	}
+	if found == false {
+		// To make brute forcing a little bit less effective
+		time.Sleep(3 * time.Second)
+
+		http.Error(w, "Bin does not exist", http.StatusNotFound)
+		return
+	}
+
+	if bin.IsReadable() == false {
+		// To make brute forcing a little bit less effective
+		time.Sleep(3 * time.Second)
+
+		http.Error(w, "This bin is no longer available", http.StatusNotFound)
+		return
+	}
+
+	var IPs []string
+	files, err := h.dao.File().GetByBin(inputBin, true)
+	if err != nil {
+		fmt.Printf("Unable to GetByBin(%q): %s\n", inputBin, err.Error())
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+	for _, file := range files {
+		IPs = append(IPs, file.IP)
+	}
+	if err := h.dao.Client().Ban(IPs, r.RemoteAddr); err != nil {
+		fmt.Printf("Unable to ban client IPs(%v): %s\n", IPs, err.Error())
+		http.Error(w, "Unable to ban clients", http.StatusInternalServerError)
+		return
+	}
+
+	// Set to deleted
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	bin.DeletedAt.Scan(now)
+	if err := h.dao.Bin().Update(&bin); err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	h.metrics.IncrBinBanCount()
+	http.Error(w, "Bin banned successfully.", http.StatusOK)
 	return
 }

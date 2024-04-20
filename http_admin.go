@@ -410,3 +410,110 @@ func (h *HTTP) viewAdminCleanup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+func (h *HTTP) viewAdminClients(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	inputLimit := params["limit"]
+
+	// default
+	limit := 20
+
+	i, err := strconv.Atoi(inputLimit)
+	if err == nil {
+		if i >= 1 && i <= 100 {
+			limit = i
+		}
+	}
+
+	type Clients struct {
+		ByLastActiveAt []ds.Client `json:"by-last-active-at"`
+		ByRequests     []ds.Client `json:"by-requests"`
+		ByBannedAt     []ds.Client `json:"by-banned-at"`
+	}
+
+	type Data struct {
+		Clients Clients `json:"clients"`
+		Limit   int     `json:"limit"`
+	}
+	var data Data
+	data.Limit = limit
+
+	clientsByLastActiveAt, err := h.dao.Client().GetByLastActiveAt(limit)
+	if err != nil {
+		fmt.Printf("Unable to .GetLastActive(): %s\n", err.Error())
+		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		return
+	}
+
+	clientsByRequests, err := h.dao.Client().GetByRequests(limit)
+	if err != nil {
+		fmt.Printf("Unable to .GetByRequests(): %s\n", err.Error())
+		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		return
+	}
+
+	clientsByBannedAt, err := h.dao.Client().GetByBannedAt(limit)
+	if err != nil {
+		fmt.Printf("Unable to .GetByBannedAt(): %s\n", err.Error())
+		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		return
+	}
+
+	var clients Clients
+	clients.ByLastActiveAt = clientsByLastActiveAt
+	clients.ByRequests = clientsByRequests
+	clients.ByBannedAt = clientsByBannedAt
+
+	data.Clients = clients
+
+	if r.Header.Get("accept") == "application/json" {
+		w.Header().Set("Content-Type", "application/json")
+		out, err := json.MarshalIndent(data, "", "    ")
+		if err != nil {
+			fmt.Printf("Failed to parse json: %s\n", err.Error())
+			http.Error(w, "Errno 201", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(200)
+		io.WriteString(w, string(out))
+	} else {
+		if err := h.templates.ExecuteTemplate(w, "admin_clients", data); err != nil {
+			fmt.Printf("Failed to execute template: %s\n", err.Error())
+			http.Error(w, "Errno 203", http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+func (h *HTTP) viewAdminClientsAll(w http.ResponseWriter, r *http.Request) {
+	clients, err := h.dao.Client().GetAll()
+	if err != nil {
+		fmt.Printf("Unable to .GetAll(): %s\n", err.Error())
+		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		return
+	}
+	type Data struct {
+		Clients []ds.Client `json:"all-clients"`
+	}
+
+	var data Data
+	data.Clients = clients
+
+	if r.Header.Get("accept") == "application/json" {
+		w.Header().Set("Content-Type", "application/json")
+		out, err := json.MarshalIndent(data, "", "    ")
+		if err != nil {
+			fmt.Printf("Failed to parse json: %s\n", err.Error())
+			http.Error(w, "Errno 201", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(200)
+		io.WriteString(w, string(out))
+	} else {
+		if err := h.templates.ExecuteTemplate(w, "admin_clients_all", data); err != nil {
+			fmt.Printf("Failed to execute template: %s\n", err.Error())
+			http.Error(w, "Errno 203", http.StatusInternalServerError)
+			return
+		}
+	}
+}
