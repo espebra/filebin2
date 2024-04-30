@@ -4,8 +4,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	_ "github.com/lib/pq"
 	"time"
+
+	_ "github.com/lib/pq"
 )
 
 type DAO struct {
@@ -24,9 +25,6 @@ func Init(dbHost string, dbPort int, dbName, dbUser, dbPassword string) (DAO, er
 	var dao DAO
 	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", dbHost, dbPort, dbUser, dbPassword, dbName)
 	db, err := sql.Open("postgres", connStr)
-	if err != nil {
-		return dao, err
-	}
 	if err != nil {
 		return dao, err
 	}
