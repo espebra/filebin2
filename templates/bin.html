@@ -15,7 +15,9 @@
         <link rel="stylesheet" href="/static/css/custom.css"/>
 
         <title>Filebin | {{ .Bin.Id }}</title>
+        <script src="/static/js/sorttable.js"></script>
         <script src="/static/js/filebin2.js"></script>
+
         {{ if eq .Bin.Readonly false }}
         <script>
             window.onload = function () {
@@ -162,7 +164,7 @@
         {{ end }}
 
         {{ if .Files }}
-            <table class="table table-hover">
+            <table class="table table-hover sortable">
                 <thead>
                     <tr>
                         <th scope="col">Filename</th>
@@ -175,7 +177,7 @@
                 <tbody>
                     {{ range $index, $value := .Files }}
                         <tr>
-                            <td>
+                            <td sorttable_customkey="{{ lowercase .Filename }}">
                                 {{ if eq .Category "image" }}
                                     <i class="far fa-fw fa-file-image"></i>
                                 {{ else }}
@@ -194,10 +196,10 @@
                             <td>
                                 {{ .Mime }}
                             </td>
-                            <td>
+                            <td sorttable_customkey="{{ .Bytes }}">
                                 {{ .BytesReadable }}
                             </td>
-                            <td>
+                            <td sorttable_customkey="{{ .UpdatedAt }}">
                                 {{ .UpdatedAtRelative }}
                             </td>
                             <td>

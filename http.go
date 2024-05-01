@@ -305,6 +305,9 @@ func (h *HTTP) ParseTemplates() *template.Template {
 		"unescapeHTML": func(s string) template.HTML {
 			return template.HTML(s)
 		},
+		"lowercase": func(s string) string {
+			return strings.ToLower(s)
+		},
 		"isBanned": func(client ds.Client) bool {
 			if client.IsBanned() {
 				return true
