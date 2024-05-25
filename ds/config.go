@@ -6,6 +6,7 @@ import (
 )
 
 type Config struct {
+	Contact              string
 	Expiration           int
 	ExpirationDuration   time.Duration
 	LimitFileDownloads   uint64

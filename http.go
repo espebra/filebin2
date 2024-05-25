@@ -60,6 +60,7 @@ func (h *HTTP) Init() (err error) {
 	h.router.HandleFunc("/api", h.clientLookup(h.api)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/api.yaml", h.clientLookup(h.apiSpec)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/privacy", h.clientLookup(h.privacy)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/contact", h.clientLookup(h.contact)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/terms", h.clientLookup(h.terms)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/integration/slack", h.log(h.integrationSlack)).Methods(http.MethodPost)
 	h.router.HandleFunc("/admin/log/{category:[a-z]+}/{filter:[A-Za-z0-9.:_-]+}", h.auth(h.viewAdminLog)).Methods(http.MethodHead, http.MethodGet)
