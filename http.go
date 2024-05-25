@@ -330,7 +330,7 @@ func (h *HTTP) cookieVerify(w http.ResponseWriter, r *http.Request) bool {
 
 	// Skip cookie verification for certain user agents.
 	agent := r.Header.Get("user-agent")
-	filter := []string{"Wget", "curl"}
+	filter := []string{"Wget", "curl", "VLC"}
 	for _, f := range filter {
 		if strings.Contains(agent, f) {
 			// Skip cookie verification if the user-agent match the filter
