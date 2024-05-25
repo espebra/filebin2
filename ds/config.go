@@ -27,6 +27,8 @@ type Config struct {
 	SlackChannel         string
 	Tmpdir               string
 	RequireApproval      bool
+	RequireCookie        bool
+	ExpectedCookieValue  string
 	AllowRobots          bool
 	BaseUrl              url.URL
 	RejectFileExtensions []string

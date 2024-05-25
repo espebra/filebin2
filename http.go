@@ -325,6 +325,45 @@ func (h *HTTP) ParseTemplates() *template.Template {
 	return templ
 }
 
+func (h *HTTP) cookieVerify(w http.ResponseWriter, r *http.Request) bool {
+
+	// Skip cookie verification for certain user agents.
+	agent := r.Header.Get("user-agent")
+	filter := []string{"Wget", "curl"}
+	for _, f := range filter {
+		if strings.Contains(agent, f) {
+			// Skip cookie verification if the user-agent match the filter
+			return true
+		}
+	}
+
+	// Check if cookie exists
+	if cookie, err := r.Cookie("verified"); err == nil {
+		// Yes, the cookie exists.
+		// Check if the cookie has the expected value
+		if cookie.Value == h.config.ExpectedCookieValue {
+			// Yes, the value is correct.
+			// Cookie exists and contains the expected value. Ok to continue.
+			return true
+		}
+	}
+
+	// false indicates that the client didn't provide a proper cookie. Should show the warning.
+	return false
+}
+
+func (h *HTTP) setVerificationCookie(w http.ResponseWriter, r *http.Request) {
+	// The cookie does not exist or its value was wrong
+	cookie := http.Cookie{}
+	cookie.Name = "verified"
+	cookie.Value = h.config.ExpectedCookieValue
+	cookie.Expires = time.Now().Add(365 * 24 * time.Hour)
+	cookie.Secure = true
+	cookie.HttpOnly = true
+	cookie.Path = "/"
+	http.SetCookie(w, &cookie)
+}
+
 func extractIP(addr string) (string, error) {
 	host, _, err := net.SplitHostPort(addr)
 	var ip net.IP
