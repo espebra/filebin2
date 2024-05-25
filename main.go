@@ -24,6 +24,7 @@ import (
 
 var (
 	// Various
+	contactFlag             = flag.String("contact", "", "The contact information, such as an email address, that will be shown on the website for people that want to get in touch with the service owner.")
 	expirationFlag          = flag.Int("expiration", 604800, "Bin expiration time in seconds since the last bin update")
 	tmpdirFlag              = flag.String("tmpdir", os.TempDir(), "Directory for temporary files for upload and download")
 	baseURLFlag             = flag.String("baseurl", "https://filebin.net", "The base URL to use. Required for self-hosted instances.")
@@ -136,6 +137,12 @@ func main() {
 		}
 	}
 
+	// Contact information
+	if *contactFlag == "" {
+		fmt.Printf("Contact information, such as an email address, must be specified using the --contact parameter.\n")
+		os.Exit(2)
+	}
+
 	// mmdb path
 	geodb, err := geoip.Init(*mmdbASNPathFlag, *mmdbCityPathFlag)
 	if err != nil {
@@ -203,6 +210,7 @@ func main() {
 	config := &ds.Config{
 		AdminPassword:        *adminPasswordFlag,
 		AdminUsername:        *adminUsernameFlag,
+		Contact:              *contactFlag,
 		MetricsPassword:      *metricsPasswordFlag,
 		MetricsUsername:      *metricsUsernameFlag,
 		Metrics:              *metricsFlag,

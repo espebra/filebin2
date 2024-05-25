@@ -50,6 +50,7 @@ func (h *HTTP) viewBin(w http.ResponseWriter, r *http.Request) {
 	}
 	var data Data
 	data.Page = "bin"
+	data.Contact = h.config.Contact
 	data.BaseUrl = h.config.BaseUrl.String()
 
 	var binURL url.URL

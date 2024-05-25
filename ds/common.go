@@ -4,4 +4,5 @@ type Common struct {
 	Page    string `json:"-"`
 	BaseUrl string `json:"-"`
 	BinUrl  string `json:"-"`
+	Contact string `json:"-"`
 }

@@ -20,8 +20,8 @@ func (h *HTTP) index(w http.ResponseWriter, r *http.Request) {
 		AvailableStorage bool   `json:"available_storage"`
 	}
 	var data Data
-
 	data.Page = "front"
+	data.Contact = h.config.Contact
 
 	bin := &ds.Bin{}
 	bin.ExpiredAt = time.Now().UTC().Add(h.config.ExpirationDuration)
@@ -100,8 +100,28 @@ func (h *HTTP) terms(w http.ResponseWriter, r *http.Request) {
 	}
 	var data Data
 	data.Page = "terms"
+	data.Contact = h.config.Contact
 
 	if err := h.templates.ExecuteTemplate(w, "terms", data); err != nil {
+		fmt.Printf("Failed to execute template: %s\n", err.Error())
+		http.Error(w, "Errno 302", http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *HTTP) contact(w http.ResponseWriter, r *http.Request) {
+	setRobotsPermissions(w, h.config.AllowRobots)
+	w.Header().Set("Cache-Control", "max-age=3600")
+
+	type Data struct {
+		ds.Common
+		Bin ds.Bin `json:"bin"`
+	}
+	var data Data
+	data.Page = "contact"
+	data.Contact = h.config.Contact
+
+	if err := h.templates.ExecuteTemplate(w, "contact", data); err != nil {
 		fmt.Printf("Failed to execute template: %s\n", err.Error())
 		http.Error(w, "Errno 302", http.StatusInternalServerError)
 		return
