@@ -188,6 +188,34 @@ func (h *HTTP) archive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// The file is downloadable at this point
+	if h.config.RequireCookie {
+		if h.cookieVerify(w, r) == false {
+			// Set the cookie
+			h.setVerificationCookie(w, r)
+
+			// Show the warning
+			type Data struct {
+				ds.Common
+				Bin     ds.Bin `json:"bin"`
+				NextUrl string `json:"next_url"`
+			}
+			var data Data
+			data.Bin = bin
+			var nextUrl url.URL
+			nextUrl.Scheme = h.config.BaseUrl.Scheme
+			nextUrl.Host = h.config.BaseUrl.Host
+			nextUrl.Path = path.Join(h.config.BaseUrl.Path, r.RequestURI)
+			data.NextUrl = nextUrl.String()
+			if err := h.templates.ExecuteTemplate(w, "cookie", data); err != nil {
+				fmt.Printf("Failed to execute template: %s\n", err.Error())
+				http.Error(w, "Errno 302", http.StatusInternalServerError)
+				return
+			}
+			return
+		}
+	}
+
 	if inputFormat == "zip" {
 		w.Header().Set("Content-Type", "application/zip")
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s.zip\"", bin.Id))

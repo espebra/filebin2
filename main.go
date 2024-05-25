@@ -24,10 +24,12 @@ import (
 
 var (
 	// Various
-	expirationFlag      = flag.Int("expiration", 604800, "Bin expiration time in seconds since the last bin update")
-	tmpdirFlag          = flag.String("tmpdir", os.TempDir(), "Directory for temporary files for upload and download")
-	baseURLFlag         = flag.String("baseurl", "https://filebin.net", "The base URL to use. Required for self-hosted instances.")
-	requireApprovalFlag = flag.Bool("manual-approval", false, "Require manual admin approval of new bins before files can be downloaded.")
+	expirationFlag          = flag.Int("expiration", 604800, "Bin expiration time in seconds since the last bin update")
+	tmpdirFlag              = flag.String("tmpdir", os.TempDir(), "Directory for temporary files for upload and download")
+	baseURLFlag             = flag.String("baseurl", "https://filebin.net", "The base URL to use. Required for self-hosted instances.")
+	requireApprovalFlag     = flag.Bool("manual-approval", false, "Require manual admin approval of new bins before files can be downloaded.")
+	requireCookieFlag       = flag.Bool("require-cookie", false, "Require cookie before allowing a download to happen.")
+	expectedCookieValueFlag = flag.String("expected-cookie-value", "2024-05-24", "Which cookie value to expect to avoid showing a warning message.")
 	//enableBanningFlag = flag.Bool("enable-banning", false, "Enable banning. This will allow anyone to ban client IP addresses that upload files to filebin.")
 	mmdbCityPathFlag = flag.String("mmdb-city", "", "The path to an mmdb formatted geoip database like GeoLite2-City.mmdb.")
 	mmdbASNPathFlag  = flag.String("mmdb-asn", "", "The path to an mmdb formatted geoip database like GeoLite2-ASN.mmdb.")
@@ -215,6 +217,8 @@ func main() {
 		HttpProxyHeaders:     *proxyHeadersFlag,
 		LimitFileDownloads:   *limitFileDownloadsFlag,
 		RequireApproval:      *requireApprovalFlag,
+		RequireCookie:        *requireCookieFlag,
+		ExpectedCookieValue:  *expectedCookieValueFlag,
 		RejectFileExtensions: strings.Fields(*rejectFileExtensions),
 		SlackSecret:          *slackSecretFlag,
 		SlackDomain:          *slackDomainFlag,
