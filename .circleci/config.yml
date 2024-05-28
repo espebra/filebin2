@@ -4,7 +4,7 @@ orbs:
 jobs:
   build:
     machine:
-      image: ubuntu-2004:202010-01
+      image: default
     steps:
       - checkout
       - run: docker --version
