@@ -121,25 +121,12 @@ func (c *ClientDao) clientQuery(sqlStatement string, params ...interface{}) (cli
 }
 
 func (c *ClientDao) Ban(IPsToBan []string, banByRemoteAddr string) (err error) {
-	// Parse the IP address of the client that requested the ban
-	host, _, err := net.SplitHostPort(banByRemoteAddr)
-	var ip net.IP
-	if err == nil {
-		ip = net.ParseIP(host)
-	} else {
-		ip = net.ParseIP(banByRemoteAddr)
-	}
-	if ip == nil {
-		return errors.New(fmt.Sprintf("Unable to parse remote addr %s", banByRemoteAddr))
-	}
-	banByIP := ip.String()
-
 	// Loop over the IP addresses that will be banned
 	now := time.Now().UTC()
 	sqlStatement := "UPDATE client SET banned_at=$1, banned_by=$2 WHERE ip=$3 RETURNING ip"
 	var ret string
 	for _, ipToBan := range IPsToBan {
-		if err := c.db.QueryRow(sqlStatement, now, banByIP, ipToBan).Scan(&ret); err != nil {
+		if err := c.db.QueryRow(sqlStatement, now, banByRemoteAddr, ipToBan).Scan(&ret); err != nil {
 			return err
 		}
 	}
