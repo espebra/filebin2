@@ -39,6 +39,7 @@ func (l *Lurker) Run() {
 				l.DeletePendingFiles()
 				l.DeletePendingBins()
 				l.CleanTransactions()
+				l.CleanClients()
 				fmt.Printf("Lurker completed run in %.3fs\n", time.Since(t0).Seconds())
 			}
 		}
@@ -113,5 +114,16 @@ func (l *Lurker) CleanTransactions() {
 	}
 	if count > 0 {
 		fmt.Printf("Removed %d log transactions.\n", count)
+	}
+}
+
+func (l *Lurker) CleanClients() {
+	count, err := l.dao.Client().Cleanup(l.retention)
+	if err != nil {
+		fmt.Printf("Unable to Client().Cleanup(): %s\n", err.Error())
+		return
+	}
+	if count > 0 {
+		fmt.Printf("Removed %d client entries.\n", count)
 	}
 }

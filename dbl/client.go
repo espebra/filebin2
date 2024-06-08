@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	//"net/http"
 	"time"
 
 	"github.com/espebra/filebin2/ds"
@@ -131,4 +130,17 @@ func (c *ClientDao) Ban(IPsToBan []string, banByRemoteAddr string) (err error) {
 		}
 	}
 	return err
+}
+
+func (c *ClientDao) Cleanup(days uint64) (count int64, err error) {
+	sqlStatement := fmt.Sprintf("DELETE FROM client WHERE last_active_at < CURRENT_DATE - CAST('%d days' AS interval) AND banned_at IS NULL", days)
+	res, err := c.db.Exec(sqlStatement)
+	if err != nil {
+		return 0, err
+	}
+	count, err = res.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }
