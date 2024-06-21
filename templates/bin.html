@@ -53,7 +53,19 @@
 
         {{ template "topbar" . }}
 
-        <h1>Filebin</h1>
+
+        <div class="row">
+            <div class="col">
+                <h1 class="display-1">Filebin</h1>
+            </div>
+            <div class="col">
+                <div class="text-end">
+                    <a href="#" data-bs-toggle="modal" data-bs-target="#modalBinQR" aria-haspopup="true" aria-expanded="false">
+                        <img class="img-fluid" src="/qr/{{ $.Bin.Id }}?thumbnail" alt="QR code for {{ .BinUrl }}"/>
+                    </a>
+                </div>
+            </div>
+        </div>
 
         {{ if eq .Bin.Readonly false }}
             <!-- Upload status -->

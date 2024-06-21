@@ -5,6 +5,7 @@ import (
 	"archive/zip"
 	"encoding/json"
 	"fmt"
+	"image/png"
 	"io"
 	"net/http"
 	"net/url"
@@ -117,19 +118,36 @@ func (h *HTTP) viewBin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HTTP) binQR(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "max-age=0")
+	w.Header().Set("Cache-Control", "max-age=604800")
 	w.Header().Set("X-Robots-Tag", "noindex")
 
 	params := mux.Vars(r)
 	inputBin := params["bin"]
+
+	// Check if the thumbnail query parameter is set
+	thumbnail := r.URL.Query().Has("thumbnail")
+
+	size := 256
+	if thumbnail {
+		size = 80
+	}
 
 	var binURL url.URL
 	binURL.Scheme = h.config.BaseUrl.Scheme
 	binURL.Host = h.config.BaseUrl.Host
 	binURL.Path = path.Join(h.config.BaseUrl.Path, inputBin)
 
-	var png []byte
-	png, err := qrcode.Encode(binURL.String(), qrcode.Medium, 256)
+	var q *qrcode.QRCode
+	q, err := qrcode.New(binURL.String(), qrcode.Medium)
+	if err != nil {
+		fmt.Printf("Error generating qr code %s: %s\n", binURL.String(), err.Error())
+		http.Error(w, "Unable to generate QR code", http.StatusInternalServerError)
+		return
+	}
+
+	q.DisableBorder = true
+
+	img := q.Image(size)
 	if err != nil {
 		fmt.Printf("Error generating qr code %s: %s\n", binURL.String(), err.Error())
 		http.Error(w, "Unable to generate QR code", http.StatusInternalServerError)
@@ -137,8 +155,7 @@ func (h *HTTP) binQR(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "image/png")
-
-	if _, err := w.Write(png); err != nil {
+	if err := png.Encode(w, img); err != nil {
 		fmt.Printf("Unable to write image: %s\n", err.Error())
 		http.Error(w, "Unable to generate QR code", http.StatusInternalServerError)
 	}
