@@ -118,7 +118,7 @@ func (h *HTTP) viewBin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HTTP) binQR(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "max-age=604800")
+	w.Header().Set("Cache-Control", "max-age=31536000")
 	w.Header().Set("X-Robots-Tag", "noindex")
 
 	params := mux.Vars(r)
