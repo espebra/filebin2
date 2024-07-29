@@ -29,7 +29,8 @@ var (
 	tmpdirFlag              = flag.String("tmpdir", os.TempDir(), "Directory for temporary files for upload and download")
 	baseURLFlag             = flag.String("baseurl", "https://filebin.net", "The base URL to use. Required for self-hosted instances.")
 	requireApprovalFlag     = flag.Bool("manual-approval", false, "Require manual admin approval of new bins before files can be downloaded.")
-	requireCookieFlag       = flag.Bool("require-cookie", false, "Require cookie before allowing a download to happen.")
+	requireCookieFlag       = flag.Bool("require-verification-cookie", false, "Require cookie before allowing a download to happen.")
+	cookieLifetimeFlag      = flag.Int("verification-cookie-lifetime", 365, "Number of days before cookie expiration.")
 	expectedCookieValueFlag = flag.String("expected-cookie-value", "2024-05-24", "Which cookie value to expect to avoid showing a warning message.")
 	//enableBanningFlag = flag.Bool("enable-banning", false, "Enable banning. This will allow anyone to ban client IP addresses that upload files to filebin.")
 	mmdbCityPathFlag = flag.String("mmdb-city", "", "The path to an mmdb formatted geoip database like GeoLite2-City.mmdb.")
@@ -226,6 +227,7 @@ func main() {
 		LimitFileDownloads:   *limitFileDownloadsFlag,
 		RequireApproval:      *requireApprovalFlag,
 		RequireCookie:        *requireCookieFlag,
+		CookieLifetime:       *cookieLifetimeFlag,
 		ExpectedCookieValue:  *expectedCookieValueFlag,
 		RejectFileExtensions: strings.Fields(*rejectFileExtensions),
 		SlackSecret:          *slackSecretFlag,

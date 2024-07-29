@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"embed"
-	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -358,7 +357,7 @@ func (h *HTTP) setVerificationCookie(w http.ResponseWriter, r *http.Request) {
 	cookie := http.Cookie{}
 	cookie.Name = "verified"
 	cookie.Value = h.config.ExpectedCookieValue
-	cookie.Expires = time.Now().Add(365 * 24 * time.Hour)
+	cookie.Expires = time.Now().Add(time.Duration(h.config.CookieLifetime) * 24 * time.Hour)
 	cookie.Secure = true
 	cookie.HttpOnly = true
 	cookie.Path = "/"
@@ -366,17 +365,24 @@ func (h *HTTP) setVerificationCookie(w http.ResponseWriter, r *http.Request) {
 }
 
 func extractIP(addr string) (string, error) {
-	host, _, err := net.SplitHostPort(addr)
 	var ip net.IP
-	if err == nil {
-		ip = net.ParseIP(host)
-	} else {
-		ip = net.ParseIP(addr)
-	}
+	var err error
+	var host string
+
+	// Try to parse the addr directly
+	ip = net.ParseIP(addr)
+
+	// If parsing directly failed, try to split host from port
 	if ip == nil {
-		return ip.String(), errors.New(fmt.Sprintf("Unable to parse remote addr %s", addr))
+		host, _, err = net.SplitHostPort(addr)
+		if err == nil {
+			ip = net.ParseIP(host)
+		}
+		if err != nil {
+			fmt.Printf("Unable to split host port for %s, returning %s: %s\n", addr, ip.String(), err.Error())
+		}
 	}
-	return ip.String(), nil
+	return ip.String(), err
 }
 
 func inStringSlice(needle string, haystack []string) bool {

@@ -7,6 +7,7 @@ import (
 
 type Config struct {
 	Contact              string
+	CookieLifetime       int
 	Expiration           int
 	ExpirationDuration   time.Duration
 	LimitFileDownloads   uint64
