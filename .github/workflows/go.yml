@@ -30,5 +30,5 @@ jobs:
         fi
 
     - name: Build
-      run: docker-compose -f ci.yml up --abort-on-container-exit
+      run: docker compose -f ci.yml up --abort-on-container-exit
 
