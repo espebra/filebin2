@@ -117,6 +117,63 @@ func (h *HTTP) viewBin(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *HTTP) viewBinPlainText(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "max-age=0")
+	w.Header().Set("X-Robots-Tag", "noindex")
+
+	params := mux.Vars(r)
+	inputBin := params["bin"]
+
+	type Data struct {
+		ds.Common
+		Bin   ds.Bin    `json:"bin"`
+		Files []ds.File `json:"files"`
+	}
+	var data Data
+
+	bin, found, err := h.dao.Bin().GetByID(inputBin)
+	if err != nil {
+		fmt.Printf("Unable to GetByID(%q): %s\n", inputBin, err.Error())
+		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		return
+	}
+	if found {
+		files, err := h.dao.File().GetByBin(inputBin, true)
+		if err != nil {
+			fmt.Printf("Unable to GetByBin(%q): %s\n", inputBin, err.Error())
+			http.Error(w, "Not found", http.StatusNotFound)
+			return
+		}
+		if bin.IsReadable() {
+			data.Files = files
+		}
+	} else {
+		// Synthetize a bin without creating it. It will be created when a file is uploaded.
+		bin = ds.Bin{}
+		bin.Id = inputBin
+		bin.ExpiredAt = time.Now().UTC().Add(h.config.ExpirationDuration)
+		bin.ExpiredAtRelative = humanize.Time(bin.ExpiredAt)
+
+		// Intentional slowdown to make crawling less efficient
+		time.Sleep(1 * time.Second)
+	}
+
+	code := 200
+	if bin.IsReadable() == false {
+		code = 404
+	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(code)
+	for _, file := range data.Files {
+		var u url.URL
+		u.Scheme = h.config.BaseUrl.Scheme
+		u.Host = h.config.BaseUrl.Host
+		u.Path = path.Join(h.config.BaseUrl.Path, file.URL)
+		fmt.Fprintf(w, "%s\n", u.String())
+	}
+}
+
 func (h *HTTP) binQR(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=31536000")
 	w.Header().Set("X-Robots-Tag", "noindex")
