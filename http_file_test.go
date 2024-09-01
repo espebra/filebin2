@@ -522,6 +522,33 @@ func TestBinInputValidation(t *testing.T) {
 	runTests(tcs, t)
 }
 
+func TestBinText(t *testing.T) {
+	tcs := []TestCase{
+		{
+			Description:   "Create new bin",
+			Method:        "POST",
+			Bin:           "mytestbin6",
+			Filename:      "a",
+			UploadContent: "content a",
+			StatusCode:    201,
+		}, {
+			Description:   "Upload second file",
+			Method:        "POST",
+			Bin:           "mytestbin6",
+			Filename:      "b",
+			UploadContent: "content b",
+			StatusCode:    201,
+		}, {
+			Description:     "Get bin in plaintext",
+			Method:          "GET",
+			Bin:             "mytestbin6.txt",
+			DownloadContent: "/mytestbin6/a\n/mytestbin6/b\n",
+			StatusCode:      200,
+		},
+	}
+	runTests(tcs, t)
+}
+
 func TestBinBan(t *testing.T) {
 	tcs := []TestCase{
 		{
