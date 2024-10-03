@@ -504,6 +504,56 @@ func TestInvalidFileInput(t *testing.T) {
 }
 
 func TestUpsertWiderCharacterSet(t *testing.T) {
+	type TestCase struct {
+		InputFilename    string
+		Valid            bool
+		ModifiedFilename string
+	}
+
+	tests := []TestCase{
+		{
+			InputFilename:    "a",
+			Valid:            true,
+			ModifiedFilename: "a",
+		}, {
+			InputFilename:    "1",
+			Valid:            true,
+			ModifiedFilename: "1",
+		}, {
+			InputFilename:    "雨中.txt",
+			Valid:            true,
+			ModifiedFilename: "雨中.txt",
+		}, {
+			InputFilename:    ".",
+			Valid:            true,
+			ModifiedFilename: "_",
+		}, {
+			InputFilename:    "",
+			Valid:            false,
+			ModifiedFilename: "",
+		}, {
+			InputFilename:    "foo\bbar",
+			Valid:            true,
+			ModifiedFilename: "foo_bar",
+		}, {
+			InputFilename:    "   ",
+			Valid:            false,
+			ModifiedFilename: "",
+		}, {
+			InputFilename:    "    test    ",
+			Valid:            true,
+			ModifiedFilename: "test",
+		}, {
+			InputFilename:    "    ../foo/bar/baz.zip    ",
+			Valid:            true,
+			ModifiedFilename: "baz.zip",
+		}, {
+			InputFilename:    "℃!",
+			Valid:            true,
+			ModifiedFilename: "__",
+		},
+	}
+
 	dao, err := tearUp()
 
 	if err != nil {
@@ -521,39 +571,30 @@ func TestUpsertWiderCharacterSet(t *testing.T) {
 		t.Error(err)
 	}
 
-	// Create file
-	file := &ds.File{}
-	file.Filename = "ОДД.txt"
-	file.Bin = bin.Id // Foreign key
-	file.Bytes = 1
-	file.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-	file.InStorage = true
+	for i, test := range tests {
+		file := &ds.File{}
+		file.Filename = test.InputFilename
+		file.Bin = bin.Id
+		err = dao.File().Insert(file)
 
-	err = dao.File().Insert(file)
+		if test.Valid == false {
+			if err == nil {
+				t.Error(errors.New(fmt.Sprintf("Expected error and invalid filename, got %q\n", file.Filename)))
+			}
+		}
 
-	if err != nil {
-		t.Error(err)
-	}
+		if test.Valid == true {
+			if err != nil {
+				t.Error(errors.New(fmt.Sprintf("Got %s, but did not expect error here", err.Error())))
+			}
 
-	if file.Id == 0 {
-		t.Error(errors.New("Expected id > 0"))
-	}
+			if file.Id == 0 {
+				t.Error(errors.New("Expected id > 0"))
+			}
 
-	// Create file2
-	file2 := &ds.File{}
-	file2.Filename = "雨中.txt"
-	file2.Bin = bin.Id // Foreign key
-	file2.Bytes = 1
-	file2.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-	file2.InStorage = true
-
-	err = dao.File().Insert(file2)
-
-	if err != nil {
-		t.Error(err)
-	}
-
-	if file2.Id == 0 {
-		t.Error(errors.New("Expected id > 0"))
+			if file.Filename != test.ModifiedFilename {
+				t.Errorf("Test case %d: Unexpected filename. Got %q, expected %q\n", i, file.Filename, test.ModifiedFilename)
+			}
+		}
 	}
 }
