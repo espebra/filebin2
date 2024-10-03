@@ -502,3 +502,58 @@ func TestInvalidFileInput(t *testing.T) {
 		t.Error("Expected an error since filename is not set")
 	}
 }
+
+func TestUpsertWiderCharacterSet(t *testing.T) {
+	dao, err := tearUp()
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	defer tearDown(dao)
+
+	// Create bin first
+	bin := &ds.Bin{}
+	bin.Id = "sometestbin"
+	err = dao.Bin().Upsert(bin)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Create file
+	file := &ds.File{}
+	file.Filename = "ОДД.txt"
+	file.Bin = bin.Id // Foreign key
+	file.Bytes = 1
+	file.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	file.InStorage = true
+
+	err = dao.File().Insert(file)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if file.Id == 0 {
+		t.Error(errors.New("Expected id > 0"))
+	}
+
+	// Create file2
+	file2 := &ds.File{}
+	file2.Filename = "雨中.txt"
+	file2.Bin = bin.Id // Foreign key
+	file2.Bytes = 1
+	file2.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	file2.InStorage = true
+
+	err = dao.File().Insert(file2)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if file2.Id == 0 {
+		t.Error(errors.New("Expected id > 0"))
+	}
+}

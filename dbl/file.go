@@ -7,12 +7,10 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/espebra/filebin2/ds"
 	"path"
-	"regexp"
+	"path/filepath"
 	"strings"
 	"time"
 )
-
-var invalidFilename = regexp.MustCompile("[^A-Za-z0-9-_=+,.]")
 
 type FileDao struct {
 	db *sql.DB
@@ -29,8 +27,17 @@ func setCategory(file *ds.File) {
 }
 
 func (d *FileDao) ValidateInput(file *ds.File) error {
-	// Replace all invalid characters with _
-	file.Filename = invalidFilename.ReplaceAllString(file.Filename, "_")
+	// Verify that the filename provided is a clean filename and not a
+	// folder structure.
+	if file.Filename != filepath.Base(file.Filename) {
+		return errors.New("The filename specified is not a clean basename")
+	}
+
+	// Replace all invalid UTF-8 characters in the filename with _
+	file.Filename = strings.ToValidUTF8(file.Filename, "_")
+
+	// Trim whitespace before and after.
+	file.Filename = strings.Trim(file.Filename, " ")
 
 	// . is not allowed as the first character
 	if strings.HasPrefix(file.Filename, ".") {
