@@ -32,7 +32,7 @@ func setCategory(file *ds.File) {
 
 func (d *FileDao) ValidateInput(file *ds.File) error {
 	// Trim whitespace before and after.
-	file.Filename = strings.Trim(file.Filename, " ")
+	file.Filename = strings.TrimSpace(file.Filename)
 
 	// If the filename is empty, error out
 	if len(file.Filename) == 0 {
