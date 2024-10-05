@@ -3,16 +3,15 @@ package dbl
 import (
 	"database/sql"
 	"errors"
-	//"fmt"
+	"fmt"
 	"github.com/dustin/go-humanize"
 	"github.com/espebra/filebin2/ds"
 	"path"
-	"regexp"
+	"path/filepath"
 	"strings"
 	"time"
+	"unicode"
 )
-
-var invalidFilename = regexp.MustCompile("[^A-Za-z0-9-_=+,.]")
 
 type FileDao struct {
 	db *sql.DB
@@ -29,18 +28,69 @@ func setCategory(file *ds.File) {
 }
 
 func (d *FileDao) ValidateInput(file *ds.File) error {
-	// Replace all invalid characters with _
-	file.Filename = invalidFilename.ReplaceAllString(file.Filename, "_")
+	// Trim whitespace before and after the filename.
+	file.Filename = strings.TrimSpace(file.Filename)
 
-	// . is not allowed as the first character
-	if strings.HasPrefix(file.Filename, ".") {
-		file.Filename = strings.Replace(file.Filename, ".", "_", 1)
-	}
-
-	// If the filename is empty, error out
+	// If the filename is empty, error out.
 	if len(file.Filename) == 0 {
 		return errors.New("Filename not specified")
 	}
+
+	// Create a new variable to use for filename modifications.
+	n := file.Filename
+
+	// Extract the basename from the filename, in case the filename
+	// is not clean and contains a folder structure.
+	// folder structure.
+	n = filepath.Base(n)
+
+	// Replace all invalid UTF-8 characters in the filename with _
+	n = strings.ToValidUTF8(n, "_")
+
+	// Mapping function to replace non-safe characters with underscore.
+	// It is possible that this filter can be extended to allow more
+	// unicode categories.
+	safe := func(r rune) rune {
+		switch {
+		// Allow numbers
+		case unicode.IsNumber(r):
+			//fmt.Printf("Character check: r=%q is a number\n", r)
+			return r
+		// Allow letters
+		case unicode.IsLetter(r):
+			//fmt.Printf("Character check: r=%q is a letter\n", r)
+			return r
+		// Allow certain other characters
+		case strings.ContainsAny(string(r), "-_=+,."):
+			//fmt.Printf("Character check: r=%q is a valid character\n", r)
+			return r
+		}
+		//fmt.Printf("Invalid character (%q) in filename replaced with underscore\n", r)
+		// All other characters are replaced with an underscore
+		return '_'
+
+	}
+	n = strings.Map(safe, n)
+
+	// . is not allowed as the first character
+	if strings.HasPrefix(n, ".") {
+		n = strings.Replace(n, ".", "_", 1)
+	}
+
+	// Truncate long filenames
+	// XXX: The maximum length could be made configurable
+	if len(n) > 120 {
+		fmt.Printf("Truncating filename to 120 characters. Counting %d characters in %q.\n", len(n), n)
+		n = n[:120]
+	}
+
+	if file.Filename != n {
+		// Log that the filename was modified.
+		fmt.Printf("Modifying filename during upload from %q to %q\n", file.Filename, n)
+
+	}
+
+	file.Filename = n
 
 	return nil
 }

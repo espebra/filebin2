@@ -285,7 +285,8 @@ function FileAPI (c, t, d, f, bin, binURL) {
                 updateFileCount();
             };
 
-            filename = file.name.replace(/[^A-Za-z0-9-_=,.]/g, "_");
+            // XXX: Consider validating UTF-8 here
+            filename = file.name;
 
             // XXX: Do this properly using a path join function
             uploadURL = "/" + bin + "/" + filename;
@@ -297,7 +298,6 @@ function FileAPI (c, t, d, f, bin, binURL) {
             );
             xhr.setRequestHeader("Cache-Control", "no-cache");
             xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
-            xhr.setRequestHeader("Filename", filename);
             xhr.setRequestHeader("Size", file.size);
             xhr.setRequestHeader("Bin", bin);
             xhr.send(file);

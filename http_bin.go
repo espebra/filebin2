@@ -320,7 +320,7 @@ func (h *HTTP) archive(w http.ResponseWriter, r *http.Request) {
 				fmt.Println(err)
 			}
 			h.metrics.IncrBytesFilebinToClient(uint64(bytes))
-			fmt.Printf("Added file %s at %s (%d bytes) to the zip archive for bin %s\n", file.Filename, humanize.Bytes(uint64(bytes)), bytes, bin.Id)
+			fmt.Printf("Added file %q at %s (%d bytes) to the zip archive for bin %s\n", file.Filename, humanize.Bytes(uint64(bytes)), bytes, bin.Id)
 		}
 		if err := zw.Close(); err != nil {
 			fmt.Println(err)
@@ -359,7 +359,7 @@ func (h *HTTP) archive(w http.ResponseWriter, r *http.Request) {
 				fmt.Println(err)
 			}
 			h.metrics.IncrBytesFilebinToClient(uint64(bytes))
-			fmt.Printf("Added file %s at %s (%d bytes) to the tar archive for bin %s\n", file.Filename, humanize.Bytes(uint64(bytes)), bytes, bin.Id)
+			fmt.Printf("Added file %q at %s (%d bytes) to the tar archive for bin %s\n", file.Filename, humanize.Bytes(uint64(bytes)), bytes, bin.Id)
 		}
 		if err := tw.Close(); err != nil {
 			fmt.Println(err)

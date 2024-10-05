@@ -502,3 +502,107 @@ func TestInvalidFileInput(t *testing.T) {
 		t.Error("Expected an error since filename is not set")
 	}
 }
+
+func TestUpsertWiderCharacterSet(t *testing.T) {
+	type TestCase struct {
+		InputFilename    string
+		Valid            bool
+		ModifiedFilename string
+	}
+
+	tests := []TestCase{
+		{
+			InputFilename:    "a",
+			Valid:            true,
+			ModifiedFilename: "a",
+		}, {
+			InputFilename:    "1",
+			Valid:            true,
+			ModifiedFilename: "1",
+		}, {
+			InputFilename:    "雨中.txt",
+			Valid:            true,
+			ModifiedFilename: "雨中.txt",
+		}, {
+			InputFilename:    ".",
+			Valid:            true,
+			ModifiedFilename: "_",
+		}, {
+			InputFilename:    "",
+			Valid:            false,
+			ModifiedFilename: "",
+		}, {
+			InputFilename:    "foo\bbar",
+			Valid:            true,
+			ModifiedFilename: "foo_bar",
+		}, {
+			InputFilename:    "   ",
+			Valid:            false,
+			ModifiedFilename: "",
+		}, {
+			InputFilename:    "    test    ",
+			Valid:            true,
+			ModifiedFilename: "test",
+		}, {
+			InputFilename:    "    ../foo/bar/baz.zip    ",
+			Valid:            true,
+			ModifiedFilename: "baz.zip",
+		}, {
+			InputFilename:    "℃!",
+			Valid:            true,
+			ModifiedFilename: "__",
+		}, {
+			InputFilename:    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			Valid:            true,
+			ModifiedFilename: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		}, {
+			InputFilename:    "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+			Valid:            true,
+			ModifiedFilename: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+		},
+	}
+
+	dao, err := tearUp()
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	defer tearDown(dao)
+
+	// Create bin first
+	bin := &ds.Bin{}
+	bin.Id = "sometestbin"
+	err = dao.Bin().Upsert(bin)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	for i, test := range tests {
+		file := &ds.File{}
+		file.Filename = test.InputFilename
+		file.Bin = bin.Id
+		err = dao.File().Insert(file)
+
+		if test.Valid == false {
+			if err == nil {
+				t.Error(errors.New(fmt.Sprintf("Expected error and invalid filename, got %q\n", file.Filename)))
+			}
+		}
+
+		if test.Valid == true {
+			if err != nil {
+				t.Error(errors.New(fmt.Sprintf("Got %s, but did not expect error here", err.Error())))
+			}
+
+			if file.Id == 0 {
+				t.Error(errors.New("Expected id > 0"))
+			}
+
+			if file.Filename != test.ModifiedFilename {
+				t.Errorf("Test case %d: Unexpected filename. Got %q, expected %q\n", i, file.Filename, test.ModifiedFilename)
+			}
+		}
+	}
+}
