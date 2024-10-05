@@ -160,15 +160,16 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	// upload files to / with the request headers bin and filename set instead
 	// of /{bin}/{filename}
 	if inputBin == "" || inputFilename == "" {
-		inputBin = r.Header.Get("bin")
 		inputFilename = r.Header.Get("filename")
-		if inputBin == "" {
-			inputBin = h.dao.Bin().GenerateId()
-			fmt.Printf("Auto generated bin: %s\n", inputBin)
-		}
 		if inputFilename == "" {
 			h.Error(w, r, "Upload failed: missing filename request header", "Missing filename request header", 952, http.StatusBadRequest)
 			return
+		}
+
+		inputBin = r.Header.Get("bin")
+		if inputBin == "" {
+			inputBin = h.dao.Bin().GenerateId()
+			fmt.Printf("Auto generated bin: %s\n", inputBin)
 		}
 	}
 
