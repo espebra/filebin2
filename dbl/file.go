@@ -79,6 +79,13 @@ func (d *FileDao) ValidateInput(file *ds.File) error {
 		n = strings.Replace(n, ".", "_", 1)
 	}
 
+	// Truncate long filenames
+	// XXX: The maximum length could be made configurable
+	if len(n) > 120 {
+		fmt.Printf("Truncating filename to 120 characters. Counting %d characters in %q.\n", len(n), n)
+		n = n[:120]
+	}
+
 	if file.Filename != n {
 		fmt.Printf("Modifying filename during upload from %q to %q\n", file.Filename, n)
 	}
