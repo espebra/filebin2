@@ -10,11 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-	//"regexp"
 	"unicode"
 )
-
-//var validCharacters = regexp.MustCompile("-_=+,.")
 
 type FileDao struct {
 	db *sql.DB
@@ -31,14 +28,15 @@ func setCategory(file *ds.File) {
 }
 
 func (d *FileDao) ValidateInput(file *ds.File) error {
-	// Trim whitespace before and after.
+	// Trim whitespace before and after the filename.
 	file.Filename = strings.TrimSpace(file.Filename)
 
-	// If the filename is empty, error out
+	// If the filename is empty, error out.
 	if len(file.Filename) == 0 {
 		return errors.New("Filename not specified")
 	}
 
+	// Create a new variable to use for filename modifications.
 	n := file.Filename
 
 	// Extract the basename from the filename, in case the filename
@@ -87,7 +85,9 @@ func (d *FileDao) ValidateInput(file *ds.File) error {
 	}
 
 	if file.Filename != n {
+		// Log that the filename was modified.
 		fmt.Printf("Modifying filename during upload from %q to %q\n", file.Filename, n)
+
 	}
 
 	file.Filename = n
