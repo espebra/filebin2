@@ -559,6 +559,14 @@ func TestUpsertWiderCharacterSet(t *testing.T) {
 			InputFilename:    "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
 			Valid:            true,
 			ModifiedFilename: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+		}, {
+			InputFilename:    " a b ( ) [ ] ",
+			Valid:            true,
+			ModifiedFilename: "a b ( ) [ ]",
+		}, {
+			InputFilename:    "a    b c  d",
+			Valid:            true,
+			ModifiedFilename: "a b c d",
 		},
 	}
 

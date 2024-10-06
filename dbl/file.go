@@ -61,7 +61,7 @@ func (d *FileDao) ValidateInput(file *ds.File) error {
 			//fmt.Printf("Character check: r=%q is a letter\n", r)
 			return r
 		// Allow certain other characters
-		case strings.ContainsAny(string(r), "-_=+,."):
+		case strings.ContainsAny(string(r), "-_=+,.()[] "):
 			//fmt.Printf("Character check: r=%q is a valid character\n", r)
 			return r
 		}
@@ -77,6 +77,9 @@ func (d *FileDao) ValidateInput(file *ds.File) error {
 		n = strings.Replace(n, ".", "_", 1)
 	}
 
+	// Replace redundant spaces with single spaces
+	n = strings.Join(strings.Fields(n), " ")
+
 	// Truncate long filenames
 	// XXX: The maximum length could be made configurable
 	if len(n) > 120 {
@@ -86,8 +89,7 @@ func (d *FileDao) ValidateInput(file *ds.File) error {
 
 	if file.Filename != n {
 		// Log that the filename was modified.
-		fmt.Printf("Modifying filename during upload from %q to %q\n", file.Filename, n)
-
+		fmt.Printf("Modifying filename during upload from %q to %q (%s)\n", file.Filename, n, file.Bin)
 	}
 
 	file.Filename = n
