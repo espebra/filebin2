@@ -1,6 +1,9 @@
+@import url('poppins.css');
+
 html, body {
     margin: 0;
     height: 100%;
+    font-family: Poppins;
 }
 
 #fileDrop {
@@ -18,7 +21,7 @@ html, body {
     opacity: 0.9;
     border: 7px dashed #000000;
     visibility: hidden;
-    font-family: Courier;
+    font-family: Poppins;
 }
 
 #fileList {
