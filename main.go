@@ -48,6 +48,12 @@ var (
 	accessLogFlag    = flag.String("access-log", "/var/log/filebin/access.log", "Path for access.log output")
 	proxyHeadersFlag = flag.Bool("proxy-headers", false, "Read client request information from proxy headers")
 
+	// Timeouts
+	readTimeoutFlag       = flag.Duration("read-timeout", 1*time.Hour, "Read timeout for the HTTP server")
+	readHeaderTimeoutFlag = flag.Duration("read-header-timeout", 2*time.Second, "Read header timeout for the HTTP server")
+	writeTimeoutFlag      = flag.Duration("write-timeout", 1*time.Hour, "Write timeout for the HTTP server")
+	idleTimeoutFlag       = flag.Duration("idle-timeout", 30*time.Second, "Idle timeout for the HTTP server")
+
 	// Database
 	dbHostFlag     = flag.String("db-host", os.Getenv("DATABASE_HOST"), "Database host")
 	dbPortFlag     = flag.String("db-port", os.Getenv("DATABASE_PORT"), "Database port")
@@ -224,7 +230,10 @@ func main() {
 		HttpAccessLog:        *accessLogFlag,
 		HttpPort:             *listenPortFlag,
 		HttpProxyHeaders:     *proxyHeadersFlag,
+		IdleTimeout:          *idleTimeoutFlag,
 		LimitFileDownloads:   *limitFileDownloadsFlag,
+		ReadHeaderTimeout:    *readHeaderTimeoutFlag,
+		ReadTimeout:          *readTimeoutFlag,
 		RequireApproval:      *requireApprovalFlag,
 		RequireCookie:        *requireCookieFlag,
 		CookieLifetime:       *cookieLifetimeFlag,
@@ -234,6 +243,7 @@ func main() {
 		SlackDomain:          *slackDomainFlag,
 		SlackChannel:         *slackChannelFlag,
 		Tmpdir:               *tmpdirFlag,
+		WriteTimeout:         *writeTimeoutFlag,
 	}
 
 	config.LimitStorageBytes, err = humanize.ParseBytes(*limitStorageFlag)
