@@ -65,11 +65,11 @@ Path to a filename for the access log output.
 
 #### `--admin-password string` (default: not set)
 
-Password to require for access to the /admin endpoint. If the password is not set, then the admin endpoint will not be available. Make sure to keep this password a secret.
+Password to require for access to the /admin endpoint. If the password is not set, then the admin endpoint will not be available. Make sure to keep this password a secret. Can also be set using the environment variable `ADMIN_PASSWORD`.
 
 #### `--admin-username string` (default: not set)
 
-Username to require for access to the /admin endpoint. If the password is not set, then the admin endpoint will not be available.
+Username to require for access to the /admin endpoint. If the password is not set, then the admin endpoint will not be available. Can also be set using the environment variable `ADMIN_USERNAME`.
 
 #### `--allow-robots` (default: not set)
 
@@ -78,6 +78,10 @@ If this argument is set, then the `X-Robots-Tag` response header will allow sear
 #### `--baseurl string` (default: "https://filebin.net")
 
 The base URL to use, which impacts URLs that are presented to the user for files and bins, and it needs to point to the hostname of the filebin instance.
+
+#### `--contact string` (default: none)
+
+The e-mail address to show on the website on the contact page.
 
 #### `--db-host string` (default: none)
 
@@ -89,7 +93,7 @@ The name of the PostgreSQL database to use.
 
 #### `--db-password string` (default: none)
 
-The password to use when authenticating to the PostgreSQL database.
+The password to use when authenticating to the PostgreSQL database. Can also be set using the environment variable `DATABASE_PASSWORD`.
 
 #### `--db-port string` (default: none)
 
@@ -97,7 +101,11 @@ The port to use when connecting to the PostgreSQL database.
 
 #### `--db-username string` (default: none)
 
-The username to use when authenticating to the PostgreSQL database.
+The username to use when authenticating to the PostgreSQL database. Can also be set using the environment variable `DATABASE_USERNAME`.
+
+#### `--expected-cookie-value string` (default: "2024-05-24")
+
+Which cookie value to expect to avoid showing a warning message. See --require-verification-cookie.
 
 #### `--expiration int` (default: 604800)
 
@@ -165,9 +173,21 @@ The path to an mmdb formatted geoip database like GeoLite2-City.mmdb. This is op
 
 If this argument is set, then the client IP will be read from the proxy headers provided in the incoming HTTP requests. This argument should only be set if there is an HTTP proxy running in front of Filebin, that is using the proxy headers to tell Filebin the original client IP address.
 
+#### `--read-header-timeout duration (default: 2s)
+
+Read header timeout for the HTTP server.
+
+#### `--read-timeout duration (default: 1h)
+
+Read timeout for the HTTP server. File uploads need to complete within this timeout before they are terminated.
+
 #### `--reject-file-extensions string` (default: not set)
 
 A whitespace separated list of file extensions that will be rejected. Example: "exe bat dll".
+
+#### `--require-verification-cookie` (default not set)
+
+If enabled, a warning page will be shown before a user can download files. If the user accepts to continue past the warning page, a cookie will be set to identify that the user understands the risk of downloading files.
 
 #### `--s3-access-key string` (default: not set)
 
@@ -220,6 +240,14 @@ This argument specifies the secret that Slack will need to use when connecting t
 #### `--tmpdir string`
 
 Directory for temporary files for upload and download (default "`/tmp`").
+
+#### `--verification-cookie-lifetime int` (default: 365)
+
+Number of days before cookie expiration. See --require-verification-cookie.
+
+#### `--write-timeout duration` (default: 1h)
+
+Write timeout for the HTTP server.
 
 ## Integrations
 
