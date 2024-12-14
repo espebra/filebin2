@@ -34,4 +34,10 @@ type Config struct {
 	AllowRobots          bool
 	BaseUrl              url.URL
 	RejectFileExtensions []string
+
+	// Timeouts for the HTTP server
+	ReadTimeout       time.Duration
+	ReadHeaderTimeout time.Duration
+	WriteTimeout      time.Duration
+	IdleTimeout       time.Duration
 }

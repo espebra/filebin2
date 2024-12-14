@@ -207,14 +207,19 @@ func (h *HTTP) Run() {
 		handler = handlers.ProxyHeaders(handler)
 	}
 
+	fmt.Printf("HTTP server read timeout: %s\n", h.config.ReadTimeout)
+	fmt.Printf("HTTP server read header timeout: %s\n", h.config.ReadHeaderTimeout)
+	fmt.Printf("HTTP server idle timeout: %s\n", h.config.IdleTimeout)
+	fmt.Printf("HTTP server write timeout: %s\n", h.config.WriteTimeout)
+
 	// Set up the server
 	srv := &http.Server{
 		Addr:              fmt.Sprintf("%s:%d", h.config.HttpHost, h.config.HttpPort),
 		Handler:           handler,
-		ReadTimeout:       1 * time.Hour,
-		WriteTimeout:      1 * time.Hour,
-		IdleTimeout:       30 * time.Second,
-		ReadHeaderTimeout: 2 * time.Second,
+		ReadTimeout:       h.config.ReadTimeout,
+		WriteTimeout:      h.config.WriteTimeout,
+		IdleTimeout:       h.config.IdleTimeout,
+		ReadHeaderTimeout: h.config.ReadHeaderTimeout,
 	}
 
 	// Start the server
