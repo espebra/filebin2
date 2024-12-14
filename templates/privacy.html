@@ -24,6 +24,10 @@
                 <p>Meta data about transactions, including the IP address of clients uploading and downloading files, is logged for abuse handling purposes and may be shared with third parties in this context.</p>
 
                 <p>This service is using <a href="https://en.wikipedia.org/wiki/HTTPS">HTTPS</a> to secure <a href="https://en.wikipedia.org/wiki/Data_in_transit">data in transit</a>. This mechanism provide data protection from a limited set of scenarios such as man-in-the-middle attacks. The content is, however, not encrypted on the server side. It is recommended that the client encrypts the content prior to uploading it.</p>
+
+		{{ if .CookiesInUse }}
+		<p>A cookie named <code>verified</code> is stored in the client's browser to signal to Filebin if the user has acknowledged the risk involved in downloading files from this service.</p>
+		{{ end }}
             </div>
         </div>
 

@@ -78,10 +78,16 @@ func (h *HTTP) privacy(w http.ResponseWriter, r *http.Request) {
 
 	type Data struct {
 		ds.Common
+		CookiesInUse bool
 		Bin ds.Bin `json:"bin"`
 	}
+
 	var data Data
 	data.Page = "privacy"
+
+	if h.config.RequireCookie == true {
+		data.CookiesInUse = true
+	}
 
 	if err := h.templates.ExecuteTemplate(w, "privacy", data); err != nil {
 		fmt.Printf("Failed to execute template: %s\n", err.Error())
