@@ -173,11 +173,11 @@ The path to an mmdb formatted geoip database like GeoLite2-City.mmdb. This is op
 
 If this argument is set, then the client IP will be read from the proxy headers provided in the incoming HTTP requests. This argument should only be set if there is an HTTP proxy running in front of Filebin, that is using the proxy headers to tell Filebin the original client IP address.
 
-#### `--read-header-timeout duration (default: 2s)
+#### `--read-header-timeout duration` (default: 2s)
 
 Read header timeout for the HTTP server.
 
-#### `--read-timeout duration (default: 1h)
+#### `--read-timeout duration` (default: 1h)
 
 Read timeout for the HTTP server. File uploads need to complete within this timeout before they are terminated.
 
