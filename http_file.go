@@ -106,7 +106,7 @@ func (h *HTTP) getFile(w http.ResponseWriter, r *http.Request) {
 			var nextUrl url.URL
 			nextUrl.Scheme = h.config.BaseUrl.Scheme
 			nextUrl.Host = h.config.BaseUrl.Host
-			nextUrl.Path = path.Join(h.config.BaseUrl.Path, r.RequestURI)
+			nextUrl.Path = path.Join(h.config.BaseUrl.Path, r.URL.Path)
 			data.NextUrl = nextUrl.String()
 			if err := h.templates.ExecuteTemplate(w, "cookie", data); err != nil {
 				fmt.Printf("Failed to execute template: %s\n", err.Error())
