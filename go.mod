@@ -1,8 +1,7 @@
 module github.com/espebra/filebin2
 
 go 1.22
-
-toolchain go1.22.5
+toolchain go1.23.7
 
 require (
 	github.com/dustin/go-humanize v1.0.1
@@ -25,8 +24,8 @@ require (
 	github.com/minio/crc64nvme v1.0.1 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/rs/xid v1.6.0 // indirect
-	golang.org/x/crypto v0.33.0 // indirect
-	golang.org/x/net v0.35.0 // indirect
+	golang.org/x/crypto v0.35.0 // indirect
+	golang.org/x/net v0.36.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
 )
