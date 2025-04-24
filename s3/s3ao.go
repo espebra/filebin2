@@ -224,7 +224,7 @@ func (s S3AO) PresignedGetObject(bin string, filename string, mime string) (pres
 		reqParams.Set("response-content-disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
 	default:
 		// Browser to decide how to handle the rest of the content-types
-		reqParams.Set("response-content-disposition", fmt.Sprintf("filename=\"%s\"", filename))
+		reqParams.Set("response-content-disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))
 	}
 
 	reqParams.Set("response-cache-control", fmt.Sprintf("max-age=%.0f", s.expiry.Seconds()))
