@@ -145,7 +145,7 @@ func TestDeleteBin(t *testing.T) {
 
 	_, found, err := dao.Bin().GetByID(bin.Id)
 	if err != nil {
-		t.Errorf("Did not expect an error even though the bin was deleted earlier: " + err.Error())
+		t.Errorf("Did not expect an error even though the bin was deleted earlier: %s\n", err.Error())
 	}
 	if found == true {
 		t.Errorf("Expected found to be false as the bin was deleted earlier.")

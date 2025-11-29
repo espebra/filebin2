@@ -318,7 +318,7 @@ func TestDeleteFile(t *testing.T) {
 
 	_, found, err := dao.File().GetByID(file.Id)
 	if err != nil {
-		t.Errorf("Did not expect an error even though the file was deleted: " + err.Error())
+		t.Errorf("Did not expect an error even though the file was deleted: %s\n", err.Error())
 	}
 	if found == true {
 		t.Errorf("expected found to be false as the file was deleted earlier.")
