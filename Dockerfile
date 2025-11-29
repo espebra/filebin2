@@ -1,4 +1,4 @@
-FROM golang:bullseye
+FROM golang:trixie
 RUN export DEBIAN_FRONTEND=noninteractive && apt-get install -y make gcc libc-dev git
 RUN go install github.com/jstemmer/go-junit-report/v2@latest
 WORKDIR /app
