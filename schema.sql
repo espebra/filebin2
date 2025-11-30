@@ -80,3 +80,4 @@ CREATE INDEX idx_file_deleted_at_in_storage ON file(deleted_at, in_storage);
 CREATE INDEX idx_bin_deleted_at_expired_at ON bin(expired_at, deleted_at);
 CREATE INDEX idx_sha256 ON file(sha256);
 CREATE INDEX idx_client_banned_at ON client(banned_at, last_active_at);
+CREATE INDEX idx_client_ip_active ON client(ip, last_active_at)
