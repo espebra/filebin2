@@ -23,20 +23,22 @@ import (
 	"github.com/felixge/httpsnoop"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type funcHandler func(http.ResponseWriter, *http.Request)
 
 type HTTP struct {
-	router      *mux.Router
-	templateBox *embed.FS
-	staticBox   *embed.FS
-	templates   *template.Template
-	dao         *dbl.DAO
-	s3          *s3.S3AO
-	geodb       *geoip.DAO
-	config      *ds.Config
-	metrics     *ds.Metrics
+	router          *mux.Router
+	templateBox     *embed.FS
+	staticBox       *embed.FS
+	templates       *template.Template
+	dao             *dbl.DAO
+	s3              *s3.S3AO
+	geodb           *geoip.DAO
+	config          *ds.Config
+	metrics         *ds.Metrics
+	metricsRegistry *prometheus.Registry
 }
 
 func (h *HTTP) Init() (err error) {

@@ -15,6 +15,7 @@ import (
 	"github.com/espebra/filebin2/ds"
 	"github.com/espebra/filebin2/geoip"
 	"github.com/espebra/filebin2/s3"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 const (
@@ -83,7 +84,9 @@ func TestMain(m *testing.M) {
 		HttpPort:             testHTTPPort,
 		RejectFileExtensions: []string{"illegal1", "illegal2"},
 	}
-	metrics := ds.Metrics{}
+	// Create Prometheus registry and metrics
+	metricsRegistry := prometheus.NewRegistry()
+	metrics := ds.NewMetrics("test", metricsRegistry)
 
 	geodb, err := geoip.Init("mmdb/GeoLite2-ASN.mmdb", "mmdb/GeoLite2-City.mmdb")
 	if err != nil {
@@ -92,13 +95,14 @@ func TestMain(m *testing.M) {
 	}
 
 	h := &HTTP{
-		staticBox:   &staticBox,
-		templateBox: &templateBox,
-		dao:         &dao,
-		s3:          &s3ao,
-		geodb:       &geodb,
-		config:      &c,
-		metrics:     &metrics,
+		staticBox:       &staticBox,
+		templateBox:     &templateBox,
+		dao:             &dao,
+		s3:              &s3ao,
+		geodb:           &geodb,
+		config:          &c,
+		metrics:         metrics,
+		metricsRegistry: metricsRegistry,
 	}
 	if err := h.Init(); err != nil {
 		fmt.Printf("Unable to start the HTTP server: %s\n", err.Error())

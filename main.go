@@ -20,6 +20,7 @@ import (
 	"github.com/espebra/filebin2/s3"
 
 	"github.com/dustin/go-humanize"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
@@ -252,18 +253,21 @@ func main() {
 		os.Exit(2)
 	}
 	config.LimitStorageReadable = humanize.Bytes(config.LimitStorageBytes)
-	metrics := ds.Metrics{}
-	metrics.Id = *metricsIdFlag
+
+	// Create Prometheus registry and metrics
+	metricsRegistry := prometheus.NewRegistry()
+	metrics := ds.NewMetrics(*metricsIdFlag, metricsRegistry)
 	metrics.LimitBytes = config.LimitStorageBytes
 
 	h := &HTTP{
-		staticBox:   &staticBox,
-		templateBox: &templateBox,
-		dao:         &daoconn,
-		s3:          &s3conn,
-		geodb:       &geodb,
-		config:      config,
-		metrics:     &metrics,
+		staticBox:       &staticBox,
+		templateBox:     &templateBox,
+		dao:             &daoconn,
+		s3:              &s3conn,
+		geodb:           &geodb,
+		config:          config,
+		metrics:         metrics,
+		metricsRegistry: metricsRegistry,
 	}
 
 	if err := h.Init(); err != nil {
