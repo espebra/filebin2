@@ -28,13 +28,13 @@ func (d *MetricsDao) UpdateMetrics(metrics *ds.Metrics) (err error) {
 	var currentLogEntries, currentFiles, currentBytes, currentBins int64
 
 	// Number of log entries
-	sqlStatement := "SELECT COUNT(Id) FROM transaction"
+	sqlStatement := "SELECT COUNT(*) FROM transaction"
 	if err := d.db.QueryRow(sqlStatement).Scan(&currentLogEntries); err != nil {
 		return err
 	}
 
 	// Number of current files
-	sqlStatement = "SELECT COUNT(Id) FROM file WHERE in_storage = true AND deleted_at IS NULL"
+	sqlStatement = "SELECT COUNT(*) FROM file WHERE in_storage = true AND deleted_at IS NULL"
 	if err := d.db.QueryRow(sqlStatement).Scan(&currentFiles); err != nil {
 		return err
 	}
@@ -48,7 +48,7 @@ func (d *MetricsDao) UpdateMetrics(metrics *ds.Metrics) (err error) {
 	}
 
 	// Number of current bins
-	sqlStatement = "SELECT COUNT(Id) FROM bin WHERE expired_at > $1 AND deleted_at IS NULL"
+	sqlStatement = "SELECT COUNT(*) FROM bin WHERE expired_at > $1 AND deleted_at IS NULL"
 	if err := d.db.QueryRow(sqlStatement, now).Scan(&currentBins); err != nil {
 		return err
 	}
