@@ -25,39 +25,39 @@ func (d *MetricsDao) StorageBytesAllocated() (totalBytes uint64) {
 func (d *MetricsDao) UpdateMetrics(metrics *ds.Metrics) (err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
 
-	tmp := ds.Metrics{}
+	var currentLogEntries, currentFiles, currentBytes, currentBins int64
 
 	// Number of log entries
 	sqlStatement := "SELECT COUNT(Id) FROM transaction"
-	if err := d.db.QueryRow(sqlStatement).Scan(&tmp.CurrentLogEntries); err != nil {
+	if err := d.db.QueryRow(sqlStatement).Scan(&currentLogEntries); err != nil {
 		return err
 	}
 
 	// Number of current files
 	sqlStatement = "SELECT COUNT(Id) FROM file WHERE in_storage = true AND deleted_at IS NULL"
-	if err := d.db.QueryRow(sqlStatement).Scan(&tmp.CurrentFiles); err != nil {
+	if err := d.db.QueryRow(sqlStatement).Scan(&currentFiles); err != nil {
 		return err
 	}
 
 	// Total number of bytes of current files
-	if metrics.CurrentFiles > 0 {
+	if currentFiles > 0 {
 		sqlStatement = "SELECT SUM(bytes) FROM file WHERE in_storage = true AND deleted_at IS NULL"
-		if err := d.db.QueryRow(sqlStatement).Scan(&tmp.CurrentBytes); err != nil {
+		if err := d.db.QueryRow(sqlStatement).Scan(&currentBytes); err != nil {
 			return err
 		}
 	}
 
 	// Number of current bins
 	sqlStatement = "SELECT COUNT(Id) FROM bin WHERE expired_at > $1 AND deleted_at IS NULL"
-	if err := d.db.QueryRow(sqlStatement, now).Scan(&tmp.CurrentBins); err != nil {
+	if err := d.db.QueryRow(sqlStatement, now).Scan(&currentBins); err != nil {
 		return err
 	}
 
-	metrics.Lock()
-	metrics.CurrentBins = tmp.CurrentBins
-	metrics.CurrentLogEntries = tmp.CurrentLogEntries
-	metrics.CurrentFiles = tmp.CurrentFiles
-	metrics.CurrentBytes = tmp.CurrentBytes
+	// Update metrics struct fields (no lock needed for Prometheus metrics as they are thread-safe)
+	metrics.CurrentBins = currentBins
+	metrics.CurrentLogEntries = currentLogEntries
+	metrics.CurrentFiles = currentFiles
+	metrics.CurrentBytes = currentBytes
 
 	metrics.CurrentFilesReadable = humanize.Comma(metrics.CurrentFiles)
 	metrics.CurrentBinsReadable = humanize.Comma(metrics.CurrentBins)
@@ -66,7 +66,6 @@ func (d *MetricsDao) UpdateMetrics(metrics *ds.Metrics) (err error) {
 	metrics.TotalFilesReadable = humanize.Comma(metrics.TotalFiles)
 	metrics.TotalBinsReadable = humanize.Comma(metrics.TotalBins)
 	metrics.TotalBytesReadable = humanize.Bytes(uint64(metrics.TotalBytes))
-	metrics.Unlock()
 
 	return nil
 }
