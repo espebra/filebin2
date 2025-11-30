@@ -261,7 +261,9 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 
 	//fmt.Printf("Uploading filename %s (%s) to bin %s\n", inputFilename, humanize.Bytes(inputBytes), bin.Id)
 
-	fp, err := ioutil.TempFile(h.config.Tmpdir, "filebin")
+	// Add timestamp to the temporary file to make it easy to see when
+	// an upload was started.
+	fp, err := ioutil.TempFile(h.config.Tmpdir, fmt.Sprintf("filebin-%s-", t0.Format("20060102-150405")))
 	// Defer removal of the tempfile to clean up partially uploaded files.
 	if err != nil {
 		h.Error(w, r, fmt.Sprintf("Failed to create temporary upload file: %s", err.Error()), "Storage error", 124, http.StatusInternalServerError)
