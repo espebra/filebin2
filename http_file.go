@@ -274,7 +274,12 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 
 	t1 := time.Now()
 
-	nBytes, err := io.Copy(fp, r.Body)
+	// Compute MD5 and SHA256 checksums during the initial write to reduce disk IOPS
+	md5Checksum := md5.New()
+	sha256Checksum := sha256.New()
+	multiWriter := io.MultiWriter(fp, md5Checksum, sha256Checksum)
+
+	nBytes, err := io.Copy(multiWriter, r.Body)
 	if err != nil {
 		h.Error(w, r, fmt.Sprintf("File upload of file %q bin %q aborted at %s of %s, upload started %s: %s (%s)", inputFilename, bin.Id, humanize.Bytes(uint64(nBytes)), humanize.Bytes(inputBytes), humanize.Time(t0), err.Error(), fp.Name()), "Storage error", 125, http.StatusInternalServerError)
 		return
@@ -287,15 +292,10 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 		h.Error(w, r, "", "Empty file uploads are not allowed", 127, http.StatusBadRequest)
 		return
 	}
-	fp.Seek(0, 0)
 
 	t2 := time.Now()
 
-	md5Checksum := md5.New()
-	if _, err := io.Copy(md5Checksum, fp); err != nil {
-		h.Error(w, r, fmt.Sprintf("Error during checksum: %s", err.Error()), "Processing error", 128, http.StatusInternalServerError)
-		return
-	}
+	// Checksums are already calculated from the write above
 	md5ChecksumString := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%x", md5Checksum.Sum(nil))))
 	if inputMD5 != "" {
 		if md5ChecksumString != inputMD5 {
@@ -303,13 +303,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	fp.Seek(0, 0)
 
-	sha256Checksum := sha256.New()
-	if _, err := io.Copy(sha256Checksum, fp); err != nil {
-		h.Error(w, r, fmt.Sprintf("Error during checksum: %s", err.Error()), "Processing error", 130, http.StatusInternalServerError)
-		return
-	}
 	sha256ChecksumString := fmt.Sprintf("%x", sha256Checksum.Sum(nil))
 	if inputSHA256 != "" {
 		if sha256ChecksumString != inputSHA256 {
