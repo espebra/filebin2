@@ -192,8 +192,17 @@ func (h *HTTP) auth(fn func(http.ResponseWriter, *http.Request)) http.HandlerFun
 func (h *HTTP) Run() {
 	fmt.Printf("Starting HTTP server on %s:%d\n", h.config.HttpHost, h.config.HttpPort)
 
-	// Add gzip compression
-	handler := handlers.CompressHandler(h.router)
+	// Add gzip compression, but exclude /archive endpoints (they're already compressed)
+	var handler http.Handler
+	handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/archive/") {
+			// Skip compression for archive endpoints
+			h.router.ServeHTTP(w, r)
+		} else {
+			// Apply compression for all other endpoints
+			handlers.CompressHandler(h.router).ServeHTTP(w, r)
+		}
+	})
 
 	// Add access logging
 	accessLog, err := os.OpenFile(h.config.HttpAccessLog, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
