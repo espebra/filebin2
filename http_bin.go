@@ -218,6 +218,85 @@ func (h *HTTP) binQR(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// archiveWriter provides a common interface for creating archive files
+type archiveWriter interface {
+	addFile(file ds.File) (io.Writer, error)
+	close() error
+}
+
+// zipArchiveWriter wraps zip.Writer to implement archiveWriter
+type zipArchiveWriter struct {
+	writer *zip.Writer
+}
+
+func newZipArchiveWriter(w io.Writer) *zipArchiveWriter {
+	return &zipArchiveWriter{writer: zip.NewWriter(w)}
+}
+
+func (z *zipArchiveWriter) addFile(file ds.File) (io.Writer, error) {
+	header := &zip.FileHeader{}
+	header.Name = file.Filename
+	header.Modified = file.UpdatedAt
+	header.SetMode(400) // RW for the file owner
+	return z.writer.CreateHeader(header)
+}
+
+func (z *zipArchiveWriter) close() error {
+	return z.writer.Close()
+}
+
+// tarArchiveWriter wraps tar.Writer to implement archiveWriter
+type tarArchiveWriter struct {
+	writer *tar.Writer
+}
+
+func newTarArchiveWriter(w io.Writer) *tarArchiveWriter {
+	return &tarArchiveWriter{writer: tar.NewWriter(w)}
+}
+
+func (t *tarArchiveWriter) addFile(file ds.File) (io.Writer, error) {
+	header := &tar.Header{}
+	header.Name = file.Filename
+	header.Size = int64(file.Bytes)
+	header.ModTime = file.UpdatedAt
+	header.Mode = 0600 // rw access for the owner
+
+	if err := t.writer.WriteHeader(header); err != nil {
+		return nil, err
+	}
+	return t.writer, nil
+}
+
+func (t *tarArchiveWriter) close() error {
+	return t.writer.Close()
+}
+
+// addFilesToArchive adds files from S3 to an archive writer
+func (h *HTTP) addFilesToArchive(w http.ResponseWriter, r *http.Request, bin ds.Bin, files []ds.File, archiver archiveWriter, format string) error {
+	for _, file := range files {
+		writer, err := archiver.addFile(file)
+		if err != nil {
+			return err
+		}
+
+		fp, err := h.s3.GetObject(bin.Id, file.Filename, 0, 0)
+		if err != nil {
+			h.Error(w, r, fmt.Sprintf("Failed to archive object in bin %q: filename %q: %s", bin.Id, file.Filename, err.Error()), "Archive error", 300, http.StatusInternalServerError)
+			return err
+		}
+		defer fp.Close()
+		h.metrics.IncrBytesStorageToFilebin(file.Bytes)
+
+		bytes, err := io.Copy(writer, fp)
+		if err != nil {
+			return err
+		}
+		h.metrics.IncrBytesFilebinToClient(uint64(bytes))
+		fmt.Printf("Added file %q at %s (%d bytes) to the %s archive for bin %s\n", file.Filename, humanize.Bytes(uint64(bytes)), bytes, format, bin.Id)
+	}
+	return archiver.close()
+}
+
 func (h *HTTP) archive(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=0")
 	w.Header().Set("X-Robots-Tag", "noindex")
@@ -291,84 +370,30 @@ func (h *HTTP) archive(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	var archiver archiveWriter
 	if inputFormat == "zip" {
 		w.Header().Set("Content-Type", "application/zip")
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s.zip\"", bin.Id))
-		zw := zip.NewWriter(w)
-		for _, file := range files {
-			header := &zip.FileHeader{}
-			header.Name = file.Filename
-			header.Modified = file.UpdatedAt
-			header.SetMode(400) // RW for the file owner
-
-			ze, err := zw.CreateHeader(header)
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-
-			fp, err := h.s3.GetObject(bin.Id, file.Filename, 0, 0)
-			if err != nil {
-				h.Error(w, r, fmt.Sprintf("Failed to archive object in bin %q: filename %q: %s", bin.Id, file.Filename, err.Error()), "Archive error", 300, http.StatusInternalServerError)
-				return
-			}
-			defer fp.Close()
-			h.metrics.IncrBytesStorageToFilebin(file.Bytes)
-
-			bytes, err := io.Copy(ze, fp)
-			if err != nil {
-				fmt.Println(err)
-			}
-			h.metrics.IncrBytesFilebinToClient(uint64(bytes))
-			fmt.Printf("Added file %q at %s (%d bytes) to the zip archive for bin %s\n", file.Filename, humanize.Bytes(uint64(bytes)), bytes, bin.Id)
-		}
-		if err := zw.Close(); err != nil {
-			fmt.Println(err)
-		}
-		if err := h.dao.Bin().RegisterDownload(&bin); err != nil {
-			fmt.Printf("Unable to update bin %q: %s\n", inputBin, err.Error())
-		}
-		h.metrics.IncrZipArchiveDownloadCount()
-		return
-	} else if inputFormat == "tar" {
+		archiver = newZipArchiveWriter(w)
+	} else {
 		w.Header().Set("Content-Type", "application/x-tar")
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s.tar\"", bin.Id))
-		tw := tar.NewWriter(w)
-		for _, file := range files {
-			header := &tar.Header{}
-			header.Name = file.Filename
-			header.Size = int64(file.Bytes)
-			header.ModTime = file.UpdatedAt
-			header.Mode = 0600 // rw access for the owner
+		archiver = newTarArchiveWriter(w)
+	}
 
-			if err := tw.WriteHeader(header); err != nil {
-				fmt.Println(err)
-				return
-			}
-
-			fp, err := h.s3.GetObject(bin.Id, file.Filename, 0, 0)
-			if err != nil {
-				h.Error(w, r, fmt.Sprintf("Failed to archive object in bin %q: filename %q: %s", bin.Id, file.Filename, err.Error()), "Archive error", 300, http.StatusInternalServerError)
-				return
-			}
-			defer fp.Close()
-			h.metrics.IncrBytesStorageToFilebin(file.Bytes)
-
-			bytes, err := io.Copy(tw, fp)
-			if err != nil {
-				fmt.Println(err)
-			}
-			h.metrics.IncrBytesFilebinToClient(uint64(bytes))
-			fmt.Printf("Added file %q at %s (%d bytes) to the tar archive for bin %s\n", file.Filename, humanize.Bytes(uint64(bytes)), bytes, bin.Id)
-		}
-		if err := tw.Close(); err != nil {
-			fmt.Println(err)
-		}
-		if err := h.dao.Bin().RegisterDownload(&bin); err != nil {
-			fmt.Printf("Unable to update bin %q: %s\n", inputBin, err.Error())
-		}
-		h.metrics.IncrTarArchiveDownloadCount()
+	if err := h.addFilesToArchive(w, r, bin, files, archiver, inputFormat); err != nil {
+		fmt.Println(err)
 		return
+	}
+
+	if err := h.dao.Bin().RegisterDownload(&bin); err != nil {
+		fmt.Printf("Unable to update bin %q: %s\n", inputBin, err.Error())
+	}
+
+	if inputFormat == "zip" {
+		h.metrics.IncrZipArchiveDownloadCount()
+	} else {
+		h.metrics.IncrTarArchiveDownloadCount()
 	}
 }
 
