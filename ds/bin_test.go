@@ -130,9 +130,9 @@ func TestBinIsReadable(t *testing.T) {
 	futureTime := now.Add(1 * time.Hour)
 
 	tests := []struct {
-		name      string
-		bin       *Bin
-		want      bool
+		name string
+		bin  *Bin
+		want bool
 	}{
 		{
 			name: "readable bin (not expired, not deleted)",

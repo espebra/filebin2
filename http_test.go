@@ -15,6 +15,7 @@ import (
 	"github.com/espebra/filebin2/ds"
 	"github.com/espebra/filebin2/geoip"
 	"github.com/espebra/filebin2/s3"
+	"github.com/espebra/filebin2/workspace"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -94,12 +95,20 @@ func TestMain(m *testing.M) {
 		os.Exit(2)
 	}
 
+	// Initialize workspace manager for tests
+	wm, err := workspace.NewManager(os.TempDir(), 4.0)
+	if err != nil {
+		fmt.Printf("Unable to initialize workspace manager: %s\n", err.Error())
+		os.Exit(2)
+	}
+
 	h := &HTTP{
 		staticBox:       &staticBox,
 		templateBox:     &templateBox,
 		dao:             &dao,
 		s3:              &s3ao,
 		geodb:           &geodb,
+		workspace:       wm,
 		config:          &c,
 		metrics:         metrics,
 		metricsRegistry: metricsRegistry,

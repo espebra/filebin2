@@ -18,6 +18,7 @@ import (
 	"github.com/espebra/filebin2/ds"
 	"github.com/espebra/filebin2/geoip"
 	"github.com/espebra/filebin2/s3"
+	"github.com/espebra/filebin2/workspace"
 
 	"github.com/dustin/go-humanize"
 	"github.com/prometheus/client_golang/prometheus"
@@ -27,7 +28,8 @@ var (
 	// Various
 	contactFlag             = flag.String("contact", "", "The contact information, such as an email address, that will be shown on the website for people that want to get in touch with the service owner.")
 	expirationFlag          = flag.Int("expiration", 604800, "Bin expiration time in seconds since the last bin update")
-	tmpdirFlag              = flag.String("tmpdir", os.TempDir(), "Directory for temporary files for upload and download")
+	tmpdirFlag              = flag.String("tmpdir", os.TempDir(), "Comma-separated list of directories for temporary files. Multiple directories will be benchmarked at startup, and the fastest one with sufficient free space will be used for each upload.")
+	tmpdirThresholdFlag     = flag.Float64("tmpdir-capacity-threshold", 4.0, "Workspace capacity threshold multiplier. A workspace must have at least this multiplier times the file size available to be selected (e.g., 4.0 requires 4x the file size available).")
 	baseURLFlag             = flag.String("baseurl", "https://filebin.net", "The base URL to use. Required for self-hosted instances.")
 	requireApprovalFlag     = flag.Bool("manual-approval", false, "Require manual admin approval of new bins before files can be downloaded.")
 	requireCookieFlag       = flag.Bool("require-verification-cookie", false, "Require cookie before allowing a download to happen.")
@@ -254,6 +256,14 @@ func main() {
 	}
 	config.LimitStorageReadable = humanize.Bytes(config.LimitStorageBytes)
 
+	// Initialize workspace manager
+	wm, err := workspace.NewManager(*tmpdirFlag, *tmpdirThresholdFlag)
+	if err != nil {
+		fmt.Printf("Unable to initialize workspace manager: %s\n", err.Error())
+		os.Exit(2)
+	}
+	fmt.Printf("Workspace capacity threshold: %.1fx file size\n", *tmpdirThresholdFlag)
+
 	// Create Prometheus registry and metrics
 	metricsRegistry := prometheus.NewRegistry()
 	metrics := ds.NewMetrics(*metricsIdFlag, metricsRegistry)
@@ -265,6 +275,7 @@ func main() {
 		dao:             &daoconn,
 		s3:              &s3conn,
 		geodb:           &geodb,
+		workspace:       wm,
 		config:          config,
 		metrics:         metrics,
 		metricsRegistry: metricsRegistry,
