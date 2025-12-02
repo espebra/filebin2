@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -263,7 +262,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 
 	// Add timestamp to the temporary file to make it easy to see when
 	// an upload was started.
-	fp, err := ioutil.TempFile(h.config.Tmpdir, fmt.Sprintf("filebin-%s-", t0.Format("20060102-150405")))
+	fp, err := h.workspace.CreateTempFile(inputBytes, fmt.Sprintf("filebin-%s-", t0.Format("20060102-150405")))
 	// Defer removal of the tempfile to clean up partially uploaded files.
 	if err != nil {
 		h.Error(w, r, fmt.Sprintf("Failed to create temporary upload file: %s", err.Error()), "Storage error", 124, http.StatusInternalServerError)

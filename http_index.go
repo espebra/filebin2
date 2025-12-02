@@ -79,7 +79,7 @@ func (h *HTTP) privacy(w http.ResponseWriter, r *http.Request) {
 	type Data struct {
 		ds.Common
 		CookiesInUse bool
-		Bin ds.Bin `json:"bin"`
+		Bin          ds.Bin `json:"bin"`
 	}
 
 	var data Data

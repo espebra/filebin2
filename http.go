@@ -19,6 +19,7 @@ import (
 	"github.com/espebra/filebin2/ds"
 	"github.com/espebra/filebin2/geoip"
 	"github.com/espebra/filebin2/s3"
+	"github.com/espebra/filebin2/workspace"
 
 	"github.com/felixge/httpsnoop"
 	"github.com/gorilla/handlers"
@@ -36,6 +37,7 @@ type HTTP struct {
 	dao             *dbl.DAO
 	s3              *s3.S3AO
 	geodb           *geoip.DAO
+	workspace       *workspace.Manager
 	config          *ds.Config
 	metrics         *ds.Metrics
 	metricsRegistry *prometheus.Registry
