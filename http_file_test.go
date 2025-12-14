@@ -574,7 +574,7 @@ func TestBinBan(t *testing.T) {
 			Description: "Get bin after being banned",
 			Method:      "GET",
 			Bin:         "mytestbin5",
-			StatusCode:  403,
+			StatusCode:  404,
 		}, {
 			Description: "Get file after being banned",
 			Method:      "GET",
