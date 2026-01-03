@@ -15,11 +15,12 @@ type FileContentDao struct {
 // GetBySHA256 retrieves a file content record by its SHA256 hash
 func (d *FileContentDao) GetBySHA256(sha256 string) (*ds.FileContent, error) {
 	var content ds.FileContent
-	sqlStatement := "SELECT sha256, bytes, reference_count, in_storage, created_at, last_referenced_at FROM file_content WHERE sha256 = $1"
+	sqlStatement := "SELECT sha256, bytes, reference_count, downloads, in_storage, created_at, last_referenced_at FROM file_content WHERE sha256 = $1"
 	err := d.db.QueryRow(sqlStatement, sha256).Scan(
 		&content.SHA256,
 		&content.Bytes,
 		&content.ReferenceCount,
+		&content.Downloads,
 		&content.InStorage,
 		&content.CreatedAt,
 		&content.LastReferencedAt,
@@ -82,10 +83,32 @@ RETURNING reference_count`
 	return newCount, nil
 }
 
+// IncrementDownloads atomically increments the download counter for content
+func (d *FileContentDao) IncrementDownloads(sha256 string) error {
+	sqlStatement := `UPDATE file_content
+SET downloads = downloads + 1
+WHERE sha256 = $1`
+
+	res, err := d.db.Exec(sqlStatement, sha256)
+	if err != nil {
+		return err
+	}
+
+	count, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return errors.New("File content not found")
+	}
+
+	return nil
+}
+
 // GetPendingDelete returns file content records that have zero references
 // and are still in storage (ready to be cleaned up by lurker)
 func (d *FileContentDao) GetPendingDelete() ([]ds.FileContent, error) {
-	sqlStatement := `SELECT sha256, bytes, reference_count, in_storage, created_at, last_referenced_at
+	sqlStatement := `SELECT sha256, bytes, reference_count, downloads, in_storage, created_at, last_referenced_at
 FROM file_content
 WHERE reference_count = 0 AND in_storage = true
 ORDER BY last_referenced_at ASC`
@@ -103,6 +126,7 @@ ORDER BY last_referenced_at ASC`
 			&content.SHA256,
 			&content.Bytes,
 			&content.ReferenceCount,
+			&content.Downloads,
 			&content.InStorage,
 			&content.CreatedAt,
 			&content.LastReferencedAt,
@@ -169,7 +193,7 @@ func (d *FileContentDao) Delete(sha256 string) error {
 
 // GetAll returns all file content records
 func (d *FileContentDao) GetAll() ([]ds.FileContent, error) {
-	sqlStatement := `SELECT sha256, bytes, reference_count, in_storage, created_at, last_referenced_at
+	sqlStatement := `SELECT sha256, bytes, reference_count, downloads, in_storage, created_at, last_referenced_at
 FROM file_content
 ORDER BY reference_count DESC, bytes DESC`
 
@@ -186,6 +210,7 @@ ORDER BY reference_count DESC, bytes DESC`
 			&content.SHA256,
 			&content.Bytes,
 			&content.ReferenceCount,
+			&content.Downloads,
 			&content.InStorage,
 			&content.CreatedAt,
 			&content.LastReferencedAt,
