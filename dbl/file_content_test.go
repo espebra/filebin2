@@ -14,7 +14,7 @@ func TestFileContentInsertOrIncrement(t *testing.T) {
 	}
 	defer tearDown(dao)
 
-	// First insert should set reference count to 1
+	// First insert should create the record
 	content := &ds.FileContent{
 		SHA256:    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 		Bytes:     100,
@@ -26,103 +26,35 @@ func TestFileContentInsertOrIncrement(t *testing.T) {
 		t.Errorf("Failed to insert file content: %s", err)
 	}
 
-	if content.ReferenceCount != 1 {
-		t.Errorf("Expected reference count to be 1 on first insert, got %d", content.ReferenceCount)
-	}
-
-	// Second insert should increment reference count to 2
-	err = dao.FileContent().InsertOrIncrement(content)
-	if err != nil {
-		t.Errorf("Failed to increment file content: %s", err)
-	}
-
-	if content.ReferenceCount != 2 {
-		t.Errorf("Expected reference count to be 2 after increment, got %d", content.ReferenceCount)
-	}
-
-	// Third insert should increment reference count to 3
-	err = dao.FileContent().InsertOrIncrement(content)
-	if err != nil {
-		t.Errorf("Failed to increment file content: %s", err)
-	}
-
-	if content.ReferenceCount != 3 {
-		t.Errorf("Expected reference count to be 3 after second increment, got %d", content.ReferenceCount)
-	}
-
-	// Verify the database has the correct count
+	// Verify the record exists
 	dbContent, err := dao.FileContent().GetBySHA256(content.SHA256)
+	if err != nil {
+		t.Errorf("Failed to get file content after insert: %s", err)
+	}
+
+	if dbContent.SHA256 != content.SHA256 {
+		t.Errorf("Expected SHA256 %s, got %s", content.SHA256, dbContent.SHA256)
+	}
+
+	// Subsequent calls should update last_referenced_at without error
+	err = dao.FileContent().InsertOrIncrement(content)
+	if err != nil {
+		t.Errorf("Failed to update file content: %s", err)
+	}
+
+	err = dao.FileContent().InsertOrIncrement(content)
+	if err != nil {
+		t.Errorf("Failed to update file content: %s", err)
+	}
+
+	// Verify the record still exists
+	dbContent, err = dao.FileContent().GetBySHA256(content.SHA256)
 	if err != nil {
 		t.Errorf("Failed to get file content: %s", err)
 	}
 
-	if dbContent.ReferenceCount != 3 {
-		t.Errorf("Expected reference count in DB to be 3, got %d", dbContent.ReferenceCount)
-	}
-}
-
-func TestFileContentDecrementRefCount(t *testing.T) {
-	dao, err := tearUp()
-	if err != nil {
-		t.Error(err)
-	}
-	defer tearDown(dao)
-
-	// Insert content with initial ref count
-	content := &ds.FileContent{
-		SHA256:    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-		Bytes:     100,
-		InStorage: true,
-	}
-
-	// Increment to ref count 3
-	dao.FileContent().InsertOrIncrement(content)
-	dao.FileContent().InsertOrIncrement(content)
-	dao.FileContent().InsertOrIncrement(content)
-
-	// Verify it's at 3
-	if content.ReferenceCount != 3 {
-		t.Errorf("Expected reference count to be 3, got %d", content.ReferenceCount)
-	}
-
-	// Decrement to 2
-	newCount, err := dao.FileContent().DecrementRefCount(content.SHA256)
-	if err != nil {
-		t.Errorf("Failed to decrement ref count: %s", err)
-	}
-
-	if newCount != 2 {
-		t.Errorf("Expected new count to be 2, got %d", newCount)
-	}
-
-	// Decrement to 1
-	newCount, err = dao.FileContent().DecrementRefCount(content.SHA256)
-	if err != nil {
-		t.Errorf("Failed to decrement ref count: %s", err)
-	}
-
-	if newCount != 1 {
-		t.Errorf("Expected new count to be 1, got %d", newCount)
-	}
-
-	// Decrement to 0
-	newCount, err = dao.FileContent().DecrementRefCount(content.SHA256)
-	if err != nil {
-		t.Errorf("Failed to decrement ref count: %s", err)
-	}
-
-	if newCount != 0 {
-		t.Errorf("Expected new count to be 0, got %d", newCount)
-	}
-
-	// Verify the database has ref count 0
-	dbContent, err := dao.FileContent().GetBySHA256(content.SHA256)
-	if err != nil {
-		t.Errorf("Failed to get file content: %s", err)
-	}
-
-	if dbContent.ReferenceCount != 0 {
-		t.Errorf("Expected reference count in DB to be 0, got %d", dbContent.ReferenceCount)
+	if !dbContent.InStorage {
+		t.Errorf("Expected content to be in storage")
 	}
 }
 
@@ -197,35 +129,62 @@ func TestFileContentGetPendingDelete(t *testing.T) {
 	}
 	defer tearDown(dao)
 
-	// Create content with ref count 0 and in_storage true (should be pending delete)
+	// Create a bin for testing
+	bin := &ds.Bin{
+		Id:        "testbin789",
+		ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
+	}
+	dao.Bin().Insert(bin)
+
+	// Create content1 with no file references (should be pending delete)
 	content1 := &ds.FileContent{
 		SHA256:    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 		Bytes:     100,
 		InStorage: true,
 	}
 	dao.FileContent().InsertOrIncrement(content1)
-	dao.FileContent().DecrementRefCount(content1.SHA256)
+	// No file records created, so COUNT(*) will be 0
 
-	// Create content with ref count > 0 and in_storage true (should NOT be pending delete)
+	// Create content2 with one non-deleted file (should NOT be pending delete)
 	content2 := &ds.FileContent{
 		SHA256:    "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
 		Bytes:     200,
 		InStorage: true,
 	}
 	dao.FileContent().InsertOrIncrement(content2)
+	file2 := &ds.File{
+		Filename: "file2.txt",
+		Bin:      bin.Id,
+		Bytes:    200,
+		SHA256:   content2.SHA256,
+	}
+	dao.File().Insert(file2)
 
-	// Create content with ref count 0 and in_storage false (should NOT be pending delete)
+	// Create content3 with files but all marked as deleted (should be pending delete)
 	content3 := &ds.FileContent{
 		SHA256:    "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
 		Bytes:     300,
-		InStorage: false,
+		InStorage: true,
 	}
 	dao.FileContent().InsertOrIncrement(content3)
-	dao.FileContent().DecrementRefCount(content3.SHA256)
-	// Update to set in_storage to false
-	dbContent3, _ := dao.FileContent().GetBySHA256(content3.SHA256)
-	dbContent3.InStorage = false
-	dao.FileContent().Update(dbContent3)
+	file3 := &ds.File{
+		Filename: "file3.txt",
+		Bin:      bin.Id,
+		Bytes:    300,
+		SHA256:   content3.SHA256,
+	}
+	dao.File().Insert(file3)
+	// Mark as deleted
+	file3.DeletedAt.Scan(time.Now().UTC())
+	dao.File().Update(file3)
+
+	// Create content4 with in_storage=false (should NOT be pending delete)
+	content4 := &ds.FileContent{
+		SHA256:    "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+		Bytes:     400,
+		InStorage: false,
+	}
+	dao.FileContent().InsertOrIncrement(content4)
 
 	// Get pending deletes
 	pending, err := dao.FileContent().GetPendingDelete()
@@ -233,13 +192,28 @@ func TestFileContentGetPendingDelete(t *testing.T) {
 		t.Errorf("Failed to get pending deletes: %s", err)
 	}
 
-	// Should only find content1
-	if len(pending) != 1 {
-		t.Errorf("Expected 1 pending delete, got %d", len(pending))
+	// Should find content1 and content3 (both have no non-deleted file references)
+	if len(pending) != 2 {
+		t.Errorf("Expected 2 pending deletes, got %d", len(pending))
 	}
 
-	if len(pending) > 0 && pending[0].SHA256 != content1.SHA256 {
-		t.Errorf("Expected pending delete to be %s, got %s", content1.SHA256, pending[0].SHA256)
+	// Verify we got the right content
+	foundContent1 := false
+	foundContent3 := false
+	for _, p := range pending {
+		if p.SHA256 == content1.SHA256 {
+			foundContent1 = true
+		}
+		if p.SHA256 == content3.SHA256 {
+			foundContent3 = true
+		}
+	}
+
+	if !foundContent1 {
+		t.Errorf("Expected to find content1 (%s) in pending deletes", content1.SHA256)
+	}
+	if !foundContent3 {
+		t.Errorf("Expected to find content3 (%s) in pending deletes", content3.SHA256)
 	}
 }
 
@@ -396,8 +370,9 @@ func TestDeduplicationFlow(t *testing.T) {
 	t.Logf("Created bin with ID: %s", bin.Id)
 
 	// Simulate uploading same content 3 times
+	var fileIDs []uint64
 	for i := 0; i < 3; i++ {
-		// Increment reference count (simulates upload)
+		// Create file_content record (or update existing)
 		content := &ds.FileContent{
 			SHA256:    sha256,
 			Bytes:     100,
@@ -405,7 +380,7 @@ func TestDeduplicationFlow(t *testing.T) {
 		}
 		err = dao.FileContent().InsertOrIncrement(content)
 		if err != nil {
-			t.Fatalf("Upload %d: Failed to increment ref count: %s", i, err)
+			t.Fatalf("Upload %d: Failed to insert/update file_content: %s", i, err)
 		}
 
 		// Create file record
@@ -419,20 +394,21 @@ func TestDeduplicationFlow(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Upload %d: Failed to insert file: %s (bin=%s, filename=%s)", i, err, bin.Id, file.Filename)
 		}
+		fileIDs = append(fileIDs, file.Id)
 		t.Logf("Successfully inserted file %d: %s", file.Id, file.Filename)
 	}
 
-	// Verify reference count is 3
+	// Verify content exists
 	content, err := dao.FileContent().GetBySHA256(sha256)
 	if err != nil {
 		t.Errorf("Failed to get file content: %s", err)
 	}
 
-	if content.ReferenceCount != 3 {
-		t.Errorf("Expected reference count to be 3, got %d", content.ReferenceCount)
+	if !content.InStorage {
+		t.Errorf("Expected content to be in storage")
 	}
 
-	// Simulate deleting 2 files
+	// Simulate deleting 2 files (mark as deleted)
 	t.Logf("Attempting to get files from bin: %s", bin.Id)
 	files, err := dao.File().GetByBin(bin.Id, true)
 	if err != nil {
@@ -444,30 +420,15 @@ func TestDeduplicationFlow(t *testing.T) {
 	}
 
 	for i := 0; i < 2; i++ {
-		// Decrement reference count (simulates delete)
-		newCount, err := dao.FileContent().DecrementRefCount(sha256)
+		// Mark file as deleted
+		files[i].DeletedAt.Scan(time.Now().UTC())
+		err = dao.File().Update(&files[i])
 		if err != nil {
-			t.Errorf("Delete %d: Failed to decrement ref count: %s", i, err)
+			t.Errorf("Delete %d: Failed to mark file as deleted: %s", i, err)
 		}
-
-		expectedCount := 3 - (i + 1)
-		if newCount != expectedCount {
-			t.Errorf("Delete %d: Expected new count to be %d, got %d", i, expectedCount, newCount)
-		}
-		// File record doesn't need to be updated - in_storage tracking is now in file_content
 	}
 
-	// Verify reference count is 1
-	content, err = dao.FileContent().GetBySHA256(sha256)
-	if err != nil {
-		t.Errorf("Failed to get file content: %s", err)
-	}
-
-	if content.ReferenceCount != 1 {
-		t.Errorf("Expected reference count to be 1 after 2 deletes, got %d", content.ReferenceCount)
-	}
-
-	// Content should NOT be pending delete (still has 1 reference)
+	// Content should NOT be pending delete (still has 1 non-deleted file)
 	pending, err := dao.FileContent().GetPendingDelete()
 	if err != nil {
 		t.Errorf("Failed to get pending deletes: %s", err)
@@ -477,17 +438,14 @@ func TestDeduplicationFlow(t *testing.T) {
 		t.Errorf("Expected 0 pending deletes, got %d", len(pending))
 	}
 
-	// Delete the last file
-	newCount, err := dao.FileContent().DecrementRefCount(sha256)
+	// Mark the last file as deleted
+	files[2].DeletedAt.Scan(time.Now().UTC())
+	err = dao.File().Update(&files[2])
 	if err != nil {
-		t.Errorf("Failed to decrement ref count on last delete: %s", err)
+		t.Errorf("Failed to mark last file as deleted: %s", err)
 	}
 
-	if newCount != 0 {
-		t.Errorf("Expected new count to be 0, got %d", newCount)
-	}
-
-	// Content should NOW be pending delete (ref count = 0, in_storage = true)
+	// Content should NOW be pending delete (COUNT(*) where deleted_at IS NULL = 0)
 	pending, err = dao.FileContent().GetPendingDelete()
 	if err != nil {
 		t.Errorf("Failed to get pending deletes: %s", err)

@@ -13,7 +13,6 @@ CREATE TABLE bin (
 CREATE TABLE file_content (
 	sha256		VARCHAR(128) NOT NULL PRIMARY KEY,
 	bytes		BIGINT NOT NULL,
-	reference_count	INT NOT NULL DEFAULT 1,
 	downloads	BIGINT NOT NULL DEFAULT 0,
 	in_storage	BOOLEAN NOT NULL DEFAULT false,
 	created_at	TIMESTAMP NOT NULL,
@@ -90,4 +89,4 @@ CREATE INDEX idx_bin_deleted_at_expired_at ON bin(expired_at, deleted_at);
 CREATE INDEX idx_sha256 ON file(sha256);
 CREATE INDEX idx_client_banned_at ON client(banned_at, last_active_at);
 CREATE INDEX idx_client_ip_active ON client(ip, last_active_at);
-CREATE INDEX idx_file_content_ref_count ON file_content(reference_count, in_storage)
+CREATE INDEX idx_file_content_in_storage ON file_content(in_storage)
