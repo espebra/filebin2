@@ -63,10 +63,9 @@ func TestFileContentInStorageReflectsS3State(t *testing.T) {
 
 	// Insert file_content with in_storage=true
 	fileContent := &ds.FileContent{
-		SHA256:         sha256,
-		Bytes:          uint64(len(content)),
-		ReferenceCount: 1,
-		InStorage:      true,
+		SHA256:    sha256,
+		Bytes:     uint64(len(content)),
+		InStorage: true,
 	}
 	err = dao.FileContent().InsertOrIncrement(fileContent)
 	if err != nil {
@@ -273,19 +272,16 @@ func TestDeduplicationWithS3Storage(t *testing.T) {
 		t.Fatalf("Failed to insert file1: %s", err)
 	}
 
-	// Verify ref count is 1
+	// Verify content exists
 	dbContent, err := dao.FileContent().GetBySHA256(sha256)
 	if err != nil {
 		t.Fatalf("Failed to get file_content: %s", err)
-	}
-	if dbContent.ReferenceCount != 1 {
-		t.Errorf("Expected ref count 1, got %d", dbContent.ReferenceCount)
 	}
 	if !dbContent.InStorage {
 		t.Error("file_content.in_storage should be true")
 	}
 
-	// Upload 2: Skip S3 upload (deduplication), just increment ref count
+	// Upload 2: Skip S3 upload (deduplication), just update last_referenced_at
 	t.Log("Upload 2: Deduplicated upload (skip S3)")
 
 	// Check if content already exists in S3 (it should)
@@ -294,14 +290,14 @@ func TestDeduplicationWithS3Storage(t *testing.T) {
 		t.Error("Content should still exist in S3 for deduplication")
 	}
 
-	// Increment ref count (no S3 upload needed)
+	// Update last_referenced_at (no S3 upload needed)
 	err = dao.FileContent().InsertOrIncrement(&ds.FileContent{
 		SHA256:    sha256,
 		Bytes:     uint64(len(content)),
 		InStorage: true,
 	})
 	if err != nil {
-		t.Fatalf("Failed to increment ref count: %s", err)
+		t.Fatalf("Failed to update file_content: %s", err)
 	}
 
 	file2 := &ds.File{
@@ -315,28 +311,22 @@ func TestDeduplicationWithS3Storage(t *testing.T) {
 		t.Fatalf("Failed to insert file2: %s", err)
 	}
 
-	// Verify ref count is 2 and content still in S3
+	// Verify content still in S3
 	dbContent, err = dao.FileContent().GetBySHA256(sha256)
 	if err != nil {
 		t.Fatalf("Failed to get file_content: %s", err)
-	}
-	if dbContent.ReferenceCount != 2 {
-		t.Errorf("Expected ref count 2 after deduplication, got %d", dbContent.ReferenceCount)
 	}
 	if !dbContent.InStorage {
 		t.Error("file_content.in_storage should still be true after deduplication")
 	}
 
-	// Delete 1: Decrement ref count, keep content in S3
+	// Delete 1: Mark first file as deleted, keep content in S3
 	t.Log("Delete 1: Remove one file reference")
-	newCount, err := dao.FileContent().DecrementRefCount(sha256)
+	file1.DeletedAt.Scan(time.Now().UTC())
+	err = dao.File().Update(file1)
 	if err != nil {
-		t.Fatalf("Failed to decrement ref count: %s", err)
+		t.Fatalf("Failed to mark file1 as deleted: %s", err)
 	}
-	if newCount != 1 {
-		t.Errorf("Expected ref count 1 after first delete, got %d", newCount)
-	}
-	// File records don't track in_storage anymore - only file_content does
 
 	// Verify content STILL exists in S3 (one reference remaining)
 	_, err = s3ao.GetClient().StatObject(ctx, s3ao.GetBucket(), sha256, minio.StatObjectOptions{})
@@ -353,16 +343,31 @@ func TestDeduplicationWithS3Storage(t *testing.T) {
 		t.Error("file_content.in_storage should still be true with references remaining")
 	}
 
-	// Delete 2: Decrement to 0, then remove from S3
-	t.Log("Delete 2: Remove last file reference and delete from S3")
-	newCount, err = dao.FileContent().DecrementRefCount(sha256)
+	// Verify content is NOT pending delete (still has one non-deleted file)
+	pending, err := dao.FileContent().GetPendingDelete()
 	if err != nil {
-		t.Fatalf("Failed to decrement ref count: %s", err)
+		t.Fatalf("Failed to get pending deletes: %s", err)
 	}
-	if newCount != 0 {
-		t.Errorf("Expected ref count 0 after last delete, got %d", newCount)
+	if len(pending) != 0 {
+		t.Errorf("Expected 0 pending deletes with one file remaining, got %d", len(pending))
 	}
-	// File records don't track in_storage anymore - only file_content does
+
+	// Delete 2: Mark last file as deleted, then remove from S3
+	t.Log("Delete 2: Remove last file reference and delete from S3")
+	file2.DeletedAt.Scan(time.Now().UTC())
+	err = dao.File().Update(file2)
+	if err != nil {
+		t.Fatalf("Failed to mark file2 as deleted: %s", err)
+	}
+
+	// Verify content IS pending delete (COUNT(*) where deleted_at IS NULL = 0)
+	pending, err = dao.FileContent().GetPendingDelete()
+	if err != nil {
+		t.Fatalf("Failed to get pending deletes: %s", err)
+	}
+	if len(pending) != 1 {
+		t.Errorf("Expected 1 pending delete with no files remaining, got %d", len(pending))
+	}
 
 	// Now remove from S3 (simulating lurker cleanup)
 	err = s3ao.RemoveObjectByHash(sha256)
@@ -394,8 +399,5 @@ func TestDeduplicationWithS3Storage(t *testing.T) {
 	}
 	if finalContent.InStorage {
 		t.Error("file_content.in_storage should be false after S3 removal")
-	}
-	if finalContent.ReferenceCount != 0 {
-		t.Errorf("Expected ref count 0, got %d", finalContent.ReferenceCount)
 	}
 }

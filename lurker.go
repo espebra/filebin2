@@ -54,17 +54,9 @@ func (l *Lurker) DeletePendingFiles() {
 		return
 	}
 	if len(files) > 0 {
-		fmt.Printf("Found %d files pending removal.\n", len(files))
-		for _, file := range files {
-			// Decrement reference count for the file content
-			newCount, err := l.dao.FileContent().DecrementRefCount(file.SHA256)
-			if err != nil {
-				fmt.Printf("Unable to decrement ref count for %s: %s\n", file.SHA256, err.Error())
-			} else {
-				fmt.Printf("Decremented ref count for %s to %d\n", file.SHA256, newCount)
-			}
-			// No need to update file record - in_storage tracking is now purely in file_content
-		}
+		fmt.Printf("Found %d files pending removal (already marked deleted).\n", len(files))
+		// Files are already marked as deleted (deleted_at is set)
+		// Orphaned content will be detected by DeletePendingContent using COUNT(*)
 	}
 }
 
@@ -77,23 +69,8 @@ func (l *Lurker) DeletePendingBins() {
 	if len(bins) > 0 {
 		fmt.Printf("Found %d bins pending removal.\n", len(bins))
 		for _, bin := range bins {
-			//fmt.Printf(" > Bin %s\n", bin.Id)
-			files, err := l.dao.File().GetByBin(bin.Id, true)
-			if err != nil {
-				fmt.Printf("Unable to GetByBin: %s\n", err.Error())
-				return
-			}
-			for _, file := range files {
-				// Decrement reference count for the file content
-				newCount, err := l.dao.FileContent().DecrementRefCount(file.SHA256)
-				if err != nil {
-					fmt.Printf("Unable to decrement ref count for %s: %s\n", file.SHA256, err.Error())
-				} else {
-					fmt.Printf("Decremented ref count for %s to %d\n", file.SHA256, newCount)
-				}
-				fmt.Printf("Processed file %s from bin %s\n", file.Filename, bin.Id)
-				// No need to update file record - in_storage tracking is now purely in file_content
-			}
+			// Bin deletion cascades to files (sets deleted_at)
+			// Orphaned content will be detected by DeletePendingContent using COUNT(*)
 			if err := l.dao.Bin().Update(&bin); err != nil {
 				fmt.Printf("Unable to update bin %s: %s\n", bin.Id, err.Error())
 				return

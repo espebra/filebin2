@@ -7,7 +7,6 @@ import (
 type FileContent struct {
 	SHA256           string    `json:"sha256"`
 	Bytes            uint64    `json:"bytes"`
-	ReferenceCount   int       `json:"reference_count"`
 	Downloads        uint64    `json:"downloads"`
 	InStorage        bool      `json:"in_storage"`
 	CreatedAt        time.Time `json:"created_at"`

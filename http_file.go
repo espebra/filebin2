@@ -423,7 +423,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 	t4 := time.Now()
 
-	// Update or insert file_content record with reference counting
+	// Update or insert file_content record
 	fileContent := ds.FileContent{
 		SHA256:    file.SHA256,
 		Bytes:     file.Bytes,
@@ -534,13 +534,7 @@ func (h *HTTP) deleteFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Decrement reference count for file content
-	newCount, err := h.dao.FileContent().DecrementRefCount(file.SHA256)
-	if err != nil {
-		fmt.Printf("Failed to decrement ref count for %s: %s\n", file.SHA256, err)
-	} else if newCount == 0 {
-		fmt.Printf("Reference count for %s reached 0, will be cleaned up by lurker\n", file.SHA256)
-	}
+	// Note: File content cleanup is handled by lurker using COUNT(*) to find orphaned content
 
 	// Update the updated timestamp of the bin
 	if err := h.dao.Bin().Update(&bin); err != nil {
