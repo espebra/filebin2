@@ -286,6 +286,11 @@ func (h *HTTP) addFilesToArchive(w http.ResponseWriter, r *http.Request, bin ds.
 		}
 		defer fp.Close()
 
+		// Increment download counter for the file (tracks downloads per file)
+		if err := h.dao.File().RegisterDownload(&file); err != nil {
+			fmt.Printf("Unable to increment download counter for file %q in bin %q: %s\n", file.Filename, bin.Id, err.Error())
+		}
+
 		// Increment download counter for the content (tracks downloads by SHA256)
 		if err := h.dao.FileContent().IncrementDownloads(file.SHA256); err != nil {
 			fmt.Printf("Unable to increment download counter for content %s in archive: %s\n", file.SHA256, err.Error())
