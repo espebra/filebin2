@@ -340,6 +340,17 @@ func TestFileCountBySHA256(t *testing.T) {
 		t.Errorf("Expected count to be 0, got %d", count)
 	}
 
+	// Create file_content record (required by foreign key constraint)
+	content := &ds.FileContent{
+		SHA256:    sha256,
+		Bytes:     100,
+		InStorage: true,
+	}
+	err = dao.FileContent().InsertOrIncrement(content)
+	if err != nil {
+		t.Error(err)
+	}
+
 	// Create 3 files with same SHA256
 	for i := 0; i < 3; i++ {
 		file := &ds.File{
