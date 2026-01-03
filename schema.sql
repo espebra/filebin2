@@ -33,6 +33,7 @@ CREATE TABLE file_content (
 	sha256		VARCHAR(128) NOT NULL PRIMARY KEY,
 	bytes		BIGINT NOT NULL,
 	reference_count	INT NOT NULL DEFAULT 1,
+	downloads	BIGINT NOT NULL DEFAULT 0,
 	in_storage	BOOLEAN NOT NULL DEFAULT false,
 	created_at	TIMESTAMP NOT NULL,
 	last_referenced_at TIMESTAMP NOT NULL
