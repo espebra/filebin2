@@ -279,7 +279,7 @@ func (h *HTTP) addFilesToArchive(w http.ResponseWriter, r *http.Request, bin ds.
 			return err
 		}
 
-		fp, err := h.s3.GetObject(bin.Id, file.Filename, 0, 0)
+		fp, err := h.s3.GetObject(file.SHA256, 0, 0)
 		if err != nil {
 			h.Error(w, r, fmt.Sprintf("Failed to archive object in bin %q: filename %q: %s", bin.Id, file.Filename, err.Error()), "Archive error", 300, http.StatusInternalServerError)
 			return err

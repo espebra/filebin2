@@ -2,6 +2,8 @@ package s3
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -102,14 +104,17 @@ func TestGetObject(t *testing.T) {
 	}
 	defer tearDown(s3ao)
 
-	filename := "testobject"
-	bin := "testbin"
 	content := "content"
-	if err := s3ao.PutObject(bin, filename, strings.NewReader(content), int64(len(content))); err != nil {
+	// Calculate SHA256 of content
+	h := sha256.New()
+	h.Write([]byte(content))
+	contentSHA256 := fmt.Sprintf("%x", h.Sum(nil))
+
+	if err := s3ao.PutObjectByHash(contentSHA256, strings.NewReader(content), int64(len(content))); err != nil {
 		t.Errorf("Unable to put object: %s\n", err.Error())
 	}
 
-	fp, err := s3ao.GetObject(bin, filename, 0, 0)
+	fp, err := s3ao.GetObject(contentSHA256, 0, 0)
 	if err != nil {
 		t.Errorf("Unable to get object: %s\n", err.Error())
 	}
@@ -129,9 +134,9 @@ func TestUnknownObject(t *testing.T) {
 	}
 	defer tearDown(s3ao)
 
-	filename := "testobject"
-	bin := "testbin"
-	fp, err := s3ao.GetObject(bin, filename, 0, 0)
+	// Use a non-existent SHA256
+	nonExistentSHA256 := "0000000000000000000000000000000000000000000000000000000000000000"
+	fp, err := s3ao.GetObject(nonExistentSHA256, 0, 0)
 	if err != nil {
 		// This is strange behaviour. The library should return an error
 		// if the object does not exist.
@@ -147,7 +152,7 @@ func TestUnknownObject(t *testing.T) {
 		t.Errorf("Expected empty response, but got %s\n", s)
 	}
 
-	err = s3ao.RemoveObject(bin, filename)
+	err = s3ao.RemoveObjectByHash(nonExistentSHA256)
 	if err != nil {
 		// This is strange behaviour. The library should return an error
 		// if the object does not exist.
