@@ -69,12 +69,15 @@ func (h *HTTP) getFile(w http.ResponseWriter, r *http.Request) {
 		h.Error(w, r, "", "The file does not exist.", 116, http.StatusNotFound)
 		return
 	}
-	if file.IsReadable() == false {
-		h.Error(w, r, "", "The file is no longer available.", 117, http.StatusNotFound)
+
+	// Check if file is available for download (checks file deletion, bin deletion, bin expiry, and content availability)
+	available, err := h.dao.File().IsAvailableForDownload(file.Id)
+	if err != nil {
+		h.Error(w, r, fmt.Sprintf("Failed to check file availability: %s", err.Error()), "Database error", 117, http.StatusInternalServerError)
 		return
 	}
-	if file.InStorage == false {
-		h.Error(w, r, "", "The file is not available.", 118, http.StatusNotFound)
+	if !available {
+		h.Error(w, r, "", "The file is not available for download.", 118, http.StatusNotFound)
 		return
 	}
 
@@ -122,7 +125,7 @@ func (h *HTTP) getFile(w http.ResponseWriter, r *http.Request) {
 
 	// Redirect the client to a presigned URL for this fetch, which is more efficient
 	// than proxying the request through filebin.
-	presignedURL, err := h.s3.PresignedGetObject(inputBin, inputFilename, file.Mime)
+	presignedURL, err := h.s3.PresignedGetObject(file.SHA256, file.Filename, file.Mime)
 	if err != nil {
 		h.Error(w, r, fmt.Sprintf("Unable to generate presigned URL for bin %q and filename %q: %s", inputBin, inputFilename, err.Error()), "Unable to presign URL for object", 1351, http.StatusInternalServerError)
 		return
@@ -368,42 +371,64 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Retry if the S3 upload fails
-	retryLimit := 3
-	retryCounter := 1
+	// Check if content already exists in storage (deduplication)
+	existingContent, err := h.dao.FileContent().GetBySHA256(sha256ChecksumString)
+	skipS3Upload := false
+	if err == nil && existingContent != nil && existingContent.InStorage {
+		// Content already in S3, skip upload
+		skipS3Upload = true
+		fmt.Printf("Content with SHA256 %s already exists in storage, skipping S3 upload\n", sha256ChecksumString)
+	}
 
-	h.metrics.IncrStorageUploadInProgress()
-	defer h.metrics.DecrStorageUploadInProgress()
+	// Upload to S3 only if content doesn't already exist
+	if !skipS3Upload {
+		// Retry if the S3 upload fails
+		retryLimit := 3
+		retryCounter := 1
 
-	for {
-		fp.Seek(0, 0)
-		err := h.s3.PutObject(file.Bin, file.Filename, fp, nBytes)
-		if err == nil {
-			// Completed successfully
-			h.s3.SetTrace(false)
-			break
-		} else {
-			// Completed with error
-			if retryCounter >= retryLimit {
-				// Give up after a few attempts
-				fmt.Printf("Gave up uploading to S3 after %d/%d attempts: %s\n", retryCounter, retryLimit, err.Error())
-				http.Error(w, "Failed to store the object in S3, please try again later", http.StatusInternalServerError)
-				return
+		h.metrics.IncrStorageUploadInProgress()
+		defer h.metrics.DecrStorageUploadInProgress()
+
+		for {
+			fp.Seek(0, 0)
+			err := h.s3.PutObjectByHash(file.SHA256, fp, nBytes)
+			if err == nil {
+				// Completed successfully
+				h.s3.SetTrace(false)
+				break
+			} else {
+				// Completed with error
+				if retryCounter >= retryLimit {
+					// Give up after a few attempts
+					fmt.Printf("Gave up uploading to S3 after %d/%d attempts: %s\n", retryCounter, retryLimit, err.Error())
+					http.Error(w, "Failed to store the object in S3, please try again later", http.StatusInternalServerError)
+					return
+				}
+				fmt.Printf("Failed attempt to upload to S3 (%d/%d): %s\n", retryCounter, retryLimit, err.Error())
+
+				retryCounter = retryCounter + 1
+
+				// Sleep a little before retrying
+				time.Sleep(time.Duration(retryCounter) * time.Second)
+
+				// Get some more debug data in case the retry also fails
+				h.s3.SetTrace(true)
 			}
-			fmt.Printf("Failed attempt to upload to S3 (%d/%d): %s\n", retryCounter, retryLimit, err.Error())
-
-			retryCounter = retryCounter + 1
-
-			// Sleep a little before retrying
-			time.Sleep(time.Duration(retryCounter) * time.Second)
-
-			// Get some more debug data in case the retry also fails
-			h.s3.SetTrace(true)
 		}
 	}
 	t4 := time.Now()
 
-	file.InStorage = true
+	// Update or insert file_content record with reference counting
+	fileContent := ds.FileContent{
+		SHA256:    file.SHA256,
+		Bytes:     file.Bytes,
+		InStorage: true,
+	}
+	if err := h.dao.FileContent().InsertOrIncrement(&fileContent); err != nil {
+		fmt.Printf("Unable to update file_content for SHA256 %s: %s\n", file.SHA256, err.Error())
+		http.Error(w, "Failed to update content tracking", http.StatusInternalServerError)
+		return
+	}
 
 	if found {
 		if err := h.dao.File().Update(&file); err != nil {
@@ -502,6 +527,14 @@ func (h *HTTP) deleteFile(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("Unable to update the file (%q, %q): %s\n", inputBin, inputFilename, err.Error())
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
+	}
+
+	// Decrement reference count for file content
+	newCount, err := h.dao.FileContent().DecrementRefCount(file.SHA256)
+	if err != nil {
+		fmt.Printf("Failed to decrement ref count for %s: %s\n", file.SHA256, err)
+	} else if newCount == 0 {
+		fmt.Printf("Reference count for %s reached 0, will be cleaned up by lurker\n", file.SHA256)
 	}
 
 	// Update the updated timestamp of the bin
