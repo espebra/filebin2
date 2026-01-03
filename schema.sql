@@ -10,6 +10,16 @@ CREATE TABLE bin (
 	updates		BIGINT NOT NULL
 );
 
+CREATE TABLE file_content (
+	sha256		VARCHAR(128) NOT NULL PRIMARY KEY,
+	bytes		BIGINT NOT NULL,
+	reference_count	INT NOT NULL DEFAULT 1,
+	downloads	BIGINT NOT NULL DEFAULT 0,
+	in_storage	BOOLEAN NOT NULL DEFAULT false,
+	created_at	TIMESTAMP NOT NULL,
+	last_referenced_at TIMESTAMP NOT NULL
+);
+
 CREATE TABLE file (
 	id		BIGSERIAL NOT NULL PRIMARY KEY,
 	bin_id		VARCHAR(64) REFERENCES bin(id) ON DELETE CASCADE,
@@ -17,7 +27,7 @@ CREATE TABLE file (
 	mime		VARCHAR(128) NOT NULL,
 	bytes		BIGINT NOT NULL,
 	md5		VARCHAR(128) NOT NULL,
-	sha256		VARCHAR(128) NOT NULL,
+	sha256		VARCHAR(128) NOT NULL REFERENCES file_content(sha256) ON DELETE RESTRICT,
 	downloads	BIGINT NOT NULL,
 	updates 	BIGINT NOT NULL,
 	ip		VARCHAR(128) NOT NULL,
@@ -27,16 +37,6 @@ CREATE TABLE file (
 	created_at	TIMESTAMP NOT NULL,
 	deleted_at	TIMESTAMP,
 	UNIQUE(bin_id, filename)
-);
-
-CREATE TABLE file_content (
-	sha256		VARCHAR(128) NOT NULL PRIMARY KEY,
-	bytes		BIGINT NOT NULL,
-	reference_count	INT NOT NULL DEFAULT 1,
-	downloads	BIGINT NOT NULL DEFAULT 0,
-	in_storage	BOOLEAN NOT NULL DEFAULT false,
-	created_at	TIMESTAMP NOT NULL,
-	last_referenced_at TIMESTAMP NOT NULL
 );
 
 CREATE TABLE transaction (
