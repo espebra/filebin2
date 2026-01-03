@@ -14,6 +14,7 @@ type DAO struct {
 	ConnStr        string
 	binDao         *BinDao
 	fileDao        *FileDao
+	fileContentDao *FileContentDao
 	metricsDao     *MetricsDao
 	transactionDao *TransactionDao
 	clientDao      *ClientDao
@@ -40,6 +41,7 @@ func Init(dbHost string, dbPort int, dbName, dbUser, dbPassword string) (DAO, er
 	dao.ConnStr = connStr
 	dao.binDao = &BinDao{db: db}
 	dao.fileDao = &FileDao{db: db}
+	dao.fileContentDao = &FileContentDao{db: db}
 	dao.metricsDao = &MetricsDao{db: db}
 	dao.transactionDao = &TransactionDao{db: db}
 	dao.clientDao = &ClientDao{db: db}
@@ -58,6 +60,7 @@ func (dao DAO) CreateSchema() error {
 func (dao DAO) ResetDB() error {
 	sqlStatements := []string{
 		"DELETE FROM file",
+		"DELETE FROM file_content",
 		"DELETE FROM bin",
 		"DELETE FROM client",
 		"DELETE FROM autonomous_system",
@@ -78,6 +81,10 @@ func (dao DAO) Bin() *BinDao {
 
 func (dao DAO) File() *FileDao {
 	return dao.fileDao
+}
+
+func (dao DAO) FileContent() *FileContentDao {
+	return dao.fileContentDao
 }
 
 func (dao DAO) Metrics() *MetricsDao {
