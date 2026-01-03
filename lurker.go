@@ -38,6 +38,7 @@ func (l *Lurker) Run() {
 				t0 := time.Now()
 				l.DeletePendingFiles()
 				l.DeletePendingBins()
+				l.DeletePendingContent()
 				l.CleanTransactions()
 				l.CleanClients()
 				fmt.Printf("Lurker completed run in %.3fs\n", time.Since(t0).Seconds())
@@ -55,17 +56,14 @@ func (l *Lurker) DeletePendingFiles() {
 	if len(files) > 0 {
 		fmt.Printf("Found %d files pending removal.\n", len(files))
 		for _, file := range files {
-			//fmt.Printf(" > Bin %s, filename %s\n", file.Bin, file.Filename)
-			if err := l.s3.RemoveObject(file.Bin, file.Filename); err != nil {
-				fmt.Printf("Unable to delete file %s from bin %s from S3.\n", file.Filename, file.Bin)
-				return
+			// Decrement reference count for the file content
+			newCount, err := l.dao.FileContent().DecrementRefCount(file.SHA256)
+			if err != nil {
+				fmt.Printf("Unable to decrement ref count for %s: %s\n", file.SHA256, err.Error())
+			} else {
+				fmt.Printf("Decremented ref count for %s to %d\n", file.SHA256, newCount)
 			}
-
-			file.InStorage = false
-			if err := l.dao.File().Update(&file); err != nil {
-				fmt.Printf("Unable to update filename %s (id %d) in bin %s: %s\n", file.Filename, file.Id, file.Bin, err.Error())
-				return
-			}
+			// No need to update file record - in_storage tracking is now purely in file_content
 		}
 	}
 }
@@ -86,22 +84,57 @@ func (l *Lurker) DeletePendingBins() {
 				return
 			}
 			for _, file := range files {
-				if err := l.s3.RemoveObject(file.Bin, file.Filename); err != nil {
-					fmt.Printf("Unable to delete file %s from bin %s from S3.\n", file.Filename, file.Bin)
-					return
+				// Decrement reference count for the file content
+				newCount, err := l.dao.FileContent().DecrementRefCount(file.SHA256)
+				if err != nil {
+					fmt.Printf("Unable to decrement ref count for %s: %s\n", file.SHA256, err.Error())
+				} else {
+					fmt.Printf("Decremented ref count for %s to %d\n", file.SHA256, newCount)
 				}
-
-				fmt.Printf("Removing file %s from bin %s\n", file.Filename, bin.Id)
-				file.InStorage = false
-				if err := l.dao.File().Update(&file); err != nil {
-					fmt.Printf("Unable to update filename %s (id %d) in bin %s: %s\n", file.Filename, file.Id, file.Bin, err.Error())
-					return
-				}
+				fmt.Printf("Processed file %s from bin %s\n", file.Filename, bin.Id)
+				// No need to update file record - in_storage tracking is now purely in file_content
 			}
 			if err := l.dao.Bin().Update(&bin); err != nil {
 				fmt.Printf("Unable to update bin %s: %s\n", bin.Id, err.Error())
 				return
 			}
+		}
+	}
+}
+
+func (l *Lurker) DeletePendingContent() {
+	contents, err := l.dao.FileContent().GetPendingDelete()
+	if err != nil {
+		fmt.Printf("Unable to get pending content deletions: %s\n", err.Error())
+		return
+	}
+	if len(contents) > 0 {
+		fmt.Printf("Found %d content objects pending removal.\n", len(contents))
+		for _, content := range contents {
+			// Safety check: verify no files reference this content
+			count, err := l.dao.File().CountBySHA256(content.SHA256)
+			if err != nil {
+				fmt.Printf("Unable to count files for SHA256 %s: %s\n", content.SHA256, err.Error())
+				continue
+			}
+			if count > 0 {
+				fmt.Printf("Skipping %s: still has %d file references\n", content.SHA256, count)
+				continue
+			}
+
+			// Delete from S3
+			if err := l.s3.RemoveObjectByHash(content.SHA256); err != nil {
+				fmt.Printf("Failed to remove %s from S3: %s\n", content.SHA256, err.Error())
+				return
+			}
+
+			// Mark as not in storage (or delete the record)
+			content.InStorage = false
+			if err := l.dao.FileContent().Update(&content); err != nil {
+				fmt.Printf("Unable to update file_content for SHA256 %s: %s\n", content.SHA256, err.Error())
+				return
+			}
+			fmt.Printf("Removed orphaned content %s from S3\n", content.SHA256)
 		}
 	}
 }

@@ -9,7 +9,6 @@ type File struct {
 	Id                int          `json:"-"`
 	Bin               string       `json:"-"`
 	Filename          string       `json:"filename"`
-	InStorage         bool         `json:"-"`
 	Mime              string       `json:"content-type"`
 	Category          string       `json:"-"`
 	Bytes             uint64       `json:"bytes"`
@@ -32,10 +31,8 @@ type File struct {
 
 func (f *File) IsReadable() bool {
 	// Not readable if the file is deleted
+	// Note: Content availability must be checked separately via file_content.in_storage
 	if f.IsDeleted() {
-		return false
-	}
-	if f.InStorage == false {
 		return false
 	}
 	return true

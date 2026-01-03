@@ -14,7 +14,6 @@ CREATE TABLE file (
 	id		BIGSERIAL NOT NULL PRIMARY KEY,
 	bin_id		VARCHAR(64) REFERENCES bin(id) ON DELETE CASCADE,
 	filename        VARCHAR(128) NOT NULL,
-	in_storage	BOOLEAN NOT NULL,
 	mime		VARCHAR(128) NOT NULL,
 	bytes		BIGINT NOT NULL,
 	md5		VARCHAR(128) NOT NULL,
@@ -28,6 +27,15 @@ CREATE TABLE file (
 	created_at	TIMESTAMP NOT NULL,
 	deleted_at	TIMESTAMP,
 	UNIQUE(bin_id, filename)
+);
+
+CREATE TABLE file_content (
+	sha256		VARCHAR(128) NOT NULL PRIMARY KEY,
+	bytes		BIGINT NOT NULL,
+	reference_count	INT NOT NULL DEFAULT 1,
+	in_storage	BOOLEAN NOT NULL DEFAULT false,
+	created_at	TIMESTAMP NOT NULL,
+	last_referenced_at TIMESTAMP NOT NULL
 );
 
 CREATE TABLE transaction (
@@ -76,8 +84,9 @@ CREATE INDEX idx_bin_id ON transaction(bin_id);
 CREATE INDEX idx_ip ON transaction(ip);
 CREATE INDEX idx_cid ON transaction(client_id);
 CREATE INDEX idx_transaction_timestamp ON transaction(timestamp);
-CREATE INDEX idx_file_deleted_at_in_storage ON file(deleted_at, in_storage);
+CREATE INDEX idx_file_deleted_at ON file(deleted_at);
 CREATE INDEX idx_bin_deleted_at_expired_at ON bin(expired_at, deleted_at);
 CREATE INDEX idx_sha256 ON file(sha256);
 CREATE INDEX idx_client_banned_at ON client(banned_at, last_active_at);
-CREATE INDEX idx_client_ip_active ON client(ip, last_active_at)
+CREATE INDEX idx_client_ip_active ON client(ip, last_active_at);
+CREATE INDEX idx_file_content_ref_count ON file_content(reference_count, in_storage)
