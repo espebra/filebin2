@@ -287,7 +287,6 @@ func TestFileCount(t *testing.T) {
 			file.Bin = bin.Id // Foreign key
 			file.Filename = fmt.Sprintf("testfile-%d", i)
 			file.Bytes = tc.Bytes
-			file.InStorage = true
 			err = dao.File().Insert(file)
 			if err != nil {
 				t.Error(err)

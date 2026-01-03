@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/espebra/filebin2/ds"
 	"testing"
+	"time"
 )
 
 func TestFileContentInsertOrIncrement(t *testing.T) {
@@ -278,11 +279,10 @@ func TestFileCountBySHA256(t *testing.T) {
 	// Create 3 files with same SHA256
 	for i := 0; i < 3; i++ {
 		file := &ds.File{
-			Filename:  fmt.Sprintf("file%d.txt", i),
-			Bin:       bin.Id,
-			Bytes:     100,
-			SHA256:    sha256,
-			InStorage: true,
+			Filename: fmt.Sprintf("file%d.txt", i),
+			Bin:      bin.Id,
+			Bytes:    100,
+			SHA256:   sha256,
 		}
 		err = dao.File().Insert(file)
 		if err != nil {
@@ -313,10 +313,12 @@ func TestDeduplicationFlow(t *testing.T) {
 	// Create bin
 	bin := &ds.Bin{}
 	bin.Id = "testbin456"
+	bin.ExpiredAt = time.Now().UTC().Add(time.Hour * 24)
 	err = dao.Bin().Insert(bin)
 	if err != nil {
-		t.Error(err)
+		t.Fatalf("Failed to insert bin: %s", err)
 	}
+	t.Logf("Created bin with ID: %s", bin.Id)
 
 	// Simulate uploading same content 3 times
 	for i := 0; i < 3; i++ {
@@ -333,11 +335,10 @@ func TestDeduplicationFlow(t *testing.T) {
 
 		// Create file record
 		file := &ds.File{
-			Filename:  fmt.Sprintf("file%d.txt", i),
-			Bin:       bin.Id,
-			Bytes:     100,
-			SHA256:    sha256,
-			InStorage: true,
+			Filename: fmt.Sprintf("file%d.txt", i),
+			Bin:      bin.Id,
+			Bytes:    100,
+			SHA256:   sha256,
 		}
 		err = dao.File().Insert(file)
 		if err != nil {
@@ -357,13 +358,14 @@ func TestDeduplicationFlow(t *testing.T) {
 	}
 
 	// Simulate deleting 2 files
-	files, err := dao.File().GetByBin(bin.Id, false)
+	t.Logf("Attempting to get files from bin: %s", bin.Id)
+	files, err := dao.File().GetByBin(bin.Id, true)
 	if err != nil {
 		t.Error(err)
 	}
 
 	if len(files) != 3 {
-		t.Fatalf("Expected 3 files in bin, got %d", len(files))
+		t.Fatalf("Expected 3 files in bin %s, got %d", bin.Id, len(files))
 	}
 
 	for i := 0; i < 2; i++ {
@@ -377,13 +379,7 @@ func TestDeduplicationFlow(t *testing.T) {
 		if newCount != expectedCount {
 			t.Errorf("Delete %d: Expected new count to be %d, got %d", i, expectedCount, newCount)
 		}
-
-		// Mark file as deleted
-		files[i].InStorage = false
-		err = dao.File().Update(&files[i])
-		if err != nil {
-			t.Errorf("Delete %d: Failed to update file: %s", i, err)
-		}
+		// File record doesn't need to be updated - in_storage tracking is now in file_content
 	}
 
 	// Verify reference count is 1
