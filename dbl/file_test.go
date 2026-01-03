@@ -8,6 +8,25 @@ import (
 	"time"
 )
 
+// ensureFileContent creates a file_content record if it doesn't exist
+// This is required because of the foreign key constraint from file.sha256 to file_content.sha256
+func ensureFileContent(dao DAO, file *ds.File) error {
+	// Check if file_content already exists
+	_, err := dao.FileContent().GetBySHA256(file.SHA256)
+	if err == nil {
+		// Already exists, nothing to do
+		return nil
+	}
+
+	// Create new file_content record
+	content := &ds.FileContent{
+		SHA256:    file.SHA256,
+		Bytes:     file.Bytes,
+		InStorage: true,
+	}
+	return dao.FileContent().InsertOrIncrement(content)
+}
+
 func TestUpsert(t *testing.T) {
 	dao, err := tearUp()
 
@@ -32,6 +51,12 @@ func TestUpsert(t *testing.T) {
 	file.Bin = bin.Id // Foreign key
 	file.Bytes = 1
 	file.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+	// Ensure file_content exists (required by foreign key constraint)
+	err = ensureFileContent(dao, file)
+	if err != nil {
+		t.Error(err)
+	}
 
 	err = dao.File().Insert(file)
 
@@ -68,6 +93,12 @@ func TestGetFileById(t *testing.T) {
 	file.Bin = bin.Id // Foreign key
 	file.Bytes = 1
 	file.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+	// Ensure file_content exists (required by foreign key constraint)
+	err = ensureFileContent(dao, file)
+	if err != nil {
+		t.Error(err)
+	}
 
 	err = dao.File().Insert(file)
 
@@ -144,6 +175,13 @@ func TestGetFileByName(t *testing.T) {
 	file.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	file.IP = "127.0.0.1"
 	file.Headers = "some headers"
+
+	// Ensure file_content exists (required by foreign key constraint)
+	err = ensureFileContent(dao, file)
+	if err != nil {
+		t.Error(err)
+	}
+
 	err = dao.File().Insert(file)
 	if err != nil {
 		t.Error(err)
@@ -201,6 +239,12 @@ func TestInsertDuplicatedFile(t *testing.T) {
 	file.Bin = bin.Id
 	file.Bytes = 1
 	file.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+	// Ensure file_content exists (required by foreign key constraint)
+	err = ensureFileContent(dao, file)
+	if err != nil {
+		t.Error(err)
+	}
 
 	err = dao.File().Insert(file)
 
@@ -318,6 +362,12 @@ func TestDeleteFile(t *testing.T) {
 	file.Bytes = 1
 	file.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
+	// Ensure file_content exists (required by foreign key constraint)
+	err = ensureFileContent(dao, file)
+	if err != nil {
+		t.Error(err)
+	}
+
 	err = dao.File().Insert(file)
 
 	if err != nil {
@@ -367,6 +417,13 @@ func TestUpdateFile(t *testing.T) {
 	file.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	file.IP = "127.0.0.1"
 	file.Headers = "first headers"
+
+	// Ensure file_content exists (required by foreign key constraint)
+	err = ensureFileContent(dao, file)
+	if err != nil {
+		t.Error(err)
+	}
+
 	err = dao.File().Insert(file)
 	if err != nil {
 		t.Error(err)
@@ -381,6 +438,13 @@ func TestUpdateFile(t *testing.T) {
 	dbFile.SHA256 = "ff0350c8a7fea1087c5300e9ae922a7ab453648b1c156d5c58437d9f4565244b"
 	dbFile.IP = "127.0.0.2"
 	dbFile.Headers = "second headers"
+
+	// Ensure new SHA256 exists in file_content before updating
+	err = ensureFileContent(dao, &dbFile)
+	if err != nil {
+		t.Error(err)
+	}
+
 	err = dao.File().Update(&dbFile)
 	if err != nil {
 		t.Error(err)
@@ -685,6 +749,10 @@ func TestInvalidFileInput(t *testing.T) {
 	file.Filename = ""
 	file.Bytes = 1
 	file.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+	// Ensure file_content exists (required by foreign key constraint)
+	_ = ensureFileContent(dao, file) // ignore error since we expect Insert to fail anyway
+
 	err = dao.File().Insert(file)
 	if err == nil {
 		t.Error("Expected an error since filename is not set")
@@ -775,10 +843,25 @@ func TestUpsertWiderCharacterSet(t *testing.T) {
 		t.Error(err)
 	}
 
+	// Create file_content record for the default SHA256 used by all test files
+	// Since file.SHA256 is not explicitly set, it will use the default empty value
+	// We need to set it to a valid hash for the foreign key constraint
+	defaultSHA256 := "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	defaultContent := &ds.FileContent{
+		SHA256:    defaultSHA256,
+		Bytes:     0,
+		InStorage: true,
+	}
+	err = dao.FileContent().InsertOrIncrement(defaultContent)
+	if err != nil {
+		t.Error(err)
+	}
+
 	for i, test := range tests {
 		file := &ds.File{}
 		file.Filename = test.InputFilename
 		file.Bin = bin.Id
+		file.SHA256 = defaultSHA256 // Set SHA256 to satisfy foreign key constraint
 		err = dao.File().Insert(file)
 
 		if test.Valid == false {

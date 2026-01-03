@@ -272,6 +272,18 @@ func TestFileCount(t *testing.T) {
 		},
 	}
 
+	// Create file_content record for the default SHA256 used by test files
+	defaultSHA256 := "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	defaultContent := &ds.FileContent{
+		SHA256:    defaultSHA256,
+		Bytes:     0,
+		InStorage: true,
+	}
+	err = dao.FileContent().InsertOrIncrement(defaultContent)
+	if err != nil {
+		t.Error(err)
+	}
+
 	for _, tc := range testcases {
 		bin := &ds.Bin{}
 		bin.Id = tc.Bin
@@ -287,6 +299,7 @@ func TestFileCount(t *testing.T) {
 			file.Bin = bin.Id // Foreign key
 			file.Filename = fmt.Sprintf("testfile-%d", i)
 			file.Bytes = tc.Bytes
+			file.SHA256 = defaultSHA256 // Set SHA256 to satisfy foreign key constraint
 			err = dao.File().Insert(file)
 			if err != nil {
 				t.Error(err)
