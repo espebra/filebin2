@@ -57,9 +57,8 @@ func TestFileIsReadable(t *testing.T) {
 		want bool
 	}{
 		{
-			name: "readable file (in storage, not deleted)",
+			name: "readable file (not deleted)",
 			file: &File{
-				InStorage: true,
 				DeletedAt: sql.NullTime{Valid: false},
 			},
 			want: true,
@@ -67,26 +66,6 @@ func TestFileIsReadable(t *testing.T) {
 		{
 			name: "not readable file (deleted)",
 			file: &File{
-				InStorage: true,
-				DeletedAt: sql.NullTime{
-					Time:  now,
-					Valid: true,
-				},
-			},
-			want: false,
-		},
-		{
-			name: "not readable file (not in storage)",
-			file: &File{
-				InStorage: false,
-				DeletedAt: sql.NullTime{Valid: false},
-			},
-			want: false,
-		},
-		{
-			name: "not readable file (not in storage and deleted)",
-			file: &File{
-				InStorage: false,
 				DeletedAt: sql.NullTime{
 					Time:  now,
 					Valid: true,
