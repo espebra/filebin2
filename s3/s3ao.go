@@ -181,15 +181,11 @@ func (s S3AO) RemoveBucket() error {
 	return nil
 }
 
-func (s S3AO) GetObject(bin string, filename string, start int64, end int64) (*minio.Object, error) {
+func (s S3AO) GetObject(contentSHA256 string, start int64, end int64) (*minio.Object, error) {
 	t0 := time.Now()
 
-	// Hash the path in S3
-	b := sha256.New()
-	b.Write([]byte(bin))
-	f := sha256.New()
-	f.Write([]byte(filename))
-	objectKey := path.Join(fmt.Sprintf("%x", b.Sum(nil)), fmt.Sprintf("%x", f.Sum(nil)))
+	// Use content SHA256 as the object key for content-addressable storage
+	objectKey := contentSHA256
 	opts := minio.GetObjectOptions{}
 
 	if end > 0 {
@@ -206,13 +202,9 @@ func (s S3AO) GetObject(bin string, filename string, start int64, end int64) (*m
 }
 
 // This only works with objects that are not encrypted
-func (s S3AO) PresignedGetObject(bin string, filename string, mime string) (presignedURL *url.URL, err error) {
-	// Hash the path in S3
-	b := sha256.New()
-	b.Write([]byte(bin))
-	f := sha256.New()
-	f.Write([]byte(filename))
-	objectKey := path.Join(fmt.Sprintf("%x", b.Sum(nil)), fmt.Sprintf("%x", f.Sum(nil)))
+func (s S3AO) PresignedGetObject(contentSHA256 string, filename string, mime string) (presignedURL *url.URL, err error) {
+	// Use content SHA256 as the object key for content-addressable storage
+	objectKey := contentSHA256
 
 	reqParams := make(url.Values)
 	reqParams.Set("response-content-type", mime)
@@ -283,4 +275,50 @@ func (s S3AO) GetObjectKey(bin string, filename string) (key string) {
 	f.Write([]byte(filename))
 	key = path.Join(fmt.Sprintf("%x", b.Sum(nil)), fmt.Sprintf("%x", f.Sum(nil)))
 	return key
+}
+
+// PutObjectByHash uploads an object using content-addressable storage (SHA256 as key)
+func (s S3AO) PutObjectByHash(contentSHA256 string, data io.Reader, size int64) (err error) {
+	t0 := time.Now()
+
+	var objectSize uint64
+	var content io.Reader
+
+	// Do not encrypt the content during upload. This allows for presigned downloads.
+	content = data
+	objectSize = uint64(size)
+
+	_, err = s.client.PutObject(context.Background(), s.bucket, contentSHA256, content, int64(objectSize), minio.PutObjectOptions{ContentType: "application/octet-stream"})
+	if err != nil {
+		fmt.Printf("Unable to put object: %s\n", err.Error())
+		return err
+	}
+
+	fmt.Printf("Stored object: %s (%d bytes) in %.3fs\n", contentSHA256, objectSize, time.Since(t0).Seconds())
+	return nil
+}
+
+// RemoveObjectByHash removes an object using content-addressable storage (SHA256 as key)
+func (s S3AO) RemoveObjectByHash(contentSHA256 string) error {
+	t0 := time.Now()
+
+	opts := minio.RemoveObjectOptions{}
+
+	err := s.client.RemoveObject(context.Background(), s.bucket, contentSHA256, opts)
+	if err != nil {
+		fmt.Printf("Unable to remove object: %s\n", err.Error())
+		return err
+	}
+	fmt.Printf("Removed object: %s in %.3fs\n", contentSHA256, time.Since(t0).Seconds())
+	return nil
+}
+
+// GetClient returns the underlying minio client (for migration and advanced operations)
+func (s S3AO) GetClient() *minio.Client {
+	return s.client
+}
+
+// GetBucket returns the bucket name
+func (s S3AO) GetBucket() string {
+	return s.bucket
 }
