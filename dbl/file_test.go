@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/espebra/filebin2/ds"
 	"testing"
+	"time"
 )
 
 func TestUpsert(t *testing.T) {
@@ -31,7 +32,6 @@ func TestUpsert(t *testing.T) {
 	file.Bin = bin.Id // Foreign key
 	file.Bytes = 1
 	file.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-	file.InStorage = true
 
 	err = dao.File().Insert(file)
 
@@ -68,7 +68,6 @@ func TestGetFileById(t *testing.T) {
 	file.Bin = bin.Id // Foreign key
 	file.Bytes = 1
 	file.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-	file.InStorage = true
 
 	err = dao.File().Insert(file)
 
@@ -241,18 +240,39 @@ func TestGetAllFiles(t *testing.T) {
 
 	count := 50
 
+	// Create file_content record for the files
+	sha256 := "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	content := &ds.FileContent{
+		SHA256:    sha256,
+		Bytes:     1,
+		InStorage: true,
+	}
+	// Initialize ref count to 1
+	err = dao.FileContent().InsertOrIncrement(content)
+	if err != nil {
+		t.Error(err)
+	}
+
 	for i := 0; i < count; i++ {
 		file := &ds.File{}
 		file.Filename = fmt.Sprintf("File-%d", i)
 		file.Bin = bin.Id
 		file.Bytes = 1
-		file.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-		file.InStorage = true
+		file.SHA256 = sha256
 		err = dao.File().Insert(file)
 
 		if err != nil {
 			t.Error(err)
 			break
+		}
+
+		// Increment ref count for each additional file (except the first)
+		if i > 0 {
+			err = dao.FileContent().InsertOrIncrement(content)
+			if err != nil {
+				t.Error(err)
+				break
+			}
 		}
 	}
 
@@ -431,6 +451,27 @@ func TestGetFilesByBin(t *testing.T) {
 		t.Error(err)
 	}
 
+	// Create file_content records first
+	content1 := &ds.FileContent{
+		SHA256:    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+		Bytes:     1,
+		InStorage: true,
+	}
+	err = dao.FileContent().InsertOrIncrement(content1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	content2 := &ds.FileContent{
+		SHA256:    "ff0350c8a7fea1087c5300e9ae922a7ab453648b1c156d5c58437d9f4565244b",
+		Bytes:     2,
+		InStorage: true,
+	}
+	err = dao.FileContent().InsertOrIncrement(content2)
+	if err != nil {
+		t.Error(err)
+	}
+
 	// Create files
 	file1 := &ds.File{}
 	file1.Filename = "file1.txt"
@@ -452,7 +493,7 @@ func TestGetFilesByBin(t *testing.T) {
 		t.Error(err)
 	}
 
-	files, err := dao.File().GetByBin(bin.Id, false)
+	files, err := dao.File().GetByBin(bin.Id, true)
 	if err != nil {
 		t.Error(err)
 	}
@@ -460,7 +501,7 @@ func TestGetFilesByBin(t *testing.T) {
 		t.Errorf("Was expecting two files, got %d instead.", len(files))
 	}
 
-	files, err = dao.File().GetByBin("-1", false)
+	files, err = dao.File().GetByBin("-1", true)
 	if err != nil {
 		t.Error("Did not expect an error even though we asked for a bin id that does not exist")
 	}
@@ -474,6 +515,153 @@ func TestGetFilesByBin(t *testing.T) {
 	}
 	if file1.Downloads != 1 {
 		t.Errorf("Was expecting the number of downloads to be 1, not %d\n", file1.Downloads)
+	}
+}
+
+func TestIsAvailableForDownload(t *testing.T) {
+	dao, err := tearUp()
+	if err != nil {
+		t.Error(err)
+	}
+	defer tearDown(dao)
+
+	sha256 := "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+	// Create file_content record
+	content := &ds.FileContent{
+		SHA256:    sha256,
+		Bytes:     100,
+		InStorage: true,
+	}
+	err = dao.FileContent().InsertOrIncrement(content)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Test 1: File should be available (all conditions met)
+	bin1 := &ds.Bin{Id: "availablebin1", ExpiredAt: time.Now().UTC().Add(time.Hour * 24)}
+	err = dao.Bin().Insert(bin1)
+	if err != nil {
+		t.Error(err)
+	}
+	file1 := &ds.File{Filename: "test1.txt", Bin: bin1.Id, Bytes: 100, SHA256: sha256}
+	err = dao.File().Insert(file1)
+	if err != nil {
+		t.Error(err)
+	}
+	available, err := dao.File().IsAvailableForDownload(file1.Id)
+	if err != nil {
+		t.Errorf("Failed to check availability: %s", err)
+	}
+	if !available {
+		t.Error("File should be available when all conditions are met")
+	}
+
+	// Test 2: File not available when file is deleted
+	bin2 := &ds.Bin{Id: "availablebin2", ExpiredAt: time.Now().UTC().Add(time.Hour * 24)}
+	err = dao.Bin().Insert(bin2)
+	if err != nil {
+		t.Error(err)
+	}
+	file2 := &ds.File{Filename: "test2.txt", Bin: bin2.Id, Bytes: 100, SHA256: sha256}
+	err = dao.File().Insert(file2)
+	if err != nil {
+		t.Error(err)
+	}
+	file2.DeletedAt.Time = time.Now().UTC()
+	file2.DeletedAt.Valid = true
+	err = dao.File().Update(file2)
+	if err != nil {
+		t.Error(err)
+	}
+	available, err = dao.File().IsAvailableForDownload(file2.Id)
+	if err != nil {
+		t.Errorf("Failed to check availability: %s", err)
+	}
+	if available {
+		t.Error("File should not be available when file is deleted")
+	}
+
+	// Test 3: File not available when bin is expired
+	bin3 := &ds.Bin{Id: "expiredbin123", ExpiredAt: time.Now().UTC().Add(-time.Hour)}
+	err = dao.Bin().Insert(bin3)
+	if err != nil {
+		t.Error(err)
+	}
+	file3 := &ds.File{Filename: "test3.txt", Bin: bin3.Id, Bytes: 100, SHA256: sha256}
+	err = dao.File().Insert(file3)
+	if err != nil {
+		t.Error(err)
+	}
+	available, err = dao.File().IsAvailableForDownload(file3.Id)
+	if err != nil {
+		t.Errorf("Failed to check availability: %s", err)
+	}
+	if available {
+		t.Error("File should not be available when bin is expired")
+	}
+
+	// Test 4: File not available when bin is deleted
+	bin4 := &ds.Bin{Id: "deletedbin123", ExpiredAt: time.Now().UTC().Add(time.Hour * 24)}
+	err = dao.Bin().Insert(bin4)
+	if err != nil {
+		t.Error(err)
+	}
+	bin4.DeletedAt.Time = time.Now().UTC()
+	bin4.DeletedAt.Valid = true
+	err = dao.Bin().Update(bin4)
+	if err != nil {
+		t.Error(err)
+	}
+	file4 := &ds.File{Filename: "test4.txt", Bin: bin4.Id, Bytes: 100, SHA256: sha256}
+	err = dao.File().Insert(file4)
+	if err != nil {
+		t.Error(err)
+	}
+	available, err = dao.File().IsAvailableForDownload(file4.Id)
+	if err != nil {
+		t.Errorf("Failed to check availability: %s", err)
+	}
+	if available {
+		t.Error("File should not be available when bin is deleted")
+	}
+
+	// Test 5: File not available when content is not in storage
+	sha256_2 := "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
+	content2 := &ds.FileContent{
+		SHA256:    sha256_2,
+		Bytes:     100,
+		InStorage: false,
+	}
+	err = dao.FileContent().InsertOrIncrement(content2)
+	if err != nil {
+		t.Error(err)
+	}
+	bin5 := &ds.Bin{Id: "availablebin5", ExpiredAt: time.Now().UTC().Add(time.Hour * 24)}
+	err = dao.Bin().Insert(bin5)
+	if err != nil {
+		t.Error(err)
+	}
+	file5 := &ds.File{Filename: "test5.txt", Bin: bin5.Id, Bytes: 100, SHA256: sha256_2}
+	err = dao.File().Insert(file5)
+	if err != nil {
+		t.Error(err)
+	}
+	available, err = dao.File().IsAvailableForDownload(file5.Id)
+	if err != nil {
+		t.Errorf("Failed to check availability: %s", err)
+	}
+	if available {
+		t.Error("File should not be available when content is not in storage")
+	}
+
+	// Test 6: Non-existent file ID should return false
+	available, err = dao.File().IsAvailableForDownload(999999)
+	if err != nil {
+		t.Errorf("Failed to check availability: %s", err)
+	}
+	if available {
+		t.Error("Non-existent file should not be available")
 	}
 }
 
