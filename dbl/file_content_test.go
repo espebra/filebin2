@@ -18,6 +18,8 @@ func TestFileContentInsertOrIncrement(t *testing.T) {
 	content := &ds.FileContent{
 		SHA256:    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 		Bytes:     100,
+		MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+		Mime:      "application/octet-stream",
 		InStorage: true,
 	}
 
@@ -69,6 +71,8 @@ func TestFileContentIncrementDownloads(t *testing.T) {
 	content := &ds.FileContent{
 		SHA256:    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 		Bytes:     100,
+		MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+		Mime:      "application/octet-stream",
 		InStorage: true,
 	}
 
@@ -140,6 +144,8 @@ func TestFileContentGetPendingDelete(t *testing.T) {
 	content1 := &ds.FileContent{
 		SHA256:    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 		Bytes:     100,
+		MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+		Mime:      "application/octet-stream",
 		InStorage: true,
 	}
 	dao.FileContent().InsertOrIncrement(content1)
@@ -149,6 +155,8 @@ func TestFileContentGetPendingDelete(t *testing.T) {
 	content2 := &ds.FileContent{
 		SHA256:    "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
 		Bytes:     200,
+		MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+		Mime:      "application/octet-stream",
 		InStorage: true,
 	}
 	dao.FileContent().InsertOrIncrement(content2)
@@ -164,6 +172,8 @@ func TestFileContentGetPendingDelete(t *testing.T) {
 	content3 := &ds.FileContent{
 		SHA256:    "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
 		Bytes:     300,
+		MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+		Mime:      "application/octet-stream",
 		InStorage: true,
 	}
 	dao.FileContent().InsertOrIncrement(content3)
@@ -182,6 +192,8 @@ func TestFileContentGetPendingDelete(t *testing.T) {
 	content4 := &ds.FileContent{
 		SHA256:    "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
 		Bytes:     400,
+		MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+		Mime:      "application/octet-stream",
 		InStorage: false,
 	}
 	dao.FileContent().InsertOrIncrement(content4)
@@ -228,6 +240,8 @@ func TestFileContentGetAll(t *testing.T) {
 	content1 := &ds.FileContent{
 		SHA256:    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 		Bytes:     100,
+		MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+		Mime:      "application/octet-stream",
 		InStorage: true,
 	}
 	dao.FileContent().InsertOrIncrement(content1)
@@ -235,6 +249,8 @@ func TestFileContentGetAll(t *testing.T) {
 	content2 := &ds.FileContent{
 		SHA256:    "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
 		Bytes:     200,
+		MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+		Mime:      "application/octet-stream",
 		InStorage: true,
 	}
 	dao.FileContent().InsertOrIncrement(content2)
@@ -260,6 +276,8 @@ func TestFileContentUpdate(t *testing.T) {
 	content := &ds.FileContent{
 		SHA256:    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 		Bytes:     100,
+		MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+		Mime:      "application/octet-stream",
 		InStorage: true,
 	}
 	dao.FileContent().InsertOrIncrement(content)
@@ -320,6 +338,8 @@ func TestFileCountBySHA256(t *testing.T) {
 	content := &ds.FileContent{
 		SHA256:    sha256,
 		Bytes:     100,
+		MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+		Mime:      "application/octet-stream",
 		InStorage: true,
 	}
 	err = dao.FileContent().InsertOrIncrement(content)
@@ -413,6 +433,8 @@ func TestDeduplicationFlow(t *testing.T) {
 		content := &ds.FileContent{
 			SHA256:    sha256,
 			Bytes:     100,
+			MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+			Mime:      "application/octet-stream",
 			InStorage: true,
 		}
 		err = dao.FileContent().InsertOrIncrement(content)

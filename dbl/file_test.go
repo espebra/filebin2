@@ -22,6 +22,8 @@ func ensureFileContent(dao DAO, file *ds.File) error {
 	content := &ds.FileContent{
 		SHA256:    file.SHA256,
 		Bytes:     file.Bytes,
+		MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+		Mime:      "application/octet-stream",
 		InStorage: true,
 	}
 	return dao.FileContent().InsertOrIncrement(content)
@@ -289,6 +291,8 @@ func TestGetAllFiles(t *testing.T) {
 	content := &ds.FileContent{
 		SHA256:    sha256,
 		Bytes:     1,
+		MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+		Mime:      "application/octet-stream",
 		InStorage: true,
 	}
 	// Initialize ref count to 1
@@ -519,6 +523,8 @@ func TestGetFilesByBin(t *testing.T) {
 	content1 := &ds.FileContent{
 		SHA256:    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 		Bytes:     1,
+		MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+		Mime:      "application/octet-stream",
 		InStorage: true,
 	}
 	err = dao.FileContent().InsertOrIncrement(content1)
@@ -529,6 +535,8 @@ func TestGetFilesByBin(t *testing.T) {
 	content2 := &ds.FileContent{
 		SHA256:    "ff0350c8a7fea1087c5300e9ae922a7ab453648b1c156d5c58437d9f4565244b",
 		Bytes:     2,
+		MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+		Mime:      "application/octet-stream",
 		InStorage: true,
 	}
 	err = dao.FileContent().InsertOrIncrement(content2)
@@ -595,6 +603,8 @@ func TestIsAvailableForDownload(t *testing.T) {
 	content := &ds.FileContent{
 		SHA256:    sha256,
 		Bytes:     100,
+		MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+		Mime:      "application/octet-stream",
 		InStorage: true,
 	}
 	err = dao.FileContent().InsertOrIncrement(content)
@@ -695,6 +705,8 @@ func TestIsAvailableForDownload(t *testing.T) {
 	content2 := &ds.FileContent{
 		SHA256:    sha256_2,
 		Bytes:     100,
+		MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+		Mime:      "application/octet-stream",
 		InStorage: false,
 	}
 	err = dao.FileContent().InsertOrIncrement(content2)
@@ -850,6 +862,8 @@ func TestUpsertWiderCharacterSet(t *testing.T) {
 	defaultContent := &ds.FileContent{
 		SHA256:    defaultSHA256,
 		Bytes:     0,
+		MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+		Mime:      "application/octet-stream",
 		InStorage: true,
 	}
 	err = dao.FileContent().InsertOrIncrement(defaultContent)
