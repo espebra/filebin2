@@ -15,7 +15,6 @@ CREATE TABLE file_content (
 	bytes		BIGINT NOT NULL,
 	md5		VARCHAR(128) NOT NULL,
 	mime		VARCHAR(128) NOT NULL,
-	downloads	BIGINT NOT NULL DEFAULT 0,
 	in_storage	BOOLEAN NOT NULL DEFAULT false,
 	created_at	TIMESTAMP NOT NULL,
 	last_referenced_at TIMESTAMP NOT NULL
