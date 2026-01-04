@@ -592,3 +592,92 @@ func TestBinBan(t *testing.T) {
 	}
 	runTests(tcs, t)
 }
+
+func httpAdminRequest(method, path string) (statuscode int, body string, err error) {
+	u, err := url.Parse("http://localhost:8080")
+	if err != nil {
+		log.Fatal(err)
+	}
+	u.Path = path
+
+	req, err := http.NewRequest(method, u.String(), nil)
+	if err != nil {
+		return -1, "", err
+	}
+
+	// Add basic auth for admin endpoints
+	req.SetBasicAuth("admin", "changeme")
+	req.Close = true
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return -2, "", err
+	}
+
+	content, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return -3, "", err
+	}
+	body = string(content)
+	resp.Body.Close()
+	return resp.StatusCode, body, err
+}
+
+func TestBlockedContent(t *testing.T) {
+	// First, upload a file with known content
+	tcs := []TestCase{
+		{
+			Description:   "Upload file with specific content",
+			Method:        "POST",
+			Bin:           "blockedcontenttest",
+			Filename:      "blocked.txt",
+			UploadContent: "this content will be blocked",
+			SHA256:        "8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4",
+			StatusCode:    201,
+		},
+	}
+	runTests(tcs, t)
+
+	// Block the content using the admin endpoint
+	sha256 := "8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4"
+	statusCode, _, err := httpAdminRequest("POST", "/admin/file/"+sha256+"/block")
+	if err != nil {
+		t.Errorf("Failed to block content: %s\n", err.Error())
+		os.Exit(1)
+	}
+	if statusCode != 303 && statusCode != 200 {
+		t.Errorf("Expected status code 303 or 200 when blocking content, got %d\n", statusCode)
+		os.Exit(1)
+	}
+
+	// Try to upload the same content again - should be rejected
+	tcs2 := []TestCase{
+		{
+			Description:   "Try to upload blocked content to same bin",
+			Method:        "POST",
+			Bin:           "blockedcontenttest",
+			Filename:      "blocked2.txt",
+			UploadContent: "this content will be blocked",
+			SHA256:        "8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4",
+			StatusCode:    403,
+		},
+		{
+			Description:   "Try to upload blocked content to different bin",
+			Method:        "POST",
+			Bin:           "anotherbin",
+			Filename:      "test.txt",
+			UploadContent: "this content will be blocked",
+			SHA256:        "8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4",
+			StatusCode:    403,
+		},
+		{
+			Description:   "Upload different content should still work",
+			Method:        "POST",
+			Bin:           "blockedcontenttest",
+			Filename:      "allowed.txt",
+			UploadContent: "this content is allowed",
+			StatusCode:    201,
+		},
+	}
+	runTests(tcs2, t)
+}
