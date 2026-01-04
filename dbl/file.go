@@ -98,8 +98,8 @@ func (d *FileDao) ValidateInput(file *ds.File) error {
 }
 
 func (d *FileDao) GetByID(id int) (file ds.File, found bool, err error) {
-	sqlStatement := "SELECT f.id, f.bin_id, f.filename, fc.mime, fc.bytes, fc.md5, f.sha256, f.downloads, f.updates, fc.in_storage, f.ip, f.client_id, f.headers, f.updated_at, f.created_at, f.deleted_at FROM file f JOIN file_content fc ON f.sha256 = fc.sha256 WHERE f.id = $1 LIMIT 1"
-	err = d.db.QueryRow(sqlStatement, id).Scan(&file.Id, &file.Bin, &file.Filename, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updates, &file.InStorage, &file.IP, &file.ClientId, &file.Headers, &file.UpdatedAt, &file.CreatedAt, &file.DeletedAt)
+	sqlStatement := "SELECT f.id, f.bin_id, f.filename, fc.mime, fc.bytes, fc.md5, f.sha256, f.downloads, f.updates, fc.in_storage, f.ip, f.client_id, f.headers, f.updated_at, f.created_at, f.deleted_at, b.deleted_at FROM file f JOIN file_content fc ON f.sha256 = fc.sha256 LEFT JOIN bin b ON f.bin_id = b.id WHERE f.id = $1 LIMIT 1"
+	err = d.db.QueryRow(sqlStatement, id).Scan(&file.Id, &file.Bin, &file.Filename, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updates, &file.InStorage, &file.IP, &file.ClientId, &file.Headers, &file.UpdatedAt, &file.CreatedAt, &file.DeletedAt, &file.BinDeletedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return file, false, nil
@@ -114,14 +114,18 @@ func (d *FileDao) GetByID(id int) (file ds.File, found bool, err error) {
 	if file.IsDeleted() {
 		file.DeletedAt.Time = file.DeletedAt.Time.UTC()
 		file.DeletedAtRelative = humanize.Time(file.DeletedAt.Time)
+	}
+	if file.BinDeletedAt.Valid && !file.BinDeletedAt.Time.IsZero() {
+		file.BinDeletedAt.Time = file.BinDeletedAt.Time.UTC()
+		file.BinDeletedAtRelative = humanize.Time(file.BinDeletedAt.Time)
 	}
 	file.BytesReadable = humanize.Bytes(file.Bytes)
 	return file, true, nil
 }
 
 func (d *FileDao) GetByName(bin string, filename string) (file ds.File, found bool, err error) {
-	sqlStatement := "SELECT f.id, f.bin_id, f.filename, fc.mime, fc.bytes, fc.md5, f.sha256, f.downloads, f.updates, fc.in_storage, f.ip, f.client_id, f.headers, f.updated_at, f.created_at, f.deleted_at FROM file f JOIN file_content fc ON f.sha256 = fc.sha256 WHERE f.bin_id = $1 AND f.filename = $2 LIMIT 1"
-	err = d.db.QueryRow(sqlStatement, bin, filename).Scan(&file.Id, &file.Bin, &file.Filename, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updates, &file.InStorage, &file.IP, &file.ClientId, &file.Headers, &file.UpdatedAt, &file.CreatedAt, &file.DeletedAt)
+	sqlStatement := "SELECT f.id, f.bin_id, f.filename, fc.mime, fc.bytes, fc.md5, f.sha256, f.downloads, f.updates, fc.in_storage, f.ip, f.client_id, f.headers, f.updated_at, f.created_at, f.deleted_at, b.deleted_at FROM file f JOIN file_content fc ON f.sha256 = fc.sha256 LEFT JOIN bin b ON f.bin_id = b.id WHERE f.bin_id = $1 AND f.filename = $2 LIMIT 1"
+	err = d.db.QueryRow(sqlStatement, bin, filename).Scan(&file.Id, &file.Bin, &file.Filename, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updates, &file.InStorage, &file.IP, &file.ClientId, &file.Headers, &file.UpdatedAt, &file.CreatedAt, &file.DeletedAt, &file.BinDeletedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return file, false, nil
@@ -136,6 +140,10 @@ func (d *FileDao) GetByName(bin string, filename string) (file ds.File, found bo
 	if file.IsDeleted() {
 		file.DeletedAt.Time = file.DeletedAt.Time.UTC()
 		file.DeletedAtRelative = humanize.Time(file.DeletedAt.Time)
+	}
+	if file.BinDeletedAt.Valid && !file.BinDeletedAt.Time.IsZero() {
+		file.BinDeletedAt.Time = file.BinDeletedAt.Time.UTC()
+		file.BinDeletedAtRelative = humanize.Time(file.BinDeletedAt.Time)
 	}
 	file.BytesReadable = humanize.Bytes(file.Bytes)
 	setCategory(&file)
@@ -250,9 +258,10 @@ func (d *FileDao) RegisterDownload(file *ds.File) (err error) {
 
 func (d *FileDao) GetByBin(id string, inStorage bool) (files []ds.File, err error) {
 	// Join with file_content to check if content is actually in storage
-	sqlStatement := `SELECT f.id, f.bin_id, f.filename, fc.mime, fc.bytes, fc.md5, f.sha256, f.downloads, f.updates, fc.in_storage, f.ip, f.client_id, f.headers, f.updated_at, f.created_at, f.deleted_at
+	sqlStatement := `SELECT f.id, f.bin_id, f.filename, fc.mime, fc.bytes, fc.md5, f.sha256, f.downloads, f.updates, fc.in_storage, f.ip, f.client_id, f.headers, f.updated_at, f.created_at, f.deleted_at, b.deleted_at
 		FROM file f
 		JOIN file_content fc ON f.sha256 = fc.sha256
+		LEFT JOIN bin b ON f.bin_id = b.id
 		WHERE f.bin_id = $1 AND fc.in_storage = $2 AND f.deleted_at IS NULL
 		ORDER BY f.filename ASC`
 	files, err = d.fileQuery(sqlStatement, id, inStorage)
@@ -261,9 +270,10 @@ func (d *FileDao) GetByBin(id string, inStorage bool) (files []ds.File, err erro
 
 func (d *FileDao) GetAll(available bool) (files []ds.File, err error) {
 	// Join with file_content to check if content is actually in storage
-	sqlStatement := `SELECT f.id, f.bin_id, f.filename, fc.mime, fc.bytes, fc.md5, f.sha256, f.downloads, f.updates, fc.in_storage, f.ip, f.client_id, f.headers, f.updated_at, f.created_at, f.deleted_at
+	sqlStatement := `SELECT f.id, f.bin_id, f.filename, fc.mime, fc.bytes, fc.md5, f.sha256, f.downloads, f.updates, fc.in_storage, f.ip, f.client_id, f.headers, f.updated_at, f.created_at, f.deleted_at, b.deleted_at
 		FROM file f
 		JOIN file_content fc ON f.sha256 = fc.sha256
+		LEFT JOIN bin b ON f.bin_id = b.id
 		WHERE fc.in_storage = $1 AND f.deleted_at IS NULL
 		ORDER BY f.filename ASC`
 	files, err = d.fileQuery(sqlStatement, available)
@@ -279,9 +289,10 @@ func (d *FileDao) GetPendingDelete() (files []ds.File, err error) {
 
 func (d *FileDao) GetTopDownloads(limit int) (files []ds.File, err error) {
 	// Join with file_content to only show files whose content is still in storage
-	sqlStatement := `SELECT f.id, f.bin_id, f.filename, fc.mime, fc.bytes, fc.md5, f.sha256, f.downloads, f.updates, fc.in_storage, f.ip, f.client_id, f.headers, f.updated_at, f.created_at, f.deleted_at
+	sqlStatement := `SELECT f.id, f.bin_id, f.filename, fc.mime, fc.bytes, fc.md5, f.sha256, f.downloads, f.updates, fc.in_storage, f.ip, f.client_id, f.headers, f.updated_at, f.created_at, f.deleted_at, b.deleted_at
 		FROM file f
 		JOIN file_content fc ON f.sha256 = fc.sha256
+		LEFT JOIN bin b ON f.bin_id = b.id
 		WHERE fc.in_storage = true AND f.deleted_at IS NULL
 		ORDER BY f.downloads DESC LIMIT $1`
 	files, err = d.fileQuery(sqlStatement, limit)
@@ -296,7 +307,7 @@ func (d *FileDao) fileQuery(sqlStatement string, params ...interface{}) (files [
 	defer rows.Close()
 	for rows.Next() {
 		var file ds.File
-		err = rows.Scan(&file.Id, &file.Bin, &file.Filename, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updates, &file.InStorage, &file.IP, &file.ClientId, &file.Headers, &file.UpdatedAt, &file.CreatedAt, &file.DeletedAt)
+		err = rows.Scan(&file.Id, &file.Bin, &file.Filename, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updates, &file.InStorage, &file.IP, &file.ClientId, &file.Headers, &file.UpdatedAt, &file.CreatedAt, &file.DeletedAt, &file.BinDeletedAt)
 		if err != nil {
 			return files, err
 		}
@@ -308,6 +319,10 @@ func (d *FileDao) fileQuery(sqlStatement string, params ...interface{}) (files [
 		if file.IsDeleted() {
 			file.DeletedAt.Time = file.DeletedAt.Time.UTC()
 			file.DeletedAtRelative = humanize.Time(file.DeletedAt.Time)
+		}
+		if file.BinDeletedAt.Valid && !file.BinDeletedAt.Time.IsZero() {
+			file.BinDeletedAt.Time = file.BinDeletedAt.Time.UTC()
+			file.BinDeletedAtRelative = humanize.Time(file.BinDeletedAt.Time)
 		}
 		file.BytesReadable = humanize.Bytes(file.Bytes)
 		file.URL = path.Join("/", file.Bin, file.Filename)
@@ -345,7 +360,7 @@ func (d *FileDao) FilesByChecksum(limit int) (files []ds.FileByChecksum, err err
 }
 
 func (d *FileDao) FileByChecksum(sha256 string) (files []ds.File, err error) {
-	sqlStatement := "SELECT f.id, f.bin_id, f.filename, fc.mime, fc.bytes, fc.md5, f.sha256, f.downloads, f.updates, fc.in_storage, f.ip, f.client_id, f.headers, f.updated_at, f.created_at, f.deleted_at FROM file f JOIN file_content fc ON f.sha256 = fc.sha256 WHERE f.sha256 = $1 ORDER BY f.downloads DESC, f.updates DESC"
+	sqlStatement := "SELECT f.id, f.bin_id, f.filename, fc.mime, fc.bytes, fc.md5, f.sha256, f.downloads, f.updates, fc.in_storage, f.ip, f.client_id, f.headers, f.updated_at, f.created_at, f.deleted_at, b.deleted_at FROM file f JOIN file_content fc ON f.sha256 = fc.sha256 LEFT JOIN bin b ON f.bin_id = b.id WHERE f.sha256 = $1 ORDER BY f.downloads DESC, f.updates DESC"
 	files, err = d.fileQuery(sqlStatement, sha256)
 	return files, err
 }

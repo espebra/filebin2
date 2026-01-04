@@ -26,7 +26,8 @@
                 <th>Content type</th>
                 <th>Size</th>
                 <th>Uploaded</th>
-                <th>Deleted</th>
+                <th>File deleted</th>
+                <th>Bin deleted</th>
                 <th>File downloads</th>
                 <th>File updates</th>
                 <th>In storage</th>
@@ -43,6 +44,7 @@
                     <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
                     <td sorttable_customkey="{{ .UpdatedAt }}">{{ .UpdatedAtRelative }}</td>
                     <td sorttable_customkey="{{ .DeletedAt }}">{{ .DeletedAtRelative }}</td>
+                    <td sorttable_customkey="{{ .BinDeletedAt }}">{{ .BinDeletedAtRelative }}</td>
                     <td>{{ .Downloads }}</td>
                     <td>{{ .Updates }}</td>
                     <td>{{ .InStorage }}</td>
