@@ -271,10 +271,10 @@ func (d *FileDao) GetAll(available bool) (files []ds.File, err error) {
 }
 
 func (d *FileDao) GetPendingDelete() (files []ds.File, err error) {
-	// Files that are deleted but whose content might still be in storage (for other files)
-	sqlStatement := "SELECT id, bin_id, filename, mime, bytes, md5, sha256, downloads, updates, ip, client_id, headers, updated_at, created_at, deleted_at FROM file WHERE deleted_at IS NOT NULL ORDER BY filename ASC"
-	files, err = d.fileQuery(sqlStatement)
-	return files, err
+	// Files are soft-deleted by setting deleted_at. No further action needed by lurker.
+	// Content cleanup is handled by FileContent.GetPendingDelete() which checks for orphaned content.
+	// Return empty list to avoid logging "pending removal" for already-deleted files.
+	return files, nil
 }
 
 func (d *FileDao) GetTopDownloads(limit int) (files []ds.File, err error) {
