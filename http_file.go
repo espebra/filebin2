@@ -427,6 +427,8 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	fileContent := ds.FileContent{
 		SHA256:    file.SHA256,
 		Bytes:     file.Bytes,
+		MD5:       file.MD5,
+		Mime:      file.Mime,
 		InStorage: true,
 	}
 	if err := h.dao.FileContent().InsertOrIncrement(&fileContent); err != nil {
