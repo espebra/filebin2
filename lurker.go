@@ -114,7 +114,7 @@ func (l *Lurker) DeletePendingContent() {
 				fmt.Printf("Unable to update file_content for SHA256 %s: %s\n", content.SHA256, err.Error())
 				return
 			}
-			fmt.Printf("Removed orphaned content %s from S3\n", content.SHA256)
+			//fmt.Printf("Removed orphaned content %s from S3\n", content.SHA256)
 		}
 	}
 }
