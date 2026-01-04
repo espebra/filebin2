@@ -17,11 +17,18 @@
         {{template "admin_bar" .}}
 
         <h1>File by SHA256 checksum</h1>
-	<p><code>{{ .SHA256 }}</code></p>
 
         {{ if .FileContent }}
         <h2>Content Information</h2>
         <table class="table table-sm">
+            <tr>
+                <th>SHA256</th>
+                <td><code>{{ .FileContent.SHA256 }}</code></td>
+            </tr>
+            <tr>
+                <th>MD5</th>
+                <td><code>{{ .FileContent.MD5 }}</code></td>
+            </tr>
             <tr>
                 <th>Content type</th>
                 <td>{{ .FileContent.Mime }}</td>
@@ -29,10 +36,6 @@
             <tr>
                 <th>Size</th>
                 <td>{{ .FileContent.BytesReadable }} ({{ .FileContent.Bytes }} bytes)</td>
-            </tr>
-            <tr>
-                <th>MD5</th>
-                <td><code>{{ .FileContent.MD5 }}</code></td>
             </tr>
             <tr>
                 <th>In storage</th>
@@ -49,6 +52,7 @@
                 <th>Uploaded</th>
                 <th>File deleted</th>
                 <th>Bin deleted</th>
+                <th>Available for download</th>
                 <th>File downloads</th>
                 <th>File updates</th>
             </tr>
@@ -63,6 +67,7 @@
                     <td sorttable_customkey="{{ .UpdatedAt }}">{{ .UpdatedAtRelative }}</td>
                     <td sorttable_customkey="{{ .DeletedAt }}">{{ .DeletedAtRelative }}</td>
                     <td sorttable_customkey="{{ .BinDeletedAt }}">{{ .BinDeletedAtRelative }}</td>
+                    <td>{{ .AvailableForDownload }}</td>
                     <td>{{ .Downloads }}</td>
                     <td>{{ .Updates }}</td>
                 </tr>
