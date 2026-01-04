@@ -25,11 +25,13 @@ type File struct {
 	UpdatedAtRelative string       `json:"updated_at_relative"`
 	CreatedAt         time.Time    `json:"created_at"`
 	CreatedAtRelative string       `json:"created_at_relative"`
-	DeletedAt            sql.NullTime `json:"-"`
-	DeletedAtRelative    string       `json:"-"`
-	BinDeletedAt         sql.NullTime `json:"-"`
-	BinDeletedAtRelative string       `json:"-"`
-	URL                  string       `json:"-"`
+	DeletedAt               sql.NullTime `json:"-"`
+	DeletedAtRelative       string       `json:"-"`
+	BinDeletedAt            sql.NullTime `json:"-"`
+	BinDeletedAtRelative    string       `json:"-"`
+	BinExpiredAt            time.Time    `json:"-"`
+	AvailableForDownload    bool         `json:"-"`
+	URL                     string       `json:"-"`
 }
 
 func (f *File) IsReadable() bool {
