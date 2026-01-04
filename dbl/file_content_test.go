@@ -297,8 +297,10 @@ func TestFileCountBySHA256(t *testing.T) {
 	sha256 := "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
 	// Create bin
-	bin := &ds.Bin{}
-	bin.Id = "testbin123"
+	bin := &ds.Bin{
+		Id:        "testbin123",
+		ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
+	}
 	err = dao.Bin().Insert(bin)
 	if err != nil {
 		t.Error(err)
