@@ -401,3 +401,325 @@ func TestDeduplicationWithS3Storage(t *testing.T) {
 		t.Error("file_content.in_storage should be false after S3 removal")
 	}
 }
+// TestReuploadAfterDeletion verifies that content can be re-uploaded after being deleted from S3
+func TestReuploadAfterDeletion(t *testing.T) {
+	dao, err := tearUp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tearDown(dao)
+
+	s3ao, err := setupS3()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardownS3(s3ao)
+
+	ctx := context.Background()
+	sha256 := "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+	content := "test content for reupload"
+
+	t.Run("delete_files_then_reupload", func(t *testing.T) {
+		// Create two bins
+		bin1 := &ds.Bin{
+			Id:        "reupload-bin1",
+			ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
+		}
+		dao.Bin().Insert(bin1)
+
+		bin2 := &ds.Bin{
+			Id:        "reupload-bin2",
+			ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
+		}
+		dao.Bin().Insert(bin2)
+
+		// Upload same content to both bins
+		fileContent := &ds.FileContent{
+			SHA256:    sha256,
+			Bytes:     uint64(len(content)),
+			InStorage: true,
+		}
+		err = dao.FileContent().InsertOrIncrement(fileContent)
+		if err != nil {
+			t.Fatalf("Failed to insert file_content: %s", err)
+		}
+
+		// Upload to S3
+		err = s3ao.PutObjectByHash(sha256, strings.NewReader(content), int64(len(content)))
+		if err != nil {
+			t.Fatalf("Failed to upload to S3: %s", err)
+		}
+
+		// Create two file records
+		file1 := &ds.File{
+			Filename: "file1.txt",
+			Bin:      bin1.Id,
+			Bytes:    uint64(len(content)),
+			SHA256:   sha256,
+		}
+		dao.File().Insert(file1)
+
+		file2 := &ds.File{
+			Filename: "file2.txt",
+			Bin:      bin2.Id,
+			Bytes:    uint64(len(content)),
+			SHA256:   sha256,
+		}
+		dao.File().Insert(file2)
+
+		// Delete both files
+		file1.DeletedAt.Scan(time.Now().UTC())
+		dao.File().Update(file1)
+
+		file2.DeletedAt.Scan(time.Now().UTC())
+		dao.File().Update(file2)
+
+		// Simulate lurker: check for pending deletes
+		pending, err := dao.FileContent().GetPendingDelete()
+		if err != nil {
+			t.Fatalf("Failed to get pending deletes: %s", err)
+		}
+		if len(pending) != 1 {
+			t.Errorf("Expected 1 pending delete, got %d", len(pending))
+		}
+
+		// Simulate lurker: remove from S3
+		err = s3ao.RemoveObjectByHash(sha256)
+		if err != nil {
+			t.Fatalf("Failed to remove from S3: %s", err)
+		}
+
+		// Simulate lurker: mark as not in storage
+		dbContent, err := dao.FileContent().GetBySHA256(sha256)
+		if err != nil {
+			t.Fatalf("Failed to get file_content: %s", err)
+		}
+		dbContent.InStorage = false
+		err = dao.FileContent().Update(dbContent)
+		if err != nil {
+			t.Fatalf("Failed to update file_content: %s", err)
+		}
+
+		// Verify content is not in S3
+		_, err = s3ao.GetClient().StatObject(ctx, s3ao.GetBucket(), sha256, minio.StatObjectOptions{})
+		if err == nil {
+			t.Error("Content should not exist in S3 after lurker cleanup")
+		}
+
+		// Verify in_storage is false
+		dbContent, err = dao.FileContent().GetBySHA256(sha256)
+		if err != nil {
+			t.Fatalf("Failed to get file_content: %s", err)
+		}
+		if dbContent.InStorage {
+			t.Error("in_storage should be false after lurker cleanup")
+		}
+
+		// Now re-upload to a third bin
+		bin3 := &ds.Bin{
+			Id:        "reupload-bin3",
+			ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
+		}
+		dao.Bin().Insert(bin3)
+
+		// Upload to S3 again
+		err = s3ao.PutObjectByHash(sha256, strings.NewReader(content), int64(len(content)))
+		if err != nil {
+			t.Fatalf("Failed to re-upload to S3: %s", err)
+		}
+
+		// Call InsertOrIncrement with InStorage: true (simulating upload handler)
+		reuploadContent := &ds.FileContent{
+			SHA256:    sha256,
+			Bytes:     uint64(len(content)),
+			InStorage: true,
+		}
+		err = dao.FileContent().InsertOrIncrement(reuploadContent)
+		if err != nil {
+			t.Fatalf("Failed to update file_content on re-upload: %s", err)
+		}
+
+		// Create new file record
+		file3 := &ds.File{
+			Filename: "file3.txt",
+			Bin:      bin3.Id,
+			Bytes:    uint64(len(content)),
+			SHA256:   sha256,
+		}
+		dao.File().Insert(file3)
+
+		// Verify in_storage is now true
+		finalContent, err := dao.FileContent().GetBySHA256(sha256)
+		if err != nil {
+			t.Fatalf("Failed to get file_content after re-upload: %s", err)
+		}
+		if !finalContent.InStorage {
+			t.Error("in_storage should be true after re-upload")
+		}
+
+		// Verify content exists in S3
+		_, err = s3ao.GetClient().StatObject(ctx, s3ao.GetBucket(), sha256, minio.StatObjectOptions{})
+		if err != nil {
+			t.Errorf("Content should exist in S3 after re-upload: %s", err)
+		}
+
+		// Cleanup
+		dao.Bin().Delete(bin1)
+		dao.Bin().Delete(bin2)
+		dao.Bin().Delete(bin3)
+	})
+
+	t.Run("delete_bins_then_reupload", func(t *testing.T) {
+		sha256_v2 := "60303ae22b998861bce3b28f33eec1be758a213c86c93c076dbe9f558c11c752"
+		content_v2 := "test content for bin deletion"
+
+		// Create two bins
+		bin4 := &ds.Bin{
+			Id:        "reupload-bin4",
+			ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
+		}
+		dao.Bin().Insert(bin4)
+
+		bin5 := &ds.Bin{
+			Id:        "reupload-bin5",
+			ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
+		}
+		dao.Bin().Insert(bin5)
+
+		// Upload same content to both bins
+		fileContent := &ds.FileContent{
+			SHA256:    sha256_v2,
+			Bytes:     uint64(len(content_v2)),
+			InStorage: true,
+		}
+		err = dao.FileContent().InsertOrIncrement(fileContent)
+		if err != nil {
+			t.Fatalf("Failed to insert file_content: %s", err)
+		}
+
+		// Upload to S3
+		err = s3ao.PutObjectByHash(sha256_v2, strings.NewReader(content_v2), int64(len(content_v2)))
+		if err != nil {
+			t.Fatalf("Failed to upload to S3: %s", err)
+		}
+
+		// Create two file records
+		file4 := &ds.File{
+			Filename: "file4.txt",
+			Bin:      bin4.Id,
+			Bytes:    uint64(len(content_v2)),
+			SHA256:   sha256_v2,
+		}
+		dao.File().Insert(file4)
+
+		file5 := &ds.File{
+			Filename: "file5.txt",
+			Bin:      bin5.Id,
+			Bytes:    uint64(len(content_v2)),
+			SHA256:   sha256_v2,
+		}
+		dao.File().Insert(file5)
+
+		// Delete both bins (soft delete)
+		bin4.DeletedAt.Scan(time.Now().UTC())
+		dao.Bin().Update(bin4)
+
+		bin5.DeletedAt.Scan(time.Now().UTC())
+		dao.Bin().Update(bin5)
+
+		// Simulate lurker: check for pending deletes
+		// Content should be pending because all files belong to deleted bins
+		pending, err := dao.FileContent().GetPendingDelete()
+		if err != nil {
+			t.Fatalf("Failed to get pending deletes: %s", err)
+		}
+		if len(pending) != 1 {
+			t.Errorf("Expected 1 pending delete (bins deleted), got %d", len(pending))
+		}
+
+		// Simulate lurker: remove from S3
+		err = s3ao.RemoveObjectByHash(sha256_v2)
+		if err != nil {
+			t.Fatalf("Failed to remove from S3: %s", err)
+		}
+
+		// Simulate lurker: mark as not in storage
+		dbContent, err := dao.FileContent().GetBySHA256(sha256_v2)
+		if err != nil {
+			t.Fatalf("Failed to get file_content: %s", err)
+		}
+		dbContent.InStorage = false
+		err = dao.FileContent().Update(dbContent)
+		if err != nil {
+			t.Fatalf("Failed to update file_content: %s", err)
+		}
+
+		// Verify content is not in S3
+		_, err = s3ao.GetClient().StatObject(ctx, s3ao.GetBucket(), sha256_v2, minio.StatObjectOptions{})
+		if err == nil {
+			t.Error("Content should not exist in S3 after lurker cleanup")
+		}
+
+		// Verify in_storage is false
+		dbContent, err = dao.FileContent().GetBySHA256(sha256_v2)
+		if err != nil {
+			t.Fatalf("Failed to get file_content: %s", err)
+		}
+		if dbContent.InStorage {
+			t.Error("in_storage should be false after lurker cleanup")
+		}
+
+		// Now re-upload to a third bin
+		bin6 := &ds.Bin{
+			Id:        "reupload-bin6",
+			ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
+		}
+		dao.Bin().Insert(bin6)
+
+		// Upload to S3 again
+		err = s3ao.PutObjectByHash(sha256_v2, strings.NewReader(content_v2), int64(len(content_v2)))
+		if err != nil {
+			t.Fatalf("Failed to re-upload to S3: %s", err)
+		}
+
+		// Call InsertOrIncrement with InStorage: true (simulating upload handler)
+		reuploadContent := &ds.FileContent{
+			SHA256:    sha256_v2,
+			Bytes:     uint64(len(content_v2)),
+			InStorage: true,
+		}
+		err = dao.FileContent().InsertOrIncrement(reuploadContent)
+		if err != nil {
+			t.Fatalf("Failed to update file_content on re-upload: %s", err)
+		}
+
+		// Create new file record
+		file6 := &ds.File{
+			Filename: "file6.txt",
+			Bin:      bin6.Id,
+			Bytes:    uint64(len(content_v2)),
+			SHA256:   sha256_v2,
+		}
+		dao.File().Insert(file6)
+
+		// Verify in_storage is now true
+		finalContent, err := dao.FileContent().GetBySHA256(sha256_v2)
+		if err != nil {
+			t.Fatalf("Failed to get file_content after re-upload: %s", err)
+		}
+		if !finalContent.InStorage {
+			t.Error("in_storage should be true after re-upload (bin deletion scenario)")
+		}
+
+		// Verify content exists in S3
+		_, err = s3ao.GetClient().StatObject(ctx, s3ao.GetBucket(), sha256_v2, minio.StatObjectOptions{})
+		if err != nil {
+			t.Errorf("Content should exist in S3 after re-upload: %s", err)
+		}
+
+		// Cleanup
+		dao.Bin().Delete(bin4)
+		dao.Bin().Delete(bin5)
+		dao.Bin().Delete(bin6)
+	})
+}
