@@ -549,50 +549,6 @@ func TestBinText(t *testing.T) {
 	runTests(tcs, t)
 }
 
-func TestBinBan(t *testing.T) {
-	tcs := []TestCase{
-		{
-			Description:   "Create new bin",
-			Method:        "POST",
-			Bin:           "mytestbin5",
-			Filename:      "aaa",
-			UploadContent: "content a",
-			StatusCode:    201,
-		}, {
-			Description:     "Get file first time",
-			Method:          "GET",
-			Bin:             "mytestbin5",
-			Filename:        "aaa",
-			DownloadContent: "content a",
-			StatusCode:      200,
-		}, {
-			Description: "Ban bin",
-			Method:      "BAN",
-			Bin:         "mytestbin5",
-			StatusCode:  200,
-		}, {
-			Description: "Get bin after being banned",
-			Method:      "GET",
-			Bin:         "mytestbin5",
-			StatusCode:  404,
-		}, {
-			Description: "Get file after being banned",
-			Method:      "GET",
-			Bin:         "mytestbin5",
-			Filename:    "aaa",
-			StatusCode:  403,
-		}, {
-			Description:   "Create new bin after being banned",
-			Method:        "POST",
-			Bin:           "mytestbin6",
-			Filename:      "aaa",
-			UploadContent: "content a",
-			StatusCode:    403,
-		},
-	}
-	runTests(tcs, t)
-}
-
 func httpAdminRequest(method, path string) (statuscode int, body string, err error) {
 	u, err := url.Parse("http://localhost:8080")
 	if err != nil {
@@ -623,7 +579,7 @@ func httpAdminRequest(method, path string) (statuscode int, body string, err err
 	return resp.StatusCode, body, err
 }
 
-func TestBlockedContent(t *testing.T) {
+func TestBlockContent(t *testing.T) {
 	// First, upload a file with known content
 	tcs := []TestCase{
 		{
@@ -680,4 +636,48 @@ func TestBlockedContent(t *testing.T) {
 		},
 	}
 	runTests(tcs2, t)
+}
+
+func TestBinBan(t *testing.T) {
+	tcs := []TestCase{
+		{
+			Description:   "Create new bin",
+			Method:        "POST",
+			Bin:           "mytestbin5",
+			Filename:      "aaa",
+			UploadContent: "content a",
+			StatusCode:    201,
+		}, {
+			Description:     "Get file first time",
+			Method:          "GET",
+			Bin:             "mytestbin5",
+			Filename:        "aaa",
+			DownloadContent: "content a",
+			StatusCode:      200,
+		}, {
+			Description: "Ban bin",
+			Method:      "BAN",
+			Bin:         "mytestbin5",
+			StatusCode:  200,
+		}, {
+			Description: "Get bin after being banned",
+			Method:      "GET",
+			Bin:         "mytestbin5",
+			StatusCode:  404,
+		}, {
+			Description: "Get file after being banned",
+			Method:      "GET",
+			Bin:         "mytestbin5",
+			Filename:    "aaa",
+			StatusCode:  403,
+		}, {
+			Description:   "Create new bin after being banned",
+			Method:        "POST",
+			Bin:           "mytestbin6",
+			Filename:      "aaa",
+			UploadContent: "content a",
+			StatusCode:    403,
+		},
+	}
+	runTests(tcs, t)
 }
