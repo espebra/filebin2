@@ -39,13 +39,13 @@ func (d *FileContentDao) InsertOrIncrement(content *ds.FileContent) error {
 	sqlStatement := `INSERT INTO file_content (sha256, bytes, in_storage, created_at, last_referenced_at)
 VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT (sha256) DO UPDATE SET
-    last_referenced_at = $6`
+    in_storage = EXCLUDED.in_storage,
+    last_referenced_at = EXCLUDED.last_referenced_at`
 
 	_, err := d.db.Exec(sqlStatement,
 		content.SHA256,
 		content.Bytes,
 		content.InStorage,
-		now,
 		now,
 		now,
 	)
