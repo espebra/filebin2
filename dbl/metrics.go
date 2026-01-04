@@ -15,7 +15,7 @@ type MetricsDao struct {
 func (d *MetricsDao) StorageBytesAllocated() (totalBytes uint64) {
 	// Assume that each file consumes at least 256KB, to align with minimum billable object size in AWS.
 	minBytes := 262144
-	sqlStatement := "SELECT COALESCE((SELECT SUM(GREATEST(file.bytes, $1)) FROM file JOIN file_content ON file.sha256 = file_content.sha256 WHERE file_content.in_storage = true AND file.deleted_at IS NULL), 0)"
+	sqlStatement := "SELECT COALESCE((SELECT SUM(GREATEST(file_content.bytes, $1)) FROM file JOIN file_content ON file.sha256 = file_content.sha256 WHERE file_content.in_storage = true AND file.deleted_at IS NULL), 0)"
 	if err := d.db.QueryRow(sqlStatement, minBytes).Scan(&totalBytes); err != nil {
 		fmt.Printf("Unable to calculate total storage bytes allocated: %s\n", err.Error())
 	}
@@ -41,7 +41,7 @@ func (d *MetricsDao) UpdateMetrics(metrics *ds.Metrics) (err error) {
 
 	// Total number of bytes of current files
 	if currentFiles > 0 {
-		sqlStatement = "SELECT SUM(file.bytes) FROM file JOIN file_content ON file.sha256 = file_content.sha256 WHERE file_content.in_storage = true AND file.deleted_at IS NULL"
+		sqlStatement = "SELECT SUM(file_content.bytes) FROM file JOIN file_content ON file.sha256 = file_content.sha256 WHERE file_content.in_storage = true AND file.deleted_at IS NULL"
 		if err := d.db.QueryRow(sqlStatement).Scan(&currentBytes); err != nil {
 			return err
 		}
