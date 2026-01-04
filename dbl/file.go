@@ -350,10 +350,13 @@ func (d *FileDao) FileByChecksum(sha256 string) (files []ds.File, err error) {
 	return files, err
 }
 
-// CountBySHA256 returns the count of non-deleted files with the given SHA256
+// CountBySHA256 returns the count of active file references with the given SHA256
+// (active = file not deleted AND bin not deleted)
 func (d *FileDao) CountBySHA256(sha256 string) (int, error) {
 	var count int
-	sqlStatement := "SELECT COUNT(*) FROM file WHERE sha256 = $1 AND deleted_at IS NULL"
+	sqlStatement := `SELECT COUNT(*) FROM file f
+JOIN bin b ON f.bin_id = b.id
+WHERE f.sha256 = $1 AND f.deleted_at IS NULL AND b.deleted_at IS NULL`
 	err := d.db.QueryRow(sqlStatement, sha256).Scan(&count)
 	if err != nil {
 		return 0, err
