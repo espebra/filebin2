@@ -69,12 +69,15 @@ func (l *Lurker) DeletePendingBins() {
 	if len(bins) > 0 {
 		fmt.Printf("Found %d bins pending removal.\n", len(bins))
 		for _, bin := range bins {
+			// Mark bin as deleted
+			bin.DeletedAt.Scan(time.Now().UTC())
 			// Bin deletion cascades to files (sets deleted_at)
 			// Orphaned content will be detected by DeletePendingContent using COUNT(*)
 			if err := l.dao.Bin().Update(&bin); err != nil {
 				fmt.Printf("Unable to update bin %s: %s\n", bin.Id, err.Error())
 				return
 			}
+			fmt.Printf("Marked bin %s as deleted\n", bin.Id)
 		}
 	}
 }
