@@ -370,7 +370,6 @@ func TestDeduplicationFlow(t *testing.T) {
 	t.Logf("Created bin with ID: %s", bin.Id)
 
 	// Simulate uploading same content 3 times
-	var fileIDs []uint64
 	for i := 0; i < 3; i++ {
 		// Create file_content record (or update existing)
 		content := &ds.FileContent{
@@ -394,7 +393,6 @@ func TestDeduplicationFlow(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Upload %d: Failed to insert file: %s (bin=%s, filename=%s)", i, err, bin.Id, file.Filename)
 		}
-		fileIDs = append(fileIDs, file.Id)
 		t.Logf("Successfully inserted file %d: %s", file.Id, file.Filename)
 	}
 
