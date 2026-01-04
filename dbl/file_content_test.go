@@ -348,6 +348,42 @@ func TestFileCountBySHA256(t *testing.T) {
 	if count != 3 {
 		t.Errorf("Expected count to be 3, got %d", count)
 	}
+
+	// Mark one file as deleted
+	files, err := dao.File().GetByBin(bin.Id, true)
+	if err != nil {
+		t.Error(err)
+	}
+	files[0].DeletedAt.Scan(time.Now().UTC())
+	err = dao.File().Update(&files[0])
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Count should be 2 (one deleted)
+	count, err = dao.File().CountBySHA256(sha256)
+	if err != nil {
+		t.Errorf("Failed to count files after marking one deleted: %s", err)
+	}
+	if count != 2 {
+		t.Errorf("Expected count to be 2 after marking one deleted, got %d", count)
+	}
+
+	// Mark the bin as deleted
+	bin.DeletedAt.Scan(time.Now().UTC())
+	err = dao.Bin().Update(bin)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Count should be 0 (bin deleted, so all files in it are considered inactive)
+	count, err = dao.File().CountBySHA256(sha256)
+	if err != nil {
+		t.Errorf("Failed to count files after marking bin deleted: %s", err)
+	}
+	if count != 0 {
+		t.Errorf("Expected count to be 0 after marking bin deleted, got %d", count)
+	}
 }
 
 func TestDeduplicationFlow(t *testing.T) {
