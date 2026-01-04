@@ -52,6 +52,7 @@
                 <th>Uploaded</th>
                 <th>File deleted</th>
                 <th>Bin deleted</th>
+                <th>Bin expired</th>
                 <th>Available for download</th>
                 <th>File downloads</th>
                 <th>File updates</th>
@@ -67,6 +68,7 @@
                     <td sorttable_customkey="{{ .UpdatedAt }}">{{ .UpdatedAtRelative }}</td>
                     <td sorttable_customkey="{{ .DeletedAt }}">{{ .DeletedAtRelative }}</td>
                     <td sorttable_customkey="{{ .BinDeletedAt }}">{{ .BinDeletedAtRelative }}</td>
+                    <td sorttable_customkey="{{ .BinExpiredAt }}">{{ .BinExpiredAtRelative }}</td>
                     <td>{{ .AvailableForDownload }}</td>
                     <td>{{ .Downloads }}</td>
                     <td>{{ .Updates }}</td>
