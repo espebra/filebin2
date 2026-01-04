@@ -277,6 +277,8 @@ func TestFileCount(t *testing.T) {
 	defaultContent := &ds.FileContent{
 		SHA256:    defaultSHA256,
 		Bytes:     0,
+		MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+		Mime:      "application/octet-stream",
 		InStorage: true,
 	}
 	err = dao.FileContent().InsertOrIncrement(defaultContent)

@@ -65,6 +65,8 @@ func TestFileContentInStorageReflectsS3State(t *testing.T) {
 	fileContent := &ds.FileContent{
 		SHA256:    sha256,
 		Bytes:     uint64(len(content)),
+		MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+		Mime:      "text/plain",
 		InStorage: true,
 	}
 	err = dao.FileContent().InsertOrIncrement(fileContent)
@@ -156,6 +158,8 @@ func TestFileInStorageReflectsS3State(t *testing.T) {
 	fileContent := &ds.FileContent{
 		SHA256:    sha256,
 		Bytes:     uint64(len(content)),
+		MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+		Mime:      "text/plain",
 		InStorage: true,
 	}
 	err = dao.FileContent().InsertOrIncrement(fileContent)
@@ -254,6 +258,8 @@ func TestDeduplicationWithS3Storage(t *testing.T) {
 	fileContent := &ds.FileContent{
 		SHA256:    sha256,
 		Bytes:     uint64(len(content)),
+		MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+		Mime:      "text/plain",
 		InStorage: true,
 	}
 	err = dao.FileContent().InsertOrIncrement(fileContent)
@@ -294,6 +300,8 @@ func TestDeduplicationWithS3Storage(t *testing.T) {
 	err = dao.FileContent().InsertOrIncrement(&ds.FileContent{
 		SHA256:    sha256,
 		Bytes:     uint64(len(content)),
+		MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+		Mime:      "text/plain",
 		InStorage: true,
 	})
 	if err != nil {
@@ -437,6 +445,8 @@ func TestReuploadAfterDeletion(t *testing.T) {
 		fileContent := &ds.FileContent{
 			SHA256:    sha256,
 			Bytes:     uint64(len(content)),
+			MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+			Mime:      "text/plain",
 			InStorage: true,
 		}
 		err = dao.FileContent().InsertOrIncrement(fileContent)
@@ -532,6 +542,8 @@ func TestReuploadAfterDeletion(t *testing.T) {
 		reuploadContent := &ds.FileContent{
 			SHA256:    sha256,
 			Bytes:     uint64(len(content)),
+			MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+			Mime:      "text/plain",
 			InStorage: true,
 		}
 		err = dao.FileContent().InsertOrIncrement(reuploadContent)
@@ -592,6 +604,8 @@ func TestReuploadAfterDeletion(t *testing.T) {
 		fileContent := &ds.FileContent{
 			SHA256:    sha256_v2,
 			Bytes:     uint64(len(content_v2)),
+			MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+			Mime:      "text/plain",
 			InStorage: true,
 		}
 		err = dao.FileContent().InsertOrIncrement(fileContent)
@@ -688,6 +702,8 @@ func TestReuploadAfterDeletion(t *testing.T) {
 		reuploadContent := &ds.FileContent{
 			SHA256:    sha256_v2,
 			Bytes:     uint64(len(content_v2)),
+			MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+			Mime:      "text/plain",
 			InStorage: true,
 		}
 		err = dao.FileContent().InsertOrIncrement(reuploadContent)
