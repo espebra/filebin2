@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/dustin/go-humanize"
 	"github.com/espebra/filebin2/ds"
 	"time"
 )
@@ -31,6 +32,7 @@ func (d *FileContentDao) GetBySHA256(sha256 string) (*ds.FileContent, error) {
 		}
 		return nil, err
 	}
+	content.BytesReadable = humanize.Bytes(content.Bytes)
 	return &content, nil
 }
 
@@ -95,6 +97,7 @@ ORDER BY fc.last_referenced_at ASC`
 		if err != nil {
 			return nil, err
 		}
+		content.BytesReadable = humanize.Bytes(content.Bytes)
 		contents = append(contents, content)
 	}
 
@@ -181,6 +184,7 @@ ORDER BY bytes DESC, created_at DESC`
 			fmt.Printf("Error scanning row: %s\n", err.Error())
 			continue
 		}
+		content.BytesReadable = humanize.Bytes(content.Bytes)
 		contents = append(contents, content)
 	}
 
