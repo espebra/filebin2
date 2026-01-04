@@ -120,6 +120,9 @@ func (d *FileDao) GetByID(id int) (file ds.File, found bool, err error) {
 		file.BinDeletedAt.Time = file.BinDeletedAt.Time.UTC()
 		file.BinDeletedAtRelative = humanize.Time(file.BinDeletedAt.Time)
 	}
+	if !file.BinExpiredAt.IsZero() {
+		file.BinExpiredAtRelative = humanize.Time(file.BinExpiredAt)
+	}
 	file.BytesReadable = humanize.Bytes(file.Bytes)
 
 	// Compute availability: file not deleted, bin not deleted, bin not expired, content in storage
@@ -152,6 +155,9 @@ func (d *FileDao) GetByName(bin string, filename string) (file ds.File, found bo
 	if file.BinDeletedAt.Valid && !file.BinDeletedAt.Time.IsZero() {
 		file.BinDeletedAt.Time = file.BinDeletedAt.Time.UTC()
 		file.BinDeletedAtRelative = humanize.Time(file.BinDeletedAt.Time)
+	}
+	if !file.BinExpiredAt.IsZero() {
+		file.BinExpiredAtRelative = humanize.Time(file.BinExpiredAt)
 	}
 	file.BytesReadable = humanize.Bytes(file.Bytes)
 
@@ -338,6 +344,9 @@ func (d *FileDao) fileQuery(sqlStatement string, params ...interface{}) (files [
 		if file.BinDeletedAt.Valid && !file.BinDeletedAt.Time.IsZero() {
 			file.BinDeletedAt.Time = file.BinDeletedAt.Time.UTC()
 			file.BinDeletedAtRelative = humanize.Time(file.BinDeletedAt.Time)
+		}
+		if !file.BinExpiredAt.IsZero() {
+			file.BinExpiredAtRelative = humanize.Time(file.BinExpiredAt)
 		}
 		file.BytesReadable = humanize.Bytes(file.Bytes)
 		file.URL = path.Join("/", file.Bin, file.Filename)

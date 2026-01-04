@@ -30,6 +30,7 @@ type File struct {
 	BinDeletedAt            sql.NullTime `json:"-"`
 	BinDeletedAtRelative    string       `json:"-"`
 	BinExpiredAt            time.Time    `json:"-"`
+	BinExpiredAtRelative    string       `json:"-"`
 	AvailableForDownload    bool         `json:"-"`
 	URL                     string       `json:"-"`
 }
