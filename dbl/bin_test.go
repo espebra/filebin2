@@ -272,18 +272,26 @@ func TestFileCount(t *testing.T) {
 		},
 	}
 
-	// Create file_content record for the default SHA256 used by test files
-	defaultSHA256 := "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-	defaultContent := &ds.FileContent{
-		SHA256:    defaultSHA256,
-		Bytes:     0,
-		MD5:       "d41d8cd98f00b204e9800998ecf8427e",
-		Mime:      "application/octet-stream",
-		InStorage: true,
+	// Create file_content records for each unique byte size
+	// In content-addressable storage, files with same content (SHA256) must have same size
+	sha256ForBytes := map[uint64]string{
+		1:   "1111111111111111111111111111111111111111111111111111111111111111",
+		2:   "2222222222222222222222222222222222222222222222222222222222222222",
+		100: "0000000000000000000000000000000000000000000000000000000000000064",
 	}
-	err = dao.FileContent().InsertOrIncrement(defaultContent)
-	if err != nil {
-		t.Error(err)
+
+	for bytes, sha256 := range sha256ForBytes {
+		content := &ds.FileContent{
+			SHA256:    sha256,
+			Bytes:     bytes,
+			MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+			Mime:      "application/octet-stream",
+			InStorage: true,
+		}
+		err = dao.FileContent().InsertOrIncrement(content)
+		if err != nil {
+			t.Error(err)
+		}
 	}
 
 	for _, tc := range testcases {
@@ -300,8 +308,8 @@ func TestFileCount(t *testing.T) {
 			file := &ds.File{}
 			file.Bin = bin.Id // Foreign key
 			file.Filename = fmt.Sprintf("testfile-%d", i)
-			file.Bytes = tc.Bytes
-			file.SHA256 = defaultSHA256 // Set SHA256 to satisfy foreign key constraint
+			// Use different SHA256 for different byte sizes (content-addressable storage)
+			file.SHA256 = sha256ForBytes[tc.Bytes]
 			err = dao.File().Insert(file)
 			if err != nil {
 				t.Error(err)
