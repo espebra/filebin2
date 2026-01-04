@@ -11,6 +11,7 @@ type FileContent struct {
 	MD5              string    `json:"md5"`
 	Mime             string    `json:"mime"`
 	InStorage        bool      `json:"in_storage"`
+	Blocked          bool      `json:"blocked"`
 	CreatedAt        time.Time `json:"created_at"`
 	LastReferencedAt time.Time `json:"last_referenced_at"`
 }

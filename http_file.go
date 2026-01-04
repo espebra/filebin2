@@ -374,10 +374,17 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	// Check if content already exists in storage (deduplication)
 	existingContent, err := h.dao.FileContent().GetBySHA256(sha256ChecksumString)
 	skipS3Upload := false
-	if err == nil && existingContent != nil && existingContent.InStorage {
-		// Content already in S3, skip upload
-		skipS3Upload = true
-		fmt.Printf("Content with SHA256 %s already exists in storage, skipping S3 upload\n", sha256ChecksumString)
+	if err == nil && existingContent != nil {
+		// Check if content is blocked
+		if existingContent.Blocked {
+			h.Error(w, r, fmt.Sprintf("Rejecting upload of file %q to bin %q: content with SHA256 %s is blocked", inputFilename, bin.Id, sha256ChecksumString), "This content has been blocked and cannot be uploaded", 993, http.StatusForbidden)
+			return
+		}
+		if existingContent.InStorage {
+			// Content already in S3, skip upload
+			skipS3Upload = true
+			fmt.Printf("Content with SHA256 %s already exists in storage, skipping S3 upload\n", sha256ChecksumString)
+		}
 	}
 
 	// Upload to S3 only if content doesn't already exist
