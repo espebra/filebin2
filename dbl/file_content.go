@@ -16,13 +16,14 @@ type FileContentDao struct {
 // GetBySHA256 retrieves a file content record by its SHA256 hash
 func (d *FileContentDao) GetBySHA256(sha256 string) (*ds.FileContent, error) {
 	var content ds.FileContent
-	sqlStatement := "SELECT sha256, bytes, md5, mime, in_storage, created_at, last_referenced_at FROM file_content WHERE sha256 = $1"
+	sqlStatement := "SELECT sha256, bytes, md5, mime, in_storage, blocked, created_at, last_referenced_at FROM file_content WHERE sha256 = $1"
 	err := d.db.QueryRow(sqlStatement, sha256).Scan(
 		&content.SHA256,
 		&content.Bytes,
 		&content.MD5,
 		&content.Mime,
 		&content.InStorage,
+		&content.Blocked,
 		&content.CreatedAt,
 		&content.LastReferencedAt,
 	)
@@ -67,12 +68,12 @@ ON CONFLICT (sha256) DO UPDATE SET
 // GetPendingDelete returns file content records that have zero active references
 // (active = file exists AND file not deleted AND bin not deleted) and still in storage
 func (d *FileContentDao) GetPendingDelete() ([]ds.FileContent, error) {
-	sqlStatement := `SELECT fc.sha256, fc.bytes, fc.md5, fc.mime, fc.in_storage, fc.created_at, fc.last_referenced_at
+	sqlStatement := `SELECT fc.sha256, fc.bytes, fc.md5, fc.mime, fc.in_storage, fc.blocked, fc.created_at, fc.last_referenced_at
 FROM file_content fc
 LEFT JOIN file f ON fc.sha256 = f.sha256
 LEFT JOIN bin b ON f.bin_id = b.id
 WHERE fc.in_storage = true
-GROUP BY fc.sha256, fc.bytes, fc.md5, fc.mime, fc.in_storage, fc.created_at, fc.last_referenced_at
+GROUP BY fc.sha256, fc.bytes, fc.md5, fc.mime, fc.in_storage, fc.blocked, fc.created_at, fc.last_referenced_at
 HAVING COUNT(CASE WHEN f.id IS NOT NULL AND f.deleted_at IS NULL AND b.deleted_at IS NULL THEN 1 END) = 0
 ORDER BY fc.last_referenced_at ASC`
 
@@ -91,6 +92,7 @@ ORDER BY fc.last_referenced_at ASC`
 			&content.MD5,
 			&content.Mime,
 			&content.InStorage,
+			&content.Blocked,
 			&content.CreatedAt,
 			&content.LastReferencedAt,
 		)
@@ -158,7 +160,7 @@ func (d *FileContentDao) Delete(sha256 string) error {
 
 // GetAll returns all file content records
 func (d *FileContentDao) GetAll() ([]ds.FileContent, error) {
-	sqlStatement := `SELECT sha256, bytes, md5, mime, in_storage, created_at, last_referenced_at
+	sqlStatement := `SELECT sha256, bytes, md5, mime, in_storage, blocked, created_at, last_referenced_at
 FROM file_content
 ORDER BY bytes DESC, created_at DESC`
 
@@ -177,6 +179,7 @@ ORDER BY bytes DESC, created_at DESC`
 			&content.MD5,
 			&content.Mime,
 			&content.InStorage,
+			&content.Blocked,
 			&content.CreatedAt,
 			&content.LastReferencedAt,
 		)
@@ -193,4 +196,41 @@ ORDER BY bytes DESC, created_at DESC`
 	}
 
 	return contents, nil
+}
+
+// BlockContent marks content as blocked and soft-deletes all file references
+func (d *FileContentDao) BlockContent(sha256 string) error {
+	// Start a transaction to ensure atomicity
+	tx, err := d.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	now := time.Now().UTC().Truncate(time.Microsecond)
+
+	// Mark all file references with this SHA256 as deleted
+	sqlDeleteFiles := `UPDATE file SET deleted_at = $1 WHERE sha256 = $2 AND deleted_at IS NULL`
+	_, err = tx.Exec(sqlDeleteFiles, now, sha256)
+	if err != nil {
+		return err
+	}
+
+	// Mark the file content as blocked
+	sqlBlockContent := `UPDATE file_content SET blocked = true WHERE sha256 = $1`
+	res, err := tx.Exec(sqlBlockContent, sha256)
+	if err != nil {
+		return err
+	}
+
+	count, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return errors.New("File content does not exist")
+	}
+
+	// Commit the transaction
+	return tx.Commit()
 }

@@ -182,6 +182,24 @@ func (h *HTTP) viewAdminFile(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *HTTP) blockFileContent(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	sha256 := params["sha256"]
+
+	// Block the content (marks it as blocked and deletes all file references)
+	err := h.dao.FileContent().BlockContent(sha256)
+	if err != nil {
+		fmt.Printf("Unable to block content %s: %s\n", sha256, err.Error())
+		http.Error(w, "Failed to block content", http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Printf("Blocked content with SHA256: %s\n", sha256)
+
+	// Redirect back to the file view page
+	http.Redirect(w, r, "/admin/file/"+sha256, http.StatusSeeOther)
+}
+
 func (h *HTTP) viewAdminBins(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	inputLimit := params["limit"]

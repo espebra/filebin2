@@ -16,6 +16,7 @@ CREATE TABLE file_content (
 	md5		VARCHAR(128) NOT NULL,
 	mime		VARCHAR(128) NOT NULL,
 	in_storage	BOOLEAN NOT NULL DEFAULT false,
+	blocked		BOOLEAN NOT NULL DEFAULT false,
 	created_at	TIMESTAMP NOT NULL,
 	last_referenced_at TIMESTAMP NOT NULL
 );

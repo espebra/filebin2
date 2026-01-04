@@ -41,7 +41,26 @@
                 <th>In storage</th>
                 <td>{{ .FileContent.InStorage }}</td>
             </tr>
+            <tr>
+                <th>Blocked</th>
+                <td>
+                    {{ if .FileContent.Blocked }}
+                        <span class="badge bg-danger">BLOCKED</span>
+                    {{ else }}
+                        <span class="badge bg-success">Not blocked</span>
+                    {{ end }}
+                </td>
+            </tr>
         </table>
+
+        {{ if .FileContent }}
+        {{ if not .FileContent.Blocked }}
+        <form method="POST" action="/admin/file/{{ .FileContent.SHA256 }}/block" onsubmit="return confirm('Are you sure you want to block this content? This will delete all file references and prevent future uploads of this content.');">
+            <button type="submit" class="btn btn-danger">Block this content</button>
+        </form>
+        <br>
+        {{ end }}
+        {{ end }}
         {{ end }}
 
         <h2>File References</h2>
@@ -52,7 +71,7 @@
                 <th>Uploaded</th>
                 <th>File deleted</th>
                 <th>Bin deleted</th>
-                <th>Bin expired</th>
+                <th>Bin expires</th>
                 <th>Available for download</th>
                 <th>File downloads</th>
                 <th>File updates</th>
