@@ -123,11 +123,6 @@ func (h *HTTP) getFile(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("Unable to update file %q in bin %q: %s\n", inputFilename, inputBin, err.Error())
 	}
 
-	// Increment download counter for the content (tracks downloads by SHA256)
-	if err := h.dao.FileContent().IncrementDownloads(file.SHA256); err != nil {
-		fmt.Printf("Unable to increment download counter for content %s: %s\n", file.SHA256, err.Error())
-	}
-
 	// Redirect the client to a presigned URL for this fetch, which is more efficient
 	// than proxying the request through filebin.
 	presignedURL, err := h.s3.PresignedGetObject(file.SHA256, file.Filename, file.Mime)
