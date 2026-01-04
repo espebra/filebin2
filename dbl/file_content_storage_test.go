@@ -563,10 +563,12 @@ func TestReuploadAfterDeletion(t *testing.T) {
 			t.Errorf("Content should exist in S3 after re-upload: %s", err)
 		}
 
-		// Cleanup
+		// Cleanup - remove bins, S3 object, and file_content record
 		dao.Bin().Delete(bin1)
 		dao.Bin().Delete(bin2)
 		dao.Bin().Delete(bin3)
+		s3ao.RemoveObjectByHash(sha256)
+		dao.FileContent().Delete(sha256)
 	})
 
 	t.Run("delete_bins_then_reupload", func(t *testing.T) {
@@ -717,9 +719,11 @@ func TestReuploadAfterDeletion(t *testing.T) {
 			t.Errorf("Content should exist in S3 after re-upload: %s", err)
 		}
 
-		// Cleanup
+		// Cleanup - remove bins, S3 object, and file_content record
 		dao.Bin().Delete(bin4)
 		dao.Bin().Delete(bin5)
 		dao.Bin().Delete(bin6)
+		s3ao.RemoveObjectByHash(sha256_v2)
+		dao.FileContent().Delete(sha256_v2)
 	})
 }
