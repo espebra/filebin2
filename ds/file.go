@@ -17,6 +17,7 @@ type File struct {
 	SHA256            string       `json:"sha256"`
 	Downloads         uint64       `json:"-"`
 	Updates           uint64       `json:"-"`
+	InStorage         bool         `json:"-"`
 	IP                string       `json:"-"`
 	ClientId          string       `json:"-"`
 	Headers           string       `json:"-"`
