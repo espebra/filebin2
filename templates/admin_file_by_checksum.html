@@ -19,18 +19,38 @@
         <h1>File by SHA256 checksum</h1>
 	<p><code>{{ .SHA256 }}</code></p>
 
+        {{ if .FileContent }}
+        <h2>Content Information</h2>
+        <table class="table table-sm">
+            <tr>
+                <th>Content type</th>
+                <td>{{ .FileContent.Mime }}</td>
+            </tr>
+            <tr>
+                <th>Size</th>
+                <td>{{ .FileContent.BytesReadable }} ({{ .FileContent.Bytes }} bytes)</td>
+            </tr>
+            <tr>
+                <th>MD5</th>
+                <td><code>{{ .FileContent.MD5 }}</code></td>
+            </tr>
+            <tr>
+                <th>In storage</th>
+                <td>{{ .FileContent.InStorage }}</td>
+            </tr>
+        </table>
+        {{ end }}
+
+        <h2>File References</h2>
         <table class="table sortable">
             <tr>
                 <th>Filename</th>
                 <th>Bin</th>
-                <th>Content type</th>
-                <th>Size</th>
                 <th>Uploaded</th>
                 <th>File deleted</th>
                 <th>Bin deleted</th>
                 <th>File downloads</th>
                 <th>File updates</th>
-                <th>In storage</th>
             </tr>
             {{ range $index, $value := .Files }}
                 {{ if eq .InStorage true }}
@@ -40,14 +60,11 @@
                 {{ end }}
                     <td><a href="/{{ .Bin }}/{{ .Filename }}">{{ .Filename }}</a></td>
                     <td><a href="/{{ .Bin }}">{{ .Bin }}</a></td>
-                    <td>{{ .Mime }}</td>
-                    <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
                     <td sorttable_customkey="{{ .UpdatedAt }}">{{ .UpdatedAtRelative }}</td>
                     <td sorttable_customkey="{{ .DeletedAt }}">{{ .DeletedAtRelative }}</td>
                     <td sorttable_customkey="{{ .BinDeletedAt }}">{{ .BinDeletedAtRelative }}</td>
                     <td>{{ .Downloads }}</td>
                     <td>{{ .Updates }}</td>
-                    <td>{{ .InStorage }}</td>
                 </tr>
             {{ end }}
         </table>

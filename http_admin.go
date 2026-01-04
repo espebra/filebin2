@@ -138,11 +138,21 @@ func (h *HTTP) viewAdminFile(w http.ResponseWriter, r *http.Request) {
 	inputSHA256 := params["sha256"]
 
 	type Data struct {
-		Files  []ds.File `json:"files"`
-		SHA256 string    `json:"sha256"`
+		Files       []ds.File        `json:"files"`
+		FileContent *ds.FileContent  `json:"file_content,omitempty"`
+		SHA256      string           `json:"sha256"`
 	}
 	var data Data
 	data.SHA256 = inputSHA256
+
+	// Get file content metadata (common across all files with this SHA256)
+	fileContent, err := h.dao.FileContent().GetBySHA256(inputSHA256)
+	if err != nil {
+		fmt.Printf("Unable to get file content for SHA256 %s: %s\n", inputSHA256, err.Error())
+		// Don't fail completely, just log the error
+	} else {
+		data.FileContent = fileContent
+	}
 
 	fileByChecksum, err := h.dao.File().FileByChecksum(inputSHA256)
 	if err != nil {
