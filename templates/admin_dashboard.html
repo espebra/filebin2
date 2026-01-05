@@ -20,6 +20,32 @@
 
         <h1>Dashboard</h1>
 
+        <h2>Admin logins</h2>
+        {{ $numAdminLogins := .AdminLogins | len }}
+        {{ if eq $numAdminLogins 0 }}
+            <p>No admin logins recorded yet.</p>
+        {{ else }}
+        <table class="sortable table table-sm table-hover">
+            <thead>
+                <tr>
+                    <th>IP</th>
+                    <th>Hostname</th>
+                    <th>Last active</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ range $index, $value := .AdminLogins }}
+                <tr>
+                    <td>{{ .IP }}</td>
+                    <td>{{ if .Hostname }}{{ .Hostname }}{{ else }}-{{ end }}</td>
+                    <td sorttable_customkey="{{ .LastActive }}">{{ .LastActive.Format "2006-01-02 15:04:05 UTC" }}</td>
+                </tr>
+                {{ end }}
+            </tbody>
+        </table>
+        {{ end }}
+
+        <h2>Database connection pool</h2>
         <ul>
             <li>Maximum number of open connections to the database: {{ .DBStats.MaxOpenConnections}}</li>
             <li>The number of established connections both in use and idle: {{ .DBStats.OpenConnections}}</li>

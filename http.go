@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/espebra/filebin2/dbl"
@@ -29,6 +30,12 @@ import (
 
 type funcHandler func(http.ResponseWriter, *http.Request)
 
+type AdminLogin struct {
+	IP         string
+	Hostname   string
+	LastActive time.Time
+}
+
 type HTTP struct {
 	router          *mux.Router
 	templateBox     *embed.FS
@@ -41,6 +48,8 @@ type HTTP struct {
 	config          *ds.Config
 	metrics         *ds.Metrics
 	metricsRegistry *prometheus.Registry
+	adminLogins     []AdminLogin
+	adminLoginsMutex sync.Mutex
 }
 
 func (h *HTTP) Init() (err error) {
@@ -68,14 +77,14 @@ func (h *HTTP) Init() (err error) {
 	h.router.HandleFunc("/integration/slack", h.integrationSlack).Methods(http.MethodPost)
 	h.router.HandleFunc("/admin/log/{category:[a-z]+}/{filter:[A-Za-z0-9.:_-]+}", h.auth(h.viewAdminLog)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/bins", h.auth(h.viewAdminBins)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/admin/bins/{limit:[0-9]+}", h.auth(h.viewAdminBins)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/bins/all", h.auth(h.viewAdminBinsAll)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/clients", h.auth(h.viewAdminClients)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/clients/all", h.auth(h.viewAdminClientsAll)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/files", h.auth(h.viewAdminFiles)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/admin/files/{limit:[0-9]+}", h.auth(h.viewAdminFiles)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin/filecontent", h.auth(h.viewAdminFileContent)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/file/{sha256:[0-9a-z]+}", h.auth(h.viewAdminFile)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/file/{sha256:[0-9a-z]+}/block", h.log(h.auth(h.blockFileContent))).Methods("POST")
+	h.router.HandleFunc("/admin/file/{sha256:[0-9a-z]+}/unblock", h.log(h.auth(h.unblockFileContent))).Methods("POST")
 	h.router.HandleFunc("/admin", h.auth(h.viewAdminDashboard)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/approve/{bin:[A-Za-z0-9_-]+}", h.log(h.auth(h.approveBin))).Methods("PUT")
 	//h.router.HandleFunc("/admin/cleanup", h.Auth(h.ViewAdminCleanup)).Methods(http.MethodHead, http.MethodGet)
@@ -188,7 +197,70 @@ func (h *HTTP) auth(fn func(http.ResponseWriter, *http.Request)) http.HandlerFun
 			return
 		}
 
-		fn(w, r)
+		h.trackAdminLogin(r.RemoteAddr)
+	fn(w, r)
+	}
+}
+
+func (h *HTTP) trackAdminLogin(remoteAddr string) {
+	// Extract IP from remoteAddr (format: "IP:port")
+	host, _, err := net.SplitHostPort(remoteAddr)
+	var ip string
+	if err == nil {
+		ip = host
+	} else {
+		ip = remoteAddr
+	}
+
+	h.adminLoginsMutex.Lock()
+	defer h.adminLoginsMutex.Unlock()
+
+	now := time.Now().UTC()
+
+	// Check if IP already exists and update it
+	for i := range h.adminLogins {
+		if h.adminLogins[i].IP == ip {
+			h.adminLogins[i].LastActive = now
+			// Move to front (most recent)
+			login := h.adminLogins[i]
+			copy(h.adminLogins[1:i+1], h.adminLogins[0:i])
+			h.adminLogins[0] = login
+			return
+		}
+	}
+
+	// Add new IP at the front
+	newLogin := AdminLogin{
+		IP:         ip,
+		LastActive: now,
+	}
+
+	// Do reverse DNS lookup for new IP (with timeout)
+	resultChan := make(chan []string, 1)
+	go func() {
+		names, err := net.LookupAddr(ip)
+		if err == nil && len(names) > 0 {
+			resultChan <- names
+		} else {
+			resultChan <- nil
+		}
+	}()
+
+	// Wait for result or timeout
+	select {
+	case names := <-resultChan:
+		if names != nil && len(names) > 0 {
+			newLogin.Hostname = names[0]
+		}
+	case <-time.After(2 * time.Second):
+		// Timeout, leave hostname empty
+	}
+
+	h.adminLogins = append([]AdminLogin{newLogin}, h.adminLogins...)
+
+	// Keep only the last 10
+	if len(h.adminLogins) > 10 {
+		h.adminLogins = h.adminLogins[:10]
 	}
 }
 

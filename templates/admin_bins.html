@@ -16,7 +16,21 @@
 
         {{template "admin_bar" .}}
 
-        <h1>Top {{ .Limit }} bins</h1>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1>Top {{ .Limit }} bins</h1>
+            <div>
+                <label for="limitSelect" class="form-label me-2">Limit:</label>
+                <select id="limitSelect" class="form-select form-select-sm d-inline-block w-auto" onchange="window.location.href='/admin/bins?limit=' + this.value">
+                    <option value="25" {{ if eq .Limit 25 }}selected{{ end }}>25</option>
+                    <option value="50" {{ if eq .Limit 50 }}selected{{ end }}>50</option>
+                    <option value="100" {{ if eq .Limit 100 }}selected{{ end }}>100</option>
+                    <option value="200" {{ if eq .Limit 200 }}selected{{ end }}>200</option>
+                    <option value="500" {{ if eq .Limit 500 }}selected{{ end }}>500</option>
+                    <option value="1000" {{ if eq .Limit 1000 }}selected{{ end }}>1000</option>
+                    <option value="5000" {{ if eq .Limit 5000 }}selected{{ end }}>5000</option>
+                </select>
+            </div>
+        </div>
 
         <nav class="navbar navbar-expand-lg bg-light">
           <div class="container-fluid">

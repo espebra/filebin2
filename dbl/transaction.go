@@ -28,7 +28,6 @@ func (d *TransactionDao) Register(r *http.Request, bin string, filename string, 
 	tr.Method = r.Method
 	tr.Path = r.URL.Path
 	tr.IP = r.RemoteAddr
-	tr.ClientId = r.Header.Get("CID")
 
 	// Remove the port if it's part of RemoteAddr
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
@@ -77,31 +76,8 @@ func (d *TransactionDao) Register(r *http.Request, bin string, filename string, 
 //	return nil
 //}
 
-func (d *TransactionDao) GetByClientId(id string) (transactions []ds.Transaction, err error) {
-	sqlStatement := "SELECT id, bin_id, filename, operation, method, path, ip, client_id, headers, timestamp, req_bytes, resp_bytes, status, completed FROM transaction WHERE client_id = $1 ORDER BY timestamp DESC"
-	rows, err := d.db.Query(sqlStatement, id)
-	if err != nil {
-		return transactions, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var t ds.Transaction
-		err = rows.Scan(&t.Id, &t.BinId, &t.Filename, &t.Operation, &t.Method, &t.Path, &t.IP, &t.ClientId, &t.Headers, &t.Timestamp, &t.ReqBytes, &t.RespBytes, &t.Status, &t.CompletedAt)
-		if err != nil {
-			return transactions, err
-		}
-		t.TimestampRelative = humanize.Time(t.Timestamp)
-		t.ReqBytesReadable = humanize.Bytes(uint64(t.ReqBytes))
-		t.RespBytesReadable = humanize.Bytes(uint64(t.RespBytes))
-		t.Duration = t.CompletedAt.Sub(t.Timestamp)
-
-		transactions = append(transactions, t)
-	}
-	return transactions, nil
-}
-
 func (d *TransactionDao) GetByIP(ip string) (transactions []ds.Transaction, err error) {
-	sqlStatement := "SELECT id, bin_id, filename, operation, method, path, ip, client_id, headers, timestamp, req_bytes, resp_bytes, status, completed FROM transaction WHERE ip = $1 ORDER BY timestamp DESC"
+	sqlStatement := "SELECT id, bin_id, filename, operation, method, path, ip, headers, timestamp, req_bytes, resp_bytes, status, completed FROM transaction WHERE ip = $1 ORDER BY timestamp DESC"
 	rows, err := d.db.Query(sqlStatement, ip)
 	if err != nil {
 		return transactions, err
@@ -109,7 +85,7 @@ func (d *TransactionDao) GetByIP(ip string) (transactions []ds.Transaction, err 
 	defer rows.Close()
 	for rows.Next() {
 		var t ds.Transaction
-		err = rows.Scan(&t.Id, &t.BinId, &t.Filename, &t.Operation, &t.Method, &t.Path, &t.IP, &t.ClientId, &t.Headers, &t.Timestamp, &t.ReqBytes, &t.RespBytes, &t.Status, &t.CompletedAt)
+		err = rows.Scan(&t.Id, &t.BinId, &t.Filename, &t.Operation, &t.Method, &t.Path, &t.IP, &t.Headers, &t.Timestamp, &t.ReqBytes, &t.RespBytes, &t.Status, &t.CompletedAt)
 		if err != nil {
 			return transactions, err
 		}
@@ -124,7 +100,7 @@ func (d *TransactionDao) GetByIP(ip string) (transactions []ds.Transaction, err 
 }
 
 func (d *TransactionDao) GetByBin(bin string) (transactions []ds.Transaction, err error) {
-	sqlStatement := "SELECT id, bin_id, filename, operation, method, path, ip, client_id, headers, timestamp, req_bytes, resp_bytes, status, completed FROM transaction WHERE bin_id = $1 ORDER BY timestamp DESC"
+	sqlStatement := "SELECT id, bin_id, filename, operation, method, path, ip, headers, timestamp, req_bytes, resp_bytes, status, completed FROM transaction WHERE bin_id = $1 ORDER BY timestamp DESC"
 	rows, err := d.db.Query(sqlStatement, bin)
 	if err != nil {
 		return transactions, err
@@ -132,7 +108,7 @@ func (d *TransactionDao) GetByBin(bin string) (transactions []ds.Transaction, er
 	defer rows.Close()
 	for rows.Next() {
 		var t ds.Transaction
-		err = rows.Scan(&t.Id, &t.BinId, &t.Filename, &t.Operation, &t.Method, &t.Path, &t.IP, &t.ClientId, &t.Headers, &t.Timestamp, &t.ReqBytes, &t.RespBytes, &t.Status, &t.CompletedAt)
+		err = rows.Scan(&t.Id, &t.BinId, &t.Filename, &t.Operation, &t.Method, &t.Path, &t.IP, &t.Headers, &t.Timestamp, &t.ReqBytes, &t.RespBytes, &t.Status, &t.CompletedAt)
 		if err != nil {
 			return transactions, err
 		}
@@ -163,8 +139,8 @@ func (d *TransactionDao) Insert(t *ds.Transaction) (err error) {
 	//	t.Operation = "bin-lock"
 	//}
 
-	sqlStatement := "INSERT INTO transaction (bin_id, filename, operation, method, path, ip, client_id, headers, timestamp, status, req_bytes, resp_bytes, completed) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id"
-	if err := d.db.QueryRow(sqlStatement, t.BinId, t.Filename, t.Operation, t.Method, t.Path, t.IP, t.ClientId, t.Headers, t.Timestamp, t.Status, t.ReqBytes, t.RespBytes, t.CompletedAt).Scan(&t.Id); err != nil {
+	sqlStatement := "INSERT INTO transaction (bin_id, filename, operation, method, path, ip, headers, timestamp, status, req_bytes, resp_bytes, completed) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id"
+	if err := d.db.QueryRow(sqlStatement, t.BinId, t.Filename, t.Operation, t.Method, t.Path, t.IP, t.Headers, t.Timestamp, t.Status, t.ReqBytes, t.RespBytes, t.CompletedAt).Scan(&t.Id); err != nil {
 		return err
 	}
 	t.TimestampRelative = humanize.Time(t.Timestamp)

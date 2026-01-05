@@ -234,3 +234,100 @@ func (d *FileContentDao) BlockContent(sha256 string) error {
 	// Commit the transaction
 	return tx.Commit()
 }
+
+// UnblockContent unblocks content by setting blocked = false
+func (d *FileContentDao) UnblockContent(sha256 string) error {
+	sqlStatement := `UPDATE file_content SET blocked = false WHERE sha256 = $1`
+	res, err := d.db.Exec(sqlStatement, sha256)
+	if err != nil {
+		return err
+	}
+
+	count, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return errors.New("File content does not exist")
+	}
+
+	return nil
+}
+
+func (d *FileContentDao) GetByCreated(limit int) (contents []ds.FileByChecksum, err error) {
+	sqlStatement := `SELECT fc.sha256, COUNT(f.sha256) as c, fc.mime, fc.bytes,
+		COUNT(f.sha256) * fc.bytes AS bytes_total,
+		COALESCE(SUM(f.downloads), 0),
+		COALESCE(SUM(f.updates), 0),
+		fc.blocked,
+		fc.created_at,
+		fc.last_referenced_at
+		FROM file_content fc
+		LEFT JOIN file f ON fc.sha256 = f.sha256 AND f.deleted_at IS NULL
+		WHERE fc.in_storage = true
+		GROUP BY fc.sha256, fc.mime, fc.bytes, fc.blocked, fc.created_at, fc.last_referenced_at
+		ORDER BY fc.created_at DESC
+		LIMIT $1`
+
+	rows, err := d.db.Query(sqlStatement, limit)
+	if err != nil {
+		return contents, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var content ds.FileByChecksum
+		err = rows.Scan(&content.SHA256, &content.Count, &content.Mime, &content.Bytes,
+			&content.BytesTotal, &content.DownloadsTotal, &content.UpdatesTotal,
+			&content.Blocked, &content.CreatedAt, &content.LastReferencedAt)
+		if err != nil {
+			return contents, err
+		}
+		content.CreatedAt = content.CreatedAt.UTC()
+		content.LastReferencedAt = content.LastReferencedAt.UTC()
+		content.CreatedAtRelative = humanize.Time(content.CreatedAt)
+		content.LastReferencedAtRelative = humanize.Time(content.LastReferencedAt)
+		content.BytesReadable = humanize.Bytes(content.Bytes)
+		content.BytesTotalReadable = humanize.Bytes(content.BytesTotal)
+		contents = append(contents, content)
+	}
+	return contents, nil
+}
+
+func (d *FileContentDao) GetBlocked(limit int) (contents []ds.FileByChecksum, err error) {
+	sqlStatement := `SELECT fc.sha256, COUNT(f.sha256) as c, fc.mime, fc.bytes,
+		COUNT(f.sha256) * fc.bytes AS bytes_total,
+		COALESCE(SUM(f.downloads), 0),
+		COALESCE(SUM(f.updates), 0),
+		fc.blocked,
+		fc.created_at,
+		fc.last_referenced_at
+		FROM file_content fc
+		LEFT JOIN file f ON fc.sha256 = f.sha256 AND f.deleted_at IS NULL
+		WHERE fc.blocked = true
+		GROUP BY fc.sha256, fc.mime, fc.bytes, fc.blocked, fc.created_at, fc.last_referenced_at
+		ORDER BY fc.last_referenced_at DESC
+		LIMIT $1`
+
+	rows, err := d.db.Query(sqlStatement, limit)
+	if err != nil {
+		return contents, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var content ds.FileByChecksum
+		err = rows.Scan(&content.SHA256, &content.Count, &content.Mime, &content.Bytes,
+			&content.BytesTotal, &content.DownloadsTotal, &content.UpdatesTotal,
+			&content.Blocked, &content.CreatedAt, &content.LastReferencedAt)
+		if err != nil {
+			return contents, err
+		}
+		content.CreatedAt = content.CreatedAt.UTC()
+		content.LastReferencedAt = content.LastReferencedAt.UTC()
+		content.CreatedAtRelative = humanize.Time(content.CreatedAt)
+		content.LastReferencedAtRelative = humanize.Time(content.LastReferencedAt)
+		content.BytesReadable = humanize.Bytes(content.Bytes)
+		content.BytesTotalReadable = humanize.Bytes(content.BytesTotal)
+		contents = append(contents, content)
+	}
+	return contents, nil
+}

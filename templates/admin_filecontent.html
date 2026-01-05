@@ -1,0 +1,271 @@
+{{ define "admin_filecontent" }}<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <link rel="icon" href="/static/img/favicon.png">
+        <link rel="stylesheet" href="/static/css/bootstrap.min.css"/>
+        <link rel="stylesheet" href="/static/css/fontawesome.all.min.css"/>
+        <link rel="stylesheet" href="/static/css/custom.css"/>
+        <script src="/static/js/sorttable.js"></script>
+        <script src="/static/js/filebin2.js"></script>
+        <title>Filebin | File Content</title>
+    </head>
+    <body class="container-fluid">
+        <a id="top"></a>
+
+        {{template "admin_bar" .}}
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1>Top {{ .Limit }} file content entries</h1>
+            <div>
+                <label for="limitSelect" class="form-label me-2">Limit:</label>
+                <select id="limitSelect" class="form-select form-select-sm d-inline-block w-auto" onchange="window.location.href='/admin/filecontent?limit=' + this.value">
+                    <option value="25" {{ if eq .Limit 25 }}selected{{ end }}>25</option>
+                    <option value="50" {{ if eq .Limit 50 }}selected{{ end }}>50</option>
+                    <option value="100" {{ if eq .Limit 100 }}selected{{ end }}>100</option>
+                    <option value="200" {{ if eq .Limit 200 }}selected{{ end }}>200</option>
+                    <option value="500" {{ if eq .Limit 500 }}selected{{ end }}>500</option>
+                    <option value="1000" {{ if eq .Limit 1000 }}selected{{ end }}>1000</option>
+                    <option value="5000" {{ if eq .Limit 5000 }}selected{{ end }}>5000</option>
+                </select>
+            </div>
+        </div>
+
+        <nav class="navbar navbar-expand-lg bg-light">
+          <div class="container-fluid">
+            <div class="navbar-nav">
+              <a class="nav-link" href="#refcount"><span class="btn btn-primary">By reference count</span></a>
+              <a class="nav-link" href="#byteseach"><span class="btn btn-primary">By bytes each</span></a>
+              <a class="nav-link" href="#bytestotal"><span class="btn btn-primary">By bytes total</span></a>
+              <a class="nav-link" href="#created"><span class="btn btn-primary">By created at</span></a>
+              <a class="nav-link" href="#blocked"><span class="btn btn-primary">Blocked content</span></a>
+            </div>
+          </div>
+        </nav>
+
+        <a id="refcount"></a>
+        <div class="text-end"><small><a href="#top">Top</a></small></div>
+        <h2>By reference count</h2>
+
+        {{ $numRefCount := .FileContent.ByReferenceCount | len }}
+        {{ if eq $numRefCount 0 }}
+            <p>No file content has been recorded yet.</p>
+        {{ else }}
+            <table class="table sortable">
+                <tr>
+                    <th>SHA256</th>
+                    <th>References</th>
+                    <th>Blocked</th>
+                    <th>Mime</th>
+                    <th>Bytes each</th>
+                    <th>Bytes total</th>
+                    <th>Downloads total</th>
+                    <th>Updates total</th>
+                    <th>Created</th>
+                    <th>Last referenced</th>
+                </tr>
+                {{ range $index, $value := .FileContent.ByReferenceCount }}
+                    <tr>
+                        <td><code><a href="/admin/file/{{ .SHA256 }}">{{ slice .SHA256 0 7 }}</a></code></td>
+                        <td class="table-light"><strong>{{ .Count }}</strong></td>
+                        <td>
+                            {{ if .Blocked }}
+                                <span class="badge bg-danger">BLOCKED</span>
+                            {{ else }}
+                                <span class="badge bg-success">Not blocked</span>
+                            {{ end }}
+                        </td>
+                        <td>{{ .Mime }}</td>
+                        <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
+                        <td sorttable_customkey="{{ .BytesTotal }}">{{ .BytesTotalReadable }}</td>
+                        <td>{{ .DownloadsTotal }}</td>
+                        <td>{{ .UpdatesTotal }}</td>
+                        <td sorttable_customkey="{{ .CreatedAt }}">{{ .CreatedAtRelative }}</td>
+                        <td sorttable_customkey="{{ .LastReferencedAt }}">{{ .LastReferencedAtRelative }}</td>
+                    </tr>
+                {{ end }}
+            </table>
+        {{ end }}
+
+        <a id="byteseach"></a>
+        <div class="text-end"><small><a href="#top">Top</a></small></div>
+        <h2>By bytes each</h2>
+
+        {{ $numBytesEach := .FileContent.ByBytesEach | len }}
+        {{ if eq $numBytesEach 0 }}
+            <p>No file content has been recorded yet.</p>
+        {{ else }}
+            <table class="table sortable">
+                <tr>
+                    <th>SHA256</th>
+                    <th>References</th>
+                    <th>Blocked</th>
+                    <th>Mime</th>
+                    <th>Bytes each</th>
+                    <th>Bytes total</th>
+                    <th>Downloads total</th>
+                    <th>Updates total</th>
+                    <th>Created</th>
+                    <th>Last referenced</th>
+                </tr>
+                {{ range $index, $value := .FileContent.ByBytesEach }}
+                    <tr>
+                        <td><code><a href="/admin/file/{{ .SHA256 }}">{{ slice .SHA256 0 7 }}</a></code></td>
+                        <td>{{ .Count }}</td>
+                        <td>
+                            {{ if .Blocked }}
+                                <span class="badge bg-danger">BLOCKED</span>
+                            {{ else }}
+                                <span class="badge bg-success">Not blocked</span>
+                            {{ end }}
+                        </td>
+                        <td>{{ .Mime }}</td>
+                        <td sorttable_customkey="{{ .Bytes }}" class="table-light"><strong>{{ .BytesReadable }}</strong></td>
+                        <td sorttable_customkey="{{ .BytesTotal }}">{{ .BytesTotalReadable }}</td>
+                        <td>{{ .DownloadsTotal }}</td>
+                        <td>{{ .UpdatesTotal }}</td>
+                        <td sorttable_customkey="{{ .CreatedAt }}">{{ .CreatedAtRelative }}</td>
+                        <td sorttable_customkey="{{ .LastReferencedAt }}">{{ .LastReferencedAtRelative }}</td>
+                    </tr>
+                {{ end }}
+            </table>
+        {{ end }}
+
+        <a id="bytestotal"></a>
+        <div class="text-end"><small><a href="#top">Top</a></small></div>
+        <h2>By bytes total</h2>
+
+        {{ $numBytesTotal := .FileContent.ByBytesTotal | len }}
+        {{ if eq $numBytesTotal 0 }}
+            <p>No file content has been recorded yet.</p>
+        {{ else }}
+            <table class="table sortable">
+                <tr>
+                    <th>SHA256</th>
+                    <th>References</th>
+                    <th>Blocked</th>
+                    <th>Mime</th>
+                    <th>Bytes each</th>
+                    <th>Bytes total</th>
+                    <th>Downloads total</th>
+                    <th>Updates total</th>
+                    <th>Created</th>
+                    <th>Last referenced</th>
+                </tr>
+                {{ range $index, $value := .FileContent.ByBytesTotal }}
+                    <tr>
+                        <td><code><a href="/admin/file/{{ .SHA256 }}">{{ slice .SHA256 0 7 }}</a></code></td>
+                        <td>{{ .Count }}</td>
+                        <td>
+                            {{ if .Blocked }}
+                                <span class="badge bg-danger">BLOCKED</span>
+                            {{ else }}
+                                <span class="badge bg-success">Not blocked</span>
+                            {{ end }}
+                        </td>
+                        <td>{{ .Mime }}</td>
+                        <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
+                        <td sorttable_customkey="{{ .BytesTotal }}" class="table-light"><strong>{{ .BytesTotalReadable }}</strong></td>
+                        <td>{{ .DownloadsTotal }}</td>
+                        <td>{{ .UpdatesTotal }}</td>
+                        <td sorttable_customkey="{{ .CreatedAt }}">{{ .CreatedAtRelative }}</td>
+                        <td sorttable_customkey="{{ .LastReferencedAt }}">{{ .LastReferencedAtRelative }}</td>
+                    </tr>
+                {{ end }}
+            </table>
+        {{ end }}
+
+        <a id="created"></a>
+        <div class="text-end"><small><a href="#top">Top</a></small></div>
+        <h2>By created at</h2>
+
+        {{ $numCreated := .FileContent.ByCreated | len }}
+        {{ if eq $numCreated 0 }}
+            <p>No file content has been recorded yet.</p>
+        {{ else }}
+            <table class="table sortable">
+                <tr>
+                    <th>SHA256</th>
+                    <th>References</th>
+                    <th>Blocked</th>
+                    <th>Mime</th>
+                    <th>Bytes each</th>
+                    <th>Bytes total</th>
+                    <th>Downloads total</th>
+                    <th>Updates total</th>
+                    <th>Created</th>
+                    <th>Last referenced</th>
+                </tr>
+                {{ range $index, $value := .FileContent.ByCreated }}
+                    <tr>
+                        <td><code><a href="/admin/file/{{ .SHA256 }}">{{ slice .SHA256 0 7 }}</a></code></td>
+                        <td>{{ .Count }}</td>
+                        <td>
+                            {{ if .Blocked }}
+                                <span class="badge bg-danger">BLOCKED</span>
+                            {{ else }}
+                                <span class="badge bg-success">Not blocked</span>
+                            {{ end }}
+                        </td>
+                        <td>{{ .Mime }}</td>
+                        <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
+                        <td sorttable_customkey="{{ .BytesTotal }}">{{ .BytesTotalReadable }}</td>
+                        <td>{{ .DownloadsTotal }}</td>
+                        <td>{{ .UpdatesTotal }}</td>
+                        <td sorttable_customkey="{{ .CreatedAt }}" class="table-light"><strong>{{ .CreatedAtRelative }}</strong></td>
+                        <td sorttable_customkey="{{ .LastReferencedAt }}">{{ .LastReferencedAtRelative }}</td>
+                    </tr>
+                {{ end }}
+            </table>
+        {{ end }}
+
+        <a id="blocked"></a>
+        <div class="text-end"><small><a href="#top">Top</a></small></div>
+        <h2>Blocked content</h2>
+
+        {{ $numBlocked := .FileContent.Blocked | len }}
+        {{ if eq $numBlocked 0 }}
+            <p>No content is currently blocked.</p>
+        {{ else }}
+            <table class="table sortable">
+                <tr>
+                    <th>SHA256</th>
+                    <th>References</th>
+                    <th>Blocked</th>
+                    <th>Mime</th>
+                    <th>Bytes each</th>
+                    <th>Bytes total</th>
+                    <th>Downloads total</th>
+                    <th>Updates total</th>
+                    <th>Created</th>
+                    <th>Last referenced</th>
+                </tr>
+                {{ range $index, $value := .FileContent.Blocked }}
+                    <tr>
+                        <td><code><a href="/admin/file/{{ .SHA256 }}">{{ slice .SHA256 0 7 }}</a></code></td>
+                        <td>{{ .Count }}</td>
+                        <td class="table-light">
+                            {{ if .Blocked }}
+                                <span class="badge bg-danger">BLOCKED</span>
+                            {{ else }}
+                                <span class="badge bg-success">Not blocked</span>
+                            {{ end }}
+                        </td>
+                        <td>{{ .Mime }}</td>
+                        <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
+                        <td sorttable_customkey="{{ .BytesTotal }}">{{ .BytesTotalReadable }}</td>
+                        <td>{{ .DownloadsTotal }}</td>
+                        <td>{{ .UpdatesTotal }}</td>
+                        <td sorttable_customkey="{{ .CreatedAt }}">{{ .CreatedAtRelative }}</td>
+                        <td sorttable_customkey="{{ .LastReferencedAt }}">{{ .LastReferencedAtRelative }}</td>
+                    </tr>
+                {{ end }}
+            </table>
+        {{ end }}
+
+        <script src="/static/js/popper.min.js"></script>
+        <script src="/static/js/bootstrap.min.js"></script>
+    </body>
+</html>
+{{ end }}

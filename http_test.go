@@ -84,6 +84,8 @@ func TestMain(m *testing.M) {
 		HttpHost:             testHTTPHost,
 		HttpPort:             testHTTPPort,
 		RejectFileExtensions: []string{"illegal1", "illegal2"},
+		AdminUsername:        "admin",
+		AdminPassword:        "changeme",
 	}
 	// Create Prometheus registry and metrics
 	metricsRegistry := prometheus.NewRegistry()
