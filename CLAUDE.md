@@ -53,7 +53,7 @@ The codebase is organized into distinct layers:
 - Provides database abstraction over PostgreSQL
 - `DAO` struct with specialized sub-DAOs: `BinDao`, `FileDao`, `MetricsDao`, `TransactionDao`, `ClientDao`
 - All database operations go through this layer
-- Database schema defined in `schema.sql`
+- Database schema defined in `dbl/schema.sql`
 
 **`ds/` - Data Structures**
 - Domain models: `Bin`, `File`, `Client`, `Transaction`, `Metrics`, `Config`

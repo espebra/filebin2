@@ -172,10 +172,6 @@ func main() {
 		os.Exit(2)
 	}
 
-	if err := daoconn.CreateSchema(); err != nil {
-		fmt.Printf("Unable to create Schema: %s\n", err.Error())
-	}
-
 	s3UrlTtl, err := time.ParseDuration(*s3UrlTtlFlag)
 	if err != nil {
 		fmt.Printf("Unable to parse --s3-url-ttl: %s\n", err.Error())

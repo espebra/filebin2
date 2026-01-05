@@ -2,12 +2,16 @@ package dbl
 
 import (
 	"database/sql"
+	_ "embed"
 	"errors"
 	"fmt"
 	"time"
 
 	_ "github.com/lib/pq"
 )
+
+//go:embed schema.sql
+var schemaSQL string
 
 type DAO struct {
 	db             *sql.DB
@@ -45,6 +49,12 @@ func Init(dbHost string, dbPort int, dbName, dbUser, dbPassword string) (DAO, er
 	dao.metricsDao = &MetricsDao{db: db}
 	dao.transactionDao = &TransactionDao{db: db}
 	dao.clientDao = &ClientDao{db: db}
+
+	// Create schema if it doesn't exist
+	if err := dao.CreateSchema(); err != nil {
+		return dao, fmt.Errorf("failed to create schema: %w", err)
+	}
+
 	return dao, nil
 }
 
@@ -53,7 +63,10 @@ func (dao DAO) Close() error {
 }
 
 func (dao DAO) CreateSchema() error {
-	// Not implemented
+	// Execute the embedded schema SQL
+	if _, err := dao.db.Exec(schemaSQL); err != nil {
+		return fmt.Errorf("failed to create schema: %w", err)
+	}
 	return nil
 }
 
