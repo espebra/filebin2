@@ -29,7 +29,6 @@ CREATE TABLE file (
 	downloads	BIGINT NOT NULL,
 	updates 	BIGINT NOT NULL,
 	ip		VARCHAR(128) NOT NULL,
-	client_id	VARCHAR(128) NOT NULL,
 	headers		TEXT NOT NULL,
 	updated_at	TIMESTAMP NOT NULL,
 	created_at	TIMESTAMP NOT NULL,
@@ -44,7 +43,6 @@ CREATE TABLE transaction (
 	timestamp	TIMESTAMP NOT NULL,
 	completed	TIMESTAMP NOT NULL,
 	ip		VARCHAR(128) NOT NULL,
-	client_id	VARCHAR(128) NOT NULL,
 	method		VARCHAR(128) NOT NULL,
 	path		TEXT NOT NULL,
 	filename	TEXT,
@@ -81,7 +79,6 @@ CREATE TABLE client (
 
 CREATE INDEX idx_bin_id ON transaction(bin_id);
 CREATE INDEX idx_ip ON transaction(ip);
-CREATE INDEX idx_cid ON transaction(client_id);
 CREATE INDEX idx_transaction_timestamp ON transaction(timestamp);
 CREATE INDEX idx_file_deleted_at ON file(deleted_at);
 CREATE INDEX idx_bin_deleted_at_expired_at ON bin(expired_at, deleted_at);

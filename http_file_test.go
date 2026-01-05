@@ -564,7 +564,13 @@ func httpAdminRequest(method, path string) (statuscode int, body string, err err
 	// Add basic auth for admin endpoints
 	req.SetBasicAuth("admin", "changeme")
 	req.Close = true
-	client := &http.Client{}
+
+	// Don't follow redirects - return the redirect response directly
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return -2, "", err
@@ -588,21 +594,22 @@ func TestBlockContent(t *testing.T) {
 			Bin:           "blockedcontenttest",
 			Filename:      "blocked.txt",
 			UploadContent: "this content will be blocked",
-			SHA256:        "8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4",
+			SHA256:        "11758cbca80f40e79c605f12c9094c3b2ed9329f5e3ed41d920b11f941de995d",
 			StatusCode:    201,
 		},
 	}
 	runTests(tcs, t)
 
 	// Block the content using the admin endpoint
-	sha256 := "8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4"
-	statusCode, _, err := httpAdminRequest("POST", "/admin/file/"+sha256+"/block")
+	sha256 := "11758cbca80f40e79c605f12c9094c3b2ed9329f5e3ed41d920b11f941de995d"
+	statusCode, body, err := httpAdminRequest("POST", "/admin/file/"+sha256+"/block")
 	if err != nil {
 		t.Errorf("Failed to block content: %s\n", err.Error())
 		os.Exit(1)
 	}
 	if statusCode != 303 && statusCode != 200 {
 		t.Errorf("Expected status code 303 or 200 when blocking content, got %d\n", statusCode)
+		t.Errorf("Response body: %s\n", body)
 		os.Exit(1)
 	}
 
@@ -614,7 +621,7 @@ func TestBlockContent(t *testing.T) {
 			Bin:           "blockedcontenttest",
 			Filename:      "blocked2.txt",
 			UploadContent: "this content will be blocked",
-			SHA256:        "8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4",
+			SHA256:        "11758cbca80f40e79c605f12c9094c3b2ed9329f5e3ed41d920b11f941de995d",
 			StatusCode:    403,
 		},
 		{
@@ -623,7 +630,7 @@ func TestBlockContent(t *testing.T) {
 			Bin:           "anotherbin",
 			Filename:      "test.txt",
 			UploadContent: "this content will be blocked",
-			SHA256:        "8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4",
+			SHA256:        "11758cbca80f40e79c605f12c9094c3b2ed9329f5e3ed41d920b11f941de995d",
 			StatusCode:    403,
 		},
 		{
@@ -636,6 +643,75 @@ func TestBlockContent(t *testing.T) {
 		},
 	}
 	runTests(tcs2, t)
+}
+
+func TestUnblockContent(t *testing.T) {
+	// First, upload a file with known content
+	tcs := []TestCase{
+		{
+			Description:   "Upload file with specific content",
+			Method:        "POST",
+			Bin:           "unblockedcontenttest",
+			Filename:      "unblocked.txt",
+			UploadContent: "this content will be unblocked",
+			SHA256:        "54755318a367ec28f632443fa35dad11d3bdc626aa6cc7afa0b91fc4aaa8f034",
+			StatusCode:    201,
+		},
+	}
+	runTests(tcs, t)
+
+	// Block the content using the admin endpoint
+	sha256 := "54755318a367ec28f632443fa35dad11d3bdc626aa6cc7afa0b91fc4aaa8f034"
+	statusCode, body, err := httpAdminRequest("POST", "/admin/file/"+sha256+"/block")
+	if err != nil {
+		t.Errorf("Failed to block content: %s\n", err.Error())
+		os.Exit(1)
+	}
+	if statusCode != 303 && statusCode != 200 {
+		t.Errorf("Expected status code 303 or 200 when blocking content, got %d\n", statusCode)
+		t.Errorf("Response body: %s\n", body)
+		os.Exit(1)
+	}
+
+	// Verify upload is rejected while blocked
+	tcs2 := []TestCase{
+		{
+			Description:   "Try to upload blocked content",
+			Method:        "POST",
+			Bin:           "unblockedcontenttest2",
+			Filename:      "blocked.txt",
+			UploadContent: "this content will be unblocked",
+			SHA256:        "54755318a367ec28f632443fa35dad11d3bdc626aa6cc7afa0b91fc4aaa8f034",
+			StatusCode:    403,
+		},
+	}
+	runTests(tcs2, t)
+
+	// Unblock the content
+	statusCode, body, err = httpAdminRequest("POST", "/admin/file/"+sha256+"/unblock")
+	if err != nil {
+		t.Errorf("Failed to unblock content: %s\n", err.Error())
+		os.Exit(1)
+	}
+	if statusCode != 303 && statusCode != 200 {
+		t.Errorf("Expected status code 303 or 200 when unblocking content, got %d\n", statusCode)
+		t.Errorf("Response body: %s\n", body)
+		os.Exit(1)
+	}
+
+	// Verify upload is now allowed after unblocking
+	tcs3 := []TestCase{
+		{
+			Description:   "Upload previously blocked content after unblock",
+			Method:        "POST",
+			Bin:           "unblockedcontenttest3",
+			Filename:      "nowallowed.txt",
+			UploadContent: "this content will be unblocked",
+			SHA256:        "54755318a367ec28f632443fa35dad11d3bdc626aa6cc7afa0b91fc4aaa8f034",
+			StatusCode:    201,
+		},
+	}
+	runTests(tcs3, t)
 }
 
 func TestBinBan(t *testing.T) {

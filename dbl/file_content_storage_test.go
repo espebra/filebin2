@@ -11,11 +11,11 @@ import (
 )
 
 const (
-	testS3Endpoint   = "s3:9000"
-	testS3Region     = "us-east-1"
-	testS3Bucket     = "filebin-test-storage"
-	testS3AccessKey  = "s3accesskey"
-	testS3SecretKey  = "s3secretkey"
+	testS3Endpoint  = "s3:9000"
+	testS3Region    = "us-east-1"
+	testS3Bucket    = "filebin-test-storage"
+	testS3AccessKey = "s3accesskey"
+	testS3SecretKey = "s3secretkey"
 )
 
 func setupS3() (s3.S3AO, error) {
@@ -409,6 +409,7 @@ func TestDeduplicationWithS3Storage(t *testing.T) {
 		t.Error("file_content.in_storage should be false after S3 removal")
 	}
 }
+
 // TestReuploadAfterDeletion verifies that content can be re-uploaded after being deleted from S3
 func TestReuploadAfterDeletion(t *testing.T) {
 	dao, err := tearUp()

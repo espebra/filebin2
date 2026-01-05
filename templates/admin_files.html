@@ -16,45 +16,185 @@
 
         {{template "admin_bar" .}}
 
-        <h1>Top {{ .Limit }} files</h1>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1>Top {{ .Limit }} files</h1>
+            <div>
+                <label for="limitSelect" class="form-label me-2">Limit:</label>
+                <select id="limitSelect" class="form-select form-select-sm d-inline-block w-auto" onchange="window.location.href='/admin/files?limit=' + this.value">
+                    <option value="25" {{ if eq .Limit 25 }}selected{{ end }}>25</option>
+                    <option value="50" {{ if eq .Limit 50 }}selected{{ end }}>50</option>
+                    <option value="100" {{ if eq .Limit 100 }}selected{{ end }}>100</option>
+                    <option value="200" {{ if eq .Limit 200 }}selected{{ end }}>200</option>
+                    <option value="500" {{ if eq .Limit 500 }}selected{{ end }}>500</option>
+                    <option value="1000" {{ if eq .Limit 1000 }}selected{{ end }}>1000</option>
+                    <option value="5000" {{ if eq .Limit 5000 }}selected{{ end }}>5000</option>
+                </select>
+            </div>
+        </div>
 
         <nav class="navbar navbar-expand-lg bg-light">
           <div class="container-fluid">
             <div class="navbar-nav">
-              <a class="nav-link" href="#duplicates"><span class="btn btn-primary">By duplication count</span></a>
-<!--
               <a class="nav-link" href="#created"><span class="btn btn-primary">By created at</span></a>
-              <a class="nav-link" href="#bytes"><span class="btn btn-primary">By bytes in total</span></a>
-              <a class="nav-link" href="#files"><span class="btn btn-primary">By file count</span></a>
+              <a class="nav-link" href="#updated"><span class="btn btn-primary">By last updated at</span></a>
+              <a class="nav-link" href="#bytes"><span class="btn btn-primary">By bytes</span></a>
               <a class="nav-link" href="#downloads"><span class="btn btn-primary">By download count</span></a>
--->
+              <a class="nav-link" href="#updates"><span class="btn btn-primary">By update count</span></a>
             </div>
           </div>
         </nav>
 
-        <a id="duplicates"></a>
+        <a id="created"></a>
         <div class="text-end"><small><a href="#top">Top</a></small></div>
-        <h2>By duplication count</h2>
+        <h2>By created at</h2>
 
         <table class="table sortable">
             <tr>
-                <th>Duplicates</th>
-                <th>SHA256 checksum</th>
+                <th>Filename</th>
+                <th>Bin</th>
                 <th>Mime</th>
-                <th>Bytes each</th>
-                <th>Bytes sum</th>
-                <th>Downloads total</th>
-                <th>Updates total</th>
+                <th>Bytes</th>
+                <th>File Content</th>
+                <th>Downloads</th>
+                <th>Updates</th>
+                <th>Created</th>
+                <th>Updated</th>
             </tr>
-            {{ range $index, $value := .Files.ByChecksum }}
+            {{ range $index, $value := .Files.ByCreated }}
                 <tr>
-                    <td>{{ .Count }}</td>
-                    <td class="table-light"><code><a href="/admin/file/{{ .SHA256 }}">{{ .SHA256 }}</a></code></td>
+                    <td><a href="/{{ .Bin }}/{{ .Filename }}">{{ .Filename }}</a></td>
+                    <td><a href="/{{ .Bin }}">{{ .Bin }}</a></td>
                     <td>{{ .Mime }}</td>
                     <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
-                    <td sorttable_customkey="{{ .BytesTotal }}">{{ .BytesTotalReadable }}</td>
-                    <td>{{ .DownloadsTotal }}</td>
-                    <td>{{ .UpdatesTotal }}</td>
+                    <td><code><a href="/admin/file/{{ .SHA256 }}">{{ slice .SHA256 0 7 }}</a></code></td>
+                    <td>{{ .Downloads }}</td>
+                    <td>{{ .Updates }}</td>
+                    <td sorttable_customkey="{{ .CreatedAt }}" class="table-light"><strong>{{ .CreatedAtRelative }}</strong></td>
+                    <td sorttable_customkey="{{ .UpdatedAt }}">{{ .UpdatedAtRelative }}</td>
+                </tr>
+            {{ end }}
+        </table>
+
+        <a id="updated"></a>
+        <div class="text-end"><small><a href="#top">Top</a></small></div>
+        <h2>By last updated at</h2>
+
+        <table class="table sortable">
+            <tr>
+                <th>Filename</th>
+                <th>Bin</th>
+                <th>Mime</th>
+                <th>Bytes</th>
+                <th>File Content</th>
+                <th>Downloads</th>
+                <th>Updates</th>
+                <th>Created</th>
+                <th>Updated</th>
+            </tr>
+            {{ range $index, $value := .Files.ByUpdated }}
+                <tr>
+                    <td><a href="/{{ .Bin }}/{{ .Filename }}">{{ .Filename }}</a></td>
+                    <td><a href="/{{ .Bin }}">{{ .Bin }}</a></td>
+                    <td>{{ .Mime }}</td>
+                    <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
+                    <td><code><a href="/admin/file/{{ .SHA256 }}">{{ slice .SHA256 0 7 }}</a></code></td>
+                    <td>{{ .Downloads }}</td>
+                    <td>{{ .Updates }}</td>
+                    <td sorttable_customkey="{{ .CreatedAt }}">{{ .CreatedAtRelative }}</td>
+                    <td sorttable_customkey="{{ .UpdatedAt }}" class="table-light"><strong>{{ .UpdatedAtRelative }}</strong></td>
+                </tr>
+            {{ end }}
+        </table>
+
+        <a id="bytes"></a>
+        <div class="text-end"><small><a href="#top">Top</a></small></div>
+        <h2>By bytes</h2>
+
+        <table class="table sortable">
+            <tr>
+                <th>Filename</th>
+                <th>Bin</th>
+                <th>Mime</th>
+                <th>Bytes</th>
+                <th>File Content</th>
+                <th>Downloads</th>
+                <th>Updates</th>
+                <th>Created</th>
+                <th>Updated</th>
+            </tr>
+            {{ range $index, $value := .Files.ByBytes }}
+                <tr>
+                    <td><a href="/{{ .Bin }}/{{ .Filename }}">{{ .Filename }}</a></td>
+                    <td><a href="/{{ .Bin }}">{{ .Bin }}</a></td>
+                    <td>{{ .Mime }}</td>
+                    <td sorttable_customkey="{{ .Bytes }}" class="table-light"><strong>{{ .BytesReadable }}</strong></td>
+                    <td><code><a href="/admin/file/{{ .SHA256 }}">{{ slice .SHA256 0 7 }}</a></code></td>
+                    <td>{{ .Downloads }}</td>
+                    <td>{{ .Updates }}</td>
+                    <td sorttable_customkey="{{ .CreatedAt }}">{{ .CreatedAtRelative }}</td>
+                    <td sorttable_customkey="{{ .UpdatedAt }}">{{ .UpdatedAtRelative }}</td>
+                </tr>
+            {{ end }}
+        </table>
+
+        <a id="downloads"></a>
+        <div class="text-end"><small><a href="#top">Top</a></small></div>
+        <h2>By download count</h2>
+
+        <table class="table sortable">
+            <tr>
+                <th>Filename</th>
+                <th>Bin</th>
+                <th>Mime</th>
+                <th>Bytes</th>
+                <th>File Content</th>
+                <th>Downloads</th>
+                <th>Updates</th>
+                <th>Created</th>
+                <th>Updated</th>
+            </tr>
+            {{ range $index, $value := .Files.ByDownloads }}
+                <tr>
+                    <td><a href="/{{ .Bin }}/{{ .Filename }}">{{ .Filename }}</a></td>
+                    <td><a href="/{{ .Bin }}">{{ .Bin }}</a></td>
+                    <td>{{ .Mime }}</td>
+                    <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
+                    <td><code><a href="/admin/file/{{ .SHA256 }}">{{ slice .SHA256 0 7 }}</a></code></td>
+                    <td class="table-light"><strong>{{ .Downloads }}</strong></td>
+                    <td>{{ .Updates }}</td>
+                    <td sorttable_customkey="{{ .CreatedAt }}">{{ .CreatedAtRelative }}</td>
+                    <td sorttable_customkey="{{ .UpdatedAt }}">{{ .UpdatedAtRelative }}</td>
+                </tr>
+            {{ end }}
+        </table>
+
+        <a id="updates"></a>
+        <div class="text-end"><small><a href="#top">Top</a></small></div>
+        <h2>By update count</h2>
+
+        <table class="table sortable">
+            <tr>
+                <th>Filename</th>
+                <th>Bin</th>
+                <th>Mime</th>
+                <th>Bytes</th>
+                <th>File Content</th>
+                <th>Downloads</th>
+                <th>Updates</th>
+                <th>Created</th>
+                <th>Updated</th>
+            </tr>
+            {{ range $index, $value := .Files.ByUpdates }}
+                <tr>
+                    <td><a href="/{{ .Bin }}/{{ .Filename }}">{{ .Filename }}</a></td>
+                    <td><a href="/{{ .Bin }}">{{ .Bin }}</a></td>
+                    <td>{{ .Mime }}</td>
+                    <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
+                    <td><code><a href="/admin/file/{{ .SHA256 }}">{{ slice .SHA256 0 7 }}</a></code></td>
+                    <td>{{ .Downloads }}</td>
+                    <td class="table-light"><strong>{{ .Updates }}</strong></td>
+                    <td sorttable_customkey="{{ .CreatedAt }}">{{ .CreatedAtRelative }}</td>
+                    <td sorttable_customkey="{{ .UpdatedAt }}">{{ .UpdatedAtRelative }}</td>
                 </tr>
             {{ end }}
         </table>

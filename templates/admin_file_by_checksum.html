@@ -54,12 +54,16 @@
         </table>
 
         {{ if .FileContent }}
-        {{ if not .FileContent.Blocked }}
-        <form method="POST" action="/admin/file/{{ .FileContent.SHA256 }}/block" onsubmit="return confirm('Are you sure you want to block this content? This will delete all file references and prevent future uploads of this content.');">
-            <button type="submit" class="btn btn-danger">Block this content</button>
-        </form>
-        <br>
+        {{ if .FileContent.Blocked }}
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalUnblockContent">
+            <i class="fas fa-fw fa-unlock"></i> Unblock this content
+        </button>
+        {{ else }}
+        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalBlockContent">
+            <i class="fas fa-fw fa-ban"></i> Block this content
+        </button>
         {{ end }}
+        <br>
         {{ end }}
         {{ end }}
 
@@ -94,6 +98,68 @@
                 </tr>
             {{ end }}
         </table>
+
+        <!-- Block content modal start -->
+        {{ if .FileContent }}
+        {{ if not .FileContent.Blocked }}
+        <div class="modal fade" id="modalBlockContent" tabindex="-1" role="dialog" aria-labelledby="modalBlockContentTitle" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header alert-secondary">
+                        <h5 class="modal-title" id="modalBlockContentTitle">Block content</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>You are about to block content with SHA256 checksum <code>{{ .FileContent.SHA256 }}</code>.</p>
+                        <p>This action will:</p>
+                        <ul>
+                            <li>Mark all existing file references as deleted</li>
+                            <li>Prevent future uploads of files with this content</li>
+                        </ul>
+                        <p>This action cannot be easily reversed - existing file references will remain deleted even if you unblock the content later.</p>
+                        <p class="lead">Are you sure you want to block this content?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <form method="POST" action="/admin/file/{{ .FileContent.SHA256 }}/block">
+                            <button type="submit" class="btn btn-danger"><i class="fas fa-fw fa-ban"></i> Confirm block</button>
+                        </form>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {{ end }}
+        {{ end }}
+        <!-- Block content modal end -->
+
+        <!-- Unblock content modal start -->
+        {{ if .FileContent }}
+        {{ if .FileContent.Blocked }}
+        <div class="modal fade" id="modalUnblockContent" tabindex="-1" role="dialog" aria-labelledby="modalUnblockContentTitle" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header alert-secondary">
+                        <h5 class="modal-title" id="modalUnblockContentTitle">Unblock content</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>You are about to unblock content with SHA256 checksum <code>{{ .FileContent.SHA256 }}</code>.</p>
+                        <p>This will allow future uploads of files with this content.</p>
+                        <p><strong>Note:</strong> Previously deleted file references will not be restored. Only new uploads will be allowed.</p>
+                        <p class="lead">Are you sure you want to unblock this content?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <form method="POST" action="/admin/file/{{ .FileContent.SHA256 }}/unblock">
+                            <button type="submit" class="btn btn-success"><i class="fas fa-fw fa-unlock"></i> Confirm unblock</button>
+                        </form>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {{ end }}
+        {{ end }}
+        <!-- Unblock content modal end -->
 
         <script src="/static/js/popper.min.js"></script>
         <script src="/static/js/bootstrap.min.js"></script>

@@ -16,6 +16,9 @@ type Client struct {
 	Continent             string       `json:"continent"`
 	Proxy                 bool         `json:"proxy"`
 	Requests              uint64       `json:"requests"`
+	FilesUploaded         uint64       `json:"files_uploaded"`
+	BytesUploaded         uint64       `json:"bytes_uploaded"`
+	BytesUploadedReadable string       `json:"bytes_uploaded_readable"`
 	FirstActiveAt         time.Time    `json:"first_active_at"`
 	FirstActiveAtRelative string       `json:"first_active_at_relative"`
 	LastActiveAt          time.Time    `json:"last_active_at"`
@@ -39,6 +42,10 @@ type AutonomousSystem struct {
 	Organization          string       `json:"organization"`
 	Network               string       `json:"network"`
 	Requests              uint64       `json:"requests"`
+	ClientCount           uint64       `json:"client_count"`
+	FilesUploaded         uint64       `json:"files_uploaded"`
+	BytesUploaded         uint64       `json:"bytes_uploaded"`
+	BytesUploadedReadable string       `json:"bytes_uploaded_readable"`
 	FirstActiveAt         time.Time    `json:"first_active_at"`
 	FirstActiveAtRelative string       `json:"first_active_at_relative"`
 	LastActiveAt          time.Time    `json:"last_active_at"`
@@ -54,4 +61,30 @@ func (a *AutonomousSystem) IsBanned() bool {
 		}
 	}
 	return false
+}
+
+type ClientByCountry struct {
+	Country               string       `json:"country"`
+	ClientCount           uint64       `json:"client_count"`
+	Requests              uint64       `json:"requests"`
+	FilesUploaded         uint64       `json:"files_uploaded"`
+	BytesUploaded         uint64       `json:"bytes_uploaded"`
+	BytesUploadedReadable string       `json:"bytes_uploaded_readable"`
+	FirstActiveAt         time.Time    `json:"first_active_at"`
+	FirstActiveAtRelative string       `json:"first_active_at_relative"`
+	LastActiveAt          time.Time    `json:"last_active_at"`
+	LastActiveAtRelative  string       `json:"last_active_at_relative"`
+}
+
+type ClientByNetwork struct {
+	Network               string       `json:"network"`
+	ClientCount           uint64       `json:"client_count"`
+	Requests              uint64       `json:"requests"`
+	FilesUploaded         uint64       `json:"files_uploaded"`
+	BytesUploaded         uint64       `json:"bytes_uploaded"`
+	BytesUploadedReadable string       `json:"bytes_uploaded_readable"`
+	FirstActiveAt         time.Time    `json:"first_active_at"`
+	FirstActiveAtRelative string       `json:"first_active_at_relative"`
+	LastActiveAt          time.Time    `json:"last_active_at"`
+	LastActiveAtRelative  string       `json:"last_active_at_relative"`
 }

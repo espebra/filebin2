@@ -360,7 +360,6 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	// earlier
 	file.DeletedAt.Scan(nil)
 
-	file.ClientId = ""
 	file.Bytes = inputBytes
 	file.Mime = mime.String()
 	file.SHA256 = sha256ChecksumString

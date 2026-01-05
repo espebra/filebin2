@@ -11,7 +11,6 @@ type Transaction struct {
 	Method            string        `json:"method"`
 	Path              string        `json:"path"`
 	IP                string        `json:"ip"`
-	ClientId          string        `json:"client_id"`
 	Status            int           `json:"status"`
 	ReqBytes          int64         `json:"req_bytes"`
 	ReqBytesReadable  string        `json:"request-bytes-readable"`
