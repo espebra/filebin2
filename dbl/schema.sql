@@ -1,4 +1,4 @@
-CREATE TABLE bin (
+CREATE TABLE IF NOT EXISTS bin (
 	id		VARCHAR(64) NOT NULL PRIMARY KEY,
 	readonly	BOOLEAN NOT NULL,
 	updated_at	TIMESTAMP NOT NULL,
@@ -10,7 +10,7 @@ CREATE TABLE bin (
 	updates		BIGINT NOT NULL
 );
 
-CREATE TABLE file_content (
+CREATE TABLE IF NOT EXISTS file_content (
 	sha256		VARCHAR(128) NOT NULL PRIMARY KEY,
 	bytes		BIGINT NOT NULL,
 	md5		VARCHAR(128) NOT NULL,
@@ -21,7 +21,7 @@ CREATE TABLE file_content (
 	last_referenced_at TIMESTAMP NOT NULL
 );
 
-CREATE TABLE file (
+CREATE TABLE IF NOT EXISTS file (
 	id		BIGSERIAL NOT NULL PRIMARY KEY,
 	bin_id		VARCHAR(64) REFERENCES bin(id) ON DELETE CASCADE,
 	filename        VARCHAR(128) NOT NULL,
@@ -36,7 +36,7 @@ CREATE TABLE file (
 	UNIQUE(bin_id, filename)
 );
 
-CREATE TABLE transaction (
+CREATE TABLE IF NOT EXISTS transaction (
 	id		BIGSERIAL NOT NULL PRIMARY KEY,
 	bin_id		VARCHAR(64) NOT NULL,
 	operation	TEXT NOT NULL,
@@ -53,7 +53,7 @@ CREATE TABLE transaction (
 	UNIQUE(id)
 );
 
-CREATE TABLE autonomous_system (
+CREATE TABLE IF NOT EXISTS autonomous_system (
 	asn					INT NOT NULL PRIMARY KEY,
 	organization				VARCHAR(128) NOT NULL,
 	requests				BIGINT NOT NULL,
@@ -62,7 +62,7 @@ CREATE TABLE autonomous_system (
 	banned_at				TIMESTAMP
 );
 
-CREATE TABLE client (
+CREATE TABLE IF NOT EXISTS client (
 	ip					VARCHAR(64) NOT NULL PRIMARY KEY,
 	asn					INT NOT NULL,
 	network					VARCHAR(64) NOT NULL,
@@ -77,12 +77,12 @@ CREATE TABLE client (
 	banned_by				VARCHAR(64) NOT NULL
 );
 
-CREATE INDEX idx_bin_id ON transaction(bin_id);
-CREATE INDEX idx_ip ON transaction(ip);
-CREATE INDEX idx_transaction_timestamp ON transaction(timestamp);
-CREATE INDEX idx_file_deleted_at ON file(deleted_at);
-CREATE INDEX idx_bin_deleted_at_expired_at ON bin(expired_at, deleted_at);
-CREATE INDEX idx_sha256 ON file(sha256);
-CREATE INDEX idx_client_banned_at ON client(banned_at, last_active_at);
-CREATE INDEX idx_client_ip_active ON client(ip, last_active_at);
-CREATE INDEX idx_file_content_in_storage ON file_content(in_storage)
+CREATE INDEX IF NOT EXISTS idx_bin_id ON transaction(bin_id);
+CREATE INDEX IF NOT EXISTS idx_ip ON transaction(ip);
+CREATE INDEX IF NOT EXISTS idx_transaction_timestamp ON transaction(timestamp);
+CREATE INDEX IF NOT EXISTS idx_file_deleted_at ON file(deleted_at);
+CREATE INDEX IF NOT EXISTS idx_bin_deleted_at_expired_at ON bin(expired_at, deleted_at);
+CREATE INDEX IF NOT EXISTS idx_sha256 ON file(sha256);
+CREATE INDEX IF NOT EXISTS idx_client_banned_at ON client(banned_at, last_active_at);
+CREATE INDEX IF NOT EXISTS idx_client_ip_active ON client(ip, last_active_at);
+CREATE INDEX IF NOT EXISTS idx_file_content_in_storage ON file_content(in_storage);
