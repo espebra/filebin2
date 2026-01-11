@@ -74,6 +74,9 @@
         <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalBlockContent">
             <i class="fas fa-fw fa-ban"></i> Block this content
         </button>
+        <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#modalDeleteContent">
+            <i class="fas fa-fw fa-trash"></i> Delete this content
+        </button>
         {{ end }}
         <br>
         {{ end }}
@@ -172,6 +175,42 @@
         {{ end }}
         {{ end }}
         <!-- Unblock content modal end -->
+
+        <!-- Delete content modal start -->
+        {{ if .FileContent }}
+        {{ if not .FileContent.Blocked }}
+        <div class="modal fade" id="modalDeleteContent" tabindex="-1" role="dialog" aria-labelledby="modalDeleteContentTitle" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header alert-secondary">
+                        <h5 class="modal-title" id="modalDeleteContentTitle">Delete content</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>You are about to delete all file references for content with SHA256 checksum <code>{{ .FileContent.SHA256 }}</code>.</p>
+                        <p>This action will:</p>
+                        <ul>
+                            <li>Mark all existing file references as deleted</li>
+                            <li>Make the files unavailable for download</li>
+                        </ul>
+                        <p>This action will <strong>NOT</strong>:</p>
+                        <ul>
+                            <li>Block the content - future uploads with the same content will be allowed</li>
+                        </ul>
+                        <p class="lead">Are you sure you want to delete these file references?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <form method="POST" action="/admin/file/{{ .FileContent.SHA256 }}/delete">
+                            <button type="submit" class="btn btn-warning"><i class="fas fa-fw fa-trash"></i> Confirm delete</button>
+                        </form>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {{ end }}
+        {{ end }}
+        <!-- Delete content modal end -->
 
         <script src="/static/js/popper.min.js"></script>
         <script src="/static/js/bootstrap.min.js"></script>

@@ -254,6 +254,28 @@ func (d *FileContentDao) UnblockContent(sha256 string) error {
 	return nil
 }
 
+// DeleteFileReferences soft-deletes all file references for a given SHA256 without blocking the content
+func (d *FileContentDao) DeleteFileReferences(sha256 string) error {
+	now := time.Now().UTC().Truncate(time.Microsecond)
+
+	// Mark all file references with this SHA256 as deleted
+	sqlDeleteFiles := `UPDATE file SET deleted_at = $1 WHERE sha256 = $2 AND deleted_at IS NULL`
+	res, err := d.db.Exec(sqlDeleteFiles, now, sha256)
+	if err != nil {
+		return err
+	}
+
+	count, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return errors.New("No file references found for this content")
+	}
+
+	return nil
+}
+
 func (d *FileContentDao) GetByCreated(limit int) (contents []ds.FileByChecksum, err error) {
 	sqlStatement := `SELECT fc.sha256, COUNT(f.sha256) as c, fc.mime, fc.bytes,
 		COUNT(f.sha256) * fc.bytes AS bytes_total,

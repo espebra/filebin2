@@ -31,6 +31,7 @@
                     <th>IP</th>
                     <th>Hostname</th>
                     <th>Last active</th>
+                    <th>Last active (readable)</th>
                 </tr>
             </thead>
             <tbody>
@@ -39,6 +40,7 @@
                     <td>{{ .IP }}</td>
                     <td>{{ if .Hostname }}{{ .Hostname }}{{ else }}-{{ end }}</td>
                     <td sorttable_customkey="{{ .LastActive }}">{{ .LastActive.Format "2006-01-02 15:04:05 UTC" }}</td>
+                    <td>{{ .LastActiveReadable }}</td>
                 </tr>
                 {{ end }}
             </tbody>
