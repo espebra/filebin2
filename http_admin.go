@@ -47,6 +47,11 @@ func (h *HTTP) viewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	copy(data.AdminLogins, h.adminLogins)
 	h.adminLoginsMutex.Unlock()
 
+	// Add human-readable relative time for each admin login
+	for i := range data.AdminLogins {
+		data.AdminLogins[i].LastActiveReadable = humanize.Time(data.AdminLogins[i].LastActive)
+	}
+
 	// Get storage metrics
 	usedBytes := h.dao.Metrics().StorageBytesAllocated()
 	data.StorageMetrics.UsedBytes = usedBytes
@@ -395,6 +400,24 @@ func (h *HTTP) unblockFileContent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Printf("Unblocked content with SHA256: %s\n", sha256)
+
+	// Redirect back to the file view page
+	http.Redirect(w, r, "/admin/file/"+sha256, http.StatusSeeOther)
+}
+
+func (h *HTTP) deleteFileContent(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	sha256 := params["sha256"]
+
+	// Delete all file references for this content (without blocking)
+	err := h.dao.FileContent().DeleteFileReferences(sha256)
+	if err != nil {
+		fmt.Printf("Unable to delete file references for content %s: %s\n", sha256, err.Error())
+		http.Error(w, "Failed to delete file references", http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Printf("Deleted file references for content with SHA256: %s\n", sha256)
 
 	// Redirect back to the file view page
 	http.Redirect(w, r, "/admin/file/"+sha256, http.StatusSeeOther)
