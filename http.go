@@ -37,18 +37,18 @@ type AdminLogin struct {
 }
 
 type HTTP struct {
-	router          *mux.Router
-	templateBox     *embed.FS
-	staticBox       *embed.FS
-	templates       *template.Template
-	dao             *dbl.DAO
-	s3              *s3.S3AO
-	geodb           *geoip.DAO
-	workspace       *workspace.Manager
-	config          *ds.Config
-	metrics         *ds.Metrics
-	metricsRegistry *prometheus.Registry
-	adminLogins     []AdminLogin
+	router           *mux.Router
+	templateBox      *embed.FS
+	staticBox        *embed.FS
+	templates        *template.Template
+	dao              *dbl.DAO
+	s3               *s3.S3AO
+	geodb            *geoip.DAO
+	workspace        *workspace.Manager
+	config           *ds.Config
+	metrics          *ds.Metrics
+	metricsRegistry  *prometheus.Registry
+	adminLogins      []AdminLogin
 	adminLoginsMutex sync.Mutex
 }
 
@@ -198,7 +198,7 @@ func (h *HTTP) auth(fn func(http.ResponseWriter, *http.Request)) http.HandlerFun
 		}
 
 		h.trackAdminLogin(r.RemoteAddr)
-	fn(w, r)
+		fn(w, r)
 	}
 }
 

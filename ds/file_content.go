@@ -5,15 +5,15 @@ import (
 )
 
 type FileContent struct {
-	SHA256                    string    `json:"sha256"`
-	Bytes                     uint64    `json:"bytes"`
-	BytesReadable             string    `json:"bytes_readable"`
-	MD5                       string    `json:"md5"`
-	Mime                      string    `json:"mime"`
-	InStorage                 bool      `json:"in_storage"`
-	Blocked                   bool      `json:"blocked"`
-	CreatedAt                 time.Time `json:"created_at"`
-	CreatedAtRelative         string    `json:"created_at_relative"`
-	LastReferencedAt          time.Time `json:"last_referenced_at"`
-	LastReferencedAtRelative  string    `json:"last_referenced_at_relative"`
+	SHA256                   string    `json:"sha256"`
+	Bytes                    uint64    `json:"bytes"`
+	BytesReadable            string    `json:"bytes_readable"`
+	MD5                      string    `json:"md5"`
+	Mime                     string    `json:"mime"`
+	InStorage                bool      `json:"in_storage"`
+	Blocked                  bool      `json:"blocked"`
+	CreatedAt                time.Time `json:"created_at"`
+	CreatedAtRelative        string    `json:"created_at_relative"`
+	LastReferencedAt         time.Time `json:"last_referenced_at"`
+	LastReferencedAtRelative string    `json:"last_referenced_at_relative"`
 }

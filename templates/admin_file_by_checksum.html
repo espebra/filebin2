@@ -37,9 +37,21 @@
                 <th>Size</th>
                 <td>{{ .FileContent.BytesReadable }} ({{ .FileContent.Bytes }} bytes)</td>
             </tr>
+            {{ if eq .FileContent.InStorage true }}
             <tr>
+            {{ else }}
+            <tr class="table-danger">
+            {{ end }}
                 <th>In storage</th>
                 <td>{{ .FileContent.InStorage }}</td>
+            </tr>
+            <tr>
+                <th>S3 URL</th>
+                <td><code><a href="{{ .S3URL }}">{{ .S3URL }}</a></code>
+                    {{ if .S3PresignedURL }}
+                        (<a href="{{ .S3PresignedURL }}">Presigned URL</a>)
+                    {{ end }}
+                </td>
             </tr>
             <tr>
                 <th>Blocked</th>
@@ -81,7 +93,7 @@
                 <th>File updates</th>
             </tr>
             {{ range $index, $value := .Files }}
-                {{ if eq .InStorage true }}
+                {{ if eq .AvailableForDownload true }}
                         <tr class="table">
                 {{ else }}
                         <tr class="table-danger">
