@@ -16,9 +16,11 @@ import (
 )
 
 type S3AO struct {
-	client *minio.Client
-	bucket string
-	expiry time.Duration
+	client   *minio.Client
+	bucket   string
+	endpoint string
+	secure   bool
+	expiry   time.Duration
 }
 
 type BucketMetrics struct {
@@ -40,6 +42,7 @@ func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool, pr
 	minioClient, err := minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
 		Secure: secure,
+		Region: region,
 	})
 	if err != nil {
 		return s3ao, err
@@ -48,6 +51,8 @@ func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool, pr
 
 	s3ao.client = minioClient
 	s3ao.bucket = bucket
+	s3ao.endpoint = endpoint
+	s3ao.secure = secure
 	s3ao.expiry = presignExpiry
 
 	fmt.Printf("Established session to S3AO at %s\n", endpoint)
@@ -321,4 +326,13 @@ func (s S3AO) GetClient() *minio.Client {
 // GetBucket returns the bucket name
 func (s S3AO) GetBucket() string {
 	return s.bucket
+}
+
+// GetObjectURL returns the full S3 URL for a content SHA256
+func (s S3AO) GetObjectURL(contentSHA256 string) string {
+	protocol := "http"
+	if s.secure {
+		protocol = "https"
+	}
+	return fmt.Sprintf("%s://%s/%s/%s", protocol, s.endpoint, s.bucket, contentSHA256)
 }

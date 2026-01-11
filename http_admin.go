@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	//"github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize"
 	"github.com/gorilla/mux"
 	"io"
 	"net/http"
@@ -17,15 +17,26 @@ import (
 )
 
 func (h *HTTP) viewAdminDashboard(w http.ResponseWriter, r *http.Request) {
+	type StorageMetrics struct {
+		UsedBytes          uint64  `json:"used_bytes"`
+		UsedBytesReadable  string  `json:"used_bytes_readable"`
+		TotalBytes         uint64  `json:"total_bytes"`
+		TotalBytesReadable string  `json:"total_bytes_readable"`
+		FreeBytes          uint64  `json:"free_bytes"`
+		FreeBytesReadable  string  `json:"free_bytes_readable"`
+		UsedPercent        float64 `json:"used_percent"`
+	}
+
 	type Data struct {
 		//Bins Bins `json:"bins"`
 		//Files []ds.File `json:"files"`
-		BucketMetrics s3.BucketMetrics `json:"bucketmetrics"`
-		Page          string           `json:"page"`
-		DBMetrics     ds.Metrics       `json:"db_metrics"`
-		DBStats       sql.DBStats      `json:"db_stats"`
-		Config        ds.Config        `json:"-"`
-		AdminLogins   []AdminLogin     `json:"admin_logins"`
+		BucketMetrics  s3.BucketMetrics `json:"bucketmetrics"`
+		Page           string           `json:"page"`
+		DBMetrics      ds.Metrics       `json:"db_metrics"`
+		DBStats        sql.DBStats      `json:"db_stats"`
+		Config         ds.Config        `json:"-"`
+		AdminLogins    []AdminLogin     `json:"admin_logins"`
+		StorageMetrics StorageMetrics   `json:"storage_metrics"`
 	}
 	var data Data
 	data.Config = *h.config
@@ -35,6 +46,28 @@ func (h *HTTP) viewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	data.AdminLogins = make([]AdminLogin, len(h.adminLogins))
 	copy(data.AdminLogins, h.adminLogins)
 	h.adminLoginsMutex.Unlock()
+
+	// Get storage metrics
+	usedBytes := h.dao.Metrics().StorageBytesAllocated()
+	data.StorageMetrics.UsedBytes = usedBytes
+	data.StorageMetrics.UsedBytesReadable = humanize.Bytes(usedBytes)
+	data.StorageMetrics.TotalBytes = h.config.LimitStorageBytes
+	data.StorageMetrics.TotalBytesReadable = h.config.LimitStorageReadable
+
+	if h.config.LimitStorageBytes > 0 {
+		if usedBytes > h.config.LimitStorageBytes {
+			data.StorageMetrics.FreeBytes = 0
+		} else {
+			data.StorageMetrics.FreeBytes = h.config.LimitStorageBytes - usedBytes
+		}
+		data.StorageMetrics.FreeBytesReadable = humanize.Bytes(data.StorageMetrics.FreeBytes)
+		data.StorageMetrics.UsedPercent = float64(usedBytes) / float64(h.config.LimitStorageBytes) * 100
+	} else {
+		// No limit configured
+		data.StorageMetrics.FreeBytes = 0
+		data.StorageMetrics.FreeBytesReadable = "Unlimited"
+		data.StorageMetrics.UsedPercent = 0
+	}
 	//data.BucketMetrics = h.s3.GetBucketMetrics()
 	//err := h.dao.Metrics().GetMetrics(h.metrics)
 	//if err != nil {
@@ -275,12 +308,15 @@ func (h *HTTP) viewAdminFile(w http.ResponseWriter, r *http.Request) {
 	inputSHA256 := params["sha256"]
 
 	type Data struct {
-		Files       []ds.File       `json:"files"`
-		FileContent *ds.FileContent `json:"file_content,omitempty"`
-		SHA256      string          `json:"sha256"`
+		Files          []ds.File       `json:"files"`
+		FileContent    *ds.FileContent `json:"file_content,omitempty"`
+		SHA256         string          `json:"sha256"`
+		S3URL          string          `json:"s3_url"`
+		S3PresignedURL string          `json:"s3_presigned_url"`
 	}
 	var data Data
 	data.SHA256 = inputSHA256
+	data.S3URL = h.s3.GetObjectURL(inputSHA256)
 
 	// Get file content metadata (common across all files with this SHA256)
 	fileContent, err := h.dao.FileContent().GetBySHA256(inputSHA256)
@@ -289,6 +325,15 @@ func (h *HTTP) viewAdminFile(w http.ResponseWriter, r *http.Request) {
 		// Don't fail completely, just log the error
 	} else {
 		data.FileContent = fileContent
+
+		// Generate presigned URL for direct S3 access
+		presignedURL, err := h.s3.PresignedGetObject(inputSHA256, inputSHA256, fileContent.Mime)
+		if err != nil {
+			fmt.Printf("Unable to generate presigned URL for SHA256 %s: %s\n", inputSHA256, err.Error())
+			data.S3PresignedURL = ""
+		} else {
+			data.S3PresignedURL = presignedURL.String()
+		}
 	}
 
 	fileByChecksum, err := h.dao.File().FileByChecksum(inputSHA256)
@@ -607,14 +652,14 @@ func (h *HTTP) viewAdminClients(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type Clients struct {
-		ByLastActiveAt   []ds.Client                      `json:"by-last-active-at"`
-		ByRequests       []ds.Client                      `json:"by-requests"`
-		ByBannedAt       []ds.Client                      `json:"by-banned-at"`
-		ByFilesUploaded  []ds.Client                      `json:"by-files-uploaded"`
-		ByBytesUploaded  []ds.Client                      `json:"by-bytes-uploaded"`
-		ByCountry        []ds.ClientByCountry             `json:"by-country"`
-		ByNetwork        []ds.ClientByNetwork             `json:"by-network"`
-		ByASN            []ds.AutonomousSystem   `json:"by-asn"`
+		ByLastActiveAt  []ds.Client           `json:"by-last-active-at"`
+		ByRequests      []ds.Client           `json:"by-requests"`
+		ByBannedAt      []ds.Client           `json:"by-banned-at"`
+		ByFilesUploaded []ds.Client           `json:"by-files-uploaded"`
+		ByBytesUploaded []ds.Client           `json:"by-bytes-uploaded"`
+		ByCountry       []ds.ClientByCountry  `json:"by-country"`
+		ByNetwork       []ds.ClientByNetwork  `json:"by-network"`
+		ByASN           []ds.AutonomousSystem `json:"by-asn"`
 	}
 
 	type Data struct {

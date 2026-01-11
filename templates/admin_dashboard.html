@@ -45,6 +45,41 @@
         </table>
         {{ end }}
 
+        <h2>Storage capacity</h2>
+        {{ if gt .StorageMetrics.TotalBytes 0 }}
+        <table class="table table-sm">
+            <tr>
+                <th>Used</th>
+                <td>{{ .StorageMetrics.UsedBytesReadable }} ({{ .StorageMetrics.UsedBytes }} bytes)</td>
+            </tr>
+            <tr>
+                <th>Total</th>
+                <td>{{ .StorageMetrics.TotalBytesReadable }} ({{ .StorageMetrics.TotalBytes }} bytes)</td>
+            </tr>
+            <tr>
+                <th>Free</th>
+                <td>{{ .StorageMetrics.FreeBytesReadable }} ({{ .StorageMetrics.FreeBytes }} bytes)</td>
+            </tr>
+            <tr>
+                <th>Usage</th>
+                <td>
+                    {{ $pct := .StorageMetrics.UsedPercent }}
+                    <div class="progress" style="height: 25px;">
+                        {{ if lt $pct 70.0 }}
+                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ printf "%.1f" $pct }}%;" aria-valuenow="{{ printf "%.1f" $pct }}" aria-valuemin="0" aria-valuemax="100">{{ printf "%.1f%%" $pct }}</div>
+                        {{ else if lt $pct 90.0 }}
+                            <div class="progress-bar bg-warning" role="progressbar" style="width: {{ printf "%.1f" $pct }}%;" aria-valuenow="{{ printf "%.1f" $pct }}" aria-valuemin="0" aria-valuemax="100">{{ printf "%.1f%%" $pct }}</div>
+                        {{ else }}
+                            <div class="progress-bar bg-danger" role="progressbar" style="width: {{ printf "%.1f" $pct }}%;" aria-valuenow="{{ printf "%.1f" $pct }}" aria-valuemin="0" aria-valuemax="100">{{ printf "%.1f%%" $pct }}</div>
+                        {{ end }}
+                    </div>
+                </td>
+            </tr>
+        </table>
+        {{ else }}
+        <p>No storage limit configured. Current usage: {{ .StorageMetrics.UsedBytesReadable }} ({{ .StorageMetrics.UsedBytes }} bytes)</p>
+        {{ end }}
+
         <h2>Database connection pool</h2>
         <ul>
             <li>Maximum number of open connections to the database: {{ .DBStats.MaxOpenConnections}}</li>
