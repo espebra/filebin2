@@ -51,6 +51,8 @@ type HTTP struct {
 	metricsRegistry  *prometheus.Registry
 	adminLogins      []AdminLogin
 	adminLoginsMutex sync.Mutex
+	siteMessage      ds.SiteMessage
+	siteMessageMutex sync.RWMutex
 }
 
 func (h *HTTP) Init() (err error) {
@@ -87,6 +89,8 @@ func (h *HTTP) Init() (err error) {
 	h.router.HandleFunc("/admin/file/{sha256:[0-9a-z]+}/block", h.log(h.auth(h.blockFileContent))).Methods("POST")
 	h.router.HandleFunc("/admin/file/{sha256:[0-9a-z]+}/unblock", h.log(h.auth(h.unblockFileContent))).Methods("POST")
 	h.router.HandleFunc("/admin/file/{sha256:[0-9a-z]+}/delete", h.log(h.auth(h.deleteFileContent))).Methods("POST")
+	h.router.HandleFunc("/admin/message", h.auth(h.viewAdminSiteMessage)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin/message", h.log(h.auth(h.updateSiteMessage))).Methods("POST")
 	h.router.HandleFunc("/admin", h.auth(h.viewAdminDashboard)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/approve/{bin:[A-Za-z0-9_-]+}", h.log(h.auth(h.approveBin))).Methods("PUT")
 	//h.router.HandleFunc("/admin/cleanup", h.Auth(h.ViewAdminCleanup)).Methods(http.MethodHead, http.MethodGet)

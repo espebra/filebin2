@@ -322,8 +322,6 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 	fp.Seek(0, 0)
 
-	t3 := time.Now()
-
 	// Check if file exists
 	file, found, err := h.dao.File().GetByName(bin.Id, inputFilename)
 	if err != nil {
@@ -385,6 +383,8 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 			fmt.Printf("Content with SHA256 %s already exists in storage, skipping S3 upload\n", sha256ChecksumString)
 		}
 	}
+
+	t3 := time.Now()
 
 	// Upload to S3 only if content doesn't already exist
 	if !skipS3Upload {
@@ -461,8 +461,6 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Printf("Uploaded filename %q (%s) to bin %q (db in %.3fs, buffered in %.3fs, checksum in %.3fs, stored in %.3fs, total %.3fs)\n", file.Filename, humanize.Bytes(file.Bytes), bin.Id, t1.Sub(t0).Seconds(), t2.Sub(t1).Seconds(), t3.Sub(t2).Seconds(), t4.Sub(t3).Seconds(), t4.Sub(t0).Seconds())
-
 	// Metrics
 	h.metrics.IncrFileUploadCount()
 	h.metrics.IncrBytesClientToFilebin(file.Bytes)
@@ -476,13 +474,17 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	data.Bin = bin
 	data.File = file
 
-	w.Header().Set("Content-Type", "application/json")
 	out, err := json.MarshalIndent(data, "", "    ")
 	if err != nil {
 		fmt.Printf("Failed to parse json: %s\n", err.Error())
 		http.Error(w, "Errno 201", http.StatusInternalServerError)
 		return
 	}
+
+	t5 := time.Now()
+	fmt.Printf("Uploaded filename %q (%s) with sha256 %s to bin %q (db in %.3fs, buffered in %.3fs, stored in %.3fs, total %.3fs)\n", file.Filename, humanize.Bytes(file.Bytes), file.SHA256, bin.Id, t1.Sub(t0).Seconds(), t2.Sub(t1).Seconds(), t4.Sub(t3).Seconds(), t5.Sub(t0).Seconds())
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	io.WriteString(w, string(out))
 }

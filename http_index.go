@@ -16,12 +16,21 @@ func (h *HTTP) index(w http.ResponseWriter, r *http.Request) {
 
 	type Data struct {
 		ds.Common
-		Bin              ds.Bin `json:"bin"`
-		AvailableStorage bool   `json:"available_storage"`
+		Bin              ds.Bin          `json:"bin"`
+		AvailableStorage bool            `json:"available_storage"`
+		SiteMessage      *ds.SiteMessage `json:"site_message,omitempty"`
 	}
 	var data Data
 	data.Page = "front"
 	data.Contact = h.config.Contact
+
+	// Fetch site message if published for front page
+	h.siteMessageMutex.RLock()
+	if h.siteMessage.IsPublishedFrontPage() {
+		message := h.siteMessage
+		data.SiteMessage = &message
+	}
+	h.siteMessageMutex.RUnlock()
 
 	bin := &ds.Bin{}
 	bin.ExpiredAt = time.Now().UTC().Add(h.config.ExpirationDuration)

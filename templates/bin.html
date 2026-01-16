@@ -51,8 +51,11 @@
     </head>
     <body class="container-xl">
 
-        {{ template "topbar" . }}
+        {{ if .SiteMessage }}
+            {{ template "message_banner" .SiteMessage }}
+        {{ end }}
 
+        {{ template "topbar" . }}
 
         <div class="row">
             <div class="col">
