@@ -53,6 +53,35 @@ type HTTP struct {
 	adminLoginsMutex sync.Mutex
 	siteMessage      ds.SiteMessage
 	siteMessageMutex sync.RWMutex
+
+	// Cache for storage bytes to avoid expensive DB query on every request
+	storageBytesCache uint64
+	storageBytesMutex sync.RWMutex
+}
+
+// getCachedStorageBytes returns the cached storage bytes value
+func (h *HTTP) getCachedStorageBytes() uint64 {
+	h.storageBytesMutex.RLock()
+	defer h.storageBytesMutex.RUnlock()
+	return h.storageBytesCache
+}
+
+// startStorageBytesUpdater starts a background goroutine that updates the storage bytes cache every minute
+func (h *HTTP) startStorageBytesUpdater() {
+	// Initial update
+	h.storageBytesMutex.Lock()
+	h.storageBytesCache = h.dao.Metrics().StorageBytesAllocated()
+	h.storageBytesMutex.Unlock()
+
+	go func() {
+		ticker := time.NewTicker(1 * time.Minute)
+		for range ticker.C {
+			bytes := h.dao.Metrics().StorageBytesAllocated()
+			h.storageBytesMutex.Lock()
+			h.storageBytesCache = bytes
+			h.storageBytesMutex.Unlock()
+		}
+	}()
 }
 
 func (h *HTTP) Init() (err error) {
@@ -108,6 +137,10 @@ func (h *HTTP) Init() (err error) {
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.log(h.clientLookup(h.uploadFile))).Methods(http.MethodPost, http.MethodPut)
 
 	h.config.ExpirationDuration = time.Second * time.Duration(h.config.Expiration)
+
+	// Start background updater for storage bytes cache
+	h.startStorageBytesUpdater()
+
 	return err
 }
 

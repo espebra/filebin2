@@ -26,7 +26,7 @@ type DAO struct {
 
 // Init a database connection given
 // a database name and user.
-func Init(dbHost string, dbPort int, dbName, dbUser, dbPassword string) (DAO, error) {
+func Init(dbHost string, dbPort int, dbName, dbUser, dbPassword string, maxOpenConns, maxIdleConns int) (DAO, error) {
 	var dao DAO
 	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", dbHost, dbPort, dbUser, dbPassword, dbName)
 	db, err := sql.Open("postgres", connStr)
@@ -37,9 +37,10 @@ func Init(dbHost string, dbPort int, dbName, dbUser, dbPassword string) (DAO, er
 		return dao, errors.New(fmt.Sprintf("Unable to ping the database: %s:%d\n", dbHost, dbPort))
 	}
 
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(25)
+	db.SetMaxOpenConns(maxOpenConns)
+	db.SetMaxIdleConns(maxIdleConns)
 	db.SetConnMaxLifetime(5 * time.Minute)
+	db.SetConnMaxIdleTime(1 * time.Minute)
 
 	dao = DAO{db: db}
 	dao.ConnStr = connStr

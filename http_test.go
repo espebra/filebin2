@@ -42,7 +42,7 @@ var (
 )
 
 func tearUp() (dao dbl.DAO, s3ao s3.S3AO, err error) {
-	dao, err = dbl.Init(testDbHost, testDbPort, testDbName, testDbUser, testDbPassword)
+	dao, err = dbl.Init(testDbHost, testDbPort, testDbName, testDbUser, testDbPassword, 25, 25)
 	if err != nil {
 		return dao, s3ao, err
 	}

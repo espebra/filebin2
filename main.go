@@ -58,11 +58,13 @@ var (
 	idleTimeoutFlag       = flag.Duration("idle-timeout", 30*time.Second, "Idle timeout for the HTTP server")
 
 	// Database
-	dbHostFlag     = flag.String("db-host", os.Getenv("DATABASE_HOST"), "Database host")
-	dbPortFlag     = flag.String("db-port", os.Getenv("DATABASE_PORT"), "Database port")
-	dbNameFlag     = flag.String("db-name", os.Getenv("DATABASE_NAME"), "Name of the database")
-	dbUsernameFlag = flag.String("db-username", "", "Database username")
-	dbPasswordFlag = flag.String("db-password", "", "Database password")
+	dbHostFlag         = flag.String("db-host", os.Getenv("DATABASE_HOST"), "Database host")
+	dbPortFlag         = flag.String("db-port", os.Getenv("DATABASE_PORT"), "Database port")
+	dbNameFlag         = flag.String("db-name", os.Getenv("DATABASE_NAME"), "Name of the database")
+	dbUsernameFlag     = flag.String("db-username", "", "Database username")
+	dbPasswordFlag     = flag.String("db-password", "", "Database password")
+	dbMaxOpenConnsFlag = flag.Int("db-max-open-conns", 25, "Maximum number of open database connections")
+	dbMaxIdleConnsFlag = flag.Int("db-max-idle-conns", 25, "Maximum number of idle database connections")
 
 	// S3
 	s3EndpointFlag  = flag.String("s3-endpoint", os.Getenv("S3_ENDPOINT"), "S3 endpoint")
@@ -166,7 +168,7 @@ func main() {
 		dbport = 5432
 	}
 
-	daoconn, err := dbl.Init(*dbHostFlag, dbport, *dbNameFlag, *dbUsernameFlag, *dbPasswordFlag)
+	daoconn, err := dbl.Init(*dbHostFlag, dbport, *dbNameFlag, *dbUsernameFlag, *dbPasswordFlag, *dbMaxOpenConnsFlag, *dbMaxIdleConnsFlag)
 	if err != nil {
 		fmt.Printf("Unable to connect to the database: %s\n", err.Error())
 		os.Exit(2)

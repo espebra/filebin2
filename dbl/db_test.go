@@ -13,7 +13,7 @@ const (
 )
 
 func tearUp() (DAO, error) {
-	dao, err := Init(testDbHost, testDbPort, testDbName, testDbUser, testDbPassword)
+	dao, err := Init(testDbHost, testDbPort, testDbName, testDbUser, testDbPassword, 25, 25)
 	if err != nil {
 		return dao, err
 	}
@@ -43,7 +43,7 @@ func TestDbInit(t *testing.T) {
 }
 
 func TestFailingInit(t *testing.T) {
-	_, err := Init("", 0, "", "", "")
+	_, err := Init("", 0, "", "", "", 25, 25)
 	if err == nil {
 		t.Error("Was expecting to fail here, invalid user and db name were provided.")
 	}
