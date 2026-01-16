@@ -233,20 +233,39 @@ func (c *ClientDao) GetByBytesUploaded(limit int) (clients []ds.Client, err erro
 
 func (c *ClientDao) GetByCountry(limit int) (countries []ds.ClientByCountry, err error) {
 	sqlStatement := `
+		WITH client_stats AS (
+			SELECT
+				country,
+				COUNT(DISTINCT ip) as client_count,
+				SUM(requests) as requests,
+				MIN(first_active_at) as first_active_at,
+				MAX(last_active_at) as last_active_at
+			FROM client
+			WHERE country != ''
+			GROUP BY country
+		),
+		file_stats AS (
+			SELECT
+				c.country,
+				COUNT(f.id) as files_uploaded,
+				COALESCE(SUM(fc.bytes), 0) as bytes_uploaded
+			FROM client c
+			JOIN file f ON f.ip = c.ip AND f.deleted_at IS NULL
+			JOIN file_content fc ON fc.sha256 = f.sha256
+			WHERE c.country != ''
+			GROUP BY c.country
+		)
 		SELECT
-			c.country,
-			COUNT(DISTINCT c.ip) as client_count,
-			SUM(c.requests) as requests,
-			COALESCE(COUNT(f.id), 0) as files_uploaded,
-			COALESCE(SUM(fc.bytes), 0) as bytes_uploaded,
-			MIN(c.first_active_at) as first_active_at,
-			MAX(c.last_active_at) as last_active_at
-		FROM client c
-		LEFT JOIN file f ON f.ip = c.ip AND f.deleted_at IS NULL
-		LEFT JOIN file_content fc ON fc.sha256 = f.sha256
-		WHERE c.country != ''
-		GROUP BY c.country
-		ORDER BY requests DESC, files_uploaded DESC
+			cs.country,
+			cs.client_count,
+			cs.requests,
+			COALESCE(fs.files_uploaded, 0) as files_uploaded,
+			COALESCE(fs.bytes_uploaded, 0) as bytes_uploaded,
+			cs.first_active_at,
+			cs.last_active_at
+		FROM client_stats cs
+		LEFT JOIN file_stats fs ON fs.country = cs.country
+		ORDER BY cs.requests DESC, COALESCE(fs.files_uploaded, 0) DESC
 		LIMIT $1`
 	rows, err := c.db.Query(sqlStatement, limit)
 	if err != nil {
@@ -275,20 +294,39 @@ func (c *ClientDao) GetByCountry(limit int) (countries []ds.ClientByCountry, err
 
 func (c *ClientDao) GetByNetwork(limit int) (networks []ds.ClientByNetwork, err error) {
 	sqlStatement := `
+		WITH client_stats AS (
+			SELECT
+				network,
+				COUNT(DISTINCT ip) as client_count,
+				SUM(requests) as requests,
+				MIN(first_active_at) as first_active_at,
+				MAX(last_active_at) as last_active_at
+			FROM client
+			WHERE network != ''
+			GROUP BY network
+		),
+		file_stats AS (
+			SELECT
+				c.network,
+				COUNT(f.id) as files_uploaded,
+				COALESCE(SUM(fc.bytes), 0) as bytes_uploaded
+			FROM client c
+			JOIN file f ON f.ip = c.ip AND f.deleted_at IS NULL
+			JOIN file_content fc ON fc.sha256 = f.sha256
+			WHERE c.network != ''
+			GROUP BY c.network
+		)
 		SELECT
-			c.network,
-			COUNT(DISTINCT c.ip) as client_count,
-			SUM(c.requests) as requests,
-			COALESCE(COUNT(f.id), 0) as files_uploaded,
-			COALESCE(SUM(fc.bytes), 0) as bytes_uploaded,
-			MIN(c.first_active_at) as first_active_at,
-			MAX(c.last_active_at) as last_active_at
-		FROM client c
-		LEFT JOIN file f ON f.ip = c.ip AND f.deleted_at IS NULL
-		LEFT JOIN file_content fc ON fc.sha256 = f.sha256
-		WHERE c.network != ''
-		GROUP BY c.network
-		ORDER BY requests DESC, files_uploaded DESC
+			cs.network,
+			cs.client_count,
+			cs.requests,
+			COALESCE(fs.files_uploaded, 0) as files_uploaded,
+			COALESCE(fs.bytes_uploaded, 0) as bytes_uploaded,
+			cs.first_active_at,
+			cs.last_active_at
+		FROM client_stats cs
+		LEFT JOIN file_stats fs ON fs.network = cs.network
+		ORDER BY cs.requests DESC, COALESCE(fs.files_uploaded, 0) DESC
 		LIMIT $1`
 	rows, err := c.db.Query(sqlStatement, limit)
 	if err != nil {

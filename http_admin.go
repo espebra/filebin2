@@ -54,8 +54,8 @@ func (h *HTTP) viewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 		data.AdminLogins[i].LastActiveReadable = humanize.Time(data.AdminLogins[i].LastActive)
 	}
 
-	// Get storage metrics
-	usedBytes := h.dao.Metrics().StorageBytesAllocated()
+	// Get storage metrics (cached for performance)
+	usedBytes := h.getCachedStorageBytes()
 	data.StorageMetrics.UsedBytes = usedBytes
 	data.StorageMetrics.UsedBytesReadable = humanize.Bytes(usedBytes)
 	data.StorageMetrics.TotalBytes = h.config.LimitStorageBytes

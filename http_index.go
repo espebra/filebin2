@@ -48,8 +48,7 @@ func (h *HTTP) index(w http.ResponseWriter, r *http.Request) {
 	// >= 1 enforces a limit, in number of gigabytes stored
 	data.AvailableStorage = true
 	if h.config.LimitStorageBytes > 0 {
-		totalBytesConsumed := h.dao.Metrics().StorageBytesAllocated()
-		//fmt.Printf("Using %d bytes, limit is %d bytes\n", totalBytesConsumed, h.config.LimitStorageBytes)
+		totalBytesConsumed := h.getCachedStorageBytes()
 		if totalBytesConsumed >= h.config.LimitStorageBytes {
 			data.AvailableStorage = false
 		}
@@ -242,7 +241,7 @@ func (h *HTTP) storageStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.config.LimitStorageBytes > 0 {
-		totalBytesConsumed := h.dao.Metrics().StorageBytesAllocated()
+		totalBytesConsumed := h.getCachedStorageBytes()
 		if totalBytesConsumed >= h.config.LimitStorageBytes {
 			data.S3Full = true
 			code = 507
