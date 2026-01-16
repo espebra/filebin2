@@ -46,13 +46,22 @@ func (h *HTTP) viewBin(w http.ResponseWriter, r *http.Request) {
 
 	type Data struct {
 		ds.Common
-		Bin   ds.Bin    `json:"bin"`
-		Files []ds.File `json:"files"`
+		Bin         ds.Bin          `json:"bin"`
+		Files       []ds.File       `json:"files"`
+		SiteMessage *ds.SiteMessage `json:"site_message,omitempty"`
 	}
 	var data Data
 	data.Page = "bin"
 	data.Contact = h.config.Contact
 	data.BaseUrl = h.config.BaseUrl.String()
+
+	// Fetch site message if published for bin page
+	h.siteMessageMutex.RLock()
+	if h.siteMessage.IsPublishedBinPage() {
+		message := h.siteMessage
+		data.SiteMessage = &message
+	}
+	h.siteMessageMutex.RUnlock()
 
 	var binURL url.URL
 	binURL.Scheme = h.config.BaseUrl.Scheme

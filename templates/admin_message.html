@@ -1,0 +1,88 @@
+{{ define "admin_message" }}<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <link rel="icon" href="/static/img/favicon.png">
+        <link rel="stylesheet" href="/static/css/bootstrap.min.css"/>
+        <link rel="stylesheet" href="/static/css/fontawesome.all.min.css"/>
+        <link rel="stylesheet" href="/static/css/custom.css"/>
+        <title>Filebin | Edit Site Message</title>
+    </head>
+    <body class="container-fluid">
+        {{template "admin_bar" .}}
+
+        <h1>Site Message</h1>
+        <p>This message will be displayed on the front page and all bin pages when published.</p>
+
+        <form method="POST" action="/admin/message">
+            <div class="mb-3">
+                <label for="title" class="form-label">Title</label>
+                <input type="text" class="form-control" id="title" name="title"
+                       maxlength="200" value="{{ .Message.Title }}"
+                       placeholder="Message title (optional)">
+                <div class="form-text">Max 200 characters</div>
+            </div>
+
+            <div class="mb-3">
+                <label for="content" class="form-label">Content</label>
+                <textarea class="form-control" id="content" name="content"
+                          rows="10" maxlength="5000"
+                          placeholder="Message content (HTML supported)">{{ .Message.Content }}</textarea>
+                <div class="form-text">Max 5000 characters. HTML tags are allowed.</div>
+            </div>
+
+            <div class="mb-3">
+                <label for="color" class="form-label">Alert Color</label>
+                <select class="form-select" id="color" name="color">
+                    <option value="" {{ if eq .Message.Color "" }}selected{{ end }}>Light Blue (Default)</option>
+                    <option value="blue" {{ if eq .Message.Color "blue" }}selected{{ end }}>Blue</option>
+                    <option value="green" {{ if eq .Message.Color "green" }}selected{{ end }}>Green</option>
+                    <option value="yellow" {{ if eq .Message.Color "yellow" }}selected{{ end }}>Yellow</option>
+                    <option value="red" {{ if eq .Message.Color "red" }}selected{{ end }}>Red</option>
+                    <option value="gray" {{ if eq .Message.Color "gray" }}selected{{ end }}>Gray</option>
+                    <option value="dark" {{ if eq .Message.Color "dark" }}selected{{ end }}>Dark</option>
+                    <option value="light" {{ if eq .Message.Color "light" }}selected{{ end }}>Light</option>
+                </select>
+            </div>
+
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="published_front_page" name="published_front_page"
+                       {{ if .Message.PublishedFrontPage }}checked{{ end }}>
+                <label class="form-check-label" for="published_front_page">
+                    Show on front page
+                </label>
+            </div>
+
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="published_bin_page" name="published_bin_page"
+                       {{ if .Message.PublishedBinPage }}checked{{ end }}>
+                <label class="form-check-label" for="published_bin_page">
+                    Show on bin pages
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Save Message
+            </button>
+        </form>
+
+        {{ if not .Message.IsEmpty }}
+        <hr>
+        <h2>Preview</h2>
+        <div class="alert {{ .Message.GetAlertClass }} alert-dismissible fade show" role="alert">
+            {{ if .Message.Title }}
+                <strong>{{ .Message.Title }}</strong><br>
+            {{ end }}
+            {{ if .Message.Content }}
+                <div>{{ .Message.Content | unescapeHTML }}</div>
+            {{ end }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {{ end }}
+
+        <script src="/static/js/popper.min.js"></script>
+        <script src="/static/js/bootstrap.min.js"></script>
+    </body>
+</html>
+{{ end }}

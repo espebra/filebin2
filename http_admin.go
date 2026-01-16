@@ -5,12 +5,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/dustin/go-humanize"
-	"github.com/gorilla/mux"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/dustin/go-humanize"
+	"github.com/gorilla/mux"
 
 	"github.com/espebra/filebin2/ds"
 	"github.com/espebra/filebin2/s3"
@@ -810,4 +812,88 @@ func (h *HTTP) viewAdminClientsAll(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+}
+
+func (h *HTTP) viewAdminSiteMessage(w http.ResponseWriter, r *http.Request) {
+	type Data struct {
+		Message ds.SiteMessage `json:"message"`
+		Page    string         `json:"page"`
+	}
+
+	var data Data
+	data.Page = "message"
+
+	h.siteMessageMutex.RLock()
+	data.Message = h.siteMessage
+	h.siteMessageMutex.RUnlock()
+
+	if r.Header.Get("accept") == "application/json" {
+		w.Header().Set("Content-Type", "application/json")
+		out, err := json.Marshal(data)
+		if err != nil {
+			http.Error(w, "Errno 801", http.StatusInternalServerError)
+			return
+		}
+		w.Write(out)
+	} else {
+		if err := h.templates.ExecuteTemplate(w, "admin_message", data); err != nil {
+			fmt.Printf("Failed to execute template: %s\n", err.Error())
+			http.Error(w, "Errno 802", http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+func (h *HTTP) updateSiteMessage(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "max-age=0")
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	title := r.FormValue("title")
+	content := r.FormValue("content")
+	color := r.FormValue("color")
+	publishedFrontPage := r.FormValue("published_front_page") == "on"
+	publishedBinPage := r.FormValue("published_bin_page") == "on"
+
+	// Input validation
+	if len(title) > 200 {
+		fmt.Printf("Unable to update site message: Title must be 200 characters or less\n")
+		http.Error(w, "Errno 803", http.StatusInternalServerError)
+		return
+	}
+	if len(content) > 5000 {
+		fmt.Printf("Unable to update site message: Content must be 5000 characters or less\n")
+		http.Error(w, "Errno 803", http.StatusInternalServerError)
+		return
+	}
+
+	// Validate color to prevent XSS
+	validColors := map[string]bool{
+		"blue":   true,
+		"green":  true,
+		"yellow": true,
+		"red":    true,
+		"gray":   true,
+		"dark":   true,
+		"light":  true,
+	}
+	if !validColors[color] {
+		color = "" // Empty means default (light blue/info)
+	}
+
+	now := time.Now().UTC()
+	h.siteMessageMutex.Lock()
+	h.siteMessage.Title = title
+	h.siteMessage.Content = content
+	h.siteMessage.Color = color
+	h.siteMessage.PublishedFrontPage = publishedFrontPage
+	h.siteMessage.PublishedBinPage = publishedBinPage
+	h.siteMessage.UpdatedAt = now
+	h.siteMessageMutex.Unlock()
+
+	fmt.Printf("Updated site message (front_page=%v, bin_page=%v, color=%s)\n", publishedFrontPage, publishedBinPage, color)
+	http.Redirect(w, r, "/admin/message", http.StatusSeeOther)
 }

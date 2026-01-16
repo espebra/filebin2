@@ -42,6 +42,10 @@
     </head>
     <body class="container-xl">
 
+        {{ if .SiteMessage }}
+            {{ template "message_banner" .SiteMessage }}
+        {{ end }}
+
         {{ template "topbar" . }}
 
         <h1 class="display-1">Filebin</h1>
