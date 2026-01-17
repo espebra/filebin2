@@ -10,6 +10,7 @@ import (
 type Client struct {
 	IP                    string       `json:"ip"`
 	ASN                   int          `json:"asn"`
+	ASNOrganization       string       `json:"asn_organization"`
 	Network               string       `json:"network"`
 	City                  string       `json:"city"`
 	Country               string       `json:"country"`

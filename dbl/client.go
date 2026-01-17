@@ -17,8 +17,8 @@ type ClientDao struct {
 }
 
 func (c *ClientDao) GetByIP(ip net.IP) (client ds.Client, found bool, err error) {
-	sqlStatement := "SELECT ip, asn, network, city, country, continent, proxy, requests, first_active_at, last_active_at, banned_at, banned_by FROM client WHERE ip = $1 LIMIT 1"
-	err = c.db.QueryRow(sqlStatement, ip.String()).Scan(&client.IP, &client.ASN, &client.Network, &client.City, &client.Country, &client.Continent, &client.Proxy, &client.Requests, &client.FirstActiveAt, &client.LastActiveAt, &client.BannedAt, &client.BannedBy)
+	sqlStatement := "SELECT ip, asn, asn_organization, network, city, country, continent, proxy, requests, first_active_at, last_active_at, banned_at, banned_by FROM client WHERE ip = $1 LIMIT 1"
+	err = c.db.QueryRow(sqlStatement, ip.String()).Scan(&client.IP, &client.ASN, &client.ASNOrganization, &client.Network, &client.City, &client.Country, &client.Continent, &client.Proxy, &client.Requests, &client.FirstActiveAt, &client.LastActiveAt, &client.BannedAt, &client.BannedBy)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			client.IP = ip.String()
@@ -62,33 +62,33 @@ func (c *ClientDao) GetByRemoteAddr(remoteAddr string) (client ds.Client, found 
 
 func (c *ClientDao) Update(client *ds.Client) (err error) {
 	now := time.Now().UTC()
-	sqlStatement := "INSERT INTO client (ip, asn, network, city, country, continent, proxy, requests, first_active_at, last_active_at, banned_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, '') ON CONFLICT(ip) DO UPDATE SET asn=$11, network=$12, city=$13, country=$14, continent=$15, proxy=$16, requests=client.requests+1, last_active_at=$17 RETURNING ip, requests"
-	if err := c.db.QueryRow(sqlStatement, client.IP, client.ASN, client.Network, client.City, client.Country, client.Continent, client.Proxy, 1, now, now, client.ASN, client.Network, client.City, client.Country, client.Continent, client.Proxy, now).Scan(&client.IP, &client.Requests); err != nil {
+	sqlStatement := "INSERT INTO client (ip, asn, asn_organization, network, city, country, continent, proxy, requests, first_active_at, last_active_at, banned_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, '') ON CONFLICT(ip) DO UPDATE SET asn=$12, asn_organization=$13, network=$14, city=$15, country=$16, continent=$17, proxy=$18, requests=client.requests+1, last_active_at=$19 RETURNING ip, requests"
+	if err := c.db.QueryRow(sqlStatement, client.IP, client.ASN, client.ASNOrganization, client.Network, client.City, client.Country, client.Continent, client.Proxy, 1, now, now, client.ASN, client.ASNOrganization, client.Network, client.City, client.Country, client.Continent, client.Proxy, now).Scan(&client.IP, &client.Requests); err != nil {
 		return err
 	}
 	return err
 }
 
 func (c *ClientDao) GetAll() (clients []ds.Client, err error) {
-	sqlStatement := "SELECT ip, asn, network, city, country, continent, proxy, requests, first_active_at, last_active_at, banned_at, banned_by FROM client ORDER BY last_active_at DESC"
+	sqlStatement := "SELECT ip, asn, asn_organization, network, city, country, continent, proxy, requests, first_active_at, last_active_at, banned_at, banned_by FROM client ORDER BY last_active_at DESC"
 	clients, err = c.clientQuery(sqlStatement)
 	return clients, err
 }
 
 func (c *ClientDao) GetByLastActiveAt(limit int) (clients []ds.Client, err error) {
-	sqlStatement := "SELECT ip, asn, network, city, country, continent, proxy, requests, first_active_at, last_active_at, banned_at, banned_by FROM client ORDER BY last_active_at DESC LIMIT $1"
+	sqlStatement := "SELECT ip, asn, asn_organization, network, city, country, continent, proxy, requests, first_active_at, last_active_at, banned_at, banned_by FROM client ORDER BY last_active_at DESC LIMIT $1"
 	clients, err = c.clientQuery(sqlStatement, limit)
 	return clients, err
 }
 
 func (c *ClientDao) GetByRequests(limit int) (clients []ds.Client, err error) {
-	sqlStatement := "SELECT ip, asn, network, city, country, continent, proxy, requests, first_active_at, last_active_at, banned_at, banned_by FROM client ORDER BY requests DESC LIMIT $1"
+	sqlStatement := "SELECT ip, asn, asn_organization, network, city, country, continent, proxy, requests, first_active_at, last_active_at, banned_at, banned_by FROM client ORDER BY requests DESC LIMIT $1"
 	clients, err = c.clientQuery(sqlStatement, limit)
 	return clients, err
 }
 
 func (c *ClientDao) GetByBannedAt(limit int) (clients []ds.Client, err error) {
-	sqlStatement := "SELECT ip, asn, network, city, country, continent, proxy, requests, first_active_at, last_active_at, banned_at, banned_by FROM client WHERE banned_at > $1 ORDER BY banned_at DESC LIMIT $2"
+	sqlStatement := "SELECT ip, asn, asn_organization, network, city, country, continent, proxy, requests, first_active_at, last_active_at, banned_at, banned_by FROM client WHERE banned_at > $1 ORDER BY banned_at DESC LIMIT $2"
 	clients, err = c.clientQuery(sqlStatement, time.Unix(0, 0), limit)
 	return clients, err
 }
@@ -101,7 +101,7 @@ func (c *ClientDao) clientQuery(sqlStatement string, params ...interface{}) (cli
 	defer rows.Close()
 	for rows.Next() {
 		var client ds.Client
-		err = rows.Scan(&client.IP, &client.ASN, &client.Network, &client.City, &client.Country, &client.Continent, &client.Proxy, &client.Requests, &client.FirstActiveAt, &client.LastActiveAt, &client.BannedAt, &client.BannedBy)
+		err = rows.Scan(&client.IP, &client.ASN, &client.ASNOrganization, &client.Network, &client.City, &client.Country, &client.Continent, &client.Proxy, &client.Requests, &client.FirstActiveAt, &client.LastActiveAt, &client.BannedAt, &client.BannedBy)
 		if err != nil {
 			return clients, err
 		}
@@ -355,18 +355,41 @@ func (c *ClientDao) GetByNetwork(limit int) (networks []ds.ClientByNetwork, err 
 
 func (c *ClientDao) GetASNWithStats(limit int) (asns []ds.AutonomousSystem, err error) {
 	sqlStatement := `
+		WITH client_stats AS (
+			SELECT
+				asn,
+				MAX(asn_organization) as asn_organization,
+				COUNT(DISTINCT ip) as client_count,
+				SUM(requests) as requests,
+				MIN(first_active_at) as first_active_at,
+				MAX(last_active_at) as last_active_at
+			FROM client
+			WHERE asn > 0
+			GROUP BY asn
+		),
+		file_stats AS (
+			SELECT
+				c.asn,
+				COUNT(f.id) as files_uploaded,
+				COALESCE(SUM(fc.bytes), 0) as bytes_uploaded
+			FROM client c
+			JOIN file f ON f.ip = c.ip AND f.deleted_at IS NULL
+			JOIN file_content fc ON fc.sha256 = f.sha256
+			WHERE c.asn > 0
+			GROUP BY c.asn
+		)
 		SELECT
-			a.asn, a.organization, a.requests,
-			a.first_active_at, a.last_active_at, a.banned_at,
-			COUNT(DISTINCT cl.ip) as client_count,
-			COALESCE(COUNT(f.id), 0) as files_uploaded,
-			COALESCE(SUM(fc.bytes), 0) as bytes_uploaded
-		FROM autonomous_system a
-		LEFT JOIN client cl ON cl.asn = a.asn
-		LEFT JOIN file f ON f.ip = cl.ip AND f.deleted_at IS NULL
-		LEFT JOIN file_content fc ON fc.sha256 = f.sha256
-		GROUP BY a.asn, a.organization, a.requests, a.first_active_at, a.last_active_at, a.banned_at
-		ORDER BY a.requests DESC, files_uploaded DESC
+			cs.asn,
+			cs.asn_organization,
+			cs.client_count,
+			cs.requests,
+			COALESCE(fs.files_uploaded, 0) as files_uploaded,
+			COALESCE(fs.bytes_uploaded, 0) as bytes_uploaded,
+			cs.first_active_at,
+			cs.last_active_at
+		FROM client_stats cs
+		LEFT JOIN file_stats fs ON fs.asn = cs.asn
+		ORDER BY cs.requests DESC, COALESCE(fs.files_uploaded, 0) DESC
 		LIMIT $1`
 	rows, err := c.db.Query(sqlStatement, limit)
 	if err != nil {
@@ -376,9 +399,9 @@ func (c *ClientDao) GetASNWithStats(limit int) (asns []ds.AutonomousSystem, err 
 	for rows.Next() {
 		var asn ds.AutonomousSystem
 		err = rows.Scan(
-			&asn.ASN, &asn.Organization, &asn.Requests,
-			&asn.FirstActiveAt, &asn.LastActiveAt, &asn.BannedAt,
-			&asn.ClientCount, &asn.FilesUploaded, &asn.BytesUploaded,
+			&asn.ASN, &asn.Organization, &asn.ClientCount, &asn.Requests,
+			&asn.FilesUploaded, &asn.BytesUploaded,
+			&asn.FirstActiveAt, &asn.LastActiveAt,
 		)
 		if err != nil {
 			return asns, err
@@ -388,10 +411,6 @@ func (c *ClientDao) GetASNWithStats(limit int) (asns []ds.AutonomousSystem, err 
 		asn.FirstActiveAtRelative = humanize.Time(asn.FirstActiveAt)
 		asn.LastActiveAtRelative = humanize.Time(asn.LastActiveAt)
 		asn.BytesUploadedReadable = humanize.Bytes(asn.BytesUploaded)
-		if asn.IsBanned() {
-			asn.BannedAt.Time = asn.BannedAt.Time.UTC()
-			asn.BannedAtRelative = humanize.Time(asn.BannedAt.Time)
-		}
 		asns = append(asns, asn)
 	}
 	return asns, nil
