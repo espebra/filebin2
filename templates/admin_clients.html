@@ -397,7 +397,7 @@
                         <td sorttable_customkey="{{ .LastActiveAt }}">{{ .LastActiveAtRelative }}</td>
                         <td sorttable_customkey="{{ .FirstActiveAt }}">{{ .FirstActiveAtRelative }}</td>
                         <td sorttable_customkey="{{ .BannedAt }}">
-                            {{ if isBanned . }}
+                            {{ if .IsBanned }}
                                 {{ .BannedAtRelative }}
                             {{ else }}
                                 No
