@@ -110,7 +110,7 @@ func (h *HTTP) getFile(w http.ResponseWriter, r *http.Request) {
 			nextUrl.Host = h.config.BaseUrl.Host
 			nextUrl.Path = path.Join(h.config.BaseUrl.Path, r.URL.Path)
 			data.NextUrl = nextUrl.String()
-			if err := h.templates.ExecuteTemplate(w, "cookie", data); err != nil {
+			if err := h.renderTemplate(w, "cookie", data); err != nil {
 				fmt.Printf("Failed to execute template: %s\n", err.Error())
 				http.Error(w, "Errno 302", http.StatusInternalServerError)
 				return
