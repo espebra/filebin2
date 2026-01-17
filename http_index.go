@@ -56,7 +56,7 @@ func (h *HTTP) index(w http.ResponseWriter, r *http.Request) {
 
 	h.metrics.IncrFrontPageViewCount()
 
-	if err := h.templates.ExecuteTemplate(w, "index", data); err != nil {
+	if err := h.renderTemplate(w, "index", data); err != nil {
 		fmt.Printf("Failed to execute template: %s\n", err.Error())
 		http.Error(w, "Errno 302", http.StatusInternalServerError)
 		return
@@ -73,7 +73,7 @@ func (h *HTTP) about(w http.ResponseWriter, r *http.Request) {
 	var data Data
 	data.Page = "about"
 
-	if err := h.templates.ExecuteTemplate(w, "about", data); err != nil {
+	if err := h.renderTemplate(w, "about", data); err != nil {
 		fmt.Printf("Failed to execute template: %s\n", err.Error())
 		http.Error(w, "Errno 302", http.StatusInternalServerError)
 		return
@@ -97,7 +97,7 @@ func (h *HTTP) privacy(w http.ResponseWriter, r *http.Request) {
 		data.CookiesInUse = true
 	}
 
-	if err := h.templates.ExecuteTemplate(w, "privacy", data); err != nil {
+	if err := h.renderTemplate(w, "privacy", data); err != nil {
 		fmt.Printf("Failed to execute template: %s\n", err.Error())
 		http.Error(w, "Errno 302", http.StatusInternalServerError)
 		return
@@ -116,7 +116,7 @@ func (h *HTTP) terms(w http.ResponseWriter, r *http.Request) {
 	data.Page = "terms"
 	data.Contact = h.config.Contact
 
-	if err := h.templates.ExecuteTemplate(w, "terms", data); err != nil {
+	if err := h.renderTemplate(w, "terms", data); err != nil {
 		fmt.Printf("Failed to execute template: %s\n", err.Error())
 		http.Error(w, "Errno 302", http.StatusInternalServerError)
 		return
@@ -135,7 +135,7 @@ func (h *HTTP) contact(w http.ResponseWriter, r *http.Request) {
 	data.Page = "contact"
 	data.Contact = h.config.Contact
 
-	if err := h.templates.ExecuteTemplate(w, "contact", data); err != nil {
+	if err := h.renderTemplate(w, "contact", data); err != nil {
 		fmt.Printf("Failed to execute template: %s\n", err.Error())
 		http.Error(w, "Errno 302", http.StatusInternalServerError)
 		return
@@ -153,7 +153,7 @@ func (h *HTTP) api(w http.ResponseWriter, r *http.Request) {
 	var data Data
 	data.Page = "api"
 
-	if err := h.templates.ExecuteTemplate(w, "api", data); err != nil {
+	if err := h.renderTemplate(w, "api", data); err != nil {
 		fmt.Printf("Failed to execute template: %s\n", err.Error())
 		http.Error(w, "Errno 302", http.StatusInternalServerError)
 		return
@@ -173,7 +173,7 @@ func (h *HTTP) apiSpec(w http.ResponseWriter, r *http.Request) {
 	data.Page = "api"
 
 	w.Header().Set("Content-Type", "text/plain")
-	if err := h.templates.ExecuteTemplate(w, "apispec", data); err != nil {
+	if err := h.renderTemplate(w, "apispec", data); err != nil {
 		fmt.Printf("Failed to execute template: %s\n", err.Error())
 		http.Error(w, "Errno 302", http.StatusInternalServerError)
 		return
@@ -262,7 +262,7 @@ func (h *HTTP) storageStatus(w http.ResponseWriter, r *http.Request) {
 func (h *HTTP) robots(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=3600")
 
-	if err := h.templates.ExecuteTemplate(w, "robots", nil); err != nil {
+	if err := h.renderTemplate(w, "robots", nil); err != nil {
 		fmt.Printf("Failed to execute template: %s\n", err.Error())
 		http.Error(w, "Errno 302", http.StatusInternalServerError)
 		return

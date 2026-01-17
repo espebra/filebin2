@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"embed"
 	"fmt"
@@ -382,17 +383,30 @@ func (h *HTTP) Error(w http.ResponseWriter, r *http.Request, internal string, ex
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(statusCode)
-		if err := h.templates.ExecuteTemplate(w, "error", data); err != nil {
+		var buf bytes.Buffer
+		if err := h.templates.ExecuteTemplate(&buf, "error", data); err != nil {
 			fmt.Printf("Failed to execute template: %s\n", err.Error())
-			http.Error(w, "Errno 914", http.StatusInternalServerError)
+			// Don't call http.Error here since WriteHeader was already called
 			return
 		}
+		buf.WriteTo(w)
 	} else {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(statusCode)
 		io.WriteString(w, external)
 	}
 	return
+}
+
+// renderTemplate executes a template to a buffer first, then writes to the response.
+// This prevents "superfluous response.WriteHeader" errors when template execution fails.
+func (h *HTTP) renderTemplate(w http.ResponseWriter, name string, data interface{}) error {
+	var buf bytes.Buffer
+	if err := h.templates.ExecuteTemplate(&buf, name, data); err != nil {
+		return err
+	}
+	buf.WriteTo(w)
+	return nil
 }
 
 // Parse all templates

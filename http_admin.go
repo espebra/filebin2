@@ -115,7 +115,7 @@ func (h *HTTP) viewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		io.WriteString(w, string(out))
 	} else {
-		if err := h.templates.ExecuteTemplate(w, "admin_dashboard", data); err != nil {
+		if err := h.renderTemplate(w, "admin_dashboard", data); err != nil {
 			fmt.Printf("Failed to execute template: %s\n", err.Error())
 			http.Error(w, "Errno 203", http.StatusInternalServerError)
 			return
@@ -206,7 +206,7 @@ func (h *HTTP) viewAdminFiles(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		io.WriteString(w, string(out))
 	} else {
-		if err := h.templates.ExecuteTemplate(w, "admin_files", data); err != nil {
+		if err := h.renderTemplate(w, "admin_files", data); err != nil {
 			fmt.Printf("Failed to execute template: %s\n", err.Error())
 			http.Error(w, "Errno 203", http.StatusInternalServerError)
 			return
@@ -302,7 +302,7 @@ func (h *HTTP) viewAdminFileContent(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		io.WriteString(w, string(out))
 	} else {
-		if err := h.templates.ExecuteTemplate(w, "admin_filecontent", data); err != nil {
+		if err := h.renderTemplate(w, "admin_filecontent", data); err != nil {
 			fmt.Printf("Failed to execute template: %s\n", err.Error())
 			http.Error(w, "Errno 203", http.StatusInternalServerError)
 			return
@@ -363,7 +363,7 @@ func (h *HTTP) viewAdminFile(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		io.WriteString(w, string(out))
 	} else {
-		if err := h.templates.ExecuteTemplate(w, "admin_file_by_checksum", data); err != nil {
+		if err := h.renderTemplate(w, "admin_file_by_checksum", data); err != nil {
 			fmt.Printf("Failed to execute template: %s\n", err.Error())
 			http.Error(w, "Errno 203", http.StatusInternalServerError)
 			return
@@ -512,7 +512,7 @@ func (h *HTTP) viewAdminBins(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		io.WriteString(w, string(out))
 	} else {
-		if err := h.templates.ExecuteTemplate(w, "admin_bins", data); err != nil {
+		if err := h.renderTemplate(w, "admin_bins", data); err != nil {
 			fmt.Printf("Failed to execute template: %s\n", err.Error())
 			http.Error(w, "Errno 203", http.StatusInternalServerError)
 			return
@@ -566,7 +566,7 @@ func (h *HTTP) viewAdminBinsAll(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		io.WriteString(w, string(out))
 	} else {
-		if err := h.templates.ExecuteTemplate(w, "admin_bins_all", data); err != nil {
+		if err := h.renderTemplate(w, "admin_bins_all", data); err != nil {
 			fmt.Printf("Failed to execute template: %s\n", err.Error())
 			http.Error(w, "Errno 203", http.StatusInternalServerError)
 			return
@@ -602,7 +602,7 @@ func (h *HTTP) viewAdminLog(w http.ResponseWriter, r *http.Request) {
 		data.Transactions = trs
 	}
 
-	if err := h.templates.ExecuteTemplate(w, "log", data); err != nil {
+	if err := h.renderTemplate(w, "log", data); err != nil {
 		fmt.Printf("Failed to execute template: %s\n", err.Error())
 		http.Error(w, "Errno 203", http.StatusInternalServerError)
 		return
@@ -656,7 +656,7 @@ func (h *HTTP) viewAdminCleanup(w http.ResponseWriter, r *http.Request) {
 	data.Objects = objects
 	data.Bins = bins
 
-	if err := h.templates.ExecuteTemplate(w, "cleanup", data); err != nil {
+	if err := h.renderTemplate(w, "cleanup", data); err != nil {
 		fmt.Printf("Failed to execute template: %s\n", err.Error())
 		http.Error(w, "Errno 203", http.StatusInternalServerError)
 		return
@@ -773,7 +773,7 @@ func (h *HTTP) viewAdminClients(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		io.WriteString(w, string(out))
 	} else {
-		if err := h.templates.ExecuteTemplate(w, "admin_clients", data); err != nil {
+		if err := h.renderTemplate(w, "admin_clients", data); err != nil {
 			fmt.Printf("Failed to execute template: %s\n", err.Error())
 			http.Error(w, "Errno 203", http.StatusInternalServerError)
 			return
@@ -806,7 +806,7 @@ func (h *HTTP) viewAdminClientsAll(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		io.WriteString(w, string(out))
 	} else {
-		if err := h.templates.ExecuteTemplate(w, "admin_clients_all", data); err != nil {
+		if err := h.renderTemplate(w, "admin_clients_all", data); err != nil {
 			fmt.Printf("Failed to execute template: %s\n", err.Error())
 			http.Error(w, "Errno 203", http.StatusInternalServerError)
 			return
@@ -836,7 +836,7 @@ func (h *HTTP) viewAdminSiteMessage(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Write(out)
 	} else {
-		if err := h.templates.ExecuteTemplate(w, "admin_message", data); err != nil {
+		if err := h.renderTemplate(w, "admin_message", data); err != nil {
 			fmt.Printf("Failed to execute template: %s\n", err.Error())
 			http.Error(w, "Errno 802", http.StatusInternalServerError)
 			return
