@@ -77,7 +77,6 @@ func (dao DAO) ResetDB() error {
 		"DELETE FROM file_content",
 		"DELETE FROM bin",
 		"DELETE FROM client",
-		"DELETE FROM autonomous_system",
 		"DELETE FROM transaction"}
 
 	for _, s := range sqlStatements {

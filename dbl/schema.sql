@@ -53,18 +53,10 @@ CREATE TABLE IF NOT EXISTS transaction (
 	UNIQUE(id)
 );
 
-CREATE TABLE IF NOT EXISTS autonomous_system (
-	asn					INT NOT NULL PRIMARY KEY,
-	organization				VARCHAR(128) NOT NULL,
-	requests				BIGINT NOT NULL,
-	first_active_at				TIMESTAMP NOT NULL,
-	last_active_at				TIMESTAMP NOT NULL,
-	banned_at				TIMESTAMP
-);
-
 CREATE TABLE IF NOT EXISTS client (
 	ip					VARCHAR(64) NOT NULL PRIMARY KEY,
 	asn					INT NOT NULL,
+	asn_organization			VARCHAR(128) NOT NULL DEFAULT '',
 	network					VARCHAR(64) NOT NULL,
 	city					VARCHAR(64) NOT NULL,
 	country					VARCHAR(64) NOT NULL,
