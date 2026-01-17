@@ -54,6 +54,7 @@ type HTTP struct {
 	adminLoginsMutex sync.Mutex
 	siteMessage      ds.SiteMessage
 	siteMessageMutex sync.RWMutex
+	startedAt        time.Time
 
 	// Cache for storage bytes to avoid expensive DB query on every request
 	storageBytesCache uint64

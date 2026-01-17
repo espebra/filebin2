@@ -134,7 +134,7 @@ func (h *HTTP) getFile(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusFound)
 	io.WriteString(w, "")
 
-	fmt.Printf("Presigned download of file %q (%s) from bin %q in %.3fs (%d downloads)\n", inputFilename, humanize.Bytes(file.Bytes), inputBin, time.Since(t0).Seconds(), file.Downloads)
+	fmt.Printf("Presigned download of file %q (%s) with sha256 %s from bin %q in %.3fs (%d downloads)\n", inputFilename, humanize.Bytes(file.Bytes), file.SHA256, inputBin, time.Since(t0).Seconds(), file.Downloads)
 
 	// Increment the byte counter here
 	// Assume that the client will download the entire file from S3. This will
@@ -437,6 +437,9 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to update content tracking", http.StatusInternalServerError)
 		return
 	}
+
+	// Record upload duration
+	file.UploadDurationMs = time.Since(t0).Milliseconds()
 
 	if found {
 		if err := h.dao.File().Update(&file); err != nil {

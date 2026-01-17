@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS file (
 	updated_at	TIMESTAMP NOT NULL,
 	created_at	TIMESTAMP NOT NULL,
 	deleted_at	TIMESTAMP,
+	upload_duration_ms	BIGINT NOT NULL DEFAULT 0,
 	UNIQUE(bin_id, filename)
 );
 

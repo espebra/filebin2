@@ -20,6 +20,18 @@
 
         <h1>Dashboard</h1>
 
+        <h2>Uptime</h2>
+        <table class="table table-sm">
+            <tr>
+                <th>Started at</th>
+                <td>{{ .StartedAt.Format "2006-01-02 15:04:05 UTC" }}</td>
+            </tr>
+            <tr>
+                <th>Uptime</th>
+                <td>{{ .UptimeReadable }}</td>
+            </tr>
+        </table>
+
         <h2>Admin logins</h2>
         {{ $numAdminLogins := .AdminLogins | len }}
         {{ if eq $numAdminLogins 0 }}

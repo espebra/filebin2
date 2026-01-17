@@ -6,32 +6,35 @@ import (
 )
 
 type File struct {
-	Id                   int          `json:"-"`
-	Bin                  string       `json:"-"`
-	Filename             string       `json:"filename"`
-	Mime                 string       `json:"content-type"`
-	Category             string       `json:"-"`
-	Bytes                uint64       `json:"bytes"`
-	BytesReadable        string       `json:"bytes_readable"`
-	MD5                  string       `json:"md5"`
-	SHA256               string       `json:"sha256"`
-	Downloads            uint64       `json:"-"`
-	Updates              uint64       `json:"-"`
-	InStorage            bool         `json:"-"`
-	IP                   string       `json:"-"`
-	Headers              string       `json:"-"`
-	UpdatedAt            time.Time    `json:"updated_at"`
-	UpdatedAtRelative    string       `json:"updated_at_relative"`
-	CreatedAt            time.Time    `json:"created_at"`
-	CreatedAtRelative    string       `json:"created_at_relative"`
-	DeletedAt            sql.NullTime `json:"-"`
-	DeletedAtRelative    string       `json:"-"`
-	BinDeletedAt         sql.NullTime `json:"-"`
-	BinDeletedAtRelative string       `json:"-"`
-	BinExpiredAt         time.Time    `json:"-"`
-	BinExpiredAtRelative string       `json:"-"`
-	AvailableForDownload bool         `json:"-"`
-	URL                  string       `json:"-"`
+	Id                     int           `json:"-"`
+	Bin                    string        `json:"-"`
+	Filename               string        `json:"filename"`
+	Mime                   string        `json:"content-type"`
+	Category               string        `json:"-"`
+	Bytes                  uint64        `json:"bytes"`
+	BytesReadable          string        `json:"bytes_readable"`
+	MD5                    string        `json:"md5"`
+	SHA256                 string        `json:"sha256"`
+	Downloads              uint64        `json:"-"`
+	Updates                uint64        `json:"-"`
+	InStorage              bool          `json:"-"`
+	IP                     string        `json:"-"`
+	Headers                string        `json:"-"`
+	UpdatedAt              time.Time     `json:"updated_at"`
+	UpdatedAtRelative      string        `json:"updated_at_relative"`
+	CreatedAt              time.Time     `json:"created_at"`
+	CreatedAtRelative      string        `json:"created_at_relative"`
+	DeletedAt              sql.NullTime  `json:"-"`
+	DeletedAtRelative      string        `json:"-"`
+	BinDeletedAt           sql.NullTime  `json:"-"`
+	BinDeletedAtRelative   string        `json:"-"`
+	BinExpiredAt           time.Time     `json:"-"`
+	BinExpiredAtRelative   string        `json:"-"`
+	AvailableForDownload   bool          `json:"-"`
+	URL                    string        `json:"-"`
+	UploadDurationMs       int64         `json:"-"`
+	UploadDuration         time.Duration `json:"-"`
+	UploadDurationReadable string        `json:"-"`
 }
 
 func (f *File) IsReadable() bool {
