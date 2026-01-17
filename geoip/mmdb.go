@@ -11,7 +11,7 @@ import (
 )
 
 type DAO struct {
-	asn  *maxminddb.Reader
+	as  *maxminddb.Reader
 	city *maxminddb.Reader
 }
 
@@ -33,6 +33,11 @@ type record struct {
 	} `maxminddb:"traits"`
 }
 
+type asnRecord struct {
+	AutonomousSystemNumber       uint   `maxminddb:"autonomous_system_number"`
+	AutonomousSystemOrganization string `maxminddb:"autonomous_system_organization"`
+}
+
 func Init(asnPath string, cityPath string) (DAO, error) {
 	var dao DAO
 
@@ -41,19 +46,18 @@ func Init(asnPath string, cityPath string) (DAO, error) {
 	if err != nil {
 		return dao, err
 	}
-	dao = DAO{asn: asn}
 
 	fmt.Printf("Loading mmdb (City): %s\n", cityPath)
 	city, err := maxminddb.Open(cityPath)
 	if err != nil {
 		return dao, err
 	}
-	dao = DAO{city: city}
+	dao = DAO{as: asn, city:city}
 	return dao, nil
 }
 
 func (dao DAO) Close() error {
-	if err := dao.asn.Close(); err != nil {
+	if err := dao.as.Close(); err != nil {
 		return err
 	}
 	if err := dao.city.Close(); err != nil {
@@ -63,12 +67,15 @@ func (dao DAO) Close() error {
 }
 
 func (dao DAO) LookupASN(ip net.IP, client *ds.Client) error {
-	//var r record
-	//if err := dao.asn.Lookup(ip, &r); err != nil {
-	//	return err
-	//}
-	//fmt.Printf("IP: %v\n", ip)
-	//fmt.Printf("Record: %v\n", r)
+	var r asnRecord
+	_, found, err := dao.as.LookupNetwork(ip, &r)
+	if err != nil {
+		return err
+	}
+	if found {
+		client.ASN = int(r.AutonomousSystemNumber)
+		client.ASNOrganization = r.AutonomousSystemOrganization
+	}
 	return nil
 }
 
