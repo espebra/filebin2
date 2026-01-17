@@ -277,6 +277,7 @@ func main() {
 		config:          config,
 		metrics:         metrics,
 		metricsRegistry: metricsRegistry,
+		startedAt:       time.Now(),
 	}
 
 	if err := h.Init(); err != nil {

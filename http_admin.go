@@ -32,17 +32,21 @@ func (h *HTTP) viewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	type Data struct {
 		//Bins Bins `json:"bins"`
 		//Files []ds.File `json:"files"`
-		BucketMetrics  s3.BucketMetrics `json:"bucketmetrics"`
-		Page           string           `json:"page"`
-		DBMetrics      ds.Metrics       `json:"db_metrics"`
-		DBStats        sql.DBStats      `json:"db_stats"`
-		Config         ds.Config        `json:"-"`
-		AdminLogins    []AdminLogin     `json:"admin_logins"`
-		StorageMetrics StorageMetrics   `json:"storage_metrics"`
+		BucketMetrics   s3.BucketMetrics `json:"bucketmetrics"`
+		Page            string           `json:"page"`
+		DBMetrics       ds.Metrics       `json:"db_metrics"`
+		DBStats         sql.DBStats      `json:"db_stats"`
+		Config          ds.Config        `json:"-"`
+		AdminLogins     []AdminLogin     `json:"admin_logins"`
+		StorageMetrics  StorageMetrics   `json:"storage_metrics"`
+		StartedAt       time.Time        `json:"started_at"`
+		UptimeReadable  string           `json:"uptime_readable"`
 	}
 	var data Data
 	data.Config = *h.config
 	data.Page = "about"
+	data.StartedAt = h.startedAt
+	data.UptimeReadable = time.Since(h.startedAt).Round(time.Second).String()
 
 	h.adminLoginsMutex.Lock()
 	data.AdminLogins = make([]AdminLogin, len(h.adminLogins))

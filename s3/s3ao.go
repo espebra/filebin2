@@ -97,8 +97,6 @@ func (s S3AO) SetTrace(trace bool) {
 }
 
 func (s S3AO) PutObject(bin string, filename string, data io.Reader, size int64) (err error) {
-	t0 := time.Now()
-
 	// Hash the path in S3
 	objectKey := s.GetObjectKey(bin, filename)
 
@@ -115,7 +113,7 @@ func (s S3AO) PutObject(bin string, filename string, data io.Reader, size int64)
 		return err
 	}
 
-	fmt.Printf("Stored object: %s (%d bytes) in %.3fs\n", objectKey, objectSize, time.Since(t0).Seconds())
+	//fmt.Printf("Stored object: %s (%d bytes) in %.3fs\n", objectKey, objectSize, time.Since(t0).Seconds())
 	return nil
 }
 
@@ -284,7 +282,7 @@ func (s S3AO) GetObjectKey(bin string, filename string) (key string) {
 
 // PutObjectByHash uploads an object using content-addressable storage (SHA256 as key)
 func (s S3AO) PutObjectByHash(contentSHA256 string, data io.Reader, size int64) (err error) {
-	t0 := time.Now()
+	//t0 := time.Now()
 
 	var objectSize uint64
 	var content io.Reader
@@ -299,7 +297,7 @@ func (s S3AO) PutObjectByHash(contentSHA256 string, data io.Reader, size int64) 
 		return err
 	}
 
-	fmt.Printf("Stored object: %s (%d bytes) in %.3fs\n", contentSHA256, objectSize, time.Since(t0).Seconds())
+	//fmt.Printf("Stored object: %s (%d bytes) in %.3fs\n", contentSHA256, objectSize, time.Since(t0).Seconds())
 	return nil
 }
 
