@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
+	"io"
 	"strings"
 	"testing"
 	"time"
@@ -118,6 +119,7 @@ func TestGetObject(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unable to get object: %s\n", err.Error())
 	}
+	defer fp.Close()
 
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(fp)
@@ -137,26 +139,33 @@ func TestUnknownObject(t *testing.T) {
 	// Use a non-existent SHA256
 	nonExistentSHA256 := "0000000000000000000000000000000000000000000000000000000000000000"
 	fp, err := s3ao.GetObject(nonExistentSHA256, 0, 0)
-	if err != nil {
-		// This is strange behaviour. The library should return an error
-		// if the object does not exist.
-		//t.Errorf("Expected an error when getting a non-existing object")
-		t.Errorf("Change in behaviour")
+	if err == nil {
+		// AWS SDK returns an error when the object does not exist (unlike Minio SDK)
+		// Close the reader if we got one
+		if fp != nil {
+			fp.Close()
+		}
+		t.Errorf("Expected an error when getting a non-existing object")
 	}
 
-	// Print contents of the file
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(fp)
-	s := buf.String()
-	if len(s) != 0 {
-		t.Errorf("Expected empty response, but got %s\n", s)
+	// Verify the error is a "not found" type error
+	// AWS SDK v2 returns NoSuchKey error for non-existent objects
+	if fp != nil {
+		// If we somehow got a reader, verify it's empty
+		buf := new(bytes.Buffer)
+		io.Copy(buf, fp)
+		fp.Close()
+		s := buf.String()
+		if len(s) != 0 {
+			t.Errorf("Expected empty response, but got %s\n", s)
+		}
 	}
 
+	// RemoveObjectByHash on non-existent object should not error in S3
 	err = s3ao.RemoveObjectByHash(nonExistentSHA256)
 	if err != nil {
-		// This is strange behaviour. The library should return an error
-		// if the object does not exist.
-		//t.Errorf("Expected an error when removing a non-existing object")
-		t.Errorf("Change in behaviour")
+		// S3 DeleteObject doesn't return an error for non-existent objects
+		// This is expected AWS S3 behavior
+		t.Errorf("Unexpected error when removing non-existing object: %s", err)
 	}
 }

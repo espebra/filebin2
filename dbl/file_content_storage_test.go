@@ -1,10 +1,8 @@
 package dbl
 
 import (
-	"context"
 	"github.com/espebra/filebin2/ds"
 	"github.com/espebra/filebin2/s3"
-	"github.com/minio/minio-go/v7"
 	"strings"
 	"testing"
 	"time"
@@ -55,8 +53,7 @@ func TestFileContentInStorageReflectsS3State(t *testing.T) {
 	}
 
 	// Verify content exists in S3
-	ctx := context.Background()
-	_, err = s3ao.GetClient().StatObject(ctx, s3ao.GetBucket(), sha256, minio.StatObjectOptions{})
+	_, err = s3ao.StatObject(sha256)
 	if err != nil {
 		t.Errorf("Content should exist in S3 after upload, but got error: %s", err)
 	}
@@ -91,7 +88,7 @@ func TestFileContentInStorageReflectsS3State(t *testing.T) {
 	}
 
 	// Verify content no longer exists in S3
-	_, err = s3ao.GetClient().StatObject(ctx, s3ao.GetBucket(), sha256, minio.StatObjectOptions{})
+	_, err = s3ao.StatObject(sha256)
 	if err == nil {
 		t.Error("Content should not exist in S3 after removal")
 	}
@@ -148,8 +145,7 @@ func TestFileInStorageReflectsS3State(t *testing.T) {
 	}
 
 	// Verify content exists in S3
-	ctx := context.Background()
-	_, err = s3ao.GetClient().StatObject(ctx, s3ao.GetBucket(), sha256, minio.StatObjectOptions{})
+	_, err = s3ao.StatObject(sha256)
 	if err != nil {
 		t.Errorf("Content should exist in S3 after upload, but got error: %s", err)
 	}
@@ -195,7 +191,7 @@ func TestFileInStorageReflectsS3State(t *testing.T) {
 	}
 
 	// Verify content no longer exists in S3
-	_, err = s3ao.GetClient().StatObject(ctx, s3ao.GetBucket(), sha256, minio.StatObjectOptions{})
+	_, err = s3ao.StatObject(sha256)
 	if err == nil {
 		t.Error("Content should not exist in S3 after removal")
 	}
@@ -239,8 +235,6 @@ func TestDeduplicationWithS3Storage(t *testing.T) {
 		t.Fatalf("Failed to insert bin: %s", err)
 	}
 
-	ctx := context.Background()
-
 	// Upload 1: Upload to S3 (first time)
 	t.Log("Upload 1: First upload of content")
 	err = s3ao.PutObjectByHash(sha256, strings.NewReader(content), int64(len(content)))
@@ -249,7 +243,7 @@ func TestDeduplicationWithS3Storage(t *testing.T) {
 	}
 
 	// Verify content exists in S3
-	_, err = s3ao.GetClient().StatObject(ctx, s3ao.GetBucket(), sha256, minio.StatObjectOptions{})
+	_, err = s3ao.StatObject(sha256)
 	if err != nil {
 		t.Errorf("Content should exist in S3 after first upload: %s", err)
 	}
@@ -291,7 +285,7 @@ func TestDeduplicationWithS3Storage(t *testing.T) {
 	t.Log("Upload 2: Deduplicated upload (skip S3)")
 
 	// Check if content already exists in S3 (it should)
-	_, err = s3ao.GetClient().StatObject(ctx, s3ao.GetBucket(), sha256, minio.StatObjectOptions{})
+	_, err = s3ao.StatObject(sha256)
 	if err != nil {
 		t.Error("Content should still exist in S3 for deduplication")
 	}
@@ -337,7 +331,7 @@ func TestDeduplicationWithS3Storage(t *testing.T) {
 	}
 
 	// Verify content STILL exists in S3 (one reference remaining)
-	_, err = s3ao.GetClient().StatObject(ctx, s3ao.GetBucket(), sha256, minio.StatObjectOptions{})
+	_, err = s3ao.StatObject(sha256)
 	if err != nil {
 		t.Error("Content should still exist in S3 with one reference remaining")
 	}
@@ -384,7 +378,7 @@ func TestDeduplicationWithS3Storage(t *testing.T) {
 	}
 
 	// Verify content no longer exists in S3
-	_, err = s3ao.GetClient().StatObject(ctx, s3ao.GetBucket(), sha256, minio.StatObjectOptions{})
+	_, err = s3ao.StatObject(sha256)
 	if err == nil {
 		t.Error("Content should not exist in S3 after removing last reference")
 	}
@@ -424,7 +418,6 @@ func TestReuploadAfterDeletion(t *testing.T) {
 	}
 	defer teardownS3(s3ao)
 
-	ctx := context.Background()
 	sha256 := "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
 	content := "test content for reupload"
 
@@ -512,7 +505,7 @@ func TestReuploadAfterDeletion(t *testing.T) {
 		}
 
 		// Verify content is not in S3
-		_, err = s3ao.GetClient().StatObject(ctx, s3ao.GetBucket(), sha256, minio.StatObjectOptions{})
+		_, err = s3ao.StatObject(sha256)
 		if err == nil {
 			t.Error("Content should not exist in S3 after lurker cleanup")
 		}
@@ -571,7 +564,7 @@ func TestReuploadAfterDeletion(t *testing.T) {
 		}
 
 		// Verify content exists in S3
-		_, err = s3ao.GetClient().StatObject(ctx, s3ao.GetBucket(), sha256, minio.StatObjectOptions{})
+		_, err = s3ao.StatObject(sha256)
 		if err != nil {
 			t.Errorf("Content should exist in S3 after re-upload: %s", err)
 		}
@@ -672,7 +665,7 @@ func TestReuploadAfterDeletion(t *testing.T) {
 		}
 
 		// Verify content is not in S3
-		_, err = s3ao.GetClient().StatObject(ctx, s3ao.GetBucket(), sha256_v2, minio.StatObjectOptions{})
+		_, err = s3ao.StatObject(sha256_v2)
 		if err == nil {
 			t.Error("Content should not exist in S3 after lurker cleanup")
 		}
@@ -731,7 +724,7 @@ func TestReuploadAfterDeletion(t *testing.T) {
 		}
 
 		// Verify content exists in S3
-		_, err = s3ao.GetClient().StatObject(ctx, s3ao.GetBucket(), sha256_v2, minio.StatObjectOptions{})
+		_, err = s3ao.StatObject(sha256_v2)
 		if err != nil {
 			t.Errorf("Content should exist in S3 after re-upload: %s", err)
 		}

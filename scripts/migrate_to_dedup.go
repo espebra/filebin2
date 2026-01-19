@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -9,7 +8,6 @@ import (
 
 	"github.com/espebra/filebin2/dbl"
 	"github.com/espebra/filebin2/s3"
-	"github.com/minio/minio-go/v7"
 )
 
 func main() {
@@ -143,8 +141,7 @@ func migrateS3Objects(dao *dbl.DAO, s3ao *s3.S3AO, dryRun bool) error {
 
 		// Check if new key already exists
 		newKey := content.SHA256
-		ctx := context.Background()
-		_, err := s3ao.GetClient().StatObject(ctx, s3ao.GetBucket(), newKey, minio.StatObjectOptions{})
+		_, err := s3ao.StatObject(newKey)
 		if err == nil {
 			fmt.Printf("  New key already exists, skipping\n")
 			continue
@@ -167,16 +164,7 @@ func migrateS3Objects(dao *dbl.DAO, s3ao *s3.S3AO, dryRun bool) error {
 		}
 
 		// Copy from old key to new key
-		src := minio.CopySrcOptions{
-			Bucket: s3ao.GetBucket(),
-			Object: oldKey,
-		}
-		dst := minio.CopyDestOptions{
-			Bucket: s3ao.GetBucket(),
-			Object: newKey,
-		}
-
-		_, err = s3ao.GetClient().CopyObject(ctx, dst, src)
+		err = s3ao.CopyObject(oldKey, newKey)
 		if err != nil {
 			fmt.Printf("  ERROR: Failed to copy object: %s\n", err)
 			continue
