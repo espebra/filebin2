@@ -10,17 +10,23 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/aws/smithy-go/middleware"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/dustin/go-humanize"
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 type S3AO struct {
-	client   *minio.Client
-	bucket   string
-	endpoint string
-	secure   bool
-	expiry   time.Duration
+	client       *s3.Client
+	presignClient *s3.PresignClient
+	bucket       string
+	endpoint     string
+	secure       bool
+	expiry       time.Duration
 }
 
 type BucketMetrics struct {
@@ -38,18 +44,43 @@ type BucketMetrics struct {
 func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool, presignExpiry time.Duration) (S3AO, error) {
 	var s3ao S3AO
 
-	// Set up client for S3AO
-	minioClient, err := minio.New(endpoint, &minio.Options{
-		Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
-		Secure: secure,
-		Region: region,
-	})
-	if err != nil {
-		return s3ao, err
+	if endpoint == "" {
+		return s3ao, fmt.Errorf("endpoint is required")
 	}
-	minioClient.SetAppInfo("filebin", "2.0.1")
 
-	s3ao.client = minioClient
+	// Build the endpoint URL
+	protocol := "http"
+	if secure {
+		protocol = "https"
+	}
+	endpointURL := fmt.Sprintf("%s://%s", protocol, endpoint)
+
+	// Create custom endpoint resolver for S3-compatible storage
+	customResolver := aws.EndpointResolverWithOptionsFunc(func(service, reg string, options ...interface{}) (aws.Endpoint, error) {
+		return aws.Endpoint{
+			URL:               endpointURL,
+			HostnameImmutable: true,
+			SigningRegion:     region,
+		}, nil
+	})
+
+	// Load AWS config with custom settings
+	cfg, err := config.LoadDefaultConfig(context.Background(),
+		config.WithRegion(region),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")),
+		config.WithEndpointResolverWithOptions(customResolver),
+	)
+	if err != nil {
+		return s3ao, fmt.Errorf("failed to load AWS config: %w", err)
+	}
+
+	// Create S3 client with path-style addressing (required for MinIO and most S3-compatible storage)
+	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.UsePathStyle = true
+	})
+
+	s3ao.client = client
+	s3ao.presignClient = s3.NewPresignClient(client)
 	s3ao.bucket = bucket
 	s3ao.endpoint = endpoint
 	s3ao.secure = secure
@@ -58,41 +89,43 @@ func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool, pr
 	fmt.Printf("Established session to S3AO at %s\n", endpoint)
 
 	// Ensure that the bucket exists
-	found, err := s3ao.client.BucketExists(context.Background(), bucket)
+	_, err = s3ao.client.HeadBucket(context.Background(), &s3.HeadBucketInput{
+		Bucket: aws.String(bucket),
+	})
 	if err != nil {
-		fmt.Printf("Unable to check if S3AO bucket exists: %s\n", err.Error())
-		return s3ao, err
-	}
-	if found {
-		fmt.Printf("Found S3AO bucket: %s\n", bucket)
-	} else {
+		// Bucket doesn't exist, try to create it
 		t0 := time.Now()
-		if err := s3ao.client.MakeBucket(context.Background(), bucket, minio.MakeBucketOptions{Region: region}); err != nil {
-			fmt.Printf("%s\n", err.Error())
+		_, createErr := s3ao.client.CreateBucket(context.Background(), &s3.CreateBucketInput{
+			Bucket: aws.String(bucket),
+		})
+		if createErr != nil {
+			fmt.Printf("Unable to create S3AO bucket: %s\n", createErr.Error())
+			return s3ao, createErr
 		}
 		fmt.Printf("Created S3AO bucket: %s in %.3fs\n", bucket, time.Since(t0).Seconds())
+	} else {
+		fmt.Printf("Found S3AO bucket: %s\n", bucket)
 	}
+
 	return s3ao, nil
 }
 
 func (s S3AO) Status() bool {
-	found, err := s.client.BucketExists(context.Background(), s.bucket)
+	_, err := s.client.HeadBucket(context.Background(), &s3.HeadBucketInput{
+		Bucket: aws.String(s.bucket),
+	})
 	if err != nil {
 		fmt.Printf("Error from S3 when checking if bucket %s exists: %s\n", s.bucket, err.Error())
-		return false
-	}
-	if found == false {
-		fmt.Printf("S3 bucket %s does not exist\n", s.bucket)
 		return false
 	}
 	return true
 }
 
 func (s S3AO) SetTrace(trace bool) {
+	// AWS SDK v2 doesn't have a simple trace toggle like Minio
+	// Logging can be configured via the AWS config if needed
 	if trace {
-		s.client.TraceOn(nil)
-	} else {
-		s.client.TraceOff()
+		fmt.Println("S3 tracing enabled (limited in AWS SDK v2)")
 	}
 }
 
@@ -100,20 +133,18 @@ func (s S3AO) PutObject(bin string, filename string, data io.Reader, size int64)
 	// Hash the path in S3
 	objectKey := s.GetObjectKey(bin, filename)
 
-	var objectSize uint64
-	var content io.Reader
-
-	// Do not encrypt the content during upload. This allows for presigned downloads.
-	content = data
-	objectSize = uint64(size)
-
-	_, err = s.client.PutObject(context.Background(), s.bucket, objectKey, content, int64(objectSize), minio.PutObjectOptions{ContentType: "application/octet-stream"})
+	_, err = s.client.PutObject(context.Background(), &s3.PutObjectInput{
+		Bucket:        aws.String(s.bucket),
+		Key:           aws.String(objectKey),
+		Body:          data,
+		ContentLength: aws.Int64(size),
+		ContentType:   aws.String("application/octet-stream"),
+	})
 	if err != nil {
 		fmt.Printf("Unable to put object: %s\n", err.Error())
 		return err
 	}
 
-	//fmt.Printf("Stored object: %s (%d bytes) in %.3fs\n", objectKey, objectSize, time.Since(t0).Seconds())
 	return nil
 }
 
@@ -126,14 +157,10 @@ func (s S3AO) RemoveObject(bin string, filename string) error {
 func (s S3AO) RemoveKey(key string) error {
 	t0 := time.Now()
 
-	opts := minio.RemoveObjectOptions{
-		// The following is used in the Minio SDK documentation,
-		// but it seems not all S3 server side implementations
-		// support this. One example is DigitalOcean Spaces.
-		//GovernanceBypass: true,
-	}
-
-	err := s.client.RemoveObject(context.Background(), s.bucket, key, opts)
+	_, err := s.client.DeleteObject(context.Background(), &s3.DeleteObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(key),
+	})
 	if err != nil {
 		fmt.Printf("Unable to remove object: %s\n", err.Error())
 		return err
@@ -143,21 +170,20 @@ func (s S3AO) RemoveKey(key string) error {
 }
 
 func (s S3AO) ListObjects() (objects []string, err error) {
-	opts := minio.ListObjectsOptions{
-		Prefix:    "",
-		Recursive: true,
-	}
+	paginator := s3.NewListObjectsV2Paginator(s.client, &s3.ListObjectsV2Input{
+		Bucket: aws.String(s.bucket),
+	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	objectCh := s.client.ListObjects(ctx, s.bucket, opts)
-	for object := range objectCh {
-		if object.Err != nil {
-			return objects, object.Err
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(context.Background())
+		if err != nil {
+			return objects, err
 		}
-		objects = append(objects, object.Key)
+		for _, obj := range page.Contents {
+			objects = append(objects, *obj.Key)
+		}
 	}
+
 	return objects, nil
 }
 
@@ -168,7 +194,7 @@ func (s S3AO) RemoveBucket() error {
 		fmt.Printf("Unable to list objects: %s\n", err.Error())
 	}
 
-	// ReoveObject on all objects
+	// RemoveObject on all objects
 	for _, object := range objects {
 		if err := s.RemoveKey(object); err != nil {
 			return err
@@ -176,7 +202,10 @@ func (s S3AO) RemoveBucket() error {
 	}
 
 	// RemoveBucket
-	if err := s.client.RemoveBucket(context.Background(), s.bucket); err != nil {
+	_, err = s.client.DeleteBucket(context.Background(), &s3.DeleteBucketInput{
+		Bucket: aws.String(s.bucket),
+	})
+	if err != nil {
 		return err
 	}
 
@@ -184,86 +213,122 @@ func (s S3AO) RemoveBucket() error {
 	return nil
 }
 
-func (s S3AO) GetObject(contentSHA256 string, start int64, end int64) (*minio.Object, error) {
+func (s S3AO) GetObject(contentSHA256 string, start int64, end int64) (io.ReadCloser, error) {
 	t0 := time.Now()
 
 	// Use content SHA256 as the object key for content-addressable storage
 	objectKey := contentSHA256
-	opts := minio.GetObjectOptions{}
 
-	if end > 0 {
-		opts.SetRange(start, end)
+	input := &s3.GetObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(objectKey),
 	}
 
-	object, err := s.client.GetObject(context.Background(), s.bucket, objectKey, opts)
+	if end > 0 {
+		// AWS SDK uses inclusive range, format: "bytes=start-end"
+		input.Range = aws.String(fmt.Sprintf("bytes=%d-%d", start, end))
+	}
+
+	result, err := s.client.GetObject(context.Background(), input)
 	if err != nil {
-		return object, err
+		return nil, err
 	}
 
 	fmt.Printf("Fetched object: %s in %.3fs\n", objectKey, time.Since(t0).Seconds())
-	return object, err
+	return result.Body, nil
 }
 
-// This only works with objects that are not encrypted
-func (s S3AO) PresignedGetObject(contentSHA256 string, filename string, mime string) (presignedURL *url.URL, err error) {
+// PresignedGetObject generates a presigned URL for downloading an object.
+// If clientIP is provided, the URL will require the Client-IP header to be set
+// to that value when making the request (the header is included in the signature).
+// This only works with objects that are not encrypted.
+func (s S3AO) PresignedGetObject(contentSHA256 string, filename string, mime string, clientIP string) (presignedURL *url.URL, err error) {
 	// Use content SHA256 as the object key for content-addressable storage
 	objectKey := contentSHA256
 
-	reqParams := make(url.Values)
-	reqParams.Set("response-content-type", mime)
-
+	var contentDisposition string
 	switch {
 	case strings.HasPrefix(mime, "text/html"), strings.HasPrefix(mime, "application/pdf"):
 		// Tell browser to handle this as an attachment. For text/html, this
 		// is a small barrier to reduce phishing.
-		reqParams.Set("response-content-disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+		contentDisposition = fmt.Sprintf("attachment; filename=\"%s\"", filename)
 	default:
 		// Browser to decide how to handle the rest of the content-types
-		reqParams.Set("response-content-disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))
+		contentDisposition = fmt.Sprintf("inline; filename=\"%s\"", filename)
 	}
 
-	reqParams.Set("response-cache-control", fmt.Sprintf("max-age=%.0f", s.expiry.Seconds()))
+	cacheControl := fmt.Sprintf("max-age=%.0f", s.expiry.Seconds())
 
-	presignedURL, err = s.client.PresignedGetObject(context.Background(), s.bucket, objectKey, s.expiry, reqParams)
+	request, err := s.presignClient.PresignGetObject(context.Background(), &s3.GetObjectInput{
+		Bucket:                     aws.String(s.bucket),
+		Key:                        aws.String(objectKey),
+		ResponseContentType:        aws.String(mime),
+		ResponseContentDisposition: aws.String(contentDisposition),
+		ResponseCacheControl:       aws.String(cacheControl),
+	}, func(opts *s3.PresignOptions) {
+		opts.Expires = s.expiry
+		if clientIP != "" {
+			opts.ClientOptions = append(opts.ClientOptions, func(o *s3.Options) {
+				o.APIOptions = append(o.APIOptions, func(stack *middleware.Stack) error {
+					return stack.Build.Add(middleware.BuildMiddlewareFunc("AddClientIPHeader", func(
+						ctx context.Context, in middleware.BuildInput, next middleware.BuildHandler,
+					) (middleware.BuildOutput, middleware.Metadata, error) {
+						if req, ok := in.Request.(*smithyhttp.Request); ok {
+							req.Header.Set("Client-IP", clientIP)
+						}
+						return next.HandleBuild(ctx, in)
+					}), middleware.Before)
+				})
+			})
+		}
+	})
 	if err != nil {
-		return presignedURL, err
+		return nil, err
+	}
+
+	presignedURL, err = url.Parse(request.URL)
+	if err != nil {
+		return nil, err
 	}
 
 	return presignedURL, nil
 }
 
 func (s S3AO) GetBucketMetrics() (metrics BucketMetrics) {
-	//opts := minio.ListObjectsOptions{
-	//	Prefix:    "",
-	//	Recursive: true,
-	//}
-
-	//objectCh := s.client.ListObjects(context.Background(), s.bucket, opts)
+	// List incomplete multipart uploads
 	var size int64
 	var numObjects uint64
-	//for object := range objectCh {
-	//	if object.Err != nil {
-	//		fmt.Println(object.Err)
-	//		return metrics
-	//	}
-	//	size = size + object.Size
-	//	numObjects = numObjects + 1
-	//}
 
-	//metrics.Objects = numObjects
-	//metrics.ObjectsReadable = humanize.Comma(int64(numObjects))
-	//metrics.ObjectsSize = uint64(size)
-	//metrics.ObjectsSizeReadable = humanize.Bytes(metrics.ObjectsSize)
+	paginator := s3.NewListMultipartUploadsPaginator(s.client, &s3.ListMultipartUploadsInput{
+		Bucket: aws.String(s.bucket),
+	})
 
-	multiPartObjectCh := s.client.ListIncompleteUploads(context.Background(), s.bucket, "", true)
-	for multiPartObject := range multiPartObjectCh {
-		if multiPartObject.Err != nil {
-			fmt.Println(multiPartObject.Err)
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(context.Background())
+		if err != nil {
+			fmt.Println(err)
 			return metrics
 		}
-		size = size + multiPartObject.Size
-		numObjects = numObjects + 1
+
+		for _, upload := range page.Uploads {
+			// List parts to get size info
+			partsOutput, err := s.client.ListParts(context.Background(), &s3.ListPartsInput{
+				Bucket:   aws.String(s.bucket),
+				Key:      upload.Key,
+				UploadId: upload.UploadId,
+			})
+			if err != nil {
+				continue
+			}
+			for _, part := range partsOutput.Parts {
+				if part.Size != nil {
+					size += *part.Size
+				}
+			}
+			numObjects++
+		}
 	}
+
 	metrics.IncompleteObjects = numObjects
 	metrics.IncompleteObjectsReadable = humanize.Comma(int64(numObjects))
 	metrics.IncompleteObjectsSize = uint64(size)
@@ -282,22 +347,18 @@ func (s S3AO) GetObjectKey(bin string, filename string) (key string) {
 
 // PutObjectByHash uploads an object using content-addressable storage (SHA256 as key)
 func (s S3AO) PutObjectByHash(contentSHA256 string, data io.Reader, size int64) (err error) {
-	//t0 := time.Now()
-
-	var objectSize uint64
-	var content io.Reader
-
-	// Do not encrypt the content during upload. This allows for presigned downloads.
-	content = data
-	objectSize = uint64(size)
-
-	_, err = s.client.PutObject(context.Background(), s.bucket, contentSHA256, content, int64(objectSize), minio.PutObjectOptions{ContentType: "application/octet-stream"})
+	_, err = s.client.PutObject(context.Background(), &s3.PutObjectInput{
+		Bucket:        aws.String(s.bucket),
+		Key:           aws.String(contentSHA256),
+		Body:          data,
+		ContentLength: aws.Int64(size),
+		ContentType:   aws.String("application/octet-stream"),
+	})
 	if err != nil {
 		fmt.Printf("Unable to put object: %s\n", err.Error())
 		return err
 	}
 
-	//fmt.Printf("Stored object: %s (%d bytes) in %.3fs\n", contentSHA256, objectSize, time.Since(t0).Seconds())
 	return nil
 }
 
@@ -305,9 +366,10 @@ func (s S3AO) PutObjectByHash(contentSHA256 string, data io.Reader, size int64) 
 func (s S3AO) RemoveObjectByHash(contentSHA256 string) error {
 	t0 := time.Now()
 
-	opts := minio.RemoveObjectOptions{}
-
-	err := s.client.RemoveObject(context.Background(), s.bucket, contentSHA256, opts)
+	_, err := s.client.DeleteObject(context.Background(), &s3.DeleteObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(contentSHA256),
+	})
 	if err != nil {
 		fmt.Printf("Unable to remove object: %s\n", err.Error())
 		return err
@@ -316,8 +378,26 @@ func (s S3AO) RemoveObjectByHash(contentSHA256 string) error {
 	return nil
 }
 
-// GetClient returns the underlying minio client (for migration and advanced operations)
-func (s S3AO) GetClient() *minio.Client {
+// StatObject checks if an object exists and returns its metadata
+func (s S3AO) StatObject(key string) (*s3.HeadObjectOutput, error) {
+	return s.client.HeadObject(context.Background(), &s3.HeadObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(key),
+	})
+}
+
+// CopyObject copies an object from one key to another within the same bucket
+func (s S3AO) CopyObject(srcKey, dstKey string) error {
+	_, err := s.client.CopyObject(context.Background(), &s3.CopyObjectInput{
+		Bucket:     aws.String(s.bucket),
+		CopySource: aws.String(fmt.Sprintf("%s/%s", s.bucket, srcKey)),
+		Key:        aws.String(dstKey),
+	})
+	return err
+}
+
+// GetClient returns the underlying S3 client (for advanced operations)
+func (s S3AO) GetClient() *s3.Client {
 	return s.client
 }
 
@@ -333,4 +413,24 @@ func (s S3AO) GetObjectURL(contentSHA256 string) string {
 		protocol = "https"
 	}
 	return fmt.Sprintf("%s://%s/%s/%s", protocol, s.endpoint, s.bucket, contentSHA256)
+}
+
+// ListObjectsWithPrefix lists objects with a given prefix
+func (s S3AO) ListObjectsWithPrefix(prefix string) ([]types.Object, error) {
+	var objects []types.Object
+
+	paginator := s3.NewListObjectsV2Paginator(s.client, &s3.ListObjectsV2Input{
+		Bucket: aws.String(s.bucket),
+		Prefix: aws.String(prefix),
+	})
+
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(context.Background())
+		if err != nil {
+			return nil, err
+		}
+		objects = append(objects, page.Contents...)
+	}
+
+	return objects, nil
 }
