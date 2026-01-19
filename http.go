@@ -161,23 +161,18 @@ func (h *HTTP) clientLookup(fn func(http.ResponseWriter, *http.Request)) http.Ha
 			return
 		}
 		if found {
-			// Existing client IP to be updated
-			//fmt.Printf("Existing IP address: %s\n", client.IP)
+			// Existing client IP, GeoIP data already in database
 		} else {
-			// New client IP to be registered
-			//fmt.Printf("New IP address: %s\n", client.IP)
-
+			// New client IP, perform GeoIP lookup
+			if err := h.geodb.Lookup(r.RemoteAddr, &client); err != nil {
+				fmt.Printf("Unable to look up geoip details for %s: %s\n", r.RemoteAddr, err.Error())
+			}
 		}
 
 		if client.IsBanned() {
-			//fmt.Printf("Client IP %s is banned.\n", client.IP)
 			fmt.Printf("Rejecting request from client ip %s due to ban %s (%s) by %s.\n", client.IP, client.BannedAtRelative, client.BannedAt.Time.Format("2006-01-02 15:04:05 UTC"), client.BannedBy)
 			http.Error(w, "This client IP address has been banned.", http.StatusForbidden)
 			return
-		}
-
-		if err := h.geodb.Lookup(r.RemoteAddr, &client); err != nil {
-			fmt.Printf("Unable to look up geoip details for %s: %s\n", r.RemoteAddr, err.Error())
 		}
 
 		// Check the client details against the ban filter here

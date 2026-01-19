@@ -1,6 +1,6 @@
 #!/bin/sh
 
-S3URL=storage:9000
+S3URL=storage:5553
 
 until curl -i -s $S3URL >/dev/null
 do

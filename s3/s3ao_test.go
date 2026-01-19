@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	ENDPOINT   = "s3:9000"
+	ENDPOINT   = "s3:5553"
 	REGION     = "us-east-1"
 	BUCKET     = "filebin-test"
 	ACCESS_KEY = "s3accesskey"

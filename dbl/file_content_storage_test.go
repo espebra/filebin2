@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	testS3Endpoint  = "s3:9000"
+	testS3Endpoint  = "s3:5553"
 	testS3Region    = "us-east-1"
-	testS3Bucket    = "filebin-test-storage"
+	testS3Bucket    = "filebin-test"
 	testS3AccessKey = "s3accesskey"
 	testS3SecretKey = "s3secretkey"
 )

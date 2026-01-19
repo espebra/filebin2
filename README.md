@@ -20,7 +20,7 @@ A couple of (in hindsight) bad architectural decisions in the [previous version 
 
 ## Development environment
 
-The development environment consists of one PostgreSQL instance, one MinIO object storage instance and an instance of filebin2. The easiest way to set up this environment is to clone this repository and do:
+The development environment consists of one PostgreSQL instance, one Stupid Simple S3 instance and an instance of filebin2. The easiest way to set up this environment is to clone this repository and do:
 
 ```bash
 docker-compose up --build
@@ -30,7 +30,7 @@ This will make:
 
 * Filebin2 available on [http://localhost:8080/](http://localhost:8080/).
 * Filebin2 admin available on [http://admin:changeme@localhost:8080/admin](http://admin:changeme@localhost:8080/admin).
-* MinIO available on [http://localhost:9000/](http://localhost:9000/).
+* Stupid Simple S3 available on [http://localhost:5553/](http://localhost:5553/).
 * PostgreSQL available on `localhost:5432`.
 
 ## Usage
