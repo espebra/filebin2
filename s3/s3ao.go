@@ -21,12 +21,14 @@ import (
 )
 
 type S3AO struct {
-	client       *s3.Client
-	presignClient *s3.PresignClient
-	bucket       string
-	endpoint     string
-	secure       bool
-	expiry       time.Duration
+	client          *s3.Client
+	presignClient   *s3.PresignClient
+	bucket          string
+	endpoint        string
+	secure          bool
+	expiry          time.Duration
+	timeout         time.Duration // timeout for quick operations (delete, head, stat)
+	transferTimeout time.Duration // timeout for data transfers (put, get, copy)
 }
 
 type BucketMetrics struct {
@@ -41,7 +43,7 @@ type BucketMetrics struct {
 }
 
 // Initialize S3AO
-func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool, presignExpiry time.Duration) (S3AO, error) {
+func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool, presignExpiry, timeout, transferTimeout time.Duration) (S3AO, error) {
 	var s3ao S3AO
 
 	if endpoint == "" {
@@ -85,6 +87,8 @@ func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool, pr
 	s3ao.endpoint = endpoint
 	s3ao.secure = secure
 	s3ao.expiry = presignExpiry
+	s3ao.timeout = timeout
+	s3ao.transferTimeout = transferTimeout
 
 	fmt.Printf("Established session to S3AO at %s\n", endpoint)
 
@@ -111,7 +115,10 @@ func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool, pr
 }
 
 func (s S3AO) Status() bool {
-	_, err := s.client.HeadBucket(context.Background(), &s3.HeadBucketInput{
+	ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
+	defer cancel()
+
+	_, err := s.client.HeadBucket(ctx, &s3.HeadBucketInput{
 		Bucket: aws.String(s.bucket),
 	})
 	if err != nil {
@@ -133,7 +140,10 @@ func (s S3AO) PutObject(bin string, filename string, data io.Reader, size int64)
 	// Hash the path in S3
 	objectKey := s.GetObjectKey(bin, filename)
 
-	_, err = s.client.PutObject(context.Background(), &s3.PutObjectInput{
+	ctx, cancel := context.WithTimeout(context.Background(), s.transferTimeout)
+	defer cancel()
+
+	_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:        aws.String(s.bucket),
 		Key:           aws.String(objectKey),
 		Body:          data,
@@ -157,7 +167,10 @@ func (s S3AO) RemoveObject(bin string, filename string) error {
 func (s S3AO) RemoveKey(key string) error {
 	t0 := time.Now()
 
-	_, err := s.client.DeleteObject(context.Background(), &s3.DeleteObjectInput{
+	ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
+	defer cancel()
+
+	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
 	})
@@ -229,7 +242,10 @@ func (s S3AO) GetObject(contentSHA256 string, start int64, end int64) (io.ReadCl
 		input.Range = aws.String(fmt.Sprintf("bytes=%d-%d", start, end))
 	}
 
-	result, err := s.client.GetObject(context.Background(), input)
+	ctx, cancel := context.WithTimeout(context.Background(), s.transferTimeout)
+	defer cancel()
+
+	result, err := s.client.GetObject(ctx, input)
 	if err != nil {
 		return nil, err
 	}
@@ -347,7 +363,10 @@ func (s S3AO) GetObjectKey(bin string, filename string) (key string) {
 
 // PutObjectByHash uploads an object using content-addressable storage (SHA256 as key)
 func (s S3AO) PutObjectByHash(contentSHA256 string, data io.Reader, size int64) (err error) {
-	_, err = s.client.PutObject(context.Background(), &s3.PutObjectInput{
+	ctx, cancel := context.WithTimeout(context.Background(), s.transferTimeout)
+	defer cancel()
+
+	_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:        aws.String(s.bucket),
 		Key:           aws.String(contentSHA256),
 		Body:          data,
@@ -366,7 +385,10 @@ func (s S3AO) PutObjectByHash(contentSHA256 string, data io.Reader, size int64) 
 func (s S3AO) RemoveObjectByHash(contentSHA256 string) error {
 	t0 := time.Now()
 
-	_, err := s.client.DeleteObject(context.Background(), &s3.DeleteObjectInput{
+	ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
+	defer cancel()
+
+	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(contentSHA256),
 	})
@@ -380,7 +402,10 @@ func (s S3AO) RemoveObjectByHash(contentSHA256 string) error {
 
 // StatObject checks if an object exists and returns its metadata
 func (s S3AO) StatObject(key string) (*s3.HeadObjectOutput, error) {
-	return s.client.HeadObject(context.Background(), &s3.HeadObjectInput{
+	ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
+	defer cancel()
+
+	return s.client.HeadObject(ctx, &s3.HeadObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
 	})
@@ -388,7 +413,10 @@ func (s S3AO) StatObject(key string) (*s3.HeadObjectOutput, error) {
 
 // CopyObject copies an object from one key to another within the same bucket
 func (s S3AO) CopyObject(srcKey, dstKey string) error {
-	_, err := s.client.CopyObject(context.Background(), &s3.CopyObjectInput{
+	ctx, cancel := context.WithTimeout(context.Background(), s.transferTimeout)
+	defer cancel()
+
+	_, err := s.client.CopyObject(ctx, &s3.CopyObjectInput{
 		Bucket:     aws.String(s.bucket),
 		CopySource: aws.String(fmt.Sprintf("%s/%s", s.bucket, srcKey)),
 		Key:        aws.String(dstKey),

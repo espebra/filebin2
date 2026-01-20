@@ -20,7 +20,9 @@ const (
 
 func tearUp() (S3AO, error) {
 	expiry := time.Second * 10
-	s3ao, err := Init(ENDPOINT, BUCKET, REGION, ACCESS_KEY, SECRET_KEY, false, expiry)
+	timeout := time.Second * 30
+	transferTimeout := time.Minute * 10
+	s3ao, err := Init(ENDPOINT, BUCKET, REGION, ACCESS_KEY, SECRET_KEY, false, expiry, timeout, transferTimeout)
 	if err != nil {
 		return s3ao, err
 	}
@@ -56,7 +58,9 @@ func TestInit(t *testing.T) {
 
 func TestFailingInit(t *testing.T) {
 	expiry := time.Second * 10
-	_, err := Init("", "", "", "", "", false, expiry)
+	timeout := time.Second * 30
+	transferTimeout := time.Minute * 10
+	_, err := Init("", "", "", "", "", false, expiry, timeout, transferTimeout)
 	if err == nil {
 		t.Error("Was expecting to fail here, invalid user and db name were provided.")
 	}
