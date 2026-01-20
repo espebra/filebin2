@@ -78,6 +78,7 @@ var (
 
 	// Lurker
 	lurkerIntervalFlag = flag.Int("lurker-interval", 300, "Lurker interval is the delay to sleep between each run in seconds")
+	lurkerThrottleFlag = flag.Int("lurker-throttle", 250, "Milliseconds to sleep between each S3 deletion")
 	logRetentionFlag   = flag.Uint64("log-retention", 7, "The number of days to keep log entries before removed by the lurker.")
 
 	// Auth
@@ -206,7 +207,7 @@ func main() {
 	}
 
 	// Start the lurker process
-	l.Init(*lurkerIntervalFlag, *logRetentionFlag)
+	l.Init(*lurkerIntervalFlag, *lurkerThrottleFlag, *logRetentionFlag)
 	l.Run()
 
 	u, err := url.Parse(*baseURLFlag)
