@@ -72,9 +72,11 @@ var (
 	s3RegionFlag    = flag.String("s3-region", os.Getenv("S3_REGION"), "S3 region")
 	s3AccessKeyFlag = flag.String("s3-access-key", "", "S3 access key")
 	s3SecretKeyFlag = flag.String("s3-secret-key", "", "S3 secret key")
-	s3TraceFlag     = flag.Bool("s3-trace", false, "Enable S3 HTTP tracing for debugging")
-	s3SecureFlag    = flag.Bool("s3-secure", true, "Use TLS when connecting to S3")
-	s3UrlTtlFlag    = flag.String("s3-url-ttl", "1m", "The time to live for presigned S3 URLs, for example 30s or 5m")
+	s3TraceFlag           = flag.Bool("s3-trace", false, "Enable S3 HTTP tracing for debugging")
+	s3SecureFlag          = flag.Bool("s3-secure", true, "Use TLS when connecting to S3")
+	s3UrlTtlFlag          = flag.String("s3-url-ttl", "1m", "The time to live for presigned S3 URLs, for example 30s or 5m")
+	s3TimeoutFlag         = flag.String("s3-timeout", "30s", "Timeout for quick S3 operations (delete, head, stat)")
+	s3TransferTimeoutFlag = flag.String("s3-transfer-timeout", "10m", "Timeout for S3 data transfers (put, get, copy)")
 
 	// Lurker
 	lurkerIntervalFlag = flag.Int("lurker-interval", 300, "Lurker interval is the delay to sleep between each run in seconds")
@@ -182,6 +184,18 @@ func main() {
 	}
 	fmt.Printf("TTL for presigned S3 URLs: %s\n", s3UrlTtl.String())
 
+	s3Timeout, err := time.ParseDuration(*s3TimeoutFlag)
+	if err != nil {
+		fmt.Printf("Unable to parse --s3-timeout: %s\n", err.Error())
+		os.Exit(2)
+	}
+
+	s3TransferTimeout, err := time.ParseDuration(*s3TransferTimeoutFlag)
+	if err != nil {
+		fmt.Printf("Unable to parse --s3-transfer-timeout: %s\n", err.Error())
+		os.Exit(2)
+	}
+
 	filter := regexp.MustCompile(`^[a-zA-Z0-9]+$`)
 	for _, v := range strings.Fields(*rejectFileExtensions) {
 		if !filter.Match([]byte(v)) {
@@ -191,7 +205,7 @@ func main() {
 		fmt.Printf("Rejecting file extension: %s\n", v)
 	}
 
-	s3conn, err := s3.Init(*s3EndpointFlag, *s3BucketFlag, *s3RegionFlag, *s3AccessKeyFlag, *s3SecretKeyFlag, *s3SecureFlag, s3UrlTtl)
+	s3conn, err := s3.Init(*s3EndpointFlag, *s3BucketFlag, *s3RegionFlag, *s3AccessKeyFlag, *s3SecretKeyFlag, *s3SecureFlag, s3UrlTtl, s3Timeout, s3TransferTimeout)
 	if err != nil {
 		fmt.Printf("Unable to initialize S3 connection: %s\n", err.Error())
 		os.Exit(2)
