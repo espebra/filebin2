@@ -16,11 +16,13 @@ type Lurker struct {
 	dao       *dbl.DAO
 	s3        *s3.S3AO
 	interval  time.Duration
+	throttle  time.Duration
 	retention uint64
 }
 
-func (l *Lurker) Init(interval int, retention uint64) (err error) {
+func (l *Lurker) Init(interval int, throttle int, retention uint64) (err error) {
 	l.interval = time.Second * time.Duration(interval)
+	l.throttle = time.Millisecond * time.Duration(throttle)
 	l.retention = retention
 	return nil
 }
@@ -115,6 +117,11 @@ func (l *Lurker) DeletePendingContent() {
 				return
 			}
 			//fmt.Printf("Removed orphaned content %s from S3\n", content.SHA256)
+
+			// Throttle to reduce load during bulk deletions
+			if l.throttle > 0 {
+				time.Sleep(l.throttle)
+			}
 		}
 	}
 }
