@@ -20,11 +20,10 @@ type Lurker struct {
 	retention uint64
 }
 
-func (l *Lurker) Init(interval int, throttle int, retention uint64) (err error) {
+func (l *Lurker) Init(interval int, throttle int, retention uint64) {
 	l.interval = time.Second * time.Duration(interval)
 	l.throttle = time.Millisecond * time.Duration(throttle)
 	l.retention = retention
-	return nil
 }
 
 func (l *Lurker) Run() {
