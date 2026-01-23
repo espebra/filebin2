@@ -3,7 +3,6 @@ package dbl
 import (
 	"database/sql"
 	_ "embed"
-	"errors"
 	"fmt"
 	"time"
 
@@ -34,7 +33,7 @@ func Init(dbHost string, dbPort int, dbName, dbUser, dbPassword string, maxOpenC
 		return dao, err
 	}
 	if err := db.Ping(); err != nil {
-		return dao, errors.New(fmt.Sprintf("Unable to ping the database: %s:%d\n", dbHost, dbPort))
+		return dao, fmt.Errorf("unable to ping the database: %s:%d", dbHost, dbPort)
 	}
 
 	db.SetMaxOpenConns(maxOpenConns)
