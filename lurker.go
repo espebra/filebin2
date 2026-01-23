@@ -32,6 +32,14 @@ func (l *Lurker) Run() {
 	ticker := time.NewTicker(l.interval)
 	done := make(chan bool)
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Printf("Lurker recovered from panic: %v\n", r)
+				// Restart the lurker after a brief delay
+				time.Sleep(10 * time.Second)
+				l.Run()
+			}
+		}()
 		for {
 			select {
 			case <-done:

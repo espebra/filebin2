@@ -76,6 +76,14 @@ func (h *HTTP) startStorageBytesUpdater() {
 	h.storageBytesMutex.Unlock()
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Printf("Storage bytes updater recovered from panic: %v\n", r)
+				// Restart the updater after a brief delay
+				time.Sleep(10 * time.Second)
+				h.startStorageBytesUpdater()
+			}
+		}()
 		ticker := time.NewTicker(1 * time.Minute)
 		for range ticker.C {
 			bytes := h.dao.Metrics().StorageBytesAllocated()
