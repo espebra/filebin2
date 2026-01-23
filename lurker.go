@@ -30,7 +30,6 @@ func (l *Lurker) Init(interval int, throttle int, retention uint64) (err error) 
 func (l *Lurker) Run() {
 	fmt.Printf("Starting Lurker process (interval: %s)\n", l.interval.String())
 	ticker := time.NewTicker(l.interval)
-	done := make(chan bool)
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -40,19 +39,14 @@ func (l *Lurker) Run() {
 				l.Run()
 			}
 		}()
-		for {
-			select {
-			case <-done:
-				return
-			case _ = <-ticker.C:
-				t0 := time.Now()
-				l.DeletePendingFiles()
-				l.DeletePendingBins()
-				l.DeletePendingContent()
-				l.CleanTransactions()
-				l.CleanClients()
-				fmt.Printf("Lurker completed run in %.3fs\n", time.Since(t0).Seconds())
-			}
+		for range ticker.C {
+			t0 := time.Now()
+			l.DeletePendingFiles()
+			l.DeletePendingBins()
+			l.DeletePendingContent()
+			l.CleanTransactions()
+			l.CleanClients()
+			fmt.Printf("Lurker completed run in %.3fs\n", time.Since(t0).Seconds())
 		}
 	}()
 }
