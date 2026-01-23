@@ -18,7 +18,9 @@ const (
 
 func setupS3() (s3.S3AO, error) {
 	expiry := time.Second * 60
-	s3ao, err := s3.Init(testS3Endpoint, testS3Bucket, testS3Region, testS3AccessKey, testS3SecretKey, false, expiry)
+	timeout := time.Second * 30
+	transferTimeout := time.Minute * 10
+	s3ao, err := s3.Init(testS3Endpoint, testS3Bucket, testS3Region, testS3AccessKey, testS3SecretKey, false, expiry, timeout, transferTimeout)
 	if err != nil {
 		return s3ao, err
 	}
