@@ -50,7 +50,9 @@ func tearUp() (dao dbl.DAO, s3ao s3.S3AO, err error) {
 		return dao, s3ao, err
 	}
 	expiry := time.Second * 10
-	s3ao, err = s3.Init(testS3Endpoint, testS3Bucket, testS3Region, testS3AccessKey, testS3SecretKey, false, expiry)
+	timeout := time.Second * 30
+	transferTimeout := time.Minute * 10
+	s3ao, err = s3.Init(testS3Endpoint, testS3Bucket, testS3Region, testS3AccessKey, testS3SecretKey, false, expiry, timeout, transferTimeout)
 	if err != nil {
 		return dao, s3ao, err
 	}

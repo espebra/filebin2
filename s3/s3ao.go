@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"path"
 	"strings"
@@ -66,11 +67,21 @@ func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool, pr
 		}, nil
 	})
 
+	// Custom HTTP transport with higher connection limits to reduce contention
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			MaxIdleConns:        100,
+			MaxIdleConnsPerHost: 100,
+			IdleConnTimeout:     90 * time.Second,
+		},
+	}
+
 	// Load AWS config with custom settings
 	cfg, err := config.LoadDefaultConfig(context.Background(),
 		config.WithRegion(region),
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")),
 		config.WithEndpointResolverWithOptions(customResolver),
+		config.WithHTTPClient(httpClient),
 	)
 	if err != nil {
 		return s3ao, fmt.Errorf("failed to load AWS config: %w", err)
