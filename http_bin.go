@@ -524,7 +524,6 @@ func (h *HTTP) approveBin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.metrics.IncrBinDeleteCount()
 	http.Error(w, "Bin approved successfully.", http.StatusOK)
 	return
 }
