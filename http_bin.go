@@ -470,7 +470,7 @@ func (h *HTTP) lockBin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// No need to set the bin to readonlytwice
+	// No need to set the bin to readonly twice
 	if bin.Readonly == true {
 		http.Error(w, "This bin is already locked", http.StatusOK)
 		return
