@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"embed"
 	"fmt"
@@ -285,24 +286,12 @@ func (h *HTTP) trackAdminLogin(remoteAddr string) {
 	}
 
 	// Do reverse DNS lookup for new IP (with timeout)
-	resultChan := make(chan []string, 1)
-	go func() {
-		names, err := net.LookupAddr(ip)
-		if err == nil && len(names) > 0 {
-			resultChan <- names
-		} else {
-			resultChan <- nil
-		}
-	}()
-
-	// Wait for result or timeout
-	select {
-	case names := <-resultChan:
-		if names != nil && len(names) > 0 {
-			newLogin.Hostname = names[0]
-		}
-	case <-time.After(2 * time.Second):
-		// Timeout, leave hostname empty
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	resolver := net.Resolver{}
+	names, err := resolver.LookupAddr(ctx, ip)
+	if err == nil && len(names) > 0 {
+		newLogin.Hostname = names[0]
 	}
 
 	h.adminLogins = append([]AdminLogin{newLogin}, h.adminLogins...)
