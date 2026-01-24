@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Filebin2 is a web application for convenient file sharing built in Go. It uses PostgreSQL for metadata and S3-compatible storage (MinIO) for file storage.
+Filebin2 is a web application for convenient file sharing built in Go. It uses PostgreSQL for metadata and S3-compatible storage (Stupid Simple S3) for file storage.
 
 ## Development Commands
 
@@ -29,17 +29,17 @@ The test environment is run with:
 
 ### Code Formatting
 ```bash
-make fmt            # Format all Go files in main package and subpackages (ds, s3, dbl, geoip)
+make fmt            # Format all Go files in cmd/ and internal/ packages
 ```
 
 ### Local Development Environment
 ```bash
-podman compose up --build   # Start PostgreSQL, MinIO, and filebin2
+podman compose up --build   # Start PostgreSQL, Stupid Simple S3, and filebin2
 
 # Services available at:
 # - Filebin2: http://localhost:8080/
 # - Admin: http://admin:changeme@localhost:8080/admin
-# - MinIO: http://localhost:9000/ (console on :9001)
+# - Stupid Simple S3: http://localhost:5553/
 # - PostgreSQL: localhost:5432
 ```
 
@@ -47,42 +47,75 @@ podman compose up --build   # Start PostgreSQL, MinIO, and filebin2
 
 ### Package Structure
 
-The codebase is organized into distinct layers:
+The codebase follows the standard Go project layout with `cmd/` for application entry points and `internal/` for private packages:
 
-**`dbl/` - Database Layer**
+```
+filebin2/
+├── cmd/filebin2/
+│   └── main.go                # Application entry point and flag parsing
+├── internal/
+│   ├── web/                   # HTTP server and handlers
+│   │   ├── http.go           # Main HTTP struct, router setup, New() constructor
+│   │   ├── http_admin.go     # Admin dashboard and operations
+│   │   ├── http_bin.go       # Bin operations (create, view, delete)
+│   │   ├── http_file.go      # File upload/download operations
+│   │   ├── http_index.go     # Index and static pages
+│   │   ├── http_integration.go # Slack integration
+│   │   ├── http_metrics.go   # Prometheus metrics endpoint
+│   │   ├── static/           # Embedded static files
+│   │   └── templates/        # Embedded HTML templates
+│   ├── lurker/               # Background cleanup job
+│   │   └── lurker.go         # Deletes expired bins, cleans logs/clients
+│   ├── dbl/                  # Database layer
+│   │   └── ...               # DAO, sub-DAOs for bin/file/client/metrics
+│   ├── ds/                   # Data structures
+│   │   └── ...               # Domain models (Bin, File, Config, etc.)
+│   ├── s3/                   # S3 storage layer
+│   │   └── s3ao.go           # S3 interactions
+│   ├── geoip/                # GeoIP lookups
+│   │   └── mmdb.go           # MaxMind database integration
+│   └── workspace/            # Workspace utilities
+│       └── workspace.go      # Temporary file management
+└── Makefile
+```
+
+**`internal/dbl/` - Database Layer**
 - Provides database abstraction over PostgreSQL
 - `DAO` struct with specialized sub-DAOs: `BinDao`, `FileDao`, `MetricsDao`, `TransactionDao`, `ClientDao`
 - All database operations go through this layer
 - Database schema defined in `dbl/schema.sql`
 
-**`ds/` - Data Structures**
+**`internal/ds/` - Data Structures**
 - Domain models: `Bin`, `File`, `Client`, `Transaction`, `Metrics`, `Config`
 - Pure data structures with no business logic
 - Shared across all layers
 
-**`s3/` - S3 Storage Layer**
-- `S3AO` struct handles all S3/MinIO interactions
-- Uses minio-go client library
+**`internal/s3/` - S3 Storage Layer**
+- `S3AO` struct handles all S3 interactions
+- Uses AWS SDK v2 client library
 - Manages file uploads, downloads, and presigned URLs
 - Tracks bucket metrics
 
-**`geoip/` - GeoIP Lookups**
+**`internal/geoip/` - GeoIP Lookups**
 - Optional MaxMind database integration for IP geolocation
 - Provides ASN and city-level location data
 
-**Root package (`main`)** - HTTP handlers and application logic
-- `http.go` - Main HTTP struct and router setup using gorilla/mux
-- `http_*.go` files - Handlers organized by functionality:
-  - `http_bin.go` - Bin operations (create, view, delete)
-  - `http_file.go` - File upload/download operations
-  - `http_admin.go` - Admin dashboard and operations
-  - `http_metrics.go` - Prometheus metrics endpoint
-  - `http_integration.go` - Slack integration
-- `lurker.go` - Background job that periodically:
-  - Deletes expired bins and files
-  - Cleans old transaction logs
-  - Removes stale client records
-- `main.go` - Application entry point and flag parsing
+**`internal/web/` - HTTP Server**
+- `HTTP` struct with `New()` constructor and `Init()`/`Run()` methods
+- Router setup using gorilla/mux
+- Handlers organized by functionality (bin, file, admin, metrics, integration)
+- Embeds static files and templates
+
+**`internal/lurker/` - Background Job**
+- `Lurker` struct with `New()` constructor and `Init()`/`Run()` methods
+- Periodically deletes expired bins and files
+- Cleans old transaction logs
+- Removes stale client records
+
+**`cmd/filebin2/` - Entry Point**
+- Flag parsing and configuration
+- Initializes dependencies (db, s3, geoip)
+- Creates and runs web server and lurker
 
 ### Data Flow
 
@@ -101,7 +134,7 @@ Core tables:
 
 ### Key Configuration Patterns
 
-The application uses command-line flags extensively (defined in `main.go`). Important flags:
+The application uses command-line flags extensively (defined in `cmd/filebin2/main.go`). Important flags:
 - Database: `--db-host`, `--db-port`, `--db-name`, `--db-username`, `--db-password`
 - S3: `--s3-endpoint`, `--s3-bucket`, `--s3-region`, `--s3-access-key`, `--s3-secret-key`, `--s3-secure`
 - Features: `--manual-approval`, `--require-verification-cookie`, `--limit-storage`, `--limit-file-downloads`
@@ -112,13 +145,13 @@ Environment variables can be used for sensitive values (e.g., `DATABASE_PASSWORD
 
 ### Embedded Assets
 
-The application embeds static files and templates at build time:
+The application embeds static files and templates at build time in `internal/web/http.go`:
 ```go
 //go:embed templates
-templateBox embed.FS
+var templateBox embed.FS
 
 //go:embed static
-staticBox embed.FS
+var staticBox embed.FS
 ```
 
 ### Middleware Chain
