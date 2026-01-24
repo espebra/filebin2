@@ -1,22 +1,22 @@
 version: "3"
 services:
   s3:
-    image: "minio/minio"
-    hostname: "storage"
+    image: "ghcr.io/espebra/stupid-simple-s3:latest"
+    hostname: "s3"
     restart: "no"
     environment:
-      - MINIO_ACCESS_KEY=s3accesskey
-      - MINIO_SECRET_KEY=s3secretkey
+      - STUPID_BUCKET_NAME=filebin
+      - STUPID_RW_ACCESS_KEY=s3accesskey
+      - STUPID_RW_SECRET_KEY=s3secretkey
     expose:
-      - "9000"
+      - "5553"
     ports:
-      - "9000:9000"
-    entrypoint: ["minio", "server", "/data"]
+      - "5553:5553"
     networks:
       - local
 
   db:
-    image: "postgres:13-alpine"
+    image: "postgres:17-alpine"
     hostname: "db"
     restart: "no"
     environment:
@@ -39,7 +39,7 @@ services:
       - DATABASE_NAME=db
       - DATABASE_USERNAME=username
       - DATABASE_PASSWORD=changeme
-      - S3_ENDPOINT=storage:9000
+      - S3_ENDPOINT=s3:5333
       - S3_REGION=us-east-1
       - S3_BUCKET=filebin
       - S3_ACCESS_KEY=s3accesskey

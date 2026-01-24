@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/espebra/filebin2/dbl"
-	"github.com/espebra/filebin2/s3"
+	"github.com/espebra/filebin2/internal/dbl"
+	"github.com/espebra/filebin2/internal/s3"
 )
 
 func main() {
