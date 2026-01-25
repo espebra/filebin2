@@ -12,6 +12,8 @@ Filebin2 is a web application that facilitates convenient file sharing over the 
 * [Why filebin2?](#why-filebin2)
 * [Development environment](#development-environment)
 * [Usage](#usage)
+  * [Command line arguments](#command-line-arguments)
+  * [Environment variables](#environment-variables)
 * [Integrations](#integrations)
 
 ## Why filebin2?
@@ -65,11 +67,11 @@ Path to a filename for the access log output.
 
 #### `--admin-password string` (default: not set)
 
-Password to require for access to the /admin endpoint. If the password is not set, then the admin endpoint will not be available. Make sure to keep this password a secret. Can also be set using the environment variable `ADMIN_PASSWORD`.
+Password to require for access to the /admin endpoint. If the password is not set, then the admin endpoint will not be available. Make sure to keep this password a secret. Can also be set using the environment variable `FILEBIN_ADMIN_PASSWORD`.
 
 #### `--admin-username string` (default: not set)
 
-Username to require for access to the /admin endpoint. If the password is not set, then the admin endpoint will not be available. Can also be set using the environment variable `ADMIN_USERNAME`.
+Username to require for access to the /admin endpoint. If the password is not set, then the admin endpoint will not be available. Can also be set using the environment variable `FILEBIN_ADMIN_USERNAME`.
 
 #### `--allow-robots` (default: not set)
 
@@ -93,7 +95,7 @@ The name of the PostgreSQL database to use.
 
 #### `--db-password string` (default: none)
 
-The password to use when authenticating to the PostgreSQL database. Can also be set using the environment variable `DATABASE_PASSWORD`.
+The password to use when authenticating to the PostgreSQL database. Can also be set using the environment variable `FILEBIN_DB_PASSWORD`.
 
 #### `--db-port string` (default: none)
 
@@ -101,7 +103,7 @@ The port to use when connecting to the PostgreSQL database.
 
 #### `--db-username string` (default: none)
 
-The username to use when authenticating to the PostgreSQL database. Can also be set using the environment variable `DATABASE_USERNAME`.
+The username to use when authenticating to the PostgreSQL database. Can also be set using the environment variable `FILEBIN_DB_USERNAME`.
 
 #### `--expected-cookie-value string` (default: "2024-05-24")
 
@@ -155,7 +157,7 @@ Enables the `/metrics` endpoint. If this is not set, the endpoint will not retur
 
 #### `--metrics-auth` (default: not set)
 
-Enables authentication. Currently only basic auth is supported. If `--metrics-auth` or (env) `METRICS_AUTH` is set to `basic` basic auth will be in play. If not, the endpoint is open to the world.
+Enables authentication. Currently only basic auth is supported. If `--metrics-auth` or `FILEBIN_METRICS_AUTH` is set to `basic` basic auth will be in play. If not, the endpoint is open to the world.
 
 #### `--metrics-id` (default: hostname)
 
@@ -248,6 +250,109 @@ Number of days before cookie expiration. See --require-verification-cookie.
 #### `--write-timeout duration` (default: 1h)
 
 Write timeout for the HTTP server.
+
+### Environment variables
+
+All configuration options can be set via environment variables with the `FILEBIN_` prefix. Environment variables use uppercase letters with underscores instead of hyphens. Command line flags take precedence over environment variables.
+
+#### General
+
+| Environment Variable | Description | Default |
+|---------------------|-------------|---------|
+| `FILEBIN_CONTACT` | Contact information (e.g., email address) | (required) |
+| `FILEBIN_EXPIRATION` | Bin expiration time in seconds | `604800` |
+| `FILEBIN_TMPDIR` | Directory for temporary files | System temp dir |
+| `FILEBIN_TMPDIR_CAPACITY_THRESHOLD` | Workspace capacity threshold multiplier | `4.0` |
+| `FILEBIN_BASEURL` | Base URL for the instance | `https://filebin.net` |
+| `FILEBIN_MANUAL_APPROVAL` | Require manual approval of bins (`true`/`false`) | `false` |
+| `FILEBIN_REQUIRE_VERIFICATION_COOKIE` | Require verification cookie (`true`/`false`) | `false` |
+| `FILEBIN_VERIFICATION_COOKIE_LIFETIME` | Cookie lifetime in days | `365` |
+| `FILEBIN_EXPECTED_COOKIE_VALUE` | Expected cookie value | `2024-05-24` |
+| `FILEBIN_MMDB_CITY` | Path to GeoLite2-City.mmdb | (not set) |
+| `FILEBIN_MMDB_ASN` | Path to GeoLite2-ASN.mmdb | (not set) |
+| `FILEBIN_ALLOW_ROBOTS` | Allow search engine indexing (`true`/`false`) | `false` |
+
+#### Limits
+
+| Environment Variable | Description | Default |
+|---------------------|-------------|---------|
+| `FILEBIN_LIMIT_FILE_DOWNLOADS` | Max downloads per file (0 = unlimited) | `0` |
+| `FILEBIN_LIMIT_STORAGE` | Storage capacity limit (e.g., `100GB`) | `0` |
+| `FILEBIN_REJECT_FILE_EXTENSIONS` | Space-separated list of rejected extensions | (not set) |
+
+#### HTTP Server
+
+| Environment Variable | Description | Default |
+|---------------------|-------------|---------|
+| `FILEBIN_LISTEN_HOST` | IP address to bind to | `127.0.0.1` |
+| `FILEBIN_LISTEN_PORT` | Port to listen on | `8080` |
+| `FILEBIN_ACCESS_LOG` | Path to access log file | `/var/log/filebin/access.log` |
+| `FILEBIN_PROXY_HEADERS` | Read client IP from proxy headers (`true`/`false`) | `false` |
+
+#### Timeouts
+
+| Environment Variable | Description | Default |
+|---------------------|-------------|---------|
+| `FILEBIN_READ_TIMEOUT` | HTTP read timeout | `1h` |
+| `FILEBIN_READ_HEADER_TIMEOUT` | HTTP read header timeout | `2s` |
+| `FILEBIN_WRITE_TIMEOUT` | HTTP write timeout | `1h` |
+| `FILEBIN_IDLE_TIMEOUT` | HTTP idle timeout | `30s` |
+
+#### Database
+
+| Environment Variable | Description | Default |
+|---------------------|-------------|---------|
+| `FILEBIN_DB_HOST` | PostgreSQL host | (required) |
+| `FILEBIN_DB_PORT` | PostgreSQL port | `5432` |
+| `FILEBIN_DB_NAME` | Database name | (required) |
+| `FILEBIN_DB_USERNAME` | Database username | (required) |
+| `FILEBIN_DB_PASSWORD` | Database password | (required) |
+| `FILEBIN_DB_MAX_OPEN_CONNS` | Max open database connections | `25` |
+| `FILEBIN_DB_MAX_IDLE_CONNS` | Max idle database connections | `25` |
+
+#### S3 Storage
+
+| Environment Variable | Description | Default |
+|---------------------|-------------|---------|
+| `FILEBIN_S3_ENDPOINT` | S3 endpoint (host or host:port) | (required) |
+| `FILEBIN_S3_BUCKET` | S3 bucket name | (required) |
+| `FILEBIN_S3_REGION` | S3 region | (required) |
+| `FILEBIN_S3_ACCESS_KEY` | S3 access key | (required) |
+| `FILEBIN_S3_SECRET_KEY` | S3 secret key | (required) |
+| `FILEBIN_S3_SECURE` | Use TLS for S3 (`true`/`false`) | `true` |
+| `FILEBIN_S3_TRACE` | Enable S3 debug tracing (`true`/`false`) | `false` |
+| `FILEBIN_S3_URL_TTL` | Presigned URL time-to-live | `1m` |
+| `FILEBIN_S3_TIMEOUT` | Timeout for quick S3 operations | `30s` |
+| `FILEBIN_S3_TRANSFER_TIMEOUT` | Timeout for S3 data transfers | `10m` |
+
+#### Lurker (Background Jobs)
+
+| Environment Variable | Description | Default |
+|---------------------|-------------|---------|
+| `FILEBIN_LURKER_INTERVAL` | Seconds between cleanup runs | `300` |
+| `FILEBIN_LURKER_THROTTLE` | Milliseconds between S3 deletions | `250` |
+| `FILEBIN_LOG_RETENTION` | Days to keep log entries | `7` |
+
+#### Authentication
+
+| Environment Variable | Description | Default |
+|---------------------|-------------|---------|
+| `FILEBIN_ADMIN_USERNAME` | Admin username | (not set) |
+| `FILEBIN_ADMIN_PASSWORD` | Admin password | (not set) |
+| `FILEBIN_METRICS_USERNAME` | Metrics endpoint username | (not set) |
+| `FILEBIN_METRICS_PASSWORD` | Metrics endpoint password | (not set) |
+| `FILEBIN_METRICS` | Enable metrics endpoint (`true`/`false`) | `false` |
+| `FILEBIN_METRICS_AUTH` | Metrics auth type (e.g., `basic`) | (not set) |
+| `FILEBIN_METRICS_ID` | Metrics instance identifier | `$HOSTNAME` |
+| `FILEBIN_METRICS_PROXY_URL` | URL to proxy metrics from | (not set) |
+
+#### Slack Integration
+
+| Environment Variable | Description | Default |
+|---------------------|-------------|---------|
+| `FILEBIN_SLACK_SECRET` | Slack webhook secret | (not set) |
+| `FILEBIN_SLACK_DOMAIN` | Allowed Slack domain | (not set) |
+| `FILEBIN_SLACK_CHANNEL` | Allowed Slack channel | (not set) |
 
 ## Integrations
 
