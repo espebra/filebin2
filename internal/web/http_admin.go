@@ -1,14 +1,11 @@
 package web
 
 import (
-	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -117,7 +114,7 @@ func (h *HTTP) viewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.WriteHeader(200)
-		io.WriteString(w, string(out))
+		_, _ = w.Write(out)
 	} else {
 		if err := h.renderTemplate(w, "admin_dashboard", data); err != nil {
 			fmt.Printf("Failed to execute template: %s\n", err.Error())
@@ -208,7 +205,7 @@ func (h *HTTP) viewAdminFiles(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.WriteHeader(200)
-		io.WriteString(w, string(out))
+		_, _ = w.Write(out)
 	} else {
 		if err := h.renderTemplate(w, "admin_files", data); err != nil {
 			fmt.Printf("Failed to execute template: %s\n", err.Error())
@@ -304,7 +301,7 @@ func (h *HTTP) viewAdminFileContent(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.WriteHeader(200)
-		io.WriteString(w, string(out))
+		_, _ = w.Write(out)
 	} else {
 		if err := h.renderTemplate(w, "admin_filecontent", data); err != nil {
 			fmt.Printf("Failed to execute template: %s\n", err.Error())
@@ -367,7 +364,7 @@ func (h *HTTP) viewAdminFile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.WriteHeader(200)
-		io.WriteString(w, string(out))
+		_, _ = w.Write(out)
 	} else {
 		if err := h.renderTemplate(w, "admin_file_by_checksum", data); err != nil {
 			fmt.Printf("Failed to execute template: %s\n", err.Error())
@@ -516,7 +513,7 @@ func (h *HTTP) viewAdminBins(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.WriteHeader(200)
-		io.WriteString(w, string(out))
+		_, _ = w.Write(out)
 	} else {
 		if err := h.renderTemplate(w, "admin_bins", data); err != nil {
 			fmt.Printf("Failed to execute template: %s\n", err.Error())
@@ -570,7 +567,7 @@ func (h *HTTP) viewAdminBinsAll(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.WriteHeader(200)
-		io.WriteString(w, string(out))
+		_, _ = w.Write(out)
 	} else {
 		if err := h.renderTemplate(w, "admin_bins_all", data); err != nil {
 			fmt.Printf("Failed to execute template: %s\n", err.Error())
@@ -609,60 +606,6 @@ func (h *HTTP) viewAdminLog(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.renderTemplate(w, "log", data); err != nil {
-		fmt.Printf("Failed to execute template: %s\n", err.Error())
-		http.Error(w, "Errno 203", http.StatusInternalServerError)
-		return
-	}
-}
-
-func (h *HTTP) viewAdminCleanup(w http.ResponseWriter, r *http.Request) {
-	type Data struct {
-		Objects []string `json:"objects"`
-		////Files []ds.File `json:"files"`
-		//BucketMetrics s3.BucketMetrics `json:"bucketmetrics"`
-		//Page       string        `json:"page"`
-		Bins []ds.Bin `json:"bins"`
-	}
-
-	objects, err := h.s3.ListObjects()
-	if err != nil {
-		http.Error(w, "Errno 262", http.StatusInternalServerError)
-		return
-	}
-
-	bins, err := h.dao.Bin().GetAll()
-	if err != nil {
-		http.Error(w, "Errno 361", http.StatusInternalServerError)
-		return
-	}
-
-	var allbins []string
-	for _, bin := range bins {
-		b := sha256.New()
-		b.Write([]byte(bin.Id))
-		hash := fmt.Sprintf("%x", b.Sum(nil))
-		allbins = append(allbins, hash)
-	}
-
-	for _, object := range objects {
-		splits := strings.Split(object, "/")
-		if len(splits) == 2 {
-			hash := splits[0]
-			if inStringSlice(hash, allbins) {
-				fmt.Printf("Match\n")
-			} else {
-				fmt.Printf("No match\n")
-			}
-		} else {
-			fmt.Printf("No match. Weird length: %d\n", len(splits))
-		}
-	}
-
-	var data Data
-	data.Objects = objects
-	data.Bins = bins
-
-	if err := h.renderTemplate(w, "cleanup", data); err != nil {
 		fmt.Printf("Failed to execute template: %s\n", err.Error())
 		http.Error(w, "Errno 203", http.StatusInternalServerError)
 		return
@@ -777,7 +720,7 @@ func (h *HTTP) viewAdminClients(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.WriteHeader(200)
-		io.WriteString(w, string(out))
+		_, _ = w.Write(out)
 	} else {
 		if err := h.renderTemplate(w, "admin_clients", data); err != nil {
 			fmt.Printf("Failed to execute template: %s\n", err.Error())
@@ -810,7 +753,7 @@ func (h *HTTP) viewAdminClientsAll(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.WriteHeader(200)
-		io.WriteString(w, string(out))
+		_, _ = w.Write(out)
 	} else {
 		if err := h.renderTemplate(w, "admin_clients_all", data); err != nil {
 			fmt.Printf("Failed to execute template: %s\n", err.Error())
@@ -840,7 +783,7 @@ func (h *HTTP) viewAdminSiteMessage(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Errno 801", http.StatusInternalServerError)
 			return
 		}
-		w.Write(out)
+		_, _ = w.Write(out)
 	} else {
 		if err := h.renderTemplate(w, "admin_message", data); err != nil {
 			fmt.Printf("Failed to execute template: %s\n", err.Error())

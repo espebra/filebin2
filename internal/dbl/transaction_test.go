@@ -12,7 +12,7 @@ func TestGetByBin(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	binID := "1234567890"
 	bin := &ds.Bin{}

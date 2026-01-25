@@ -30,12 +30,7 @@ type Client struct {
 }
 
 func (c *Client) IsBanned() bool {
-	if c.BannedAt.Valid {
-		if c.BannedAt.Time.IsZero() == false {
-			return true
-		}
-	}
-	return false
+	return c.BannedAt.Valid && !c.BannedAt.Time.IsZero()
 }
 
 type AutonomousSystem struct {
@@ -56,12 +51,7 @@ type AutonomousSystem struct {
 }
 
 func (a *AutonomousSystem) IsBanned() bool {
-	if a.BannedAt.Valid {
-		if a.BannedAt.Time.IsZero() == false {
-			return true
-		}
-	}
-	return false
+	return a.BannedAt.Valid && !a.BannedAt.Time.IsZero()
 }
 
 type ClientByCountry struct {

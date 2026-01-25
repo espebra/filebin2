@@ -38,13 +38,13 @@ func TestFileContentInStorageReflectsS3State(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	s3ao, err := setupS3()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer teardownS3(s3ao)
+	defer func() { _ = teardownS3(s3ao) }()
 
 	sha256 := "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	content := "test content"
@@ -120,13 +120,13 @@ func TestFileInStorageReflectsS3State(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	s3ao, err := setupS3()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer teardownS3(s3ao)
+	defer func() { _ = teardownS3(s3ao) }()
 
 	sha256 := "6ae8a75555209fd6c44157c0aed8016e763ff435a19cf186f76863140143ff72"
 	content := "test file content"
@@ -217,13 +217,13 @@ func TestDeduplicationWithS3Storage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	s3ao, err := setupS3()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer teardownS3(s3ao)
+	defer func() { _ = teardownS3(s3ao) }()
 
 	sha256 := "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
 	content := "duplicate content"
@@ -327,7 +327,7 @@ func TestDeduplicationWithS3Storage(t *testing.T) {
 
 	// Delete 1: Mark first file as deleted, keep content in S3
 	t.Log("Delete 1: Remove one file reference")
-	file1.DeletedAt.Scan(time.Now().UTC())
+	_ = file1.DeletedAt.Scan(time.Now().UTC())
 	err = dao.File().Update(file1)
 	if err != nil {
 		t.Fatalf("Failed to mark file1 as deleted: %s", err)
@@ -359,7 +359,7 @@ func TestDeduplicationWithS3Storage(t *testing.T) {
 
 	// Delete 2: Mark last file as deleted, then remove from S3
 	t.Log("Delete 2: Remove last file reference and delete from S3")
-	file2.DeletedAt.Scan(time.Now().UTC())
+	_ = file2.DeletedAt.Scan(time.Now().UTC())
 	err = dao.File().Update(file2)
 	if err != nil {
 		t.Fatalf("Failed to mark file2 as deleted: %s", err)
@@ -413,13 +413,13 @@ func TestReuploadAfterDeletion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	s3ao, err := setupS3()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer teardownS3(s3ao)
+	defer func() { _ = teardownS3(s3ao) }()
 
 	sha256 := "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
 	content := "test content for reupload"
@@ -430,13 +430,13 @@ func TestReuploadAfterDeletion(t *testing.T) {
 			Id:        "reupload-bin1",
 			ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
 		}
-		dao.Bin().Insert(bin1)
+		_ = dao.Bin().Insert(bin1)
 
 		bin2 := &ds.Bin{
 			Id:        "reupload-bin2",
 			ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
 		}
-		dao.Bin().Insert(bin2)
+		_ = dao.Bin().Insert(bin2)
 
 		// Upload same content to both bins
 		fileContent := &ds.FileContent{
@@ -464,7 +464,7 @@ func TestReuploadAfterDeletion(t *testing.T) {
 			Bytes:    uint64(len(content)),
 			SHA256:   sha256,
 		}
-		dao.File().Insert(file1)
+		_ = dao.File().Insert(file1)
 
 		file2 := &ds.File{
 			Filename: "file2.txt",
@@ -472,14 +472,14 @@ func TestReuploadAfterDeletion(t *testing.T) {
 			Bytes:    uint64(len(content)),
 			SHA256:   sha256,
 		}
-		dao.File().Insert(file2)
+		_ = dao.File().Insert(file2)
 
 		// Delete both files
-		file1.DeletedAt.Scan(time.Now().UTC())
-		dao.File().Update(file1)
+		_ = file1.DeletedAt.Scan(time.Now().UTC())
+		_ = dao.File().Update(file1)
 
-		file2.DeletedAt.Scan(time.Now().UTC())
-		dao.File().Update(file2)
+		_ = file2.DeletedAt.Scan(time.Now().UTC())
+		_ = dao.File().Update(file2)
 
 		// Simulate lurker: check for pending deletes
 		pending, err := dao.FileContent().GetPendingDelete()
@@ -527,7 +527,7 @@ func TestReuploadAfterDeletion(t *testing.T) {
 			Id:        "reupload-bin3",
 			ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
 		}
-		dao.Bin().Insert(bin3)
+		_ = dao.Bin().Insert(bin3)
 
 		// Upload to S3 again
 		err = s3ao.PutObjectByHash(sha256, strings.NewReader(content), int64(len(content)))
@@ -555,7 +555,7 @@ func TestReuploadAfterDeletion(t *testing.T) {
 			Bytes:    uint64(len(content)),
 			SHA256:   sha256,
 		}
-		dao.File().Insert(file3)
+		_ = dao.File().Insert(file3)
 
 		// Verify in_storage is now true
 		finalContent, err := dao.FileContent().GetBySHA256(sha256)
@@ -573,11 +573,11 @@ func TestReuploadAfterDeletion(t *testing.T) {
 		}
 
 		// Cleanup - remove bins, S3 object, and file_content record
-		dao.Bin().Delete(bin1)
-		dao.Bin().Delete(bin2)
-		dao.Bin().Delete(bin3)
-		s3ao.RemoveObjectByHash(sha256)
-		dao.FileContent().Delete(sha256)
+		_ = dao.Bin().Delete(bin1)
+		_ = dao.Bin().Delete(bin2)
+		_ = dao.Bin().Delete(bin3)
+		_ = s3ao.RemoveObjectByHash(sha256)
+		_ = dao.FileContent().Delete(sha256)
 	})
 
 	t.Run("delete_bins_then_reupload", func(t *testing.T) {
@@ -589,13 +589,13 @@ func TestReuploadAfterDeletion(t *testing.T) {
 			Id:        "reupload-bin4",
 			ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
 		}
-		dao.Bin().Insert(bin4)
+		_ = dao.Bin().Insert(bin4)
 
 		bin5 := &ds.Bin{
 			Id:        "reupload-bin5",
 			ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
 		}
-		dao.Bin().Insert(bin5)
+		_ = dao.Bin().Insert(bin5)
 
 		// Upload same content to both bins
 		fileContent := &ds.FileContent{
@@ -623,7 +623,7 @@ func TestReuploadAfterDeletion(t *testing.T) {
 			Bytes:    uint64(len(content_v2)),
 			SHA256:   sha256_v2,
 		}
-		dao.File().Insert(file4)
+		_ = dao.File().Insert(file4)
 
 		file5 := &ds.File{
 			Filename: "file5.txt",
@@ -631,14 +631,14 @@ func TestReuploadAfterDeletion(t *testing.T) {
 			Bytes:    uint64(len(content_v2)),
 			SHA256:   sha256_v2,
 		}
-		dao.File().Insert(file5)
+		_ = dao.File().Insert(file5)
 
 		// Delete both bins (soft delete)
-		bin4.DeletedAt.Scan(time.Now().UTC())
-		dao.Bin().Update(bin4)
+		_ = bin4.DeletedAt.Scan(time.Now().UTC())
+		_ = dao.Bin().Update(bin4)
 
-		bin5.DeletedAt.Scan(time.Now().UTC())
-		dao.Bin().Update(bin5)
+		_ = bin5.DeletedAt.Scan(time.Now().UTC())
+		_ = dao.Bin().Update(bin5)
 
 		// Simulate lurker: check for pending deletes
 		// Content should be pending because all files belong to deleted bins
@@ -687,7 +687,7 @@ func TestReuploadAfterDeletion(t *testing.T) {
 			Id:        "reupload-bin6",
 			ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
 		}
-		dao.Bin().Insert(bin6)
+		_ = dao.Bin().Insert(bin6)
 
 		// Upload to S3 again
 		err = s3ao.PutObjectByHash(sha256_v2, strings.NewReader(content_v2), int64(len(content_v2)))
@@ -715,7 +715,7 @@ func TestReuploadAfterDeletion(t *testing.T) {
 			Bytes:    uint64(len(content_v2)),
 			SHA256:   sha256_v2,
 		}
-		dao.File().Insert(file6)
+		_ = dao.File().Insert(file6)
 
 		// Verify in_storage is now true
 		finalContent, err := dao.FileContent().GetBySHA256(sha256_v2)
@@ -733,10 +733,10 @@ func TestReuploadAfterDeletion(t *testing.T) {
 		}
 
 		// Cleanup - remove bins, S3 object, and file_content record
-		dao.Bin().Delete(bin4)
-		dao.Bin().Delete(bin5)
-		dao.Bin().Delete(bin6)
-		s3ao.RemoveObjectByHash(sha256_v2)
-		dao.FileContent().Delete(sha256_v2)
+		_ = dao.Bin().Delete(bin4)
+		_ = dao.Bin().Delete(bin5)
+		_ = dao.Bin().Delete(bin6)
+		_ = s3ao.RemoveObjectByHash(sha256_v2)
+		_ = dao.FileContent().Delete(sha256_v2)
 	})
 }

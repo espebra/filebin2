@@ -200,7 +200,7 @@ func TestArchiveErrorCases(t *testing.T) {
 			UploadContent: "test content",
 			StatusCode:    http.StatusCreated,
 		}
-		httpRequest(tc)
+		_, _, _ = httpRequest(tc)
 
 		// Try to download with invalid format
 		statusCode, _, err := downloadArchive(binID, "rar")
@@ -222,13 +222,13 @@ func TestArchiveErrorCases(t *testing.T) {
 			UploadContent: "test content",
 			StatusCode:    http.StatusCreated,
 		}
-		httpRequest(tc)
+		_, _, _ = httpRequest(tc)
 
 		// Delete the file
 		tc.Method = "DELETE"
 		tc.UploadContent = ""
 		tc.StatusCode = http.StatusOK
-		httpRequest(tc)
+		_, _, _ = httpRequest(tc)
 
 		// Try to download archive of empty bin
 		statusCode, _, err := downloadArchive(binID, "tar")
@@ -250,14 +250,14 @@ func TestArchiveErrorCases(t *testing.T) {
 			UploadContent: "test content",
 			StatusCode:    http.StatusCreated,
 		}
-		httpRequest(tc)
+		_, _, _ = httpRequest(tc)
 
 		// Delete the bin
 		tc.Method = "DELETE"
 		tc.Filename = ""
 		tc.UploadContent = ""
 		tc.StatusCode = http.StatusOK
-		httpRequest(tc)
+		_, _, _ = httpRequest(tc)
 
 		// Try to download archive of deleted bin
 		statusCode, _, err := downloadArchive(binID, "tar")
@@ -368,7 +368,7 @@ func TestArchiveContentType(t *testing.T) {
 		UploadContent: "test",
 		StatusCode:    http.StatusCreated,
 	}
-	httpRequest(tc)
+	_, _, _ = httpRequest(tc)
 
 	t.Run("tar has correct content type", func(t *testing.T) {
 		contentType, err := getArchiveContentType(binID, "tar")

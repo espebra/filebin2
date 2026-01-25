@@ -2,7 +2,6 @@ package dbl
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -52,7 +51,7 @@ func (c *ClientDao) GetByRemoteAddr(remoteAddr string) (client ds.Client, found 
 		ip = net.ParseIP(remoteAddr)
 	}
 	if ip == nil {
-		return client, false, errors.New(fmt.Sprintf("Unable to parse remote addr %s", remoteAddr))
+		return client, false, fmt.Errorf("unable to parse remote addr %s", remoteAddr)
 	}
 
 	// Look up the client by IP

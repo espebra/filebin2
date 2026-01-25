@@ -36,8 +36,6 @@ var templateBox embed.FS
 //go:embed static
 var staticBox embed.FS
 
-type funcHandler func(http.ResponseWriter, *http.Request)
-
 type AdminLogin struct {
 	IP                 string
 	Hostname           string
@@ -197,22 +195,13 @@ func CacheControl(h http.Handler) http.Handler {
 
 func (h *HTTP) clientLookup(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		client, found, err := h.dao.Client().GetByRemoteAddr(r.RemoteAddr)
+		client, _, err := h.dao.Client().GetByRemoteAddr(r.RemoteAddr)
 		if err != nil {
 			h.Error(w, r, fmt.Sprintf("Failed to select client with remote addr %s: %s", r.RemoteAddr, err.Error()), "Database error", 991, http.StatusInternalServerError)
 			return
 		}
-		if found {
-			// Existing client IP to be updated
-			//fmt.Printf("Existing IP address: %s\n", client.IP)
-		} else {
-			// New client IP to be registered
-			//fmt.Printf("New IP address: %s\n", client.IP)
-
-		}
 
 		if client.IsBanned() {
-			//fmt.Printf("Client IP %s is banned.\n", client.IP)
 			fmt.Printf("Rejecting request from client ip %s due to ban %s (%s) by %s.\n", client.IP, client.BannedAtRelative, client.BannedAt.Time.Format("2006-01-02 15:04:05 UTC"), client.BannedBy)
 			http.Error(w, "This client IP address has been banned.", http.StatusForbidden)
 			return
@@ -225,7 +214,7 @@ func (h *HTTP) clientLookup(fn func(http.ResponseWriter, *http.Request)) http.Ha
 		// Check the client details against the ban filter here
 		fn(w, r)
 
-		h.dao.Client().Update(&client)
+		_ = h.dao.Client().Update(&client)
 	})
 }
 
@@ -269,7 +258,7 @@ func (h *HTTP) auth(fn func(http.ResponseWriter, *http.Request)) http.HandlerFun
 
 		// Read the authorization request header
 		username, password, ok := r.BasicAuth()
-		if ok == false {
+		if !ok {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -356,11 +345,11 @@ func (h *HTTP) Run() {
 
 	// Add access logging
 	accessLog, err := os.OpenFile(h.config.HttpAccessLog, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	defer accessLog.Close()
 	if err != nil {
 		fmt.Printf("Unable to open log file: %s\n", err.Error())
 		os.Exit(2)
 	}
+	defer accessLog.Close()
 	handler = handlers.CombinedLoggingHandler(accessLog, handler)
 
 	// Add proxy header handling
@@ -399,7 +388,7 @@ func (h *HTTP) Error(w http.ResponseWriter, r *http.Request, internal string, ex
 	}
 
 	// Disregard any request body there is
-	io.Copy(io.Discard, r.Body)
+	_, _ = io.Copy(io.Discard, r.Body)
 
 	type Data struct {
 		ds.Common
@@ -424,13 +413,12 @@ func (h *HTTP) Error(w http.ResponseWriter, r *http.Request, internal string, ex
 			// Don't call http.Error here since WriteHeader was already called
 			return
 		}
-		buf.WriteTo(w)
+		_, _ = buf.WriteTo(w)
 	} else {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(statusCode)
-		io.WriteString(w, external)
+		_, _ = io.WriteString(w, external)
 	}
-	return
 }
 
 // renderTemplate executes a template to a buffer first, then writes to the response.
@@ -440,7 +428,7 @@ func (h *HTTP) renderTemplate(w http.ResponseWriter, name string, data interface
 	if err := h.templates.ExecuteTemplate(&buf, name, data); err != nil {
 		return err
 	}
-	buf.WriteTo(w)
+	_, _ = buf.WriteTo(w)
 	return nil
 }
 
@@ -450,28 +438,17 @@ func (h *HTTP) ParseTemplates() *template.Template {
 	// Functions that are available from within templates
 	var fns = template.FuncMap{
 		"isAvailable": func(bin ds.Bin) bool {
-			if bin.IsReadable() {
-				return true
-			}
-			return false
+			return bin.IsReadable()
 		},
 		"isApproved": func(bin ds.Bin) bool {
-			if bin.IsApproved() {
-				return true
-			}
-			return false
+			return bin.IsApproved()
 		},
 		"elapsed": func(t0, t1 time.Time) string {
 			elapsed := t1.Sub(t0)
 			return elapsed.String()
 		},
 		"finished": func(t sql.NullTime) bool {
-			if t.Valid {
-				if t.Time.IsZero() == false {
-					return true
-				}
-			}
-			return false
+			return t.Valid && !t.Time.IsZero()
 		},
 		"durationInSeconds": func(dur time.Duration) string {
 			return fmt.Sprintf("%.3f", dur.Seconds())
@@ -489,10 +466,7 @@ func (h *HTTP) ParseTemplates() *template.Template {
 			return strings.ToLower(s)
 		},
 		"isBanned": func(client ds.Client) bool {
-			if client.IsBanned() {
-				return true
-			}
-			return false
+			return client.IsBanned()
 		},
 	}
 
@@ -563,15 +537,6 @@ func extractIP(addr string) (string, error) {
 	}
 
 	return ip.String(), nil
-}
-
-func inStringSlice(needle string, haystack []string) bool {
-	for i := range haystack {
-		if haystack[i] == needle {
-			return true
-		}
-	}
-	return false
 }
 
 func setRobotsPermissions(w http.ResponseWriter, allow bool) {

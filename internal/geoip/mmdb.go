@@ -1,7 +1,6 @@
 package geoip
 
 import (
-	"errors"
 	"fmt"
 	"net"
 
@@ -111,7 +110,7 @@ func (dao DAO) Lookup(remoteAddr string, client *ds.Client) (err error) {
 		ip = net.ParseIP(remoteAddr)
 	}
 	if ip == nil {
-		return errors.New(fmt.Sprintf("Unable to parse remote addr %s", remoteAddr))
+		return fmt.Errorf("unable to parse remote addr %s", remoteAddr)
 	}
 
 	if err := dao.LookupASN(ip, client); err != nil {

@@ -189,15 +189,14 @@ func (d *BinDao) Upsert(bin *ds.Bin) (err error) {
 	bin.Downloads = downloads
 	bin.Readonly = readonly
 
-	b, found, err := d.GetByID(bin.Id)
+	_, found, err := d.GetByID(bin.Id)
 	if err != nil {
 		return err
 	}
 
-	if found {
-		bin = &b
+	if !found {
+		return nil
 	}
-
 	return nil
 }
 

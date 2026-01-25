@@ -58,15 +58,6 @@ func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool, pr
 	}
 	endpointURL := fmt.Sprintf("%s://%s", protocol, endpoint)
 
-	// Create custom endpoint resolver for S3-compatible storage
-	customResolver := aws.EndpointResolverWithOptionsFunc(func(service, reg string, options ...interface{}) (aws.Endpoint, error) {
-		return aws.Endpoint{
-			URL:               endpointURL,
-			HostnameImmutable: true,
-			SigningRegion:     region,
-		}, nil
-	})
-
 	// Custom HTTP transport with higher connection limits to reduce contention
 	httpClient := &http.Client{
 		Transport: &http.Transport{
@@ -80,16 +71,17 @@ func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool, pr
 	cfg, err := config.LoadDefaultConfig(context.Background(),
 		config.WithRegion(region),
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")),
-		config.WithEndpointResolverWithOptions(customResolver),
 		config.WithHTTPClient(httpClient),
 	)
 	if err != nil {
 		return s3ao, fmt.Errorf("failed to load AWS config: %w", err)
 	}
 
-	// Create S3 client with path-style addressing (required for MinIO and most S3-compatible storage)
+	// Create S3 client with path-style addressing and custom endpoint
+	// (required for MinIO and most S3-compatible storage)
 	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
 		o.UsePathStyle = true
+		o.BaseEndpoint = aws.String(endpointURL)
 	})
 
 	s3ao.client = client

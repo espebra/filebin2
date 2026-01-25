@@ -71,7 +71,7 @@ func tearDown(dao dbl.DAO) error {
 func startHTTPServer(l net.Listener, wg *sync.WaitGroup, h http.Handler) {
 	server := &http.Server{Addr: l.Addr().String(), Handler: h}
 	wg.Done()
-	server.Serve(l)
+	_ = server.Serve(l)
 }
 
 func TestMain(m *testing.M) {
@@ -127,6 +127,6 @@ func TestMain(m *testing.M) {
 	retCode := m.Run()
 	tcpListener.Close()
 	h.Stop()
-	tearDown(dao)
+	_ = tearDown(dao)
 	os.Exit(retCode)
 }

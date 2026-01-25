@@ -13,7 +13,7 @@ func TestGetClientByIP(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	ip := "1.2.3.4"
 	client := &ds.Client{}
@@ -48,7 +48,7 @@ func TestGetClientByIP(t *testing.T) {
 		t.Errorf("Was expecting the number of requests to be 2, not %d\n", dbClient.Requests)
 	}
 
-	dbClient2, found, err := dao.Client().GetByRemoteAddr(ip)
+	dbClient2, _, err := dao.Client().GetByRemoteAddr(ip)
 	if err != nil {
 		t.Error(err)
 	}
@@ -66,7 +66,7 @@ func TestClientsGetAll(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	ips := []string{"192.168.0.1", "192.168.0.2", "10.0.0.10"}
 	for _, ip := range ips {

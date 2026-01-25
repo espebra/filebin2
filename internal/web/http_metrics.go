@@ -23,7 +23,7 @@ func (h *HTTP) viewMetrics(w http.ResponseWriter, r *http.Request) {
 			// Use constant-time comparison to prevent timing attacks
 			usernameMatch := subtle.ConstantTimeCompare([]byte(username), []byte(h.config.MetricsUsername)) == 1
 			passwordMatch := subtle.ConstantTimeCompare([]byte(password), []byte(h.config.MetricsPassword)) == 1
-			if ok == false || !usernameMatch || !passwordMatch {
+			if !ok || !usernameMatch || !passwordMatch {
 				time.Sleep(3 * time.Second)
 				w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)

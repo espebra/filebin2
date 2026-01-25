@@ -36,7 +36,7 @@ func TestUpsert(t *testing.T) {
 		t.Error(err)
 	}
 
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	// Create bin first
 	bin := &ds.Bin{}
@@ -78,7 +78,7 @@ func TestGetFileById(t *testing.T) {
 		t.Error(err)
 	}
 
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	// Create bin first
 	bin := &ds.Bin{}
@@ -159,7 +159,7 @@ func TestGetFileByName(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	// Create bin first
 	bin := &ds.Bin{}
@@ -225,7 +225,7 @@ func TestInsertDuplicatedFile(t *testing.T) {
 		t.Error(err)
 	}
 
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	// Create bin first
 	bin := &ds.Bin{}
@@ -273,7 +273,7 @@ func TestGetAllFiles(t *testing.T) {
 		t.Error(err)
 	}
 
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	// Create bin first
 	bin := &ds.Bin{}
@@ -349,7 +349,7 @@ func TestDeleteFile(t *testing.T) {
 		t.Error(err)
 	}
 
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	// Create bin first
 	bin := &ds.Bin{}
@@ -404,7 +404,7 @@ func TestUpdateFile(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	// Create bin first
 	bin := &ds.Bin{}
@@ -477,7 +477,7 @@ func TestUpdateNonExistingFile(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	file := &ds.File{}
 	file.Id = 5
@@ -493,7 +493,7 @@ func TestDeleteNonExistingFile(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	file := &ds.File{}
 	file.Id = 10
@@ -509,7 +509,7 @@ func TestGetFilesByBin(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	// Create bin first
 	bin := &ds.Bin{}
@@ -595,7 +595,7 @@ func TestIsAvailableForDownload(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	sha256 := "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
@@ -746,7 +746,7 @@ func TestInvalidFileInput(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	// Create bin first
 	bin := &ds.Bin{}
@@ -844,7 +844,7 @@ func TestUpsertWiderCharacterSet(t *testing.T) {
 		t.Error(err)
 	}
 
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	// Create bin first
 	bin := &ds.Bin{}
@@ -878,15 +878,15 @@ func TestUpsertWiderCharacterSet(t *testing.T) {
 		file.SHA256 = defaultSHA256 // Set SHA256 to satisfy foreign key constraint
 		err = dao.File().Insert(file)
 
-		if test.Valid == false {
+		if !test.Valid {
 			if err == nil {
-				t.Error(errors.New(fmt.Sprintf("Expected error and invalid filename, got %q\n", file.Filename)))
+				t.Errorf("Expected error and invalid filename, got %q\n", file.Filename)
 			}
 		}
 
-		if test.Valid == true {
+		if test.Valid {
 			if err != nil {
-				t.Error(errors.New(fmt.Sprintf("Got %s, but did not expect error here", err.Error())))
+				t.Errorf("Got %s, but did not expect error here", err.Error())
 			}
 
 			if file.Id == 0 {

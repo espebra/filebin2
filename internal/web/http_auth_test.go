@@ -18,7 +18,7 @@ func TestAdminEndpointsAuthentication(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	// Test various admin endpoints
 	endpoints := []struct {
@@ -165,7 +165,7 @@ func TestDebugEndpointsAuthentication(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	// Test various debug/pprof endpoints
 	endpoints := []struct {
@@ -291,7 +291,7 @@ func TestAuthenticationDelayOnFailure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	// Create config with test settings
 	c := ds.Config{
