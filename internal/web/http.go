@@ -3,12 +3,12 @@ package web
 import (
 	"bytes"
 	"context"
+	"crypto/subtle"
 	"database/sql"
 	"embed"
 	"fmt"
 	"html/template"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/pprof"
@@ -274,7 +274,11 @@ func (h *HTTP) auth(fn func(http.ResponseWriter, *http.Request)) http.HandlerFun
 			return
 		}
 
-		if username != h.config.AdminUsername || password != h.config.AdminPassword {
+		// Use constant-time comparison to prevent timing attacks
+		usernameMatch := subtle.ConstantTimeCompare([]byte(username), []byte(h.config.AdminUsername)) == 1
+		passwordMatch := subtle.ConstantTimeCompare([]byte(password), []byte(h.config.AdminPassword)) == 1
+
+		if !usernameMatch || !passwordMatch {
 			time.Sleep(3 * time.Second)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
@@ -395,7 +399,7 @@ func (h *HTTP) Error(w http.ResponseWriter, r *http.Request, internal string, ex
 	}
 
 	// Disregard any request body there is
-	io.Copy(ioutil.Discard, r.Body)
+	io.Copy(io.Discard, r.Body)
 
 	type Data struct {
 		ds.Common
@@ -541,24 +545,24 @@ func (h *HTTP) setVerificationCookie(w http.ResponseWriter, r *http.Request) {
 }
 
 func extractIP(addr string) (string, error) {
-	var ip net.IP
-	var err error
-	var host string
-
 	// Try to parse the addr directly
-	ip = net.ParseIP(addr)
+	ip := net.ParseIP(addr)
+	if ip != nil {
+		return ip.String(), nil
+	}
 
 	// If parsing directly failed, try to split host from port
-	if ip == nil {
-		host, _, err = net.SplitHostPort(addr)
-		if err == nil {
-			ip = net.ParseIP(host)
-		}
-		if err != nil {
-			fmt.Printf("Unable to split host port for %s, returning %s: %s\n", addr, ip.String(), err.Error())
-		}
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return "", fmt.Errorf("unable to parse IP from %q: %w", addr, err)
 	}
-	return ip.String(), err
+
+	ip = net.ParseIP(host)
+	if ip == nil {
+		return "", fmt.Errorf("unable to parse IP from host %q", host)
+	}
+
+	return ip.String(), nil
 }
 
 func inStringSlice(needle string, haystack []string) bool {
