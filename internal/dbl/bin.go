@@ -1,15 +1,17 @@
 package dbl
 
 import (
+	"crypto/rand"
 	"database/sql"
 	"errors"
-	"github.com/dustin/go-humanize"
-	"github.com/espebra/filebin2/internal/ds"
-	"math/rand"
+	"math/big"
 	"path"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/dustin/go-humanize"
+	"github.com/espebra/filebin2/internal/ds"
 )
 
 var invalidBin = regexp.MustCompile("[^A-Za-z0-9-_.]")
@@ -41,13 +43,52 @@ func (d *BinDao) ValidateInput(bin *ds.Bin) error {
 }
 
 func (d *BinDao) GenerateId() string {
-	// TODO: Make sure the ID is unique
 	characters := []rune("abcdefghijklmnopqrstuvwxyz1234567890")
 	length := 16
+	maxAttempts := 10
+	charLen := big.NewInt(int64(len(characters)))
 
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		id := make([]rune, length)
+		for i := range id {
+			n, err := rand.Int(rand.Reader, charLen)
+			if err != nil {
+				// Fallback to first character on error (extremely rare)
+				id[i] = characters[0]
+				continue
+			}
+			id[i] = characters[n.Int64()]
+		}
+		idStr := string(id)
+
+		// Skip uniqueness check if no database connection (e.g., in tests)
+		if d.db == nil {
+			return idStr
+		}
+
+		// Check if this ID already exists
+		_, found, err := d.GetByID(idStr)
+		if err != nil {
+			// Database error, try again
+			continue
+		}
+		if !found {
+			// ID is unique
+			return idStr
+		}
+		// ID exists, try again
+	}
+
+	// Fallback: return the last generated ID and let the database constraint catch duplicates
+	// This should be extremely rare given the 36^16 ID space
 	id := make([]rune, length)
 	for i := range id {
-		id[i] = characters[rand.Intn(len(characters))]
+		n, err := rand.Int(rand.Reader, charLen)
+		if err != nil {
+			id[i] = characters[0]
+			continue
+		}
+		id[i] = characters[n.Int64()]
 	}
 	return string(id)
 }
