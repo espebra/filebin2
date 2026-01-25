@@ -68,7 +68,7 @@ jobs:
           cache: false
 
       - name: Run tests
-        run: docker compose -f ci.yml up --abort-on-container-exit
+        run: docker compose -f integration-tests.yml up --abort-on-container-exit
 
       - uses: actions/upload-artifact@v4
         if: always()

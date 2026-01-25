@@ -30,7 +30,9 @@ services:
       - local
 
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.integration-tests
     restart: "no"
     environment:
       # Database

@@ -31,7 +31,9 @@ services:
       - local
 
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.integration-tests
     restart: "no"
     environment:
       - DATABASE_HOST=db
