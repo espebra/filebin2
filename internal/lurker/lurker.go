@@ -14,6 +14,7 @@ type Lurker struct {
 	interval  time.Duration
 	throttle  time.Duration
 	retention uint64
+	stopChan  chan struct{}
 }
 
 // New creates a new Lurker instance
@@ -32,26 +33,40 @@ func (l *Lurker) Init(interval int, throttle int, retention uint64) {
 
 func (l *Lurker) Run() {
 	fmt.Printf("Starting Lurker process (interval: %s)\n", l.interval.String())
-	ticker := time.NewTicker(l.interval)
+	l.stopChan = make(chan struct{})
 	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				fmt.Printf("Lurker recovered from panic: %v\n", r)
-				// Restart the lurker after a brief delay
-				time.Sleep(10 * time.Second)
-				l.Run()
+		for {
+			l.runOnce()
+			select {
+			case <-time.After(l.interval):
+				// continue to next iteration
+			case <-l.stopChan:
+				fmt.Printf("Lurker stopped\n")
+				return
 			}
-		}()
-		for range ticker.C {
-			t0 := time.Now()
-			l.DeletePendingFiles()
-			l.DeletePendingBins()
-			l.DeletePendingContent()
-			l.CleanTransactions()
-			l.CleanClients()
-			fmt.Printf("Lurker completed run in %.3fs\n", time.Since(t0).Seconds())
 		}
 	}()
+}
+
+func (l *Lurker) runOnce() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("Lurker recovered from panic: %v\n", r)
+		}
+	}()
+	t0 := time.Now()
+	l.DeletePendingFiles()
+	l.DeletePendingBins()
+	l.DeletePendingContent()
+	l.CleanTransactions()
+	l.CleanClients()
+	fmt.Printf("Lurker completed run in %.3fs\n", time.Since(t0).Seconds())
+}
+
+func (l *Lurker) Stop() {
+	if l.stopChan != nil {
+		close(l.stopChan)
+	}
 }
 
 func (l *Lurker) DeletePendingFiles() {
