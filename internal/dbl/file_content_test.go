@@ -163,6 +163,77 @@ func TestFileContentGetPendingDelete(t *testing.T) {
 	}
 }
 
+func TestFileContentGetPendingDeleteWithExpiredBin(t *testing.T) {
+	dao, err := tearUp()
+	if err != nil {
+		t.Error(err)
+	}
+	defer tearDown(dao)
+
+	// Create a bin that is NOT expired
+	activeBin := &ds.Bin{
+		Id:        "activebin",
+		ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
+	}
+	dao.Bin().Insert(activeBin)
+
+	// Create an expired bin
+	expiredBin := &ds.Bin{
+		Id:        "expiredbin",
+		ExpiredAt: time.Now().UTC().Add(-time.Hour), // Expired 1 hour ago
+	}
+	dao.Bin().Insert(expiredBin)
+
+	// Create content with file in active bin (should NOT be pending delete)
+	activeContent := &ds.FileContent{
+		SHA256:    "1111111111111111111111111111111111111111111111111111111111111111",
+		Bytes:     100,
+		MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+		Mime:      "application/octet-stream",
+		InStorage: true,
+	}
+	dao.FileContent().InsertOrIncrement(activeContent)
+	activeFile := &ds.File{
+		Filename: "activefile.txt",
+		Bin:      activeBin.Id,
+		Bytes:    100,
+		SHA256:   activeContent.SHA256,
+	}
+	dao.File().Insert(activeFile)
+
+	// Create content with file in expired bin (should be pending delete)
+	expiredContent := &ds.FileContent{
+		SHA256:    "2222222222222222222222222222222222222222222222222222222222222222",
+		Bytes:     200,
+		MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+		Mime:      "application/octet-stream",
+		InStorage: true,
+	}
+	dao.FileContent().InsertOrIncrement(expiredContent)
+	expiredFile := &ds.File{
+		Filename: "expiredfile.txt",
+		Bin:      expiredBin.Id,
+		Bytes:    200,
+		SHA256:   expiredContent.SHA256,
+	}
+	dao.File().Insert(expiredFile)
+
+	// Get pending deletes
+	pending, err := dao.FileContent().GetPendingDelete()
+	if err != nil {
+		t.Errorf("Failed to get pending deletes: %s", err)
+	}
+
+	// Should only find expiredContent (file in expired bin)
+	if len(pending) != 1 {
+		t.Errorf("Expected 1 pending delete, got %d", len(pending))
+	}
+
+	if len(pending) > 0 && pending[0].SHA256 != expiredContent.SHA256 {
+		t.Errorf("Expected pending delete to be %s, got %s", expiredContent.SHA256, pending[0].SHA256)
+	}
+}
+
 func TestFileContentGetAll(t *testing.T) {
 	dao, err := tearUp()
 	if err != nil {
@@ -339,6 +410,104 @@ func TestFileCountBySHA256(t *testing.T) {
 	}
 	if count != 0 {
 		t.Errorf("Expected count to be 0 after marking bin deleted, got %d", count)
+	}
+}
+
+func TestFileCountBySHA256WithExpiredBin(t *testing.T) {
+	dao, err := tearUp()
+	if err != nil {
+		t.Error(err)
+	}
+	defer tearDown(dao)
+
+	sha256Active := "f3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b856"
+	sha256Expired := "a4b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b857"
+
+	// Create active (non-expired) bin
+	activeBin := &ds.Bin{
+		Id:        "activebintest",
+		ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
+	}
+	err = dao.Bin().Insert(activeBin)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Create expired bin (expired 1 hour ago)
+	expiredBin := &ds.Bin{
+		Id:        "expiredbintest",
+		ExpiredAt: time.Now().UTC().Add(-time.Hour),
+	}
+	err = dao.Bin().Insert(expiredBin)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Create file_content records
+	activeContent := &ds.FileContent{
+		SHA256:    sha256Active,
+		Bytes:     100,
+		MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+		Mime:      "application/octet-stream",
+		InStorage: true,
+	}
+	err = dao.FileContent().InsertOrIncrement(activeContent)
+	if err != nil {
+		t.Error(err)
+	}
+
+	expiredContent := &ds.FileContent{
+		SHA256:    sha256Expired,
+		Bytes:     100,
+		MD5:       "d41d8cd98f00b204e9800998ecf8427e",
+		Mime:      "application/octet-stream",
+		InStorage: true,
+	}
+	err = dao.FileContent().InsertOrIncrement(expiredContent)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Create file in active bin
+	activeFile := &ds.File{
+		Filename: "activefile.txt",
+		Bin:      activeBin.Id,
+		Bytes:    100,
+		SHA256:   sha256Active,
+	}
+	err = dao.File().Insert(activeFile)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Create file in expired bin
+	expiredFile := &ds.File{
+		Filename: "expiredfile.txt",
+		Bin:      expiredBin.Id,
+		Bytes:    100,
+		SHA256:   sha256Expired,
+	}
+	err = dao.File().Insert(expiredFile)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Count for active bin's file should be 1 (bin not expired)
+	count, err := dao.File().CountBySHA256(sha256Active)
+	if err != nil {
+		t.Errorf("Failed to count files: %s", err)
+	}
+	if count != 1 {
+		t.Errorf("Expected count to be 1 for active bin, got %d", count)
+	}
+
+	// Count for expired bin's file should be 0 (bin expired)
+	count, err = dao.File().CountBySHA256(sha256Expired)
+	if err != nil {
+		t.Errorf("Failed to count files in expired bin: %s", err)
+	}
+	if count != 0 {
+		t.Errorf("Expected count to be 0 for expired bin, got %d", count)
 	}
 }
 

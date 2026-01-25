@@ -66,7 +66,7 @@ ON CONFLICT (sha256) DO UPDATE SET
 }
 
 // GetPendingDelete returns file content records that have zero active references
-// (active = file exists AND file not deleted AND bin not deleted) and still in storage
+// (active = file exists AND file not deleted AND bin not deleted AND bin not expired) and still in storage
 func (d *FileContentDao) GetPendingDelete() ([]ds.FileContent, error) {
 	sqlStatement := `SELECT fc.sha256, fc.bytes, fc.md5, fc.mime, fc.in_storage, fc.blocked, fc.created_at, fc.last_referenced_at
 FROM file_content fc
@@ -74,7 +74,7 @@ LEFT JOIN file f ON fc.sha256 = f.sha256
 LEFT JOIN bin b ON f.bin_id = b.id
 WHERE fc.in_storage = true
 GROUP BY fc.sha256, fc.bytes, fc.md5, fc.mime, fc.in_storage, fc.blocked, fc.created_at, fc.last_referenced_at
-HAVING COUNT(CASE WHEN f.id IS NOT NULL AND f.deleted_at IS NULL AND b.deleted_at IS NULL THEN 1 END) = 0
+HAVING COUNT(CASE WHEN f.id IS NOT NULL AND f.deleted_at IS NULL AND b.deleted_at IS NULL AND b.expired_at > NOW() THEN 1 END) = 0
 ORDER BY fc.last_referenced_at ASC`
 
 	rows, err := d.db.Query(sqlStatement)
