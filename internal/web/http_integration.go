@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
@@ -18,18 +17,19 @@ func (h *HTTP) integrationSlack(w http.ResponseWriter, r *http.Request) {
 	// Interpret empty secret as not enabled, so reject early in this case
 	if h.config.SlackSecret == "" {
 		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
 	}
 
 	// Information needed for auth
 	ts := r.Header.Get("X-Slack-Request-Timestamp")
 	sig := r.Header.Get("X-Slack-Signature")
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
 		h.Error(w, r, fmt.Sprintf("Failed to read request body: %s\n", err.Error()), "Internal Server Error", 833, http.StatusInternalServerError)
 		return
 	}
-	r.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+	r.Body = io.NopCloser(bytes.NewBuffer(body))
 
 	// Reject old signatures. Allowing 60 seconds splay.
 	ts_int, err := strconv.ParseInt(ts, 10, 64)

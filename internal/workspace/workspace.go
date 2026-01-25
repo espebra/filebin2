@@ -2,7 +2,6 @@ package workspace
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"sort"
 	"strings"
@@ -95,7 +94,7 @@ func NewManager(tmpdirFlag string, capacityThreshold float64) (*Manager, error) 
 // Benchmark tests the write performance of this workspace
 func (ws *Workspace) Benchmark() error {
 	// Create a temporary file for benchmarking
-	tmpFile, err := ioutil.TempFile(ws.Path, "filebin-benchmark-")
+	tmpFile, err := os.CreateTemp(ws.Path, "filebin-benchmark-")
 	if err != nil {
 		return fmt.Errorf("failed to create benchmark file: %w", err)
 	}
@@ -247,7 +246,7 @@ func (m *Manager) CreateTempFile(fileSize uint64, prefix string) (*os.File, erro
 	}
 
 	// Create the temp file in the selected workspace
-	fp, err := ioutil.TempFile(ws.Path, prefix)
+	fp, err := os.CreateTemp(ws.Path, prefix)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp file in %q: %w", ws.Path, err)
 	}

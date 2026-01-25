@@ -3,7 +3,7 @@ package web
 import (
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	//"net/http/httputil"
@@ -80,7 +80,7 @@ func httpRequest(tc TestCase) (statuscode int, body string, err error) {
 	//}
 
 	//fmt.Printf("Response headers: %q", dump)
-	content, err := ioutil.ReadAll(resp.Body)
+	content, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return -3, "", err
 	}
@@ -576,7 +576,7 @@ func httpAdminRequest(method, path string) (statuscode int, body string, err err
 		return -2, "", err
 	}
 
-	content, err := ioutil.ReadAll(resp.Body)
+	content, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return -3, "", err
 	}
