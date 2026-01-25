@@ -18,7 +18,7 @@ make                # Build and run tests, used during the integration testing b
 ### Testing
 ```bash
 # Tests are run with podman or docker compose, which is preferred for full integration testing
-podman compose -f ci.yml up --abort-on-container-exit
+podman compose -f integration-tests.yml up --abort-on-container-exit
 ```
 
 The test environment is run with:
