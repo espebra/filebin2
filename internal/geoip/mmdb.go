@@ -40,6 +40,12 @@ type asnRecord struct {
 func Init(asnPath string, cityPath string) (DAO, error) {
 	var dao DAO
 
+	// GeoIP is optional - if paths are not provided, return empty DAO
+	if asnPath == "" || cityPath == "" {
+		fmt.Println("GeoIP databases not configured, skipping")
+		return dao, nil
+	}
+
 	fmt.Printf("Loading mmdb (ASN): %s\n", asnPath)
 	asn, err := maxminddb.Open(asnPath)
 	if err != nil {
@@ -56,13 +62,21 @@ func Init(asnPath string, cityPath string) (DAO, error) {
 }
 
 func (dao DAO) Close() error {
-	if err := dao.as.Close(); err != nil {
-		return err
+	if dao.as != nil {
+		if err := dao.as.Close(); err != nil {
+			return err
+		}
 	}
-	if err := dao.city.Close(); err != nil {
-		return err
+	if dao.city != nil {
+		if err := dao.city.Close(); err != nil {
+			return err
+		}
 	}
 	return nil
+}
+
+func (dao DAO) Enabled() bool {
+	return dao.as != nil && dao.city != nil
 }
 
 func (dao DAO) LookupASN(ip net.IP, client *ds.Client) error {
@@ -101,6 +115,11 @@ func (dao DAO) LookupCity(ip net.IP, client *ds.Client) error {
 }
 
 func (dao DAO) Lookup(remoteAddr string, client *ds.Client) (err error) {
+	// Skip lookup if geoip is not enabled
+	if !dao.Enabled() {
+		return nil
+	}
+
 	// Parse the client IP address
 	host, _, err := net.SplitHostPort(remoteAddr)
 	var ip net.IP

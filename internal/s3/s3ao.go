@@ -95,23 +95,40 @@ func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool, pr
 
 	fmt.Printf("Established session to S3AO at %s\n", endpoint)
 
-	// Ensure that the bucket exists
-	_, err = s3ao.client.HeadBucket(context.Background(), &s3.HeadBucketInput{
-		Bucket: aws.String(bucket),
-	})
-	if err != nil {
-		// Bucket doesn't exist, try to create it
+	// Ensure that the bucket exists, with retry logic for startup race conditions
+	retryTimeout := 30 * time.Second
+	retryInterval := 2 * time.Second
+	startTime := time.Now()
+
+	for {
+		_, err = s3ao.client.HeadBucket(context.Background(), &s3.HeadBucketInput{
+			Bucket: aws.String(bucket),
+		})
+		if err == nil {
+			fmt.Printf("Found S3AO bucket: %s\n", bucket)
+			break
+		}
+
+		// Bucket doesn't exist or S3 is unavailable, try to create it
 		t0 := time.Now()
 		_, createErr := s3ao.client.CreateBucket(context.Background(), &s3.CreateBucketInput{
 			Bucket: aws.String(bucket),
 		})
-		if createErr != nil {
-			fmt.Printf("Unable to create S3AO bucket: %s\n", createErr.Error())
+		if createErr == nil {
+			fmt.Printf("Created S3AO bucket: %s in %.3fs\n", bucket, time.Since(t0).Seconds())
+			break
+		}
+
+		// Both HeadBucket and CreateBucket failed
+		elapsed := time.Since(startTime)
+		if elapsed >= retryTimeout {
+			fmt.Printf("Unable to access S3AO bucket after %.0fs: %s\n", elapsed.Seconds(), createErr.Error())
 			return s3ao, createErr
 		}
-		fmt.Printf("Created S3AO bucket: %s in %.3fs\n", bucket, time.Since(t0).Seconds())
-	} else {
-		fmt.Printf("Found S3AO bucket: %s\n", bucket)
+
+		fmt.Printf("S3 not available yet (%.0fs elapsed), retrying in %.0fs: %s\n",
+			elapsed.Seconds(), retryInterval.Seconds(), createErr.Error())
+		time.Sleep(retryInterval)
 	}
 
 	return s3ao, nil

@@ -28,12 +28,42 @@ type DAO struct {
 func Init(dbHost string, dbPort int, dbName, dbUser, dbPassword string, maxOpenConns, maxIdleConns int) (DAO, error) {
 	var dao DAO
 	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", dbHost, dbPort, dbUser, dbPassword, dbName)
-	db, err := sql.Open("postgres", connStr)
-	if err != nil {
-		return dao, err
-	}
-	if err := db.Ping(); err != nil {
-		return dao, fmt.Errorf("unable to ping the database: %s:%d", dbHost, dbPort)
+
+	// Retry logic for database connection with 30 second timeout
+	retryTimeout := 30 * time.Second
+	retryInterval := 2 * time.Second
+	startTime := time.Now()
+
+	var db *sql.DB
+	var err error
+
+	for {
+		db, err = sql.Open("postgres", connStr)
+		if err != nil {
+			elapsed := time.Since(startTime)
+			if elapsed >= retryTimeout {
+				return dao, fmt.Errorf("unable to open database connection after %.0fs: %s", elapsed.Seconds(), err.Error())
+			}
+			fmt.Printf("Database not available yet (%.0fs elapsed), retrying in %.0fs: %s\n",
+				elapsed.Seconds(), retryInterval.Seconds(), err.Error())
+			time.Sleep(retryInterval)
+			continue
+		}
+
+		err = db.Ping()
+		if err == nil {
+			fmt.Printf("Connected to database at %s:%d\n", dbHost, dbPort)
+			break
+		}
+
+		db.Close()
+		elapsed := time.Since(startTime)
+		if elapsed >= retryTimeout {
+			return dao, fmt.Errorf("unable to ping database after %.0fs: %s:%d", elapsed.Seconds(), dbHost, dbPort)
+		}
+		fmt.Printf("Database not available yet (%.0fs elapsed), retrying in %.0fs: %s\n",
+			elapsed.Seconds(), retryInterval.Seconds(), err.Error())
+		time.Sleep(retryInterval)
 	}
 
 	db.SetMaxOpenConns(maxOpenConns)
