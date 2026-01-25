@@ -253,10 +253,10 @@ func (s S3AO) GetObject(contentSHA256 string, start int64, end int64) (io.ReadCl
 		input.Range = aws.String(fmt.Sprintf("bytes=%d-%d", start, end))
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), s.transferTimeout)
-	defer cancel()
-
-	result, err := s.client.GetObject(ctx, input)
+	// Don't use context timeout here - we return the body for the caller to read.
+	// A timeout context would cancel the read mid-stream when defer cancel() fires.
+	// The caller manages the body's lifetime by calling Close() when done.
+	result, err := s.client.GetObject(context.Background(), input)
 	if err != nil {
 		return nil, err
 	}
