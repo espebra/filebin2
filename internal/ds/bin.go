@@ -43,7 +43,7 @@ func (b *Bin) IsReadable() bool {
 
 func (b *Bin) IsWritable() bool {
 	// Not writable if not readable
-	if b.IsReadable() == false {
+	if !b.IsReadable() {
 		return false
 	}
 	// Not readable if bin is readonly
@@ -54,28 +54,15 @@ func (b *Bin) IsWritable() bool {
 }
 
 func (b *Bin) IsExpired() bool {
-	if b.ExpiredAt.Before(time.Now()) {
-		return true
-	}
-	return false
+	return b.ExpiredAt.Before(time.Now())
 }
 
 func (b *Bin) IsApproved() bool {
-	if b.ApprovedAt.Valid {
-		if b.ApprovedAt.Time.IsZero() == false {
-			return true
-		}
-	}
-	return false
+	return b.ApprovedAt.Valid && !b.ApprovedAt.Time.IsZero()
 }
 
 func (b *Bin) IsDeleted() bool {
-	if b.DeletedAt.Valid {
-		if b.DeletedAt.Time.IsZero() == false {
-			return true
-		}
-	}
-	return false
+	return b.DeletedAt.Valid && !b.DeletedAt.Time.IsZero()
 }
 
 func (b *Bin) GenerateURL(u url.URL) error {

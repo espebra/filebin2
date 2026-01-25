@@ -205,7 +205,7 @@ func (d *FileContentDao) BlockContent(sha256 string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	now := time.Now().UTC().Truncate(time.Microsecond)
 

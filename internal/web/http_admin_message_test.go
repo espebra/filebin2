@@ -19,7 +19,7 @@ func TestAdminMessageEndpointAuthentication(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	// Create config with admin credentials
 	c := ds.Config{
@@ -70,7 +70,7 @@ func TestAdminMessageGetJSON(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	c := ds.Config{
 		AdminUsername: "admin",
@@ -134,7 +134,7 @@ func TestAdminMessageUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	c := ds.Config{
 		AdminUsername: "admin",
@@ -207,7 +207,7 @@ func TestAdminMessageUpdateUnpublish(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	c := ds.Config{
 		AdminUsername: "admin",
@@ -280,7 +280,7 @@ func TestAdminMessageValidationError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	c := ds.Config{
 		AdminUsername: "admin",
@@ -338,7 +338,7 @@ func TestAdminMessagePartialPublish(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	c := ds.Config{
 		AdminUsername: "admin",
@@ -399,7 +399,7 @@ func TestAdminMessageColor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	c := ds.Config{
 		AdminUsername: "admin",
@@ -460,7 +460,7 @@ func TestAdminMessageColorInvalid(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	c := ds.Config{
 		AdminUsername: "admin",

@@ -99,7 +99,7 @@ func (h *HTTP) viewBin(w http.ResponseWriter, r *http.Request) {
 	data.Bin = bin
 
 	code := 200
-	if bin.IsReadable() == false {
+	if !bin.IsReadable() {
 		code = 404
 	}
 
@@ -114,7 +114,7 @@ func (h *HTTP) viewBin(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Errno 201", http.StatusInternalServerError)
 			return
 		}
-		io.WriteString(w, string(out))
+		_, _ = w.Write(out)
 	} else {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(code)
@@ -168,7 +168,7 @@ func (h *HTTP) viewBinPlainText(w http.ResponseWriter, r *http.Request) {
 	}
 
 	code := 200
-	if bin.IsReadable() == false {
+	if !bin.IsReadable() {
 		code = 404
 	}
 
@@ -246,7 +246,7 @@ func (z *zipArchiveWriter) addFile(file ds.File) (io.Writer, error) {
 	header := &zip.FileHeader{}
 	header.Name = file.Filename
 	header.Modified = file.UpdatedAt
-	header.SetMode(400) // RW for the file owner
+	header.SetMode(0400) // RW for the file owner
 	return z.writer.CreateHeader(header)
 }
 
@@ -334,12 +334,12 @@ func (h *HTTP) archive(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Errno 200", http.StatusInternalServerError)
 		return
 	}
-	if found == false {
+	if !found {
 		h.Error(w, r, "", "The bin does not exist.", 201, http.StatusNotFound)
 		return
 	}
 
-	if bin.IsReadable() == false {
+	if !bin.IsReadable() {
 		h.Error(w, r, "", "This bin is no longer available.", 202, http.StatusNotFound)
 		return
 	}
@@ -359,7 +359,7 @@ func (h *HTTP) archive(w http.ResponseWriter, r *http.Request) {
 
 	// The file is downloadable at this point
 	if h.config.RequireCookie {
-		if h.cookieVerify(w, r) == false {
+		if !h.cookieVerify(w, r) {
 			// Set the cookie
 			h.setVerificationCookie(w, r)
 
@@ -424,19 +424,19 @@ func (h *HTTP) deleteBin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Errno 204", http.StatusInternalServerError)
 		return
 	}
-	if found == false {
+	if !found {
 		http.Error(w, "Bin does not exist", http.StatusNotFound)
 		return
 	}
 
-	if bin.IsReadable() == false {
+	if !bin.IsReadable() {
 		http.Error(w, "This bin is no longer available", http.StatusNotFound)
 		return
 	}
 
 	// Set to deleted
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	bin.DeletedAt.Scan(now)
+	_ = bin.DeletedAt.Scan(now)
 
 	if err := h.dao.Bin().Update(&bin); err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -445,7 +445,6 @@ func (h *HTTP) deleteBin(w http.ResponseWriter, r *http.Request) {
 
 	h.metrics.IncrBinDeleteCount()
 	http.Error(w, "Bin deleted successfully ", http.StatusOK)
-	return
 }
 
 func (h *HTTP) lockBin(w http.ResponseWriter, r *http.Request) {
@@ -460,18 +459,18 @@ func (h *HTTP) lockBin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Errno 205", http.StatusInternalServerError)
 		return
 	}
-	if found == false {
+	if !found {
 		http.Error(w, "Bin does not exist", http.StatusNotFound)
 		return
 	}
 
-	if bin.IsReadable() == false {
+	if !bin.IsReadable() {
 		http.Error(w, "This bin is no longer available", http.StatusNotFound)
 		return
 	}
 
 	// No need to set the bin to readonly twice
-	if bin.Readonly == true {
+	if bin.Readonly {
 		http.Error(w, "This bin is already locked", http.StatusOK)
 		return
 	}
@@ -485,7 +484,6 @@ func (h *HTTP) lockBin(w http.ResponseWriter, r *http.Request) {
 
 	h.metrics.IncrBinLockCount()
 	http.Error(w, "Bin locked successfully.", http.StatusOK)
-	return
 }
 
 func (h *HTTP) approveBin(w http.ResponseWriter, r *http.Request) {
@@ -500,12 +498,12 @@ func (h *HTTP) approveBin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Errno 205", http.StatusInternalServerError)
 		return
 	}
-	if found == false {
+	if !found {
 		http.Error(w, "Bin does not exist", http.StatusNotFound)
 		return
 	}
 
-	if bin.IsReadable() == false {
+	if !bin.IsReadable() {
 		http.Error(w, "This bin is no longer available", http.StatusNotFound)
 		return
 	}
@@ -518,14 +516,13 @@ func (h *HTTP) approveBin(w http.ResponseWriter, r *http.Request) {
 
 	// Set bin as approved with the current timestamp
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	bin.ApprovedAt.Scan(now)
+	_ = bin.ApprovedAt.Scan(now)
 	if err := h.dao.Bin().Update(&bin); err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
 	http.Error(w, "Bin approved successfully.", http.StatusOK)
-	return
 }
 
 // Ban the client IP addresses that have uploaded files to the given bin
@@ -544,7 +541,7 @@ func (h *HTTP) banBin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Errno 205", http.StatusInternalServerError)
 		return
 	}
-	if found == false {
+	if !found {
 		// To make brute forcing a little bit less effective
 		time.Sleep(3 * time.Second)
 
@@ -552,7 +549,7 @@ func (h *HTTP) banBin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if bin.IsReadable() == false {
+	if !bin.IsReadable() {
 		// To make brute forcing a little bit less effective
 		time.Sleep(3 * time.Second)
 
@@ -578,7 +575,7 @@ func (h *HTTP) banBin(w http.ResponseWriter, r *http.Request) {
 
 	// Set to deleted
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	bin.DeletedAt.Scan(now)
+	_ = bin.DeletedAt.Scan(now)
 	if err := h.dao.Bin().Update(&bin); err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
@@ -586,5 +583,4 @@ func (h *HTTP) banBin(w http.ResponseWriter, r *http.Request) {
 
 	h.metrics.IncrBinBanCount()
 	http.Error(w, "Bin banned successfully.", http.StatusOK)
-	return
 }

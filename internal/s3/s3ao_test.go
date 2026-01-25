@@ -71,7 +71,7 @@ func TestPutObject(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(s3ao)
+	defer func() { _ = tearDown(s3ao) }()
 
 	filename := "testobject"
 	bin := "testbin"
@@ -87,7 +87,7 @@ func TestRemoveObject(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(s3ao)
+	defer func() { _ = tearDown(s3ao) }()
 
 	filename := "testobject2"
 	bin := "testbin2"
@@ -107,7 +107,7 @@ func TestGetObject(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(s3ao)
+	defer func() { _ = tearDown(s3ao) }()
 
 	content := "content"
 	// Calculate SHA256 of content
@@ -126,7 +126,7 @@ func TestGetObject(t *testing.T) {
 	defer fp.Close()
 
 	buf := new(bytes.Buffer)
-	buf.ReadFrom(fp)
+	_, _ = buf.ReadFrom(fp)
 	s := buf.String()
 	if content != s {
 		t.Errorf("Invalid content from get object. Expected %s, got %s\n", content, s)
@@ -138,7 +138,7 @@ func TestUnknownObject(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(s3ao)
+	defer func() { _ = tearDown(s3ao) }()
 
 	// Use a non-existent SHA256
 	nonExistentSHA256 := "0000000000000000000000000000000000000000000000000000000000000000"
@@ -157,7 +157,7 @@ func TestUnknownObject(t *testing.T) {
 	if fp != nil {
 		// If we somehow got a reader, verify it's empty
 		buf := new(bytes.Buffer)
-		io.Copy(buf, fp)
+		_, _ = io.Copy(buf, fp)
 		fp.Close()
 		s := buf.String()
 		if len(s) != 0 {

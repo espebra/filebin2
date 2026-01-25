@@ -92,12 +92,12 @@ func (h *HTTP) integrationSlack(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "Errno 205", http.StatusInternalServerError)
 					return
 				}
-				if found == false {
+				if !found {
 					http.Error(w, "Bin does not exist", http.StatusNotFound)
 					return
 				}
 
-				if bin.IsReadable() == false {
+				if !bin.IsReadable() {
 					http.Error(w, "This bin is no longer available", http.StatusNotFound)
 					return
 				}
@@ -110,7 +110,7 @@ func (h *HTTP) integrationSlack(w http.ResponseWriter, r *http.Request) {
 
 				// Set bin as approved with the current timestamp
 				now := time.Now().UTC().Truncate(time.Microsecond)
-				bin.ApprovedAt.Scan(now)
+				_ = bin.ApprovedAt.Scan(now)
 				if err := h.dao.Bin().Update(&bin); err != nil {
 					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 					return
@@ -142,7 +142,7 @@ func (h *HTTP) integrationSlack(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			io.WriteString(w, fmt.Sprintf("%d last updated bins:\n", limit))
+			_, _ = io.WriteString(w, fmt.Sprintf("%d last updated bins:\n", limit))
 			for _, bin := range bins {
 				out := fmt.Sprintf("%s: https://filebin2.varnish-software.com/%s", bin.UpdatedAtRelative, bin.Id)
 				if bin.IsApproved() {
@@ -151,7 +151,7 @@ func (h *HTTP) integrationSlack(w http.ResponseWriter, r *http.Request) {
 					out = fmt.Sprintf("%s (pending)", out)
 				}
 				out = fmt.Sprintf("%s\n", out)
-				io.WriteString(w, out)
+				_, _ = io.WriteString(w, out)
 			}
 			return
 		}
@@ -159,16 +159,14 @@ func (h *HTTP) integrationSlack(w http.ResponseWriter, r *http.Request) {
 
 	// Print help for any /filebin commands we don't recognize
 	h.slackHelpText(w, r)
-	return
 }
 
 func (h *HTTP) slackHelpText(w http.ResponseWriter, r *http.Request) {
-	io.WriteString(w, "Help for filebin Slack integration\n\n")
-	io.WriteString(w, "Approve bin [string]:\n")
-	io.WriteString(w, "  /filebin approve bin\n\n")
-	io.WriteString(w, "Print the 10 last updated bins:\n")
-	io.WriteString(w, "  /filebin lastupdated\n\n")
-	io.WriteString(w, "Print the n [int] last updated bins. Limited to 100:\n")
-	io.WriteString(w, "  /filebin lastupdated n\n")
-	return
+	_, _ = io.WriteString(w, "Help for filebin Slack integration\n\n")
+	_, _ = io.WriteString(w, "Approve bin [string]:\n")
+	_, _ = io.WriteString(w, "  /filebin approve bin\n\n")
+	_, _ = io.WriteString(w, "Print the 10 last updated bins:\n")
+	_, _ = io.WriteString(w, "  /filebin lastupdated\n\n")
+	_, _ = io.WriteString(w, "Print the n [int] last updated bins. Limited to 100:\n")
+	_, _ = io.WriteString(w, "  /filebin lastupdated n\n")
 }

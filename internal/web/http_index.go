@@ -3,7 +3,6 @@ package web
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 
@@ -94,7 +93,7 @@ func (h *HTTP) privacy(w http.ResponseWriter, r *http.Request) {
 	var data Data
 	data.Page = "privacy"
 
-	if h.config.RequireCookie == true {
+	if h.config.RequireCookie {
 		data.CookiesInUse = true
 	}
 
@@ -218,7 +217,7 @@ func (h *HTTP) filebinStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(code)
-	io.WriteString(w, string(out))
+	_, _ = w.Write(out)
 }
 
 func (h *HTTP) storageStatus(w http.ResponseWriter, r *http.Request) {
@@ -257,7 +256,7 @@ func (h *HTTP) storageStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(code)
-	io.WriteString(w, string(out))
+	_, _ = w.Write(out)
 }
 
 func (h *HTTP) robots(w http.ResponseWriter, r *http.Request) {

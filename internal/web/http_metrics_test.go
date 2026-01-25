@@ -17,7 +17,7 @@ func TestMetricsAuthentication(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	tests := []struct {
 		name               string
@@ -174,7 +174,7 @@ func TestMetricsEndpointContent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	// Create config with metrics enabled and no auth
 	c := ds.Config{

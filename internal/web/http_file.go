@@ -41,12 +41,12 @@ func (h *HTTP) getFile(w http.ResponseWriter, r *http.Request) {
 		h.Error(w, r, fmt.Sprintf("Failed to select bin by id %q: %s", inputBin, err.Error()), "Database error", 112, http.StatusInternalServerError)
 		return
 	}
-	if found == false {
+	if !found {
 		h.Error(w, r, "", "The bin does not exist.", 113, http.StatusNotFound)
 		return
 	}
 
-	if bin.IsReadable() == false {
+	if !bin.IsReadable() {
 		h.Error(w, r, "", "This bin is no longer available.", 114, http.StatusNotFound)
 		return
 	}
@@ -54,7 +54,7 @@ func (h *HTTP) getFile(w http.ResponseWriter, r *http.Request) {
 	// If approvals are required, then
 	if h.config.RequireApproval {
 		// Reject downloads from bins that are not approved
-		if bin.IsApproved() == false {
+		if !bin.IsApproved() {
 			h.Error(w, r, "", "This bin requires approval before files can be downloaded.", 521, http.StatusForbidden)
 			return
 		}
@@ -65,7 +65,7 @@ func (h *HTTP) getFile(w http.ResponseWriter, r *http.Request) {
 		h.Error(w, r, fmt.Sprintf("Failed to select file by bin %q and filename %q: %s", inputBin, inputFilename, err.Error()), "Database error", 115, http.StatusInternalServerError)
 		return
 	}
-	if found == false {
+	if !found {
 		h.Error(w, r, "", "The file does not exist.", 116, http.StatusNotFound)
 		return
 	}
@@ -93,7 +93,7 @@ func (h *HTTP) getFile(w http.ResponseWriter, r *http.Request) {
 
 	// The file is downloadable at this point
 	if h.config.RequireCookie {
-		if h.cookieVerify(w, r) == false {
+		if !h.cookieVerify(w, r) {
 			// Set the cookie
 			h.setVerificationCookie(w, r)
 
@@ -134,7 +134,7 @@ func (h *HTTP) getFile(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Location", presignedURL.String())
 	w.WriteHeader(http.StatusFound)
-	io.WriteString(w, "")
+	_, _ = io.WriteString(w, "")
 
 	fmt.Printf("Presigned download of file %q (%s) with sha256 %s from bin %q in %.3fs (%d downloads)\n", inputFilename, humanize.Bytes(file.Bytes), file.SHA256, inputBin, time.Since(t0).Seconds(), file.Downloads)
 
@@ -143,8 +143,6 @@ func (h *HTTP) getFile(w http.ResponseWriter, r *http.Request) {
 	// not always be the case.
 	h.metrics.IncrBytesStorageToClient(file.Bytes)
 	h.metrics.IncrFileDownloadCount()
-
-	return
 }
 
 func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
@@ -206,15 +204,15 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if found == false {
+	if !found {
 		// Bin does not exist, so create it here
 		bin = ds.Bin{}
 		bin.Id = inputBin
 
 		// Since manual approval is not needed, then just set the approval time at the time of the upload
-		if h.config.RequireApproval == false {
+		if !h.config.RequireApproval {
 			now := time.Now().UTC().Truncate(time.Microsecond)
-			bin.ApprovedAt.Scan(now)
+			_ = bin.ApprovedAt.Scan(now)
 		}
 
 		// Abort early if the bin is invalid
@@ -233,7 +231,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 		h.metrics.IncrNewBinCount()
 	}
 
-	if bin.IsWritable() == false {
+	if !bin.IsWritable() {
 		if bin.IsExpired() {
 			h.Error(w, r, fmt.Sprintf("Upload failed: Bin %q is expired", inputBin), "The bin is no longer available", 122, http.StatusMethodNotAllowed)
 			return
@@ -241,7 +239,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 			// Reject uploads to deleted bins
 			h.Error(w, r, fmt.Sprintf("Upload failed: Bin %q is deleted", inputBin), "The bin is no longer available", 132, http.StatusMethodNotAllowed)
 			return
-		} else if bin.Readonly == true {
+		} else if bin.Readonly {
 			// Reject uploads to readonly bins
 			w.Header().Set("Allow", "GET, HEAD")
 			h.Error(w, r, fmt.Sprintf("Rejected upload of filename %q to readonly bin %q", inputFilename, inputBin), "Uploads to locked binds are not allowed", 123, http.StatusMethodNotAllowed)
@@ -315,14 +313,14 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	fp.Seek(0, 0)
+	_, _ = fp.Seek(0, 0)
 
 	mime, err := mimetype.DetectReader(fp)
 	if err != nil {
 		h.Error(w, r, fmt.Sprintf("Unable to detect mime type on filename %q in bin %q: %s", inputFilename, inputBin, err.Error()), "Processing error", 131, http.StatusInternalServerError)
 		return
 	}
-	fp.Seek(0, 0)
+	_, _ = fp.Seek(0, 0)
 
 	// Check if file exists
 	file, found, err := h.dao.File().GetByName(bin.Id, inputFilename)
@@ -358,7 +356,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 
 	// Reset the deleted status and timestamp in case the file was deleted
 	// earlier
-	file.DeletedAt.Scan(nil)
+	_ = file.DeletedAt.Scan(nil)
 
 	file.Bytes = inputBytes
 	file.Mime = mime.String()
@@ -398,7 +396,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 		defer h.metrics.DecrStorageUploadInProgress()
 
 		for {
-			fp.Seek(0, 0)
+			_, _ = fp.Seek(0, 0)
 			err := h.s3.PutObjectByHash(file.SHA256, fp, nBytes)
 			if err == nil {
 				// Completed successfully
@@ -491,7 +489,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	io.WriteString(w, string(out))
+	_, _ = w.Write(out)
 }
 
 func (h *HTTP) deleteFile(w http.ResponseWriter, r *http.Request) {
@@ -507,12 +505,12 @@ func (h *HTTP) deleteFile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Errno 110", http.StatusInternalServerError)
 		return
 	}
-	if found == false {
+	if !found {
 		http.Error(w, "The file does not exist", http.StatusNotFound)
 		return
 	}
 
-	if bin.IsReadable() == false {
+	if !bin.IsReadable() {
 		h.Error(w, r, "", "The bin is no longer available", 122, http.StatusNotFound)
 		return
 	}
@@ -523,20 +521,20 @@ func (h *HTTP) deleteFile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Errno 111", http.StatusInternalServerError)
 		return
 	}
-	if found == false {
+	if !found {
 		http.Error(w, "The file does not exist", http.StatusNotFound)
 		return
 	}
 
 	// No need to delete the file twice
-	if file.IsReadable() == false {
+	if !file.IsReadable() {
 		http.Error(w, "This file is no longer available", http.StatusNotFound)
 		return
 	}
 
 	// Flag as deleted
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	file.DeletedAt.Scan(now)
+	_ = file.DeletedAt.Scan(now)
 
 	if err := h.dao.File().Update(&file); err != nil {
 		fmt.Printf("Unable to update the file (%q, %q): %s\n", inputBin, inputFilename, err.Error())
@@ -554,5 +552,4 @@ func (h *HTTP) deleteFile(w http.ResponseWriter, r *http.Request) {
 
 	h.metrics.IncrFileDeleteCount()
 	http.Error(w, "File deleted successfully", http.StatusOK)
-	return
 }

@@ -13,7 +13,7 @@ func TestStorageBytesCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	c := ds.Config{}
 
@@ -51,7 +51,7 @@ func TestStorageBytesCache_ThreadSafety(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	c := ds.Config{}
 
@@ -96,7 +96,7 @@ func TestStorageBytesCache_InitialValueAvailable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	c := ds.Config{}
 

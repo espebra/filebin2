@@ -12,7 +12,7 @@ func TestFileContentInsertOrIncrement(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	// First insert should create the record
 	content := &ds.FileContent{
@@ -65,14 +65,14 @@ func TestFileContentGetPendingDelete(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	// Create a bin for testing
 	bin := &ds.Bin{
 		Id:        "testbin789",
 		ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
 	}
-	dao.Bin().Insert(bin)
+	_ = dao.Bin().Insert(bin)
 
 	// Create content1 with no file references (should be pending delete)
 	content1 := &ds.FileContent{
@@ -82,7 +82,7 @@ func TestFileContentGetPendingDelete(t *testing.T) {
 		Mime:      "application/octet-stream",
 		InStorage: true,
 	}
-	dao.FileContent().InsertOrIncrement(content1)
+	_ = dao.FileContent().InsertOrIncrement(content1)
 	// No file records created, so COUNT(*) will be 0
 
 	// Create content2 with one non-deleted file (should NOT be pending delete)
@@ -93,14 +93,14 @@ func TestFileContentGetPendingDelete(t *testing.T) {
 		Mime:      "application/octet-stream",
 		InStorage: true,
 	}
-	dao.FileContent().InsertOrIncrement(content2)
+	_ = dao.FileContent().InsertOrIncrement(content2)
 	file2 := &ds.File{
 		Filename: "file2.txt",
 		Bin:      bin.Id,
 		Bytes:    200,
 		SHA256:   content2.SHA256,
 	}
-	dao.File().Insert(file2)
+	_ = dao.File().Insert(file2)
 
 	// Create content3 with files but all marked as deleted (should be pending delete)
 	content3 := &ds.FileContent{
@@ -110,17 +110,17 @@ func TestFileContentGetPendingDelete(t *testing.T) {
 		Mime:      "application/octet-stream",
 		InStorage: true,
 	}
-	dao.FileContent().InsertOrIncrement(content3)
+	_ = dao.FileContent().InsertOrIncrement(content3)
 	file3 := &ds.File{
 		Filename: "file3.txt",
 		Bin:      bin.Id,
 		Bytes:    300,
 		SHA256:   content3.SHA256,
 	}
-	dao.File().Insert(file3)
+	_ = dao.File().Insert(file3)
 	// Mark as deleted
-	file3.DeletedAt.Scan(time.Now().UTC())
-	dao.File().Update(file3)
+	_ = file3.DeletedAt.Scan(time.Now().UTC())
+	_ = dao.File().Update(file3)
 
 	// Create content4 with in_storage=false (should NOT be pending delete)
 	content4 := &ds.FileContent{
@@ -130,7 +130,7 @@ func TestFileContentGetPendingDelete(t *testing.T) {
 		Mime:      "application/octet-stream",
 		InStorage: false,
 	}
-	dao.FileContent().InsertOrIncrement(content4)
+	_ = dao.FileContent().InsertOrIncrement(content4)
 
 	// Get pending deletes
 	pending, err := dao.FileContent().GetPendingDelete()
@@ -168,21 +168,21 @@ func TestFileContentGetPendingDeleteWithExpiredBin(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	// Create a bin that is NOT expired
 	activeBin := &ds.Bin{
 		Id:        "activebin",
 		ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
 	}
-	dao.Bin().Insert(activeBin)
+	_ = dao.Bin().Insert(activeBin)
 
 	// Create an expired bin
 	expiredBin := &ds.Bin{
 		Id:        "expiredbin",
 		ExpiredAt: time.Now().UTC().Add(-time.Hour), // Expired 1 hour ago
 	}
-	dao.Bin().Insert(expiredBin)
+	_ = dao.Bin().Insert(expiredBin)
 
 	// Create content with file in active bin (should NOT be pending delete)
 	activeContent := &ds.FileContent{
@@ -192,14 +192,14 @@ func TestFileContentGetPendingDeleteWithExpiredBin(t *testing.T) {
 		Mime:      "application/octet-stream",
 		InStorage: true,
 	}
-	dao.FileContent().InsertOrIncrement(activeContent)
+	_ = dao.FileContent().InsertOrIncrement(activeContent)
 	activeFile := &ds.File{
 		Filename: "activefile.txt",
 		Bin:      activeBin.Id,
 		Bytes:    100,
 		SHA256:   activeContent.SHA256,
 	}
-	dao.File().Insert(activeFile)
+	_ = dao.File().Insert(activeFile)
 
 	// Create content with file in expired bin (should be pending delete)
 	expiredContent := &ds.FileContent{
@@ -209,14 +209,14 @@ func TestFileContentGetPendingDeleteWithExpiredBin(t *testing.T) {
 		Mime:      "application/octet-stream",
 		InStorage: true,
 	}
-	dao.FileContent().InsertOrIncrement(expiredContent)
+	_ = dao.FileContent().InsertOrIncrement(expiredContent)
 	expiredFile := &ds.File{
 		Filename: "expiredfile.txt",
 		Bin:      expiredBin.Id,
 		Bytes:    200,
 		SHA256:   expiredContent.SHA256,
 	}
-	dao.File().Insert(expiredFile)
+	_ = dao.File().Insert(expiredFile)
 
 	// Get pending deletes
 	pending, err := dao.FileContent().GetPendingDelete()
@@ -239,7 +239,7 @@ func TestFileContentGetAll(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	// Create multiple content records
 	content1 := &ds.FileContent{
@@ -249,7 +249,7 @@ func TestFileContentGetAll(t *testing.T) {
 		Mime:      "application/octet-stream",
 		InStorage: true,
 	}
-	dao.FileContent().InsertOrIncrement(content1)
+	_ = dao.FileContent().InsertOrIncrement(content1)
 
 	content2 := &ds.FileContent{
 		SHA256:    "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
@@ -258,7 +258,7 @@ func TestFileContentGetAll(t *testing.T) {
 		Mime:      "application/octet-stream",
 		InStorage: true,
 	}
-	dao.FileContent().InsertOrIncrement(content2)
+	_ = dao.FileContent().InsertOrIncrement(content2)
 
 	all, err := dao.FileContent().GetAll()
 	if err != nil {
@@ -275,7 +275,7 @@ func TestFileContentUpdate(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	// Create content
 	content := &ds.FileContent{
@@ -285,7 +285,7 @@ func TestFileContentUpdate(t *testing.T) {
 		Mime:      "application/octet-stream",
 		InStorage: true,
 	}
-	dao.FileContent().InsertOrIncrement(content)
+	_ = dao.FileContent().InsertOrIncrement(content)
 
 	// Get and modify
 	dbContent, err := dao.FileContent().GetBySHA256(content.SHA256)
@@ -315,7 +315,7 @@ func TestFileCountBySHA256(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	sha256 := "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
@@ -381,7 +381,7 @@ func TestFileCountBySHA256(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	files[0].DeletedAt.Scan(time.Now().UTC())
+	_ = files[0].DeletedAt.Scan(time.Now().UTC())
 	err = dao.File().Update(&files[0])
 	if err != nil {
 		t.Error(err)
@@ -397,7 +397,7 @@ func TestFileCountBySHA256(t *testing.T) {
 	}
 
 	// Mark the bin as deleted
-	bin.DeletedAt.Scan(time.Now().UTC())
+	_ = bin.DeletedAt.Scan(time.Now().UTC())
 	err = dao.Bin().Update(bin)
 	if err != nil {
 		t.Error(err)
@@ -418,7 +418,7 @@ func TestFileCountBySHA256WithExpiredBin(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	sha256Active := "f3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b856"
 	sha256Expired := "a4b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b857"
@@ -516,7 +516,7 @@ func TestDeduplicationFlow(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	sha256 := "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
@@ -582,7 +582,7 @@ func TestDeduplicationFlow(t *testing.T) {
 
 	for i := 0; i < 2; i++ {
 		// Mark file as deleted
-		files[i].DeletedAt.Scan(time.Now().UTC())
+		_ = files[i].DeletedAt.Scan(time.Now().UTC())
 		err = dao.File().Update(&files[i])
 		if err != nil {
 			t.Errorf("Delete %d: Failed to mark file as deleted: %s", i, err)
@@ -600,7 +600,7 @@ func TestDeduplicationFlow(t *testing.T) {
 	}
 
 	// Mark the last file as deleted
-	files[2].DeletedAt.Scan(time.Now().UTC())
+	_ = files[2].DeletedAt.Scan(time.Now().UTC())
 	err = dao.File().Update(&files[2])
 	if err != nil {
 		t.Errorf("Failed to mark last file as deleted: %s", err)

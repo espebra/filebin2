@@ -12,7 +12,7 @@ func TestGetBinById(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	id := "1234567890"
 	bin := &ds.Bin{}
@@ -61,7 +61,7 @@ func TestInsertDuplicatedBin(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	bin := &ds.Bin{}
 	bin.Id = "1234567890"
@@ -81,7 +81,7 @@ func TestBinTooLong(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	bin := &ds.Bin{}
 	bin.Id = "1234567890123456789012345678901234567890123456789012345678901"
@@ -96,7 +96,7 @@ func TestGetAllBins(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	count := 50
 	for i := 0; i < count; i++ {
@@ -124,7 +124,7 @@ func TestDeleteBin(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	bin := &ds.Bin{}
 	bin.Id = "1234567890"
@@ -157,7 +157,7 @@ func TestUpdateBin(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	bin := &ds.Bin{}
 	bin.Id = "1234567890"
@@ -191,7 +191,7 @@ func TestUpdateNonExistingBin(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	bin := &ds.Bin{}
 	bin.Id = "1234567890"
@@ -206,7 +206,7 @@ func TestDeleteNonExistingBin(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	bin := &ds.Bin{}
 	bin.Id = "1234567890"
@@ -221,7 +221,7 @@ func TestInvalidBinInput(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	bin := &ds.Bin{}
 	bin.Id = "12345"
@@ -248,7 +248,7 @@ func TestFileCount(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer tearDown(dao)
+	defer func() { _ = tearDown(dao) }()
 
 	type testcase struct {
 		Bin   string
