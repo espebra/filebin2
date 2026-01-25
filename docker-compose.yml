@@ -5,7 +5,6 @@ services:
     hostname: "s3"
     restart: "no"
     environment:
-      - STUPID_BUCKET_NAME=filebin
       - STUPID_RW_ACCESS_KEY=s3accesskey
       - STUPID_RW_SECRET_KEY=s3secretkey
     expose:
