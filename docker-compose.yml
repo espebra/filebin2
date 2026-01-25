@@ -33,21 +33,39 @@ services:
     build: .
     restart: "no"
     environment:
-      - DATABASE_HOST=db
-      - DATABASE_PORT=5432
-      - DATABASE_NAME=db
-      - DATABASE_USERNAME=username
-      - DATABASE_PASSWORD=changeme
-      - S3_ENDPOINT=s3:5553
-      - S3_REGION=us-east-1
-      - S3_BUCKET=filebin
-      - S3_ACCESS_KEY=s3accesskey
-      - S3_SECRET_KEY=s3secretkey
-      - ADMIN_USERNAME=admin
-      - ADMIN_PASSWORD=changeme
-      - METRICS_USERNAME=foo
-      - METRICS_PASSWORD=bar
-      - METRICS_AUTH=basic
+      # Database
+      - FILEBIN_DB_HOST=db
+      - FILEBIN_DB_PORT=5432
+      - FILEBIN_DB_NAME=db
+      - FILEBIN_DB_USERNAME=username
+      - FILEBIN_DB_PASSWORD=changeme
+      # S3
+      - FILEBIN_S3_ENDPOINT=s3:5553
+      - FILEBIN_S3_REGION=us-east-1
+      - FILEBIN_S3_BUCKET=filebin
+      - FILEBIN_S3_ACCESS_KEY=s3accesskey
+      - FILEBIN_S3_SECRET_KEY=s3secretkey
+      - FILEBIN_S3_SECURE=false
+      # HTTP
+      - FILEBIN_LISTEN_HOST=0.0.0.0
+      - FILEBIN_ACCESS_LOG=access.log
+      # Admin
+      - FILEBIN_ADMIN_USERNAME=admin
+      - FILEBIN_ADMIN_PASSWORD=changeme
+      # Metrics
+      - FILEBIN_METRICS=true
+      - FILEBIN_METRICS_USERNAME=metrics
+      - FILEBIN_METRICS_PASSWORD=changeme
+      - FILEBIN_METRICS_AUTH=basic
+      # Lurker
+      - FILEBIN_LURKER_INTERVAL=10
+      - FILEBIN_EXPIRATION=3600
+      # Limits
+      - FILEBIN_LIMIT_STORAGE=1G
+      # Features
+      - FILEBIN_REQUIRE_VERIFICATION_COOKIE=true
+      # Contact
+      - FILEBIN_CONTACT=changeme@filebin.net
     expose:
       - "8080"
     ports:
@@ -59,18 +77,6 @@ services:
       - s3
     networks:
       - local
-    entrypoint: [ "./wait-for-s3.sh", "make", "run" ]
-  #varnish:
-  #  image: "varnish:stable"
-  #  restart: "no"
-  #  expose:
-  #    - "6081"
-  #  ports:
-  #    - "6081:80"
-  #  volumes:
-  #    - ./etc/varnish:/etc/varnish:delegated
-  #  depends_on:
-  #    - app
 
 networks:
   local: null
