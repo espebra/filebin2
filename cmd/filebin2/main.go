@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"math/rand"
 	_ "net/http/pprof"
 	"net/url"
 	"os"
@@ -100,7 +99,6 @@ var (
 )
 
 func main() {
-	rand.Seed(time.Now().UTC().UnixNano())
 	flag.Parse()
 
 	// Set some default values that should not be exposed by flag.PrintDefaults()
