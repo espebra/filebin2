@@ -44,5 +44,7 @@ jobs:
       run: docker compose -f ci.yml up --abort-on-container-exit
 
     - name: Build binaries
-      run: make linux darwin
+      run: |
+        sudo rm -rf artifacts
+        make linux darwin
 
