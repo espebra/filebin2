@@ -125,8 +125,8 @@ func (h *HTTP) getFile(w http.ResponseWriter, r *http.Request) {
 
 	// Redirect the client to a presigned URL for this fetch, which is more efficient
 	// than proxying the request through filebin.
-	// If Client-IP header is present, bind the presigned URL to that IP.
-	clientIP := r.Header.Get("Client-IP")
+	// Bind the presigned URL to X-Forwarded-For if present.
+	clientIP := r.Header.Get("X-Forwarded-For")
 	presignedURL, err := h.s3.PresignedGetObject(file.SHA256, file.Filename, file.Mime, clientIP)
 	if err != nil {
 		h.Error(w, r, fmt.Sprintf("Unable to generate presigned URL for bin %q and filename %q: %s", inputBin, inputFilename, err.Error()), "Unable to presign URL for object", 1351, http.StatusInternalServerError)

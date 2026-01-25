@@ -266,7 +266,7 @@ func (s S3AO) GetObject(contentSHA256 string, start int64, end int64) (io.ReadCl
 }
 
 // PresignedGetObject generates a presigned URL for downloading an object.
-// If clientIP is provided, the URL will require the Client-IP header to be set
+// If clientIP is provided, the URL will require the X-Forwarded-For header to be set
 // to that value when making the request (the header is included in the signature).
 // This only works with objects that are not encrypted.
 func (s S3AO) PresignedGetObject(contentSHA256 string, filename string, mime string, clientIP string) (presignedURL *url.URL, err error) {
@@ -297,11 +297,11 @@ func (s S3AO) PresignedGetObject(contentSHA256 string, filename string, mime str
 		if clientIP != "" {
 			opts.ClientOptions = append(opts.ClientOptions, func(o *s3.Options) {
 				o.APIOptions = append(o.APIOptions, func(stack *middleware.Stack) error {
-					return stack.Build.Add(middleware.BuildMiddlewareFunc("AddClientIPHeader", func(
+					return stack.Build.Add(middleware.BuildMiddlewareFunc("AddXForwardedForHeader", func(
 						ctx context.Context, in middleware.BuildInput, next middleware.BuildHandler,
 					) (middleware.BuildOutput, middleware.Metadata, error) {
 						if req, ok := in.Request.(*smithyhttp.Request); ok {
-							req.Header.Set("Client-IP", clientIP)
+							req.Header.Set("X-Forwarded-For", clientIP)
 						}
 						return next.HandleBuild(ctx, in)
 					}), middleware.Before)
