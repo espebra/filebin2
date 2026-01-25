@@ -133,8 +133,8 @@ func (c *ClientDao) Ban(IPsToBan []string, banByRemoteAddr string) (err error) {
 }
 
 func (c *ClientDao) Cleanup(days uint64) (count int64, err error) {
-	sqlStatement := fmt.Sprintf("DELETE FROM client WHERE last_active_at < CURRENT_DATE - CAST('%d days' AS interval) AND banned_at IS NULL", days)
-	res, err := c.db.Exec(sqlStatement)
+	sqlStatement := "DELETE FROM client WHERE last_active_at < CURRENT_DATE - ($1 || ' days')::interval AND banned_at IS NULL"
+	res, err := c.db.Exec(sqlStatement, days)
 	if err != nil {
 		return 0, err
 	}

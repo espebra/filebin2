@@ -161,8 +161,8 @@ func (d *TransactionDao) Update(t *ds.Transaction) (err error) {
 }
 
 func (d *TransactionDao) Cleanup(retention uint64) (count int64, err error) {
-	sqlStatement := fmt.Sprintf("DELETE FROM transaction WHERE timestamp < NOW() - INTERVAL '%d days'", retention)
-	res, err := d.db.Exec(sqlStatement)
+	sqlStatement := "DELETE FROM transaction WHERE timestamp < NOW() - ($1 || ' days')::interval"
+	res, err := d.db.Exec(sqlStatement, retention)
 	if err != nil {
 		return count, err
 	}
