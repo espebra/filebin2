@@ -1,6 +1,7 @@
 package web
 
 import (
+	"crypto/subtle"
 	"fmt"
 	"net/http"
 	"time"
@@ -19,7 +20,10 @@ func (h *HTTP) viewMetrics(w http.ResponseWriter, r *http.Request) {
 	if h.config.MetricsAuth != "" {
 		if h.config.MetricsAuth == "basic" {
 			username, password, ok := r.BasicAuth()
-			if ok == false || username != h.config.MetricsUsername || password != h.config.MetricsPassword {
+			// Use constant-time comparison to prevent timing attacks
+			usernameMatch := subtle.ConstantTimeCompare([]byte(username), []byte(h.config.MetricsUsername)) == 1
+			passwordMatch := subtle.ConstantTimeCompare([]byte(password), []byte(h.config.MetricsPassword)) == 1
+			if ok == false || !usernameMatch || !passwordMatch {
 				time.Sleep(3 * time.Second)
 				w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
