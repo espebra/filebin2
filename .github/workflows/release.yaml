@@ -5,6 +5,8 @@ on:
     tags:
       - 'v*'
 
+permissions: {}
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
@@ -12,6 +14,8 @@ env:
 jobs:
   build-binaries:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
