@@ -1,5 +1,5 @@
-[![CircleCI](https://circleci.com/gh/espebra/filebin2/tree/master.svg?style=shield)](https://circleci.com/gh/espebra/filebin2/tree/master)
-[![Actions](https://github.com/espebra/filebin2/workflows/Actions/badge.svg)](https://github.com/espebra/filebin2/actions)
+[![CI](https://github.com/espebra/filebin2/actions/workflows/ci.yaml/badge.svg)](https://github.com/espebra/filebin2/actions/workflows/ci.yaml)
+[![Release](https://github.com/espebra/filebin2/actions/workflows/release.yaml/badge.svg)](https://github.com/espebra/filebin2/actions/workflows/release.yaml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/espebra/filebin2)](https://goreportcard.com/report/github.com/espebra/filebin2)
 [![codecov](https://codecov.io/gh/espebra/filebin2/branch/master/graph/badge.svg)](https://codecov.io/gh/espebra/filebin2)
 [![CodeQL](https://github.com/espebra/filebin2/actions/workflows/github-code-scanning/codeql/badge.svg?branch=master)](https://github.com/espebra/filebin2/actions/workflows/github-code-scanning/codeql)
