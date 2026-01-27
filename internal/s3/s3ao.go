@@ -83,6 +83,10 @@ func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool, pr
 	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
 		o.UsePathStyle = true
 		o.BaseEndpoint = aws.String(endpointURL)
+		// Disable response checksum validation for S3-compatible storage
+		// that doesn't implement AWS checksum headers (avoids warning:
+		// "Response has no supported checksum. Not validating response payload.")
+		o.ResponseChecksumValidation = aws.ResponseChecksumValidationWhenRequired
 	})
 
 	s3ao.client = client
