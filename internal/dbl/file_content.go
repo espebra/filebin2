@@ -3,10 +3,11 @@ package dbl
 import (
 	"database/sql"
 	"errors"
-	"fmt"
+	"log/slog"
+	"time"
+
 	"github.com/dustin/go-humanize"
 	"github.com/espebra/filebin2/internal/ds"
-	"time"
 )
 
 type FileContentDao struct {
@@ -184,7 +185,7 @@ ORDER BY bytes DESC, created_at DESC`
 			&content.LastReferencedAt,
 		)
 		if err != nil {
-			fmt.Printf("Error scanning row: %s\n", err.Error())
+			slog.Error("error scanning file content row", "error", err)
 			continue
 		}
 		content.BytesReadable = humanize.Bytes(content.Bytes)

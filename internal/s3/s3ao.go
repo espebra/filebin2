@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"path"
@@ -93,7 +94,7 @@ func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool, pr
 	s3ao.timeout = timeout
 	s3ao.transferTimeout = transferTimeout
 
-	fmt.Printf("Established session to S3AO at %s\n", endpoint)
+	slog.Info("established session to S3", "endpoint", endpoint)
 
 	// Ensure that the bucket exists, with retry logic for startup race conditions
 	retryTimeout := 30 * time.Second
@@ -105,7 +106,7 @@ func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool, pr
 			Bucket: aws.String(bucket),
 		})
 		if err == nil {
-			fmt.Printf("Found S3AO bucket: %s\n", bucket)
+			slog.Info("found S3 bucket", "bucket", bucket)
 			break
 		}
 
@@ -115,19 +116,21 @@ func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool, pr
 			Bucket: aws.String(bucket),
 		})
 		if createErr == nil {
-			fmt.Printf("Created S3AO bucket: %s in %.3fs\n", bucket, time.Since(t0).Seconds())
+			slog.Info("created S3 bucket", "bucket", bucket, "duration_seconds", time.Since(t0).Seconds())
 			break
 		}
 
 		// Both HeadBucket and CreateBucket failed
 		elapsed := time.Since(startTime)
 		if elapsed >= retryTimeout {
-			fmt.Printf("Unable to access S3AO bucket after %.0fs: %s\n", elapsed.Seconds(), createErr.Error())
+			slog.Error("unable to access S3 bucket", "bucket", bucket, "elapsed_seconds", elapsed.Seconds(), "error", createErr)
 			return s3ao, createErr
 		}
 
-		fmt.Printf("S3 not available yet (%.0fs elapsed), retrying in %.0fs: %s\n",
-			elapsed.Seconds(), retryInterval.Seconds(), createErr.Error())
+		slog.Warn("S3 not available yet, retrying",
+			"elapsed_seconds", elapsed.Seconds(),
+			"retry_interval_seconds", retryInterval.Seconds(),
+			"error", createErr)
 		time.Sleep(retryInterval)
 	}
 
@@ -142,7 +145,7 @@ func (s S3AO) Status() bool {
 		Bucket: aws.String(s.bucket),
 	})
 	if err != nil {
-		fmt.Printf("Error from S3 when checking if bucket %s exists: %s\n", s.bucket, err.Error())
+		slog.Warn("S3 status check failed", "bucket", s.bucket, "error", err)
 		return false
 	}
 	return true
@@ -152,7 +155,7 @@ func (s S3AO) SetTrace(trace bool) {
 	// AWS SDK v2 doesn't have a simple trace toggle like Minio
 	// Logging can be configured via the AWS config if needed
 	if trace {
-		fmt.Println("S3 tracing enabled (limited in AWS SDK v2)")
+		slog.Info("S3 tracing enabled (limited in AWS SDK v2)")
 	}
 }
 
@@ -171,7 +174,7 @@ func (s S3AO) PutObject(bin string, filename string, data io.Reader, size int64)
 		ContentType:   aws.String("application/octet-stream"),
 	})
 	if err != nil {
-		fmt.Printf("Unable to put object: %s\n", err.Error())
+		slog.Error("unable to put object", "key", objectKey, "error", err)
 		return err
 	}
 
@@ -195,10 +198,10 @@ func (s S3AO) RemoveKey(key string) error {
 		Key:    aws.String(key),
 	})
 	if err != nil {
-		fmt.Printf("Unable to remove object: %s\n", err.Error())
+		slog.Error("unable to remove object", "key", key, "error", err)
 		return err
 	}
-	fmt.Printf("Removed object: %s in %.3fs\n", key, time.Since(t0).Seconds())
+	slog.Debug("removed object", "key", key, "duration_seconds", time.Since(t0).Seconds())
 	return nil
 }
 
@@ -224,7 +227,7 @@ func (s S3AO) RemoveBucket() error {
 	t0 := time.Now()
 	objects, err := s.ListObjects()
 	if err != nil {
-		fmt.Printf("Unable to list objects: %s\n", err.Error())
+		slog.Error("unable to list objects", "error", err)
 	}
 
 	// RemoveObject on all objects
@@ -242,7 +245,7 @@ func (s S3AO) RemoveBucket() error {
 		return err
 	}
 
-	fmt.Printf("Removed bucket in %.3fs\n", time.Since(t0).Seconds())
+	slog.Info("removed bucket", "bucket", s.bucket, "duration_seconds", time.Since(t0).Seconds())
 	return nil
 }
 
@@ -270,7 +273,7 @@ func (s S3AO) GetObject(contentSHA256 string, start int64, end int64) (io.ReadCl
 		return nil, err
 	}
 
-	fmt.Printf("Fetched object: %s in %.3fs\n", objectKey, time.Since(t0).Seconds())
+	slog.Debug("fetched object", "key", objectKey, "duration_seconds", time.Since(t0).Seconds())
 	return result.Body, nil
 }
 
@@ -342,7 +345,7 @@ func (s S3AO) GetBucketMetrics() (metrics BucketMetrics) {
 	for paginator.HasMorePages() {
 		page, err := paginator.NextPage(context.Background())
 		if err != nil {
-			fmt.Println(err)
+			slog.Error("failed to get bucket metrics", "error", err)
 			return metrics
 		}
 
@@ -394,7 +397,7 @@ func (s S3AO) PutObjectByHash(contentSHA256 string, data io.Reader, size int64) 
 		ContentType:   aws.String("application/octet-stream"),
 	})
 	if err != nil {
-		fmt.Printf("Unable to put object: %s\n", err.Error())
+		slog.Error("unable to put object", "sha256", contentSHA256, "error", err)
 		return err
 	}
 
@@ -413,10 +416,10 @@ func (s S3AO) RemoveObjectByHash(contentSHA256 string) error {
 		Key:    aws.String(contentSHA256),
 	})
 	if err != nil {
-		fmt.Printf("Unable to remove object: %s\n", err.Error())
+		slog.Error("unable to remove object", "sha256", contentSHA256, "error", err)
 		return err
 	}
-	fmt.Printf("Removed object: %s in %.3fs\n", contentSHA256, time.Since(t0).Seconds())
+	slog.Debug("removed object", "sha256", contentSHA256, "duration_seconds", time.Since(t0).Seconds())
 	return nil
 }
 

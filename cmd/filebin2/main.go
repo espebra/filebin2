@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log/slog"
 	_ "net/http/pprof"
 	"net/url"
 	"os"
@@ -105,6 +106,10 @@ var (
 
 	// Version
 	versionFlag = flag.Bool("version", false, "Print version information and exit")
+
+	// Logging
+	logFormatFlag = flag.String("log-format", "text", "Log output format: text or json")
+	logLevelFlag  = flag.String("log-level", "info", "Log level: debug, info, warn, or error")
 )
 
 func main() {
@@ -118,6 +123,19 @@ func main() {
 	// Environment variable overrides (FILEBIN_ prefix)
 	// All configuration can be set via environment variables.
 	// Command line flags take precedence over environment variables.
+
+	// Logging (handle early so we can use structured logging for the rest of setup)
+	if v := os.Getenv("FILEBIN_LOG_FORMAT"); v != "" && *logFormatFlag == "text" {
+		*logFormatFlag = v
+	}
+	if v := os.Getenv("FILEBIN_LOG_LEVEL"); v != "" && *logLevelFlag == "info" {
+		*logLevelFlag = v
+	}
+
+	// Configure structured logging
+	configureLogger(*logFormatFlag, *logLevelFlag)
+
+	slog.Info("starting filebin", "version", version, "commit", commit)
 
 	// Various
 	if *contactFlag == "" {
@@ -334,21 +352,21 @@ func main() {
 	if *metricsProxyURLFlag != "" {
 		_, err := url.Parse(*metricsProxyURLFlag)
 		if err != nil {
-			fmt.Printf("Unable to parse --metrics-proxy-url: %s\n", err.Error())
+			slog.Error("unable to parse --metrics-proxy-url", "error", err)
 			os.Exit(2)
 		}
 	}
 
 	// Contact information is required
 	if *contactFlag == "" {
-		fmt.Printf("Contact information must be specified using --contact or FILEBIN_CONTACT.\n")
+		slog.Error("contact information must be specified using --contact or FILEBIN_CONTACT")
 		os.Exit(2)
 	}
 
 	// mmdb path
 	geodb, err := geoip.Init(*mmdbASNPathFlag, *mmdbCityPathFlag)
 	if err != nil {
-		fmt.Printf("Unable to load geoip database: %s\n", err.Error())
+		slog.Error("unable to load geoip database", "error", err)
 		os.Exit(2)
 	}
 
@@ -360,41 +378,41 @@ func main() {
 
 	daoconn, err := dbl.Init(*dbHostFlag, dbport, *dbNameFlag, *dbUsernameFlag, *dbPasswordFlag, *dbMaxOpenConnsFlag, *dbMaxIdleConnsFlag)
 	if err != nil {
-		fmt.Printf("Unable to connect to the database: %s\n", err.Error())
+		slog.Error("unable to connect to the database", "error", err)
 		os.Exit(2)
 	}
 
 	s3UrlTtl, err := time.ParseDuration(*s3UrlTtlFlag)
 	if err != nil {
-		fmt.Printf("Unable to parse --s3-url-ttl: %s\n", err.Error())
+		slog.Error("unable to parse --s3-url-ttl", "error", err)
 		os.Exit(2)
 	}
-	fmt.Printf("TTL for presigned S3 URLs: %s\n", s3UrlTtl.String())
+	slog.Info("configured presigned S3 URL TTL", "ttl", s3UrlTtl.String())
 
 	s3Timeout, err := time.ParseDuration(*s3TimeoutFlag)
 	if err != nil {
-		fmt.Printf("Unable to parse --s3-timeout: %s\n", err.Error())
+		slog.Error("unable to parse --s3-timeout", "error", err)
 		os.Exit(2)
 	}
 
 	s3TransferTimeout, err := time.ParseDuration(*s3TransferTimeoutFlag)
 	if err != nil {
-		fmt.Printf("Unable to parse --s3-transfer-timeout: %s\n", err.Error())
+		slog.Error("unable to parse --s3-transfer-timeout", "error", err)
 		os.Exit(2)
 	}
 
 	filter := regexp.MustCompile(`^[a-zA-Z0-9]+$`)
 	for _, v := range strings.Fields(*rejectFileExtensions) {
 		if !filter.Match([]byte(v)) {
-			fmt.Printf("Extension specified by --reject-file-extensions contains illegal characters: %v\n", v)
+			slog.Error("extension specified by --reject-file-extensions contains illegal characters", "extension", v)
 			os.Exit(2)
 		}
-		fmt.Printf("Rejecting file extension: %s\n", v)
+		slog.Info("rejecting file extension", "extension", v)
 	}
 
 	s3conn, err := s3.Init(*s3EndpointFlag, *s3BucketFlag, *s3RegionFlag, *s3AccessKeyFlag, *s3SecretKeyFlag, *s3SecureFlag, s3UrlTtl, s3Timeout, s3TransferTimeout)
 	if err != nil {
-		fmt.Printf("Unable to initialize S3 connection: %s\n", err.Error())
+		slog.Error("unable to initialize S3 connection", "error", err)
 		os.Exit(2)
 	}
 
@@ -409,7 +427,7 @@ func main() {
 
 	u, err := url.Parse(*baseURLFlag)
 	if err != nil {
-		fmt.Printf("Unable to parse the baseurl parameter: %s\n", *baseURLFlag)
+		slog.Error("unable to parse the baseurl parameter", "baseurl", *baseURLFlag, "error", err)
 		os.Exit(2)
 	}
 
@@ -447,7 +465,7 @@ func main() {
 
 	config.LimitStorageBytes, err = humanize.ParseBytes(*limitStorageFlag)
 	if err != nil {
-		fmt.Printf("Unable to parse the --limit-storage parameter: %s\n", *baseURLFlag)
+		slog.Error("unable to parse the --limit-storage parameter", "value", *limitStorageFlag, "error", err)
 		os.Exit(2)
 	}
 	config.LimitStorageReadable = humanize.Bytes(config.LimitStorageBytes)
@@ -455,10 +473,10 @@ func main() {
 	// Initialize workspace manager
 	wm, err := workspace.NewManager(*tmpdirFlag, *tmpdirThresholdFlag)
 	if err != nil {
-		fmt.Printf("Unable to initialize workspace manager: %s\n", err.Error())
+		slog.Error("unable to initialize workspace manager", "error", err)
 		os.Exit(2)
 	}
-	fmt.Printf("Workspace capacity threshold: %.1fx file size\n", *tmpdirThresholdFlag)
+	slog.Info("workspace capacity threshold configured", "threshold", fmt.Sprintf("%.1fx file size", *tmpdirThresholdFlag))
 
 	// Create Prometheus registry and metrics
 	metricsRegistry := prometheus.NewRegistry()
@@ -469,10 +487,40 @@ func main() {
 	h := web.New(&daoconn, &s3conn, &geodb, wm, config, metrics, metricsRegistry)
 
 	if err := h.Init(); err != nil {
-		fmt.Printf("Unable to start the HTTP server: %s\n", err.Error())
+		slog.Error("unable to start the HTTP server", "error", err)
 	}
-	fmt.Printf("Uploaded files expiration: %s\n", config.ExpirationDuration.String())
+	slog.Info("uploaded files expiration configured", "expiration", config.ExpirationDuration.String())
 
 	// Start the http server
 	h.Run()
+}
+
+// configureLogger sets up the default slog logger based on format and level
+func configureLogger(format, level string) {
+	opts := &slog.HandlerOptions{
+		Level: parseLogLevel(level),
+	}
+
+	var handler slog.Handler
+	if strings.ToLower(format) == "json" {
+		handler = slog.NewJSONHandler(os.Stdout, opts)
+	} else {
+		handler = slog.NewTextHandler(os.Stdout, opts)
+	}
+
+	slog.SetDefault(slog.New(handler))
+}
+
+// parseLogLevel converts a string log level to slog.Level
+func parseLogLevel(level string) slog.Level {
+	switch strings.ToLower(level) {
+	case "debug":
+		return slog.LevelDebug
+	case "warn", "warning":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
 }

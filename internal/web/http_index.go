@@ -2,7 +2,7 @@ package web
 
 import (
 	"encoding/json"
-	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -37,7 +37,7 @@ func (h *HTTP) index(w http.ResponseWriter, r *http.Request) {
 	bin.ExpiredAtRelative = humanize.Time(bin.ExpiredAt)
 	bin.Id = h.dao.Bin().GenerateId()
 	if err := bin.GenerateURL(h.config.BaseUrl); err != nil {
-		fmt.Printf("Unable to generate URL: %s\n", err.Error())
+		slog.Error("unable to generate URL", "error", err)
 		http.Error(w, "Errno 9824", http.StatusInternalServerError)
 		return
 	}
@@ -57,7 +57,7 @@ func (h *HTTP) index(w http.ResponseWriter, r *http.Request) {
 	h.metrics.IncrFrontPageViewCount()
 
 	if err := h.renderTemplate(w, "index", data); err != nil {
-		fmt.Printf("Failed to execute template: %s\n", err.Error())
+		slog.Error("failed to execute template", "error", err)
 		http.Error(w, "Errno 302", http.StatusInternalServerError)
 		return
 	}
@@ -74,7 +74,7 @@ func (h *HTTP) about(w http.ResponseWriter, r *http.Request) {
 	data.Page = "about"
 
 	if err := h.renderTemplate(w, "about", data); err != nil {
-		fmt.Printf("Failed to execute template: %s\n", err.Error())
+		slog.Error("failed to execute template", "error", err)
 		http.Error(w, "Errno 302", http.StatusInternalServerError)
 		return
 	}
@@ -98,7 +98,7 @@ func (h *HTTP) privacy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.renderTemplate(w, "privacy", data); err != nil {
-		fmt.Printf("Failed to execute template: %s\n", err.Error())
+		slog.Error("failed to execute template", "error", err)
 		http.Error(w, "Errno 302", http.StatusInternalServerError)
 		return
 	}
@@ -117,7 +117,7 @@ func (h *HTTP) terms(w http.ResponseWriter, r *http.Request) {
 	data.Contact = h.config.Contact
 
 	if err := h.renderTemplate(w, "terms", data); err != nil {
-		fmt.Printf("Failed to execute template: %s\n", err.Error())
+		slog.Error("failed to execute template", "error", err)
 		http.Error(w, "Errno 302", http.StatusInternalServerError)
 		return
 	}
@@ -136,7 +136,7 @@ func (h *HTTP) contact(w http.ResponseWriter, r *http.Request) {
 	data.Contact = h.config.Contact
 
 	if err := h.renderTemplate(w, "contact", data); err != nil {
-		fmt.Printf("Failed to execute template: %s\n", err.Error())
+		slog.Error("failed to execute template", "error", err)
 		http.Error(w, "Errno 302", http.StatusInternalServerError)
 		return
 	}
@@ -154,7 +154,7 @@ func (h *HTTP) api(w http.ResponseWriter, r *http.Request) {
 	data.Page = "api"
 
 	if err := h.renderTemplate(w, "api", data); err != nil {
-		fmt.Printf("Failed to execute template: %s\n", err.Error())
+		slog.Error("failed to execute template", "error", err)
 		http.Error(w, "Errno 302", http.StatusInternalServerError)
 		return
 	}
@@ -174,7 +174,7 @@ func (h *HTTP) apiSpec(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/plain")
 	if err := h.renderTemplate(w, "apispec", data); err != nil {
-		fmt.Printf("Failed to execute template: %s\n", err.Error())
+		slog.Error("failed to execute template", "error", err)
 		http.Error(w, "Errno 302", http.StatusInternalServerError)
 		return
 	}
@@ -197,7 +197,7 @@ func (h *HTTP) filebinStatus(w http.ResponseWriter, r *http.Request) {
 		data.DbStatus = true
 	} else {
 		data.DbStatus = false
-		fmt.Printf("Database unavailable during status check\n")
+		slog.Warn("database unavailable during status check")
 		code = 503
 	}
 
@@ -205,14 +205,14 @@ func (h *HTTP) filebinStatus(w http.ResponseWriter, r *http.Request) {
 		data.S3Status = true
 	} else {
 		data.S3Status = false
-		fmt.Printf("S3 unavailable during status check\n")
+		slog.Warn("S3 unavailable during status check")
 		code = 503
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	out, err := json.MarshalIndent(data, "", "    ")
 	if err != nil {
-		fmt.Printf("Failed to parse json: %s\n", err.Error())
+		slog.Error("failed to parse json", "error", err)
 		http.Error(w, "Errno 201", http.StatusInternalServerError)
 		return
 	}
@@ -236,7 +236,7 @@ func (h *HTTP) storageStatus(w http.ResponseWriter, r *http.Request) {
 		data.S3Status = true
 	} else {
 		data.S3Status = false
-		fmt.Printf("S3 unavailable during status check\n")
+		slog.Warn("S3 unavailable during status check")
 		code = 503
 	}
 
@@ -251,7 +251,7 @@ func (h *HTTP) storageStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	out, err := json.MarshalIndent(data, "", "    ")
 	if err != nil {
-		fmt.Printf("Failed to parse json: %s\n", err.Error())
+		slog.Error("failed to parse json", "error", err)
 		http.Error(w, "Errno 201", http.StatusInternalServerError)
 		return
 	}
@@ -263,7 +263,7 @@ func (h *HTTP) robots(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=3600")
 
 	if err := h.renderTemplate(w, "robots", nil); err != nil {
-		fmt.Printf("Failed to execute template: %s\n", err.Error())
+		slog.Error("failed to execute template", "error", err)
 		http.Error(w, "Errno 302", http.StatusInternalServerError)
 		return
 	}
