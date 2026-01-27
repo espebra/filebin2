@@ -359,10 +359,10 @@ func (h *HTTP) Run() {
 	}
 
 	slog.Info("HTTP server timeouts configured",
-		"read_timeout", h.config.ReadTimeout.String(),
-		"read_header_timeout", h.config.ReadHeaderTimeout.String(),
-		"idle_timeout", h.config.IdleTimeout.String(),
-		"write_timeout", h.config.WriteTimeout.String())
+		"read_timeout_seconds", h.config.ReadTimeout.Seconds(),
+		"read_header_timeout_seconds", h.config.ReadHeaderTimeout.Seconds(),
+		"idle_timeout_seconds", h.config.IdleTimeout.Seconds(),
+		"write_timeout_seconds", h.config.WriteTimeout.Seconds())
 
 	// Set up the server
 	srv := &http.Server{
@@ -410,8 +410,8 @@ func (h *HTTP) Error(w http.ResponseWriter, r *http.Request, internal string, ex
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(statusCode)
 		var buf bytes.Buffer
-		if err := h.templates.ExecuteTemplate(&buf, "error", data); err != nil {
-			slog.Error("failed to execute template", "template", "error", "error", err)
+		if err := h.templates.ExecuteTemplate(&buf, "error_page", data); err != nil {
+			slog.Error("failed to execute template", "template", "error_page", "error", err)
 			// Don't call http.Error here since WriteHeader was already called
 			return
 		}
