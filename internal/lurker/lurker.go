@@ -32,7 +32,7 @@ func (l *Lurker) Init(interval int, throttle int, retention uint64) {
 }
 
 func (l *Lurker) Run() {
-	slog.Info("starting lurker process", "interval", l.interval.String())
+	slog.Info("starting lurker process", "interval_seconds", l.interval.Seconds())
 	l.stopChan = make(chan struct{})
 	go func() {
 		for {
