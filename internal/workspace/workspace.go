@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"sort"
 	"strings"
@@ -54,7 +55,7 @@ func NewManager(tmpdirFlag string, capacityThreshold float64) (*Manager, error) 
 
 		// Verify the directory exists and is writable
 		if err := os.MkdirAll(path, 0755); err != nil {
-			fmt.Printf("Warning: Unable to create/access tmpdir %q: %s\n", path, err.Error())
+			slog.Warn("unable to create/access tmpdir", "path", path, "error", err)
 			continue
 		}
 
@@ -64,19 +65,22 @@ func NewManager(tmpdirFlag string, capacityThreshold float64) (*Manager, error) 
 
 		// Benchmark the workspace
 		if err := ws.Benchmark(); err != nil {
-			fmt.Printf("Warning: Unable to benchmark tmpdir %q: %s\n", path, err.Error())
+			slog.Warn("unable to benchmark tmpdir", "path", path, "error", err)
 			continue
 		}
 
 		// Get initial capacity
 		if err := ws.UpdateCapacity(); err != nil {
-			fmt.Printf("Warning: Unable to check capacity for tmpdir %q: %s\n", path, err.Error())
+			slog.Warn("unable to check capacity for tmpdir", "path", path, "error", err)
 			continue
 		}
 
 		m.workspaces = append(m.workspaces, ws)
-		fmt.Printf("Workspace %q: %.2f MB/s write speed, %s available of %s total\n",
-			ws.Path, ws.WriteMBps, humanize.Bytes(ws.AvailableBytes), humanize.Bytes(ws.TotalBytes))
+		slog.Info("workspace configured",
+			"path", ws.Path,
+			"write_mbps", ws.WriteMBps,
+			"available_bytes", humanize.Bytes(ws.AvailableBytes),
+			"total_bytes", humanize.Bytes(ws.TotalBytes))
 	}
 
 	if len(m.workspaces) == 0 {
@@ -166,7 +170,7 @@ func (m *Manager) SelectWorkspace(fileSize uint64) (*Workspace, error) {
 		// Update capacity if it hasn't been checked recently (within last 10 seconds)
 		if time.Since(ws.LastChecked) > 10*time.Second {
 			if err := ws.UpdateCapacity(); err != nil {
-				fmt.Printf("Warning: Failed to update capacity for %q: %s\n", ws.Path, err.Error())
+				slog.Warn("failed to update capacity for workspace", "path", ws.Path, "error", err)
 				continue
 			}
 		}
@@ -182,8 +186,9 @@ func (m *Manager) SelectWorkspace(fileSize uint64) (*Workspace, error) {
 	for _, ws := range m.workspaces {
 		available := ws.GetAvailableBytes()
 		if available >= minRequiredFallback {
-			fmt.Printf("Warning: Using workspace %q with limited space (%.2f%% of preferred buffer)\n",
-				ws.Path, float64(available)/float64(minRequired)*100)
+			slog.Warn("using workspace with limited space",
+				"path", ws.Path,
+				"percent_of_preferred", float64(available)/float64(minRequired)*100)
 			return ws, nil
 		}
 	}
@@ -200,8 +205,10 @@ func (m *Manager) SelectWorkspace(fileSize uint64) (*Workspace, error) {
 	}
 
 	if best != nil {
-		fmt.Printf("Warning: All workspaces are low on space. Using %q with %s available for %s file\n",
-			best.Path, humanize.Bytes(maxAvailable), humanize.Bytes(fileSize))
+		slog.Warn("all workspaces are low on space",
+			"path", best.Path,
+			"available_bytes", humanize.Bytes(maxAvailable),
+			"file_size", humanize.Bytes(fileSize))
 		return best, nil
 	}
 

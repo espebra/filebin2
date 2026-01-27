@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -45,15 +46,15 @@ func (h *HTTP) integrationSlack(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Printf("Got timestamp: [%q], actual timestamp: [%d], signature: [%q]\n", ts, epoch, sig)
-	fmt.Printf("Got body: [%q]\n", body)
+	slog.Debug("slack request", "timestamp", ts, "epoch", epoch, "signature", sig)
+	slog.Debug("slack request body", "body", string(body))
 
 	// Generate signature and compare
 	hash := hmac.New(sha256.New, []byte(h.config.SlackSecret))
 	sig_basestring := fmt.Sprintf("v0:%s:%s", ts, body)
 	hash.Write([]byte(sig_basestring))
 	hash_signature := hex.EncodeToString(hash.Sum(nil))
-	fmt.Printf("Generated hash signature: [%s]\n", hash_signature)
+	slog.Debug("generated hash signature", "signature", hash_signature)
 	if sig != fmt.Sprintf("v0=%s", hash_signature) {
 		h.Error(w, r, fmt.Sprintf("Slack signature not correct: Got %q, generated %q\n", sig, hash_signature), "Unauthorized", 835, http.StatusUnauthorized)
 		return
@@ -74,7 +75,7 @@ func (h *HTTP) integrationSlack(w http.ResponseWriter, r *http.Request) {
 	// Handle commands
 	command := r.PostFormValue("command")
 	text := r.PostFormValue("text")
-	fmt.Printf("Got command: [%q], got text: [%q]\n", command, text)
+	slog.Debug("slack command", "command", command, "text", text)
 
 	if command != "/filebin" {
 		h.Error(w, r, fmt.Sprintf("Unknown command, got: %q\n", command), "Bad Request", 836, http.StatusBadRequest)
@@ -88,7 +89,7 @@ func (h *HTTP) integrationSlack(w http.ResponseWriter, r *http.Request) {
 				inputBin := s[1]
 				bin, found, err := h.dao.Bin().GetByID(inputBin)
 				if err != nil {
-					fmt.Printf("Unable to GetByID(%q): %s\n", bin.Id, err.Error())
+					slog.Error("unable to get bin by ID", "bin", bin.Id, "error", err)
 					http.Error(w, "Errno 205", http.StatusInternalServerError)
 					return
 				}
@@ -137,7 +138,7 @@ func (h *HTTP) integrationSlack(w http.ResponseWriter, r *http.Request) {
 			}
 			bins, err := h.dao.Bin().GetLastUpdated(limit)
 			if err != nil {
-				fmt.Printf("Unable to GetLastUpdated(): %s\n", err.Error())
+				slog.Error("unable to get last updated", "error", err)
 				http.Error(w, "Errno 8214", http.StatusInternalServerError)
 				return
 			}

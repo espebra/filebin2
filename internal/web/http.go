@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/http/pprof"
@@ -202,13 +203,13 @@ func (h *HTTP) clientLookup(fn func(http.ResponseWriter, *http.Request)) http.Ha
 		}
 
 		if client.IsBanned() {
-			fmt.Printf("Rejecting request from client ip %s due to ban %s (%s) by %s.\n", client.IP, client.BannedAtRelative, client.BannedAt.Time.Format("2006-01-02 15:04:05 UTC"), client.BannedBy)
+			slog.Warn("rejecting request from banned client", "ip", client.IP, "banned_at", client.BannedAt.Time.Format("2006-01-02 15:04:05 UTC"), "banned_by", client.BannedBy)
 			http.Error(w, "This client IP address has been banned.", http.StatusForbidden)
 			return
 		}
 
 		if err := h.geodb.Lookup(r.RemoteAddr, &client); err != nil {
-			fmt.Printf("Unable to look up geoip details for %s: %s\n", r.RemoteAddr, err.Error())
+			slog.Debug("unable to look up geoip details", "remote_addr", r.RemoteAddr, "error", err)
 		}
 
 		// Check the client details against the ban filter here
@@ -239,7 +240,7 @@ func (h *HTTP) log(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc
 		if metrics.Code < 400 {
 			_, err := h.dao.Transaction().Register(r, bin, filename, t0, completed, metrics.Code, metrics.Written)
 			if err != nil {
-				fmt.Printf("Unable to register the transaction: %s\n", err.Error())
+				slog.Error("unable to register transaction", "error", err)
 			}
 		}
 	})
@@ -329,7 +330,7 @@ func (h *HTTP) trackAdminLogin(remoteAddr string) {
 }
 
 func (h *HTTP) Run() {
-	fmt.Printf("Starting HTTP server on %s:%d\n", h.config.HttpHost, h.config.HttpPort)
+	slog.Info("starting HTTP server", "host", h.config.HttpHost, "port", h.config.HttpPort)
 
 	// Add gzip compression, but exclude /archive endpoints (they're already compressed)
 	var handler http.Handler
@@ -346,7 +347,7 @@ func (h *HTTP) Run() {
 	// Add access logging
 	accessLog, err := os.OpenFile(h.config.HttpAccessLog, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		fmt.Printf("Unable to open log file: %s\n", err.Error())
+		slog.Error("unable to open log file", "path", h.config.HttpAccessLog, "error", err)
 		os.Exit(2)
 	}
 	defer accessLog.Close()
@@ -357,10 +358,11 @@ func (h *HTTP) Run() {
 		handler = handlers.ProxyHeaders(handler)
 	}
 
-	fmt.Printf("HTTP server read timeout: %s\n", h.config.ReadTimeout)
-	fmt.Printf("HTTP server read header timeout: %s\n", h.config.ReadHeaderTimeout)
-	fmt.Printf("HTTP server idle timeout: %s\n", h.config.IdleTimeout)
-	fmt.Printf("HTTP server write timeout: %s\n", h.config.WriteTimeout)
+	slog.Info("HTTP server timeouts configured",
+		"read_timeout", h.config.ReadTimeout.String(),
+		"read_header_timeout", h.config.ReadHeaderTimeout.String(),
+		"idle_timeout", h.config.IdleTimeout.String(),
+		"write_timeout", h.config.WriteTimeout.String())
 
 	// Set up the server
 	srv := &http.Server{
@@ -374,7 +376,7 @@ func (h *HTTP) Run() {
 
 	// Start the server
 	if err := srv.ListenAndServe(); err != nil {
-		fmt.Printf("Failed to start HTTP server: %s\n", err.Error())
+		slog.Error("failed to start HTTP server", "error", err)
 		os.Exit(2)
 	}
 }
@@ -384,7 +386,7 @@ func (h *HTTP) Error(w http.ResponseWriter, r *http.Request, internal string, ex
 	w.Header().Set("X-Robots-Tag", "noindex")
 
 	if internal != "" {
-		fmt.Printf("Errno %d: %q\n", errno, internal)
+		slog.Warn("request error", "errno", errno, "message", internal)
 	}
 
 	// Disregard any request body there is
@@ -409,7 +411,7 @@ func (h *HTTP) Error(w http.ResponseWriter, r *http.Request, internal string, ex
 		w.WriteHeader(statusCode)
 		var buf bytes.Buffer
 		if err := h.templates.ExecuteTemplate(&buf, "error", data); err != nil {
-			fmt.Printf("Failed to execute template: %s\n", err.Error())
+			slog.Error("failed to execute template", "template", "error", "error", err)
 			// Don't call http.Error here since WriteHeader was already called
 			return
 		}
@@ -473,7 +475,7 @@ func (h *HTTP) ParseTemplates() *template.Template {
 	templ := template.New("").Funcs(fns)
 	_, err := templ.ParseFS(h.templateBox, "templates/*.html")
 	if err != nil {
-		fmt.Printf("Unable to read templates directory: %s\n", err.Error())
+		slog.Error("unable to read templates directory", "error", err)
 		os.Exit(2)
 	}
 	return templ

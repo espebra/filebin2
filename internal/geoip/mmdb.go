@@ -2,6 +2,7 @@ package geoip
 
 import (
 	"fmt"
+	"log/slog"
 	"net"
 
 	"github.com/espebra/filebin2/internal/ds"
@@ -42,17 +43,17 @@ func Init(asnPath string, cityPath string) (DAO, error) {
 
 	// GeoIP is optional - if paths are not provided, return empty DAO
 	if asnPath == "" || cityPath == "" {
-		fmt.Println("GeoIP databases not configured, skipping")
+		slog.Info("GeoIP databases not configured, skipping")
 		return dao, nil
 	}
 
-	fmt.Printf("Loading mmdb (ASN): %s\n", asnPath)
+	slog.Info("loading mmdb database", "type", "ASN", "path", asnPath)
 	asn, err := maxminddb.Open(asnPath)
 	if err != nil {
 		return dao, err
 	}
 
-	fmt.Printf("Loading mmdb (City): %s\n", cityPath)
+	slog.Info("loading mmdb database", "type", "City", "path", cityPath)
 	city, err := maxminddb.Open(cityPath)
 	if err != nil {
 		return dao, err

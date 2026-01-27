@@ -3,14 +3,15 @@ package dbl
 import (
 	"database/sql"
 	"errors"
-	"fmt"
-	"github.com/dustin/go-humanize"
-	"github.com/espebra/filebin2/internal/ds"
+	"log/slog"
 	"path"
 	"path/filepath"
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/dustin/go-humanize"
+	"github.com/espebra/filebin2/internal/ds"
 )
 
 type FileDao struct {
@@ -83,13 +84,13 @@ func (d *FileDao) ValidateInput(file *ds.File) error {
 	// Truncate long filenames
 	// XXX: The maximum length could be made configurable
 	if len(n) > 120 {
-		fmt.Printf("Truncating filename to 120 characters. Counting %d characters in %q.\n", len(n), n)
+		slog.Debug("truncating filename to 120 characters", "original_length", len(n), "filename", n)
 		n = n[:120]
 	}
 
 	if file.Filename != n {
 		// Log that the filename was modified.
-		fmt.Printf("Modifying filename during upload from %q to %q (%s)\n", file.Filename, n, file.Bin)
+		slog.Debug("modifying filename during upload", "original", file.Filename, "modified", n, "bin", file.Bin)
 	}
 
 	file.Filename = n

@@ -2,10 +2,11 @@ package dbl
 
 import (
 	"database/sql"
-	"fmt"
+	"log/slog"
+	"time"
+
 	"github.com/dustin/go-humanize"
 	"github.com/espebra/filebin2/internal/ds"
-	"time"
 )
 
 type MetricsDao struct {
@@ -17,7 +18,7 @@ func (d *MetricsDao) StorageBytesAllocated() (totalBytes uint64) {
 	minBytes := 262144
 	sqlStatement := "SELECT COALESCE((SELECT SUM(GREATEST(file_content.bytes, $1)) FROM file JOIN file_content ON file.sha256 = file_content.sha256 WHERE file_content.in_storage = true AND file.deleted_at IS NULL), 0)"
 	if err := d.db.QueryRow(sqlStatement, minBytes).Scan(&totalBytes); err != nil {
-		fmt.Printf("Unable to calculate total storage bytes allocated: %s\n", err.Error())
+		slog.Error("unable to calculate total storage bytes allocated", "error", err)
 	}
 	return totalBytes
 }

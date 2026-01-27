@@ -30,11 +30,11 @@ const (
 	testDbPassword         = "changeme"
 	testDbHost             = "db"
 	testDbPort             = 5432
-	testS3Endpoint  = "s3:5553"
-	testS3Region    = "us-east-1"
-	testS3Bucket    = "testbin"
-	testS3AccessKey = "s3accesskey"
-	testS3SecretKey = "s3secretkey"
+	testS3Endpoint         = "s3:5553"
+	testS3Region           = "us-east-1"
+	testS3Bucket           = "testbin"
+	testS3AccessKey        = "s3accesskey"
+	testS3SecretKey        = "s3secretkey"
 )
 
 var (

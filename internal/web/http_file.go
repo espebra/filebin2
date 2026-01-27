@@ -7,18 +7,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
 	"path"
 	"strconv"
-	//"strings"
 	"time"
 
-	"github.com/espebra/filebin2/internal/ds"
-
 	"github.com/dustin/go-humanize"
+	"github.com/espebra/filebin2/internal/ds"
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/gorilla/mux"
 )
@@ -111,7 +110,7 @@ func (h *HTTP) getFile(w http.ResponseWriter, r *http.Request) {
 			nextUrl.Path = path.Join(h.config.BaseUrl.Path, r.URL.Path)
 			data.NextUrl = nextUrl.String()
 			if err := h.renderTemplate(w, "cookie", data); err != nil {
-				fmt.Printf("Failed to execute template: %s\n", err.Error())
+				slog.Error("failed to execute template", "error", err)
 				http.Error(w, "Errno 302", http.StatusInternalServerError)
 				return
 			}
@@ -120,7 +119,7 @@ func (h *HTTP) getFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.dao.File().RegisterDownload(&file); err != nil {
-		fmt.Printf("Unable to update file %q in bin %q: %s\n", inputFilename, inputBin, err.Error())
+		slog.Error("unable to update file", "filename", inputFilename, "bin", inputBin, "error", err)
 	}
 
 	// Redirect the client to a presigned URL for this fetch, which is more efficient
@@ -136,7 +135,7 @@ func (h *HTTP) getFile(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusFound)
 	_, _ = io.WriteString(w, "")
 
-	fmt.Printf("Presigned download of file %q (%s) with sha256 %s from bin %q in %.3fs (%d downloads)\n", inputFilename, humanize.Bytes(file.Bytes), file.SHA256, inputBin, time.Since(t0).Seconds(), file.Downloads)
+	slog.Info("presigned download", "filename", inputFilename, "bytes", file.Bytes, "sha256", file.SHA256, "bin", inputBin, "duration_seconds", time.Since(t0).Seconds(), "downloads", file.Downloads)
 
 	// Increment the byte counter here
 	// Assume that the client will download the entire file from S3. This will
@@ -171,7 +170,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 		inputBin = r.Header.Get("bin")
 		if inputBin == "" {
 			inputBin = h.dao.Bin().GenerateId()
-			fmt.Printf("Auto generated bin: %s\n", inputBin)
+			slog.Debug("auto generated bin", "bin", inputBin)
 		}
 	}
 
@@ -325,7 +324,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	// Check if file exists
 	file, found, err := h.dao.File().GetByName(bin.Id, inputFilename)
 	if err != nil {
-		fmt.Printf("Unable to load file %q in bin %q: %s\n", file.Filename, bin.Id, err.Error())
+		slog.Error("unable to load file", "filename", file.Filename, "bin", bin.Id, "error", err)
 		http.Error(w, "Errno 106", http.StatusInternalServerError)
 		return
 	}
@@ -363,7 +362,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	file.SHA256 = sha256ChecksumString
 	file.MD5 = md5ChecksumString
 	if err := h.dao.File().ValidateInput(&file); err != nil {
-		fmt.Printf("Rejected upload of filename %q to bin %q due to failed input validation: %s\n", inputFilename, bin.Id, err.Error())
+		slog.Warn("rejected upload due to failed input validation", "filename", inputFilename, "bin", bin.Id, "error", err)
 		http.Error(w, "Input validation failed", http.StatusBadRequest)
 		return
 	}
@@ -380,7 +379,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 		if existingContent.InStorage {
 			// Content already in S3, skip upload
 			skipS3Upload = true
-			fmt.Printf("Content with SHA256 %s already exists in storage, skipping S3 upload\n", sha256ChecksumString)
+			slog.Debug("content already exists in storage, skipping S3 upload", "sha256", sha256ChecksumString)
 		}
 	}
 
@@ -406,11 +405,11 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 				// Completed with error
 				if retryCounter >= retryLimit {
 					// Give up after a few attempts
-					fmt.Printf("Gave up uploading to S3 after %d/%d attempts: %s\n", retryCounter, retryLimit, err.Error())
+					slog.Error("gave up uploading to S3", "attempt", retryCounter, "max_attempts", retryLimit, "error", err)
 					http.Error(w, "Failed to store the object in S3, please try again later", http.StatusInternalServerError)
 					return
 				}
-				fmt.Printf("Failed attempt to upload to S3 (%d/%d): %s\n", retryCounter, retryLimit, err.Error())
+				slog.Warn("failed attempt to upload to S3, retrying", "attempt", retryCounter, "max_attempts", retryLimit, "error", err)
 
 				retryCounter = retryCounter + 1
 
@@ -433,7 +432,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 		InStorage: true,
 	}
 	if err := h.dao.FileContent().InsertOrIncrement(&fileContent); err != nil {
-		fmt.Printf("Unable to update file_content for SHA256 %s: %s\n", file.SHA256, err.Error())
+		slog.Error("unable to update file_content", "sha256", file.SHA256, "error", err)
 		http.Error(w, "Failed to update content tracking", http.StatusInternalServerError)
 		return
 	}
@@ -443,13 +442,13 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 
 	if found {
 		if err := h.dao.File().Update(&file); err != nil {
-			fmt.Printf("Unable to update filename %q (id %d) in bin %q: %s\n", file.Filename, file.Id, bin.Id, err.Error())
+			slog.Error("unable to update filename", "filename", file.Filename, "file_id", file.Id, "bin", bin.Id, "error", err)
 			http.Error(w, "Errno 107", http.StatusInternalServerError)
 			return
 		}
 	} else {
 		if err := h.dao.File().Insert(&file); err != nil {
-			fmt.Printf("Unable to insert file %q in bin %q: %s\n", file.Filename, bin.Id, err.Error())
+			slog.Error("unable to insert file", "filename", file.Filename, "bin", bin.Id, "error", err)
 			http.Error(w, "Errno 108", http.StatusInternalServerError)
 			return
 		}
@@ -459,7 +458,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	// Update bin to set the correct updated timestamp
 	bin.ExpiredAt = time.Now().UTC().Add(h.config.ExpirationDuration)
 	if err := h.dao.Bin().Update(&bin); err != nil {
-		fmt.Printf("Unable to update bin %q: %s\n", bin.Id, err.Error())
+		slog.Error("unable to update bin", "bin", bin.Id, "error", err)
 		http.Error(w, "Errno 109", http.StatusInternalServerError)
 		return
 	}
@@ -479,13 +478,13 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 
 	out, err := json.MarshalIndent(data, "", "    ")
 	if err != nil {
-		fmt.Printf("Failed to parse json: %s\n", err.Error())
+		slog.Error("failed to parse json", "error", err)
 		http.Error(w, "Errno 201", http.StatusInternalServerError)
 		return
 	}
 
 	t5 := time.Now()
-	fmt.Printf("Uploaded filename %q (%s) with sha256 %s to bin %q (db in %.3fs, buffered in %.3fs, stored in %.3fs, total %.3fs)\n", file.Filename, humanize.Bytes(file.Bytes), file.SHA256, bin.Id, t1.Sub(t0).Seconds(), t2.Sub(t1).Seconds(), t4.Sub(t3).Seconds(), t5.Sub(t0).Seconds())
+	slog.Info("uploaded file", "filename", file.Filename, "bytes", file.Bytes, "sha256", file.SHA256, "bin", bin.Id, "db_seconds", t1.Sub(t0).Seconds(), "buffer_seconds", t2.Sub(t1).Seconds(), "store_seconds", t4.Sub(t3).Seconds(), "total_seconds", t5.Sub(t0).Seconds())
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -501,7 +500,7 @@ func (h *HTTP) deleteFile(w http.ResponseWriter, r *http.Request) {
 
 	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
-		fmt.Printf("Unable to GetByID(%q): %s\n", inputBin, err.Error())
+		slog.Error("unable to get bin by ID", "bin", inputBin, "error", err)
 		http.Error(w, "Errno 110", http.StatusInternalServerError)
 		return
 	}
@@ -517,7 +516,7 @@ func (h *HTTP) deleteFile(w http.ResponseWriter, r *http.Request) {
 
 	file, found, err := h.dao.File().GetByName(inputBin, inputFilename)
 	if err != nil {
-		fmt.Printf("Unable to GetByName(%q, %q): %s\n", inputBin, inputFilename, err.Error())
+		slog.Error("unable to get file by name", "bin", inputBin, "filename", inputFilename, "error", err)
 		http.Error(w, "Errno 111", http.StatusInternalServerError)
 		return
 	}
@@ -537,7 +536,7 @@ func (h *HTTP) deleteFile(w http.ResponseWriter, r *http.Request) {
 	_ = file.DeletedAt.Scan(now)
 
 	if err := h.dao.File().Update(&file); err != nil {
-		fmt.Printf("Unable to update the file (%q, %q): %s\n", inputBin, inputFilename, err.Error())
+		slog.Error("unable to update the file", "bin", inputBin, "filename", inputFilename, "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}

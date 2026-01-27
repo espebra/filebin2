@@ -2,16 +2,15 @@ package dbl
 
 import (
 	"database/sql"
-	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httputil"
-	//"path"
-	"github.com/dustin/go-humanize"
-	"github.com/espebra/filebin2/internal/ds"
 	"strconv"
 	"time"
-	//"github.com/gorilla/mux"
+
+	"github.com/dustin/go-humanize"
+	"github.com/espebra/filebin2/internal/ds"
 )
 
 type TransactionDao struct {
@@ -37,7 +36,7 @@ func (d *TransactionDao) Register(r *http.Request, bin string, filename string, 
 
 	reqHeaders, err := httputil.DumpRequest(r, false)
 	if err != nil {
-		fmt.Printf("Unable to dump request: %s\n", err.Error())
+		slog.Error("unable to dump request", "error", err)
 	}
 
 	tr.Headers = string(reqHeaders)

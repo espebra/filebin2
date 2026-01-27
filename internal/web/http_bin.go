@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"image/png"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"path"
@@ -71,14 +72,14 @@ func (h *HTTP) viewBin(w http.ResponseWriter, r *http.Request) {
 
 	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
-		fmt.Printf("Unable to GetByID(%q): %s\n", inputBin, err.Error())
+		slog.Error("unable to get bin by ID", "bin", inputBin, "error", err)
 		http.Error(w, "Errno 200", http.StatusInternalServerError)
 		return
 	}
 	if found {
 		files, err := h.dao.File().GetByBin(inputBin, true)
 		if err != nil {
-			fmt.Printf("Unable to GetByBin(%q): %s\n", inputBin, err.Error())
+			slog.Error("unable to get files by bin", "bin", inputBin, "error", err)
 			http.Error(w, "Not found", http.StatusNotFound)
 			return
 		}
@@ -110,7 +111,7 @@ func (h *HTTP) viewBin(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(code)
 		out, err := json.MarshalIndent(data, "", "    ")
 		if err != nil {
-			fmt.Printf("Failed to parse json: %s\n", err.Error())
+			slog.Error("failed to parse json", "error", err)
 			http.Error(w, "Errno 201", http.StatusInternalServerError)
 			return
 		}
@@ -119,7 +120,7 @@ func (h *HTTP) viewBin(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(code)
 		if err := h.renderTemplate(w, "bin", data); err != nil {
-			fmt.Printf("Failed to execute template: %s\n", err.Error())
+			slog.Error("failed to execute template", "error", err)
 			http.Error(w, "Errno 203", http.StatusInternalServerError)
 			return
 		}
@@ -142,14 +143,14 @@ func (h *HTTP) viewBinPlainText(w http.ResponseWriter, r *http.Request) {
 
 	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
-		fmt.Printf("Unable to GetByID(%q): %s\n", inputBin, err.Error())
+		slog.Error("unable to get bin by ID", "bin", inputBin, "error", err)
 		http.Error(w, "Errno 200", http.StatusInternalServerError)
 		return
 	}
 	if found {
 		files, err := h.dao.File().GetByBin(inputBin, true)
 		if err != nil {
-			fmt.Printf("Unable to GetByBin(%q): %s\n", inputBin, err.Error())
+			slog.Error("unable to get files by bin", "bin", inputBin, "error", err)
 			http.Error(w, "Not found", http.StatusNotFound)
 			return
 		}
@@ -206,7 +207,7 @@ func (h *HTTP) binQR(w http.ResponseWriter, r *http.Request) {
 	var q *qrcode.QRCode
 	q, err := qrcode.New(binURL.String(), qrcode.Medium)
 	if err != nil {
-		fmt.Printf("Error generating qr code %s: %s\n", binURL.String(), err.Error())
+		slog.Error("error generating qr code", "url", binURL.String(), "error", err)
 		http.Error(w, "Unable to generate QR code", http.StatusInternalServerError)
 		return
 	}
@@ -215,14 +216,14 @@ func (h *HTTP) binQR(w http.ResponseWriter, r *http.Request) {
 
 	img := q.Image(size)
 	if err != nil {
-		fmt.Printf("Error generating qr code %s: %s\n", binURL.String(), err.Error())
+		slog.Error("error generating qr code", "url", binURL.String(), "error", err)
 		http.Error(w, "Unable to generate QR code", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "image/png")
 	if err := png.Encode(w, img); err != nil {
-		fmt.Printf("Unable to write image: %s\n", err.Error())
+		slog.Error("unable to write image", "error", err)
 		http.Error(w, "Unable to generate QR code", http.StatusInternalServerError)
 	}
 }
@@ -297,7 +298,7 @@ func (h *HTTP) addFilesToArchive(w http.ResponseWriter, r *http.Request, bin ds.
 
 		// Increment download counter for the file (tracks downloads per file)
 		if err := h.dao.File().RegisterDownload(&file); err != nil {
-			fmt.Printf("Unable to increment download counter for file %q in bin %q: %s\n", file.Filename, bin.Id, err.Error())
+			slog.Error("unable to increment download counter", "filename", file.Filename, "bin", bin.Id, "error", err)
 		}
 
 		h.metrics.IncrBytesStorageToFilebin(file.Bytes)
@@ -307,7 +308,7 @@ func (h *HTTP) addFilesToArchive(w http.ResponseWriter, r *http.Request, bin ds.
 			return err
 		}
 		h.metrics.IncrBytesFilebinToClient(uint64(bytes))
-		fmt.Printf("Added file %q at %s (%d bytes) to the %s archive for bin %s\n", file.Filename, humanize.Bytes(uint64(bytes)), bytes, format, bin.Id)
+		slog.Debug("added file to archive", "filename", file.Filename, "bytes", bytes, "format", format, "bin", bin.Id)
 	}
 	return archiver.close()
 }
@@ -330,7 +331,7 @@ func (h *HTTP) archive(w http.ResponseWriter, r *http.Request) {
 
 	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
-		fmt.Printf("Unable to GetByID(%q): %s\n", inputBin, err.Error())
+		slog.Error("unable to get bin by ID", "bin", inputBin, "error", err)
 		http.Error(w, "Errno 200", http.StatusInternalServerError)
 		return
 	}
@@ -346,7 +347,7 @@ func (h *HTTP) archive(w http.ResponseWriter, r *http.Request) {
 
 	files, err := h.dao.File().GetByBin(inputBin, true)
 	if err != nil {
-		fmt.Printf("Unable to GetByBin(%q): %s\n", inputBin, err.Error())
+		slog.Error("unable to get files by bin", "bin", inputBin, "error", err)
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
 	}
@@ -377,7 +378,7 @@ func (h *HTTP) archive(w http.ResponseWriter, r *http.Request) {
 			nextUrl.Path = path.Join(h.config.BaseUrl.Path, r.RequestURI)
 			data.NextUrl = nextUrl.String()
 			if err := h.renderTemplate(w, "cookie", data); err != nil {
-				fmt.Printf("Failed to execute template: %s\n", err.Error())
+				slog.Error("failed to execute template", "error", err)
 				http.Error(w, "Errno 302", http.StatusInternalServerError)
 				return
 			}
@@ -402,7 +403,7 @@ func (h *HTTP) archive(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.dao.Bin().RegisterDownload(&bin); err != nil {
-		fmt.Printf("Unable to update bin %q: %s\n", inputBin, err.Error())
+		slog.Error("unable to update bin", "bin", inputBin, "error", err)
 	}
 
 	if inputFormat == "zip" {
@@ -420,7 +421,7 @@ func (h *HTTP) deleteBin(w http.ResponseWriter, r *http.Request) {
 
 	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
-		fmt.Printf("Unable to GetByID(%q): %s\n", inputBin, err.Error())
+		slog.Error("unable to get bin by ID", "bin", inputBin, "error", err)
 		http.Error(w, "Errno 204", http.StatusInternalServerError)
 		return
 	}
@@ -455,7 +456,7 @@ func (h *HTTP) lockBin(w http.ResponseWriter, r *http.Request) {
 
 	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
-		fmt.Printf("Unable to GetByID(%q): %s\n", inputBin, err.Error())
+		slog.Error("unable to get bin by ID", "bin", inputBin, "error", err)
 		http.Error(w, "Errno 205", http.StatusInternalServerError)
 		return
 	}
@@ -494,7 +495,7 @@ func (h *HTTP) approveBin(w http.ResponseWriter, r *http.Request) {
 
 	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
-		fmt.Printf("Unable to GetByID(%q): %s\n", inputBin, err.Error())
+		slog.Error("unable to get bin by ID", "bin", inputBin, "error", err)
 		http.Error(w, "Errno 205", http.StatusInternalServerError)
 		return
 	}
@@ -537,7 +538,7 @@ func (h *HTTP) banBin(w http.ResponseWriter, r *http.Request) {
 		// To make brute forcing a little bit less effective
 		time.Sleep(3 * time.Second)
 
-		fmt.Printf("Unable to GetByID(%q): %s\n", inputBin, err.Error())
+		slog.Error("unable to get bin by ID", "bin", inputBin, "error", err)
 		http.Error(w, "Errno 205", http.StatusInternalServerError)
 		return
 	}
@@ -560,7 +561,7 @@ func (h *HTTP) banBin(w http.ResponseWriter, r *http.Request) {
 	var IPs []string
 	files, err := h.dao.File().GetByBin(inputBin, true)
 	if err != nil {
-		fmt.Printf("Unable to GetByBin(%q): %s\n", inputBin, err.Error())
+		slog.Error("unable to get files by bin", "bin", inputBin, "error", err)
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
 	}
@@ -568,7 +569,7 @@ func (h *HTTP) banBin(w http.ResponseWriter, r *http.Request) {
 		IPs = append(IPs, file.IP)
 	}
 	if err := h.dao.Client().Ban(IPs, r.RemoteAddr); err != nil {
-		fmt.Printf("Unable to ban client IPs(%v): %s\n", IPs, err.Error())
+		slog.Error("unable to ban client IPs", "ips", IPs, "error", err)
 		http.Error(w, "Unable to ban clients", http.StatusInternalServerError)
 		return
 	}

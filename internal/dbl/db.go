@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	_ "embed"
 	"fmt"
+	"log/slog"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -44,15 +45,17 @@ func Init(dbHost string, dbPort int, dbName, dbUser, dbPassword string, maxOpenC
 			if elapsed >= retryTimeout {
 				return dao, fmt.Errorf("unable to open database connection after %.0fs: %s", elapsed.Seconds(), err.Error())
 			}
-			fmt.Printf("Database not available yet (%.0fs elapsed), retrying in %.0fs: %s\n",
-				elapsed.Seconds(), retryInterval.Seconds(), err.Error())
+			slog.Warn("database not available yet, retrying",
+				"elapsed_seconds", elapsed.Seconds(),
+				"retry_interval_seconds", retryInterval.Seconds(),
+				"error", err)
 			time.Sleep(retryInterval)
 			continue
 		}
 
 		err = db.Ping()
 		if err == nil {
-			fmt.Printf("Connected to database at %s:%d\n", dbHost, dbPort)
+			slog.Info("connected to database", "host", dbHost, "port", dbPort)
 			break
 		}
 
@@ -61,8 +64,10 @@ func Init(dbHost string, dbPort int, dbName, dbUser, dbPassword string, maxOpenC
 		if elapsed >= retryTimeout {
 			return dao, fmt.Errorf("unable to ping database after %.0fs: %s:%d", elapsed.Seconds(), dbHost, dbPort)
 		}
-		fmt.Printf("Database not available yet (%.0fs elapsed), retrying in %.0fs: %s\n",
-			elapsed.Seconds(), retryInterval.Seconds(), err.Error())
+		slog.Warn("database not available yet, retrying",
+			"elapsed_seconds", elapsed.Seconds(),
+			"retry_interval_seconds", retryInterval.Seconds(),
+			"error", err)
 		time.Sleep(retryInterval)
 	}
 
@@ -110,7 +115,7 @@ func (dao DAO) ResetDB() error {
 
 	for _, s := range sqlStatements {
 		if _, err := dao.db.Exec(s); err != nil {
-			fmt.Printf("Error in reset: %s\n", err.Error())
+			slog.Error("error in database reset", "statement", s, "error", err)
 			return err
 		}
 	}
@@ -143,7 +148,7 @@ func (dao DAO) Client() *ClientDao {
 
 func (dao DAO) Status() bool {
 	if err := dao.db.Ping(); err != nil {
-		fmt.Printf("Database status check returned: %s\n", err.Error())
+		slog.Warn("database status check failed", "error", err)
 		return false
 	}
 	return true
