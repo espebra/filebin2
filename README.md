@@ -292,7 +292,7 @@ Idle timeout for the HTTP server.
 #### Database
 
 **Database Host**
-- Environment Variable: `FILEBIN_DB_HOST`
+- Environment Variable: `FILEBIN_DATABASE_HOST`
 - Command Line Argument: `--db-host`
 - Default: (required)
 
@@ -301,7 +301,7 @@ Which PostgreSQL host to connect to. This can be an IP address or a hostname.
 ---
 
 **Database Port**
-- Environment Variable: `FILEBIN_DB_PORT`
+- Environment Variable: `FILEBIN_DATABASE_PORT`
 - Command Line Argument: `--db-port`
 - Default: `5432`
 
@@ -310,7 +310,7 @@ The port to use when connecting to the PostgreSQL database.
 ---
 
 **Database Name**
-- Environment Variable: `FILEBIN_DB_NAME`
+- Environment Variable: `FILEBIN_DATABASE_NAME`
 - Command Line Argument: `--db-name`
 - Default: (required)
 
@@ -319,7 +319,7 @@ The name of the PostgreSQL database to use.
 ---
 
 **Database Username**
-- Environment Variable: `FILEBIN_DB_USERNAME`
+- Environment Variable: `FILEBIN_DATABASE_USERNAME`
 - Command Line Argument: `--db-username`
 - Default: (required)
 
@@ -328,7 +328,7 @@ The username to use when authenticating to the PostgreSQL database.
 ---
 
 **Database Password**
-- Environment Variable: `FILEBIN_DB_PASSWORD`
+- Environment Variable: `FILEBIN_DATABASE_PASSWORD`
 - Command Line Argument: `--db-password`
 - Default: (required)
 
@@ -337,7 +337,7 @@ The password to use when authenticating to the PostgreSQL database.
 ---
 
 **Max Open Connections**
-- Environment Variable: `FILEBIN_DB_MAX_OPEN_CONNS`
+- Environment Variable: `FILEBIN_DATABASE_MAX_OPEN_CONNS`
 - Command Line Argument: `--db-max-open-conns`
 - Default: `25`
 
@@ -346,7 +346,7 @@ Maximum number of open database connections.
 ---
 
 **Max Idle Connections**
-- Environment Variable: `FILEBIN_DB_MAX_IDLE_CONNS`
+- Environment Variable: `FILEBIN_DATABASE_MAX_IDLE_CONNS`
 - Command Line Argument: `--db-max-idle-conns`
 - Default: `25`
 

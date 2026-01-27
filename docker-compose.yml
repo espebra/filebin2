@@ -36,11 +36,11 @@ services:
     restart: "no"
     environment:
       # Database
-      - FILEBIN_DB_HOST=db
-      - FILEBIN_DB_PORT=5432
-      - FILEBIN_DB_NAME=db
-      - FILEBIN_DB_USERNAME=username
-      - FILEBIN_DB_PASSWORD=changeme
+      - FILEBIN_DATABASE_HOST=db
+      - FILEBIN_DATABASE_PORT=5432
+      - FILEBIN_DATABASE_NAME=db
+      - FILEBIN_DATABASE_USERNAME=username
+      - FILEBIN_DATABASE_PASSWORD=changeme
       # S3
       - FILEBIN_S3_ENDPOINT=s3:5553
       - FILEBIN_S3_REGION=us-east-1

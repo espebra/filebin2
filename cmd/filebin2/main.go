@@ -234,26 +234,26 @@ func main() {
 
 	// Database
 	if *dbHostFlag == "" {
-		*dbHostFlag = os.Getenv("FILEBIN_DB_HOST")
+		*dbHostFlag = os.Getenv("FILEBIN_DATABASE_HOST")
 	}
 	if *dbPortFlag == "" {
-		*dbPortFlag = os.Getenv("FILEBIN_DB_PORT")
+		*dbPortFlag = os.Getenv("FILEBIN_DATABASE_PORT")
 	}
 	if *dbNameFlag == "" {
-		*dbNameFlag = os.Getenv("FILEBIN_DB_NAME")
+		*dbNameFlag = os.Getenv("FILEBIN_DATABASE_NAME")
 	}
 	if *dbUsernameFlag == "" {
-		*dbUsernameFlag = os.Getenv("FILEBIN_DB_USERNAME")
+		*dbUsernameFlag = os.Getenv("FILEBIN_DATABASE_USERNAME")
 	}
 	if *dbPasswordFlag == "" {
-		*dbPasswordFlag = os.Getenv("FILEBIN_DB_PASSWORD")
+		*dbPasswordFlag = os.Getenv("FILEBIN_DATABASE_PASSWORD")
 	}
-	if v := os.Getenv("FILEBIN_DB_MAX_OPEN_CONNS"); v != "" && *dbMaxOpenConnsFlag == 25 {
+	if v := os.Getenv("FILEBIN_DATABASE_MAX_OPEN_CONNS"); v != "" && *dbMaxOpenConnsFlag == 25 {
 		if i, err := strconv.Atoi(v); err == nil {
 			*dbMaxOpenConnsFlag = i
 		}
 	}
-	if v := os.Getenv("FILEBIN_DB_MAX_IDLE_CONNS"); v != "" && *dbMaxIdleConnsFlag == 25 {
+	if v := os.Getenv("FILEBIN_DATABASE_MAX_IDLE_CONNS"); v != "" && *dbMaxIdleConnsFlag == 25 {
 		if i, err := strconv.Atoi(v); err == nil {
 			*dbMaxIdleConnsFlag = i
 		}
@@ -387,7 +387,7 @@ func main() {
 		slog.Error("unable to parse --s3-url-ttl", "error", err)
 		os.Exit(2)
 	}
-	slog.Info("configured presigned S3 URL TTL", "ttl", s3UrlTtl.String())
+	slog.Info("configured presigned S3 URL TTL", "ttl_seconds", s3UrlTtl.Seconds())
 
 	s3Timeout, err := time.ParseDuration(*s3TimeoutFlag)
 	if err != nil {
@@ -489,7 +489,7 @@ func main() {
 	if err := h.Init(); err != nil {
 		slog.Error("unable to start the HTTP server", "error", err)
 	}
-	slog.Info("uploaded files expiration configured", "expiration", config.ExpirationDuration.String())
+	slog.Info("uploaded files expiration configured", "expiration_seconds", config.ExpirationDuration.Seconds())
 
 	// Start the http server
 	h.Run()
