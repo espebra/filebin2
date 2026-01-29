@@ -155,14 +155,6 @@ func (s S3AO) Status() bool {
 	return true
 }
 
-func (s S3AO) SetTrace(trace bool) {
-	// AWS SDK v2 doesn't have a simple trace toggle like Minio
-	// Logging can be configured via the AWS config if needed
-	if trace {
-		slog.Info("S3 tracing enabled (limited in AWS SDK v2)")
-	}
-}
-
 func (s S3AO) PutObject(bin string, filename string, data io.Reader, size int64) (err error) {
 	// Hash the path in S3
 	objectKey := s.GetObjectKey(bin, filename)

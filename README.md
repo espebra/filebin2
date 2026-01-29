@@ -410,15 +410,6 @@ Whether or not Filebin will require the connection to S3 to be TLS encrypted usi
 
 ---
 
-**S3 Trace**
-- Environment Variable: `FILEBIN_S3_TRACE`
-- Command Line Argument: `--s3-trace`
-- Default: `false`
-
-Enable S3 HTTP tracing for debugging. This will provide verbose logging on file uploads.
-
----
-
 **S3 URL TTL**
 - Environment Variable: `FILEBIN_S3_URL_TTL`
 - Command Line Argument: `--s3-url-ttl`
