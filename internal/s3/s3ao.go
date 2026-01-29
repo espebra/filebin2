@@ -47,20 +47,35 @@ type BucketMetrics struct {
 	IncompleteObjectsSizeReadable string
 }
 
+// Config holds all parameters needed to initialize an S3 connection.
+type Config struct {
+	Endpoint             string
+	Bucket               string
+	Region               string
+	AccessKey            string
+	SecretKey            string
+	Secure               bool
+	PresignExpiry        time.Duration
+	Timeout              time.Duration
+	TransferTimeout      time.Duration
+	MultipartPartSize    int64
+	MultipartConcurrency int
+}
+
 // Initialize S3AO
-func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool, presignExpiry, timeout, transferTimeout time.Duration, multipartPartSize int64, multipartConcurrency int) (S3AO, error) {
+func Init(cfg Config) (S3AO, error) {
 	var s3ao S3AO
 
-	if endpoint == "" {
+	if cfg.Endpoint == "" {
 		return s3ao, fmt.Errorf("endpoint is required")
 	}
 
 	// Build the endpoint URL
 	protocol := "http"
-	if secure {
+	if cfg.Secure {
 		protocol = "https"
 	}
-	endpointURL := fmt.Sprintf("%s://%s", protocol, endpoint)
+	endpointURL := fmt.Sprintf("%s://%s", protocol, cfg.Endpoint)
 
 	// Custom HTTP transport with higher connection limits to reduce contention
 	httpClient := &http.Client{
@@ -72,9 +87,9 @@ func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool, pr
 	}
 
 	// Load AWS config with custom settings
-	cfg, err := config.LoadDefaultConfig(context.Background(),
-		config.WithRegion(region),
-		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")),
+	awsCfg, err := config.LoadDefaultConfig(context.Background(),
+		config.WithRegion(cfg.Region),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.AccessKey, cfg.SecretKey, "")),
 		config.WithHTTPClient(httpClient),
 	)
 	if err != nil {
@@ -83,7 +98,7 @@ func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool, pr
 
 	// Create S3 client with path-style addressing and custom endpoint
 	// (required for MinIO and most S3-compatible storage)
-	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+	client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
 		o.UsePathStyle = true
 		o.BaseEndpoint = aws.String(endpointURL)
 		// Disable response checksum validation for S3-compatible storage
@@ -94,21 +109,21 @@ func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool, pr
 
 	s3ao.client = client
 	s3ao.presignClient = s3.NewPresignClient(client)
-	s3ao.bucket = bucket
-	s3ao.endpoint = endpoint
-	s3ao.secure = secure
-	s3ao.expiry = presignExpiry
-	s3ao.timeout = timeout
-	s3ao.transferTimeout = transferTimeout
-	s3ao.partSize = multipartPartSize
+	s3ao.bucket = cfg.Bucket
+	s3ao.endpoint = cfg.Endpoint
+	s3ao.secure = cfg.Secure
+	s3ao.expiry = cfg.PresignExpiry
+	s3ao.timeout = cfg.Timeout
+	s3ao.transferTimeout = cfg.TransferTimeout
+	s3ao.partSize = cfg.MultipartPartSize
 
 	// Create the upload manager for automatic multipart upload handling
 	s3ao.uploader = manager.NewUploader(client, func(u *manager.Uploader) {
-		u.PartSize = multipartPartSize
-		u.Concurrency = multipartConcurrency
+		u.PartSize = cfg.MultipartPartSize
+		u.Concurrency = cfg.MultipartConcurrency
 	})
 
-	slog.Info("established session to S3", "endpoint", endpoint)
+	slog.Info("established session to S3", "endpoint", cfg.Endpoint)
 
 	// Ensure that the bucket exists, with retry logic for startup race conditions
 	retryTimeout := 30 * time.Second
@@ -117,27 +132,27 @@ func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool, pr
 
 	for {
 		_, err = s3ao.client.HeadBucket(context.Background(), &s3.HeadBucketInput{
-			Bucket: aws.String(bucket),
+			Bucket: aws.String(cfg.Bucket),
 		})
 		if err == nil {
-			slog.Info("found S3 bucket", "bucket", bucket)
+			slog.Info("found S3 bucket", "bucket", cfg.Bucket)
 			break
 		}
 
 		// Bucket doesn't exist or S3 is unavailable, try to create it
 		t0 := time.Now()
 		_, createErr := s3ao.client.CreateBucket(context.Background(), &s3.CreateBucketInput{
-			Bucket: aws.String(bucket),
+			Bucket: aws.String(cfg.Bucket),
 		})
 		if createErr == nil {
-			slog.Info("created S3 bucket", "bucket", bucket, "duration_seconds", time.Since(t0).Seconds())
+			slog.Info("created S3 bucket", "bucket", cfg.Bucket, "duration_seconds", time.Since(t0).Seconds())
 			break
 		}
 
 		// Both HeadBucket and CreateBucket failed
 		elapsed := time.Since(startTime)
 		if elapsed >= retryTimeout {
-			slog.Error("unable to access S3 bucket", "bucket", bucket, "elapsed_seconds", elapsed.Seconds(), "error", createErr)
+			slog.Error("unable to access S3 bucket", "bucket", cfg.Bucket, "elapsed_seconds", elapsed.Seconds(), "error", createErr)
 			return s3ao, createErr
 		}
 

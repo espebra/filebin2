@@ -19,12 +19,19 @@ const (
 )
 
 func tearUp() (S3AO, error) {
-	expiry := time.Second * 10
-	timeout := time.Second * 30
-	transferTimeout := time.Minute * 10
-	partSize := int64(64 * 1024 * 1024) // 64 MB
-	concurrency := 3
-	s3ao, err := Init(ENDPOINT, BUCKET, REGION, ACCESS_KEY, SECRET_KEY, false, expiry, timeout, transferTimeout, partSize, concurrency)
+	s3ao, err := Init(Config{
+		Endpoint:             ENDPOINT,
+		Bucket:               BUCKET,
+		Region:               REGION,
+		AccessKey:            ACCESS_KEY,
+		SecretKey:            SECRET_KEY,
+		Secure:               false,
+		PresignExpiry:        time.Second * 10,
+		Timeout:              time.Second * 30,
+		TransferTimeout:      time.Minute * 10,
+		MultipartPartSize:    64 * 1024 * 1024, // 64 MB
+		MultipartConcurrency: 3,
+	})
 	if err != nil {
 		return s3ao, err
 	}
@@ -45,8 +52,6 @@ func TestInit(t *testing.T) {
 		t.Error(err)
 	}
 
-	s3ao.SetTrace(true)
-
 	status := s3ao.Status()
 	if status == false {
 		t.Error("Was expecting status to be true here")
@@ -59,12 +64,7 @@ func TestInit(t *testing.T) {
 }
 
 func TestFailingInit(t *testing.T) {
-	expiry := time.Second * 10
-	timeout := time.Second * 30
-	transferTimeout := time.Minute * 10
-	partSize := int64(64 * 1024 * 1024)
-	concurrency := 3
-	_, err := Init("", "", "", "", "", false, expiry, timeout, transferTimeout, partSize, concurrency)
+	_, err := Init(Config{})
 	if err == nil {
 		t.Error("Was expecting to fail here, invalid user and db name were provided.")
 	}
@@ -180,12 +180,19 @@ func TestUnknownObject(t *testing.T) {
 
 func TestMultipartUpload(t *testing.T) {
 	// Initialize with a 5 MB part size to force multipart upload for our test data
-	expiry := time.Second * 10
-	timeout := time.Second * 30
-	transferTimeout := time.Minute * 10
-	partSize := int64(5 * 1024 * 1024) // 5 MB
-	concurrency := 3
-	s3ao, err := Init(ENDPOINT, BUCKET+"-multipart", REGION, ACCESS_KEY, SECRET_KEY, false, expiry, timeout, transferTimeout, partSize, concurrency)
+	s3ao, err := Init(Config{
+		Endpoint:             ENDPOINT,
+		Bucket:               BUCKET + "-multipart",
+		Region:               REGION,
+		AccessKey:            ACCESS_KEY,
+		SecretKey:            SECRET_KEY,
+		Secure:               false,
+		PresignExpiry:        time.Second * 10,
+		Timeout:              time.Second * 30,
+		TransferTimeout:      time.Minute * 10,
+		MultipartPartSize:    5 * 1024 * 1024, // 5 MB
+		MultipartConcurrency: 3,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
