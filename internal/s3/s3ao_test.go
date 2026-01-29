@@ -22,7 +22,9 @@ func tearUp() (S3AO, error) {
 	expiry := time.Second * 10
 	timeout := time.Second * 30
 	transferTimeout := time.Minute * 10
-	s3ao, err := Init(ENDPOINT, BUCKET, REGION, ACCESS_KEY, SECRET_KEY, false, expiry, timeout, transferTimeout)
+	partSize := int64(64 * 1024 * 1024) // 64 MB
+	concurrency := 3
+	s3ao, err := Init(ENDPOINT, BUCKET, REGION, ACCESS_KEY, SECRET_KEY, false, expiry, timeout, transferTimeout, partSize, concurrency)
 	if err != nil {
 		return s3ao, err
 	}
@@ -60,7 +62,9 @@ func TestFailingInit(t *testing.T) {
 	expiry := time.Second * 10
 	timeout := time.Second * 30
 	transferTimeout := time.Minute * 10
-	_, err := Init("", "", "", "", "", false, expiry, timeout, transferTimeout)
+	partSize := int64(64 * 1024 * 1024)
+	concurrency := 3
+	_, err := Init("", "", "", "", "", false, expiry, timeout, transferTimeout, partSize, concurrency)
 	if err == nil {
 		t.Error("Was expecting to fail here, invalid user and db name were provided.")
 	}
@@ -171,5 +175,57 @@ func TestUnknownObject(t *testing.T) {
 		// S3 DeleteObject doesn't return an error for non-existent objects
 		// This is expected AWS S3 behavior
 		t.Errorf("Unexpected error when removing non-existing object: %s", err)
+	}
+}
+
+func TestMultipartUpload(t *testing.T) {
+	// Initialize with a 5 MB part size to force multipart upload for our test data
+	expiry := time.Second * 10
+	timeout := time.Second * 30
+	transferTimeout := time.Minute * 10
+	partSize := int64(5 * 1024 * 1024) // 5 MB
+	concurrency := 3
+	s3ao, err := Init(ENDPOINT, BUCKET+"-multipart", REGION, ACCESS_KEY, SECRET_KEY, false, expiry, timeout, transferTimeout, partSize, concurrency)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = s3ao.RemoveBucket() }()
+
+	// Create ~11 MB of content to exceed the 5 MB part size threshold
+	contentSize := 11 * 1024 * 1024
+	content := make([]byte, contentSize)
+	for i := range content {
+		content[i] = byte(i % 256)
+	}
+
+	// Calculate SHA256 of content
+	h := sha256.New()
+	h.Write(content)
+	contentSHA256 := fmt.Sprintf("%x", h.Sum(nil))
+
+	// Upload using PutObjectByHash (this should trigger multipart upload)
+	err = s3ao.PutObjectByHash(contentSHA256, bytes.NewReader(content), int64(contentSize))
+	if err != nil {
+		t.Fatalf("Unable to put object via multipart upload: %s", err)
+	}
+
+	// Download and verify content matches
+	fp, err := s3ao.GetObject(contentSHA256, 0, 0)
+	if err != nil {
+		t.Fatalf("Unable to get object: %s", err)
+	}
+	defer fp.Close()
+
+	downloaded, err := io.ReadAll(fp)
+	if err != nil {
+		t.Fatalf("Unable to read downloaded object: %s", err)
+	}
+
+	if len(downloaded) != contentSize {
+		t.Errorf("Downloaded size mismatch: expected %d, got %d", contentSize, len(downloaded))
+	}
+
+	if !bytes.Equal(content, downloaded) {
+		t.Error("Downloaded content does not match uploaded content")
 	}
 }
