@@ -78,7 +78,6 @@ var (
 	s3RegionFlag          = flag.String("s3-region", "", "S3 region")
 	s3AccessKeyFlag       = flag.String("s3-access-key", "", "S3 access key")
 	s3SecretKeyFlag       = flag.String("s3-secret-key", "", "S3 secret key")
-	s3TraceFlag           = flag.Bool("s3-trace", false, "Enable S3 HTTP tracing for debugging")
 	s3SecureFlag          = flag.Bool("s3-secure", true, "Use TLS when connecting to S3")
 	s3UrlTtlFlag          = flag.String("s3-url-ttl", "1m", "The time to live for presigned S3 URLs, for example 30s or 5m")
 	s3TimeoutFlag         = flag.String("s3-timeout", "30s", "Timeout for quick S3 operations (delete, head, stat)")
@@ -277,9 +276,6 @@ func main() {
 	if *s3SecretKeyFlag == "" {
 		*s3SecretKeyFlag = os.Getenv("FILEBIN_S3_SECRET_KEY")
 	}
-	if v := os.Getenv("FILEBIN_S3_TRACE"); v != "" {
-		*s3TraceFlag = v == "true" || v == "1" || v == "yes"
-	}
 	if v := os.Getenv("FILEBIN_S3_SECURE"); v != "" {
 		*s3SecureFlag = v == "true" || v == "1" || v == "yes"
 	}
@@ -443,10 +439,6 @@ func main() {
 	if err != nil {
 		slog.Error("unable to initialize S3 connection", "error", err)
 		os.Exit(2)
-	}
-
-	if *s3TraceFlag {
-		s3conn.SetTrace(*s3TraceFlag)
 	}
 
 	// Create and start the lurker process

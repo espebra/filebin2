@@ -180,37 +180,6 @@ func (s S3AO) Status() bool {
 	return true
 }
 
-func (s S3AO) SetTrace(trace bool) {
-	// AWS SDK v2 doesn't have a simple trace toggle like Minio
-	// Logging can be configured via the AWS config if needed
-	if trace {
-		slog.Info("S3 tracing enabled (limited in AWS SDK v2)")
-	}
-}
-
-// upload is the internal method that uses the upload manager for all uploads.
-// For files smaller than or equal to the part size, it applies the transferTimeout context.
-// For larger files (multipart), it uses a background context to avoid premature cancellation.
-func (s S3AO) upload(key string, data io.Reader, size int64) error {
-	var ctx context.Context
-	var cancel context.CancelFunc
-
-	if size <= s.partSize {
-		ctx, cancel = context.WithTimeout(context.Background(), s.transferTimeout)
-		defer cancel()
-	} else {
-		ctx = context.Background()
-	}
-
-	_, err := s.uploader.Upload(ctx, &s3.PutObjectInput{
-		Bucket:      aws.String(s.bucket),
-		Key:         aws.String(key),
-		Body:        data,
-		ContentType: aws.String("application/octet-stream"),
-	})
-	return err
-}
-
 func (s S3AO) PutObject(bin string, filename string, data io.Reader, size int64) (err error) {
 	// Hash the path in S3
 	objectKey := s.GetObjectKey(bin, filename)
