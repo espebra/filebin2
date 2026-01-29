@@ -423,7 +423,19 @@ func main() {
 	}
 	slog.Info("configured S3 multipart upload", "part_size", humanize.Bytes(s3MultipartPartSize), "concurrency", *s3MultipartConcurrencyFlag)
 
-	s3conn, err := s3.Init(*s3EndpointFlag, *s3BucketFlag, *s3RegionFlag, *s3AccessKeyFlag, *s3SecretKeyFlag, *s3SecureFlag, s3UrlTtl, s3Timeout, s3TransferTimeout, int64(s3MultipartPartSize), *s3MultipartConcurrencyFlag)
+	s3conn, err := s3.Init(s3.Config{
+		Endpoint:             *s3EndpointFlag,
+		Bucket:               *s3BucketFlag,
+		Region:               *s3RegionFlag,
+		AccessKey:            *s3AccessKeyFlag,
+		SecretKey:            *s3SecretKeyFlag,
+		Secure:               *s3SecureFlag,
+		PresignExpiry:        s3UrlTtl,
+		Timeout:              s3Timeout,
+		TransferTimeout:      s3TransferTimeout,
+		MultipartPartSize:    int64(s3MultipartPartSize),
+		MultipartConcurrency: *s3MultipartConcurrencyFlag,
+	})
 	if err != nil {
 		slog.Error("unable to initialize S3 connection", "error", err)
 		os.Exit(2)
