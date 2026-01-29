@@ -399,7 +399,6 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 			err := h.s3.PutObjectByHash(file.SHA256, fp, nBytes)
 			if err == nil {
 				// Completed successfully
-				h.s3.SetTrace(false)
 				break
 			} else {
 				// Completed with error
@@ -417,7 +416,6 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 				time.Sleep(time.Duration(retryCounter) * time.Second)
 
 				// Get some more debug data in case the retry also fails
-				h.s3.SetTrace(true)
 			}
 		}
 	}

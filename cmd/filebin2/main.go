@@ -81,7 +81,9 @@ var (
 	s3SecureFlag          = flag.Bool("s3-secure", true, "Use TLS when connecting to S3")
 	s3UrlTtlFlag          = flag.String("s3-url-ttl", "1m", "The time to live for presigned S3 URLs, for example 30s or 5m")
 	s3TimeoutFlag         = flag.String("s3-timeout", "30s", "Timeout for quick S3 operations (delete, head, stat)")
-	s3TransferTimeoutFlag = flag.String("s3-transfer-timeout", "10m", "Timeout for S3 data transfers (put, get, copy)")
+	s3TransferTimeoutFlag       = flag.String("s3-transfer-timeout", "10m", "Timeout for S3 data transfers (put, get, copy)")
+	s3MultipartPartSizeFlag     = flag.String("s3-multipart-part-size", "64MB", "Multipart upload part size (e.g. 5MB, 64MB, 128MB). Files larger than this use multipart upload.")
+	s3MultipartConcurrencyFlag  = flag.Int("s3-multipart-concurrency", 3, "Number of concurrent part uploads for multipart uploads")
 
 	// Lurker
 	lurkerIntervalFlag = flag.Int("lurker-interval", 300, "Lurker interval is the delay to sleep between each run in seconds")
@@ -286,6 +288,14 @@ func main() {
 	if v := os.Getenv("FILEBIN_S3_TRANSFER_TIMEOUT"); v != "" && *s3TransferTimeoutFlag == "10m" {
 		*s3TransferTimeoutFlag = v
 	}
+	if v := os.Getenv("FILEBIN_S3_MULTIPART_PART_SIZE"); v != "" && *s3MultipartPartSizeFlag == "64MB" {
+		*s3MultipartPartSizeFlag = v
+	}
+	if v := os.Getenv("FILEBIN_S3_MULTIPART_CONCURRENCY"); v != "" && *s3MultipartConcurrencyFlag == 3 {
+		if i, err := strconv.Atoi(v); err == nil {
+			*s3MultipartConcurrencyFlag = i
+		}
+	}
 
 	// Lurker
 	if v := os.Getenv("FILEBIN_LURKER_INTERVAL"); v != "" && *lurkerIntervalFlag == 300 {
@@ -406,7 +416,14 @@ func main() {
 		slog.Info("rejecting file extension", "extension", v)
 	}
 
-	s3conn, err := s3.Init(*s3EndpointFlag, *s3BucketFlag, *s3RegionFlag, *s3AccessKeyFlag, *s3SecretKeyFlag, *s3SecureFlag, s3UrlTtl, s3Timeout, s3TransferTimeout)
+	s3MultipartPartSize, err := humanize.ParseBytes(*s3MultipartPartSizeFlag)
+	if err != nil {
+		slog.Error("unable to parse --s3-multipart-part-size", "error", err)
+		os.Exit(2)
+	}
+	slog.Info("configured S3 multipart upload", "part_size", humanize.Bytes(s3MultipartPartSize), "concurrency", *s3MultipartConcurrencyFlag)
+
+	s3conn, err := s3.Init(*s3EndpointFlag, *s3BucketFlag, *s3RegionFlag, *s3AccessKeyFlag, *s3SecretKeyFlag, *s3SecureFlag, s3UrlTtl, s3Timeout, s3TransferTimeout, int64(s3MultipartPartSize), *s3MultipartConcurrencyFlag)
 	if err != nil {
 		slog.Error("unable to initialize S3 connection", "error", err)
 		os.Exit(2)
