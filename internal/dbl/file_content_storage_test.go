@@ -18,12 +18,19 @@ const (
 )
 
 func setupS3() (s3.S3AO, error) {
-	expiry := time.Second * 60
-	timeout := time.Second * 30
-	transferTimeout := time.Minute * 10
-	partSize := int64(64 * 1024 * 1024) // 64 MB
-	concurrency := 3
-	s3ao, err := s3.Init(testS3Endpoint, testS3Bucket, testS3Region, testS3AccessKey, testS3SecretKey, false, expiry, timeout, transferTimeout, partSize, concurrency)
+	s3ao, err := s3.Init(s3.Config{
+		Endpoint:             testS3Endpoint,
+		Bucket:               testS3Bucket,
+		Region:               testS3Region,
+		AccessKey:            testS3AccessKey,
+		SecretKey:            testS3SecretKey,
+		Secure:               false,
+		PresignExpiry:        time.Second * 60,
+		Timeout:              time.Second * 30,
+		TransferTimeout:      time.Minute * 10,
+		MultipartPartSize:    64 * 1024 * 1024, // 64 MB
+		MultipartConcurrency: 3,
+	})
 	if err != nil {
 		return s3ao, err
 	}
