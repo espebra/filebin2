@@ -49,7 +49,7 @@ func main() {
 	defer dao.Close()
 
 	// Initialize S3
-	s3ao, err := s3.Init(*s3Endpoint, *s3Bucket, *s3Region, *s3AccessKey, *s3SecretKey, *s3Secure, 60*time.Second, 30*time.Second, 10*time.Minute)
+	s3ao, err := s3.Init(*s3Endpoint, *s3Bucket, *s3Region, *s3AccessKey, *s3SecretKey, *s3Secure, 60*time.Second, 30*time.Second, 10*time.Minute, 64*1024*1024, 3)
 	if err != nil {
 		fmt.Printf("Failed to initialize S3: %s\n", err)
 		os.Exit(1)

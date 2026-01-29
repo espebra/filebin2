@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go/middleware"
@@ -25,12 +26,14 @@ import (
 type S3AO struct {
 	client          *s3.Client
 	presignClient   *s3.PresignClient
+	uploader        *manager.Uploader
 	bucket          string
 	endpoint        string
 	secure          bool
 	expiry          time.Duration
 	timeout         time.Duration // timeout for quick operations (delete, head, stat)
 	transferTimeout time.Duration // timeout for data transfers (put, get, copy)
+	partSize        int64         // multipart upload part size in bytes
 }
 
 type BucketMetrics struct {
@@ -45,7 +48,7 @@ type BucketMetrics struct {
 }
 
 // Initialize S3AO
-func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool, presignExpiry, timeout, transferTimeout time.Duration) (S3AO, error) {
+func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool, presignExpiry, timeout, transferTimeout time.Duration, multipartPartSize int64, multipartConcurrency int) (S3AO, error) {
 	var s3ao S3AO
 
 	if endpoint == "" {
@@ -97,6 +100,13 @@ func Init(endpoint, bucket, region, accessKey, secretKey string, secure bool, pr
 	s3ao.expiry = presignExpiry
 	s3ao.timeout = timeout
 	s3ao.transferTimeout = transferTimeout
+	s3ao.partSize = multipartPartSize
+
+	// Create the upload manager for automatic multipart upload handling
+	s3ao.uploader = manager.NewUploader(client, func(u *manager.Uploader) {
+		u.PartSize = multipartPartSize
+		u.Concurrency = multipartConcurrency
+	})
 
 	slog.Info("established session to S3", "endpoint", endpoint)
 
@@ -163,21 +173,34 @@ func (s S3AO) SetTrace(trace bool) {
 	}
 }
 
+// upload is the internal method that uses the upload manager for all uploads.
+// For files smaller than or equal to the part size, it applies the transferTimeout context.
+// For larger files (multipart), it uses a background context to avoid premature cancellation.
+func (s S3AO) upload(key string, data io.Reader, size int64) error {
+	var ctx context.Context
+	var cancel context.CancelFunc
+
+	if size <= s.partSize {
+		ctx, cancel = context.WithTimeout(context.Background(), s.transferTimeout)
+		defer cancel()
+	} else {
+		ctx = context.Background()
+	}
+
+	_, err := s.uploader.Upload(ctx, &s3.PutObjectInput{
+		Bucket:      aws.String(s.bucket),
+		Key:         aws.String(key),
+		Body:        data,
+		ContentType: aws.String("application/octet-stream"),
+	})
+	return err
+}
+
 func (s S3AO) PutObject(bin string, filename string, data io.Reader, size int64) (err error) {
 	// Hash the path in S3
 	objectKey := s.GetObjectKey(bin, filename)
 
-	ctx, cancel := context.WithTimeout(context.Background(), s.transferTimeout)
-	defer cancel()
-
-	_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
-		Bucket:        aws.String(s.bucket),
-		Key:           aws.String(objectKey),
-		Body:          data,
-		ContentLength: aws.Int64(size),
-		ContentType:   aws.String("application/octet-stream"),
-	})
-	if err != nil {
+	if err := s.upload(objectKey, data, size); err != nil {
 		slog.Error("unable to put object", "key", objectKey, "error", err)
 		return err
 	}
@@ -390,17 +413,7 @@ func (s S3AO) GetObjectKey(bin string, filename string) (key string) {
 
 // PutObjectByHash uploads an object using content-addressable storage (SHA256 as key)
 func (s S3AO) PutObjectByHash(contentSHA256 string, data io.Reader, size int64) (err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), s.transferTimeout)
-	defer cancel()
-
-	_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
-		Bucket:        aws.String(s.bucket),
-		Key:           aws.String(contentSHA256),
-		Body:          data,
-		ContentLength: aws.Int64(size),
-		ContentType:   aws.String("application/octet-stream"),
-	})
-	if err != nil {
+	if err := s.upload(contentSHA256, data, size); err != nil {
 		slog.Error("unable to put object", "sha256", contentSHA256, "error", err)
 		return err
 	}
