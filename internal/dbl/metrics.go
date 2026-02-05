@@ -11,15 +11,21 @@ import (
 )
 
 type PostgresStats struct {
-	Version               string  `json:"version"`
-	DatabaseSize          uint64  `json:"database_size"`
-	DatabaseSizeReadable  string  `json:"database_size_readable"`
-	ActiveConnections     int     `json:"active_connections"`
-	TxCommitted           int64   `json:"tx_committed"`
-	TxRolledBack          int64   `json:"tx_rolled_back"`
-	CacheHitRatio         float64 `json:"cache_hit_ratio"`
-	CacheHitRatioReadable string  `json:"cache_hit_ratio_readable"`
-	TotalDeadTuples       int64   `json:"total_dead_tuples"`
+	Version               string    `json:"version"`
+	ServerStartedAt       time.Time `json:"server_started_at"`
+	ServerUptime          string    `json:"server_uptime"`
+	DatabaseSize          uint64    `json:"database_size"`
+	DatabaseSizeReadable  string    `json:"database_size_readable"`
+	ActiveConnections     int       `json:"active_connections"`
+	TxCommitted           int64     `json:"tx_committed"`
+	TxRolledBack          int64     `json:"tx_rolled_back"`
+	CacheHitRatio         float64   `json:"cache_hit_ratio"`
+	CacheHitRatioReadable string    `json:"cache_hit_ratio_readable"`
+	TotalLiveTuples       int64     `json:"total_live_tuples"`
+	TotalDeadTuples       int64     `json:"total_dead_tuples"`
+	DeadTupleRatio        float64   `json:"dead_tuple_ratio"`
+	DeadTupleRatioReadable string   `json:"dead_tuple_ratio_readable"`
+	TransactionIDAge      int64     `json:"transaction_id_age"`
 }
 
 func (d *MetricsDao) PostgresStats() (PostgresStats, error) {
@@ -29,6 +35,12 @@ func (d *MetricsDao) PostgresStats() (PostgresStats, error) {
 	if err := d.db.QueryRow("SELECT version()").Scan(&stats.Version); err != nil {
 		return stats, fmt.Errorf("query version: %w", err)
 	}
+
+	// Server start time
+	if err := d.db.QueryRow("SELECT pg_postmaster_start_time()").Scan(&stats.ServerStartedAt); err != nil {
+		return stats, fmt.Errorf("query server start time: %w", err)
+	}
+	stats.ServerUptime = time.Since(stats.ServerStartedAt).Round(time.Second).String()
 
 	// Database size
 	if err := d.db.QueryRow("SELECT pg_database_size(current_database())").Scan(&stats.DatabaseSize); err != nil {
@@ -51,9 +63,18 @@ func (d *MetricsDao) PostgresStats() (PostgresStats, error) {
 	}
 	stats.CacheHitRatioReadable = fmt.Sprintf("%.2f%%", stats.CacheHitRatio*100)
 
-	// Dead tuples
-	if err := d.db.QueryRow("SELECT COALESCE(SUM(n_dead_tup), 0) FROM pg_stat_user_tables").Scan(&stats.TotalDeadTuples); err != nil {
-		return stats, fmt.Errorf("query dead tuples: %w", err)
+	// Live and dead tuples
+	if err := d.db.QueryRow("SELECT COALESCE(SUM(n_live_tup), 0), COALESCE(SUM(n_dead_tup), 0) FROM pg_stat_user_tables").Scan(&stats.TotalLiveTuples, &stats.TotalDeadTuples); err != nil {
+		return stats, fmt.Errorf("query tuple stats: %w", err)
+	}
+	if stats.TotalLiveTuples+stats.TotalDeadTuples > 0 {
+		stats.DeadTupleRatio = float64(stats.TotalDeadTuples) / float64(stats.TotalLiveTuples+stats.TotalDeadTuples)
+	}
+	stats.DeadTupleRatioReadable = fmt.Sprintf("%.2f%%", stats.DeadTupleRatio*100)
+
+	// Transaction ID age (distance to wraparound)
+	if err := d.db.QueryRow("SELECT age(datfrozenxid) FROM pg_database WHERE datname = current_database()").Scan(&stats.TransactionIDAge); err != nil {
+		return stats, fmt.Errorf("query transaction id age: %w", err)
 	}
 
 	return stats, nil

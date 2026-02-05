@@ -111,12 +111,16 @@
         <h2>PostgreSQL statistics</h2>
         <ul>
             <li>Version: {{ .PostgresStats.Version }}</li>
+            <li>Server started at: {{ .PostgresStats.ServerStartedAt.Format "2006-01-02 15:04:05 UTC" }}</li>
+            <li>Server uptime: {{ .PostgresStats.ServerUptime }}</li>
             <li>Database size: {{ .PostgresStats.DatabaseSizeReadable }} ({{ .PostgresStats.DatabaseSize }} bytes)</li>
             <li>Active connections (own): {{ .PostgresStats.ActiveConnections }}</li>
             <li>Transactions committed: {{ .PostgresStats.TxCommitted }}</li>
             <li>Transactions rolled back: {{ .PostgresStats.TxRolledBack }}</li>
             <li>Cache hit ratio: {{ .PostgresStats.CacheHitRatioReadable }}</li>
-            <li>Dead tuples: {{ .PostgresStats.TotalDeadTuples }}</li>
+            <li>Live tuples: {{ .PostgresStats.TotalLiveTuples }}</li>
+            <li>Dead tuples: {{ .PostgresStats.TotalDeadTuples }} ({{ .PostgresStats.DeadTupleRatioReadable }})</li>
+            <li>Transaction ID age: {{ .PostgresStats.TransactionIDAge }}</li>
         </ul>
         {{ end }}
 
