@@ -107,6 +107,19 @@
             <li>The total number of connections closed due to SetConnMaxLifetime: {{ .DBStats.MaxLifetimeClosed}}</li>
         </ul>
 
+        {{ if .PostgresStats }}
+        <h2>PostgreSQL statistics</h2>
+        <ul>
+            <li>Version: {{ .PostgresStats.Version }}</li>
+            <li>Database size: {{ .PostgresStats.DatabaseSizeReadable }} ({{ .PostgresStats.DatabaseSize }} bytes)</li>
+            <li>Active connections (own): {{ .PostgresStats.ActiveConnections }}</li>
+            <li>Transactions committed: {{ .PostgresStats.TxCommitted }}</li>
+            <li>Transactions rolled back: {{ .PostgresStats.TxRolledBack }}</li>
+            <li>Cache hit ratio: {{ .PostgresStats.CacheHitRatioReadable }}</li>
+            <li>Dead tuples: {{ .PostgresStats.TotalDeadTuples }}</li>
+        </ul>
+        {{ end }}
+
         <script src="/static/js/popper.min.js"></script>
         <script src="/static/js/bootstrap.min.js"></script>
     </body>

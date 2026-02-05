@@ -69,8 +69,10 @@ var (
 	dbNameFlag         = flag.String("db-name", "", "Name of the database")
 	dbUsernameFlag     = flag.String("db-username", "", "Database username")
 	dbPasswordFlag     = flag.String("db-password", "", "Database password")
-	dbMaxOpenConnsFlag = flag.Int("db-max-open-conns", 25, "Maximum number of open database connections")
-	dbMaxIdleConnsFlag = flag.Int("db-max-idle-conns", 25, "Maximum number of idle database connections")
+	dbMaxOpenConnsFlag      = flag.Int("db-max-open-conns", 25, "Maximum number of open database connections")
+	dbMaxIdleConnsFlag      = flag.Int("db-max-idle-conns", 25, "Maximum number of idle database connections")
+	dbConnMaxLifetimeFlag   = flag.Duration("db-conn-max-lifetime", 5*time.Minute, "Maximum time a database connection may be reused")
+	dbConnMaxIdleTimeFlag   = flag.Duration("db-conn-max-idle-time", 1*time.Minute, "Maximum time a database connection may be idle before being closed")
 
 	// S3
 	s3EndpointFlag        = flag.String("s3-endpoint", "", "S3 endpoint")
@@ -259,6 +261,16 @@ func main() {
 			*dbMaxIdleConnsFlag = i
 		}
 	}
+	if v := os.Getenv("FILEBIN_DATABASE_CONN_MAX_LIFETIME"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			*dbConnMaxLifetimeFlag = d
+		}
+	}
+	if v := os.Getenv("FILEBIN_DATABASE_CONN_MAX_IDLE_TIME"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			*dbConnMaxIdleTimeFlag = d
+		}
+	}
 
 	// S3
 	if *s3EndpointFlag == "" {
@@ -382,7 +394,17 @@ func main() {
 		dbport = 5432
 	}
 
-	daoconn, err := dbl.Init(*dbHostFlag, dbport, *dbNameFlag, *dbUsernameFlag, *dbPasswordFlag, *dbMaxOpenConnsFlag, *dbMaxIdleConnsFlag)
+	daoconn, err := dbl.Init(dbl.DBConfig{
+		Host:            *dbHostFlag,
+		Port:            dbport,
+		Name:            *dbNameFlag,
+		Username:        *dbUsernameFlag,
+		Password:        *dbPasswordFlag,
+		MaxOpenConns:    *dbMaxOpenConnsFlag,
+		MaxIdleConns:    *dbMaxIdleConnsFlag,
+		ConnMaxLifetime: *dbConnMaxLifetimeFlag,
+		ConnMaxIdleTime: *dbConnMaxIdleTimeFlag,
+	})
 	if err != nil {
 		slog.Error("unable to connect to the database", "error", err)
 		os.Exit(2)
