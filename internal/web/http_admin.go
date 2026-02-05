@@ -11,6 +11,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/gorilla/mux"
 
+	"github.com/espebra/filebin2/internal/dbl"
 	"github.com/espebra/filebin2/internal/ds"
 	"github.com/espebra/filebin2/internal/s3"
 )
@@ -35,9 +36,10 @@ func (h *HTTP) viewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 		DBStats        sql.DBStats      `json:"db_stats"`
 		Config         ds.Config        `json:"-"`
 		AdminLogins    []AdminLogin     `json:"admin_logins"`
-		StorageMetrics StorageMetrics   `json:"storage_metrics"`
-		StartedAt      time.Time        `json:"started_at"`
-		UptimeReadable string           `json:"uptime_readable"`
+		StorageMetrics StorageMetrics      `json:"storage_metrics"`
+		PostgresStats  *dbl.PostgresStats `json:"postgres_stats,omitempty"`
+		StartedAt      time.Time          `json:"started_at"`
+		UptimeReadable string             `json:"uptime_readable"`
 	}
 	var data Data
 	data.Config = *h.config
@@ -92,6 +94,13 @@ func (h *HTTP) viewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	//data.DBMetrics.FreeBytesReadable = humanize.Bytes(uint64(freeBytes))
 
 	data.DBStats = h.dao.Stats()
+
+	pgStats, err := h.dao.Metrics().PostgresStats()
+	if err != nil {
+		slog.Error("unable to get postgres stats", "error", err)
+	} else {
+		data.PostgresStats = &pgStats
+	}
 
 	//binsAvailable, err := h.dao.Bin().GetAll()
 	//if err != nil {

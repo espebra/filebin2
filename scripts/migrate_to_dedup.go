@@ -41,7 +41,17 @@ func main() {
 	fmt.Println()
 
 	// Initialize database
-	dao, err := dbl.Init(*dbHost, *dbPort, *dbName, *dbUser, *dbPassword, 25, 25)
+	dao, err := dbl.Init(dbl.DBConfig{
+		Host:            *dbHost,
+		Port:            *dbPort,
+		Name:            *dbName,
+		Username:        *dbUser,
+		Password:        *dbPassword,
+		MaxOpenConns:    25,
+		MaxIdleConns:    25,
+		ConnMaxLifetime: 5 * time.Minute,
+		ConnMaxIdleTime: 1 * time.Minute,
+	})
 	if err != nil {
 		fmt.Printf("Failed to initialize database: %s\n", err)
 		os.Exit(1)

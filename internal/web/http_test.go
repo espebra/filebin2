@@ -42,7 +42,17 @@ var (
 )
 
 func tearUp() (dao dbl.DAO, s3ao s3.S3AO, err error) {
-	dao, err = dbl.Init(testDbHost, testDbPort, testDbName, testDbUser, testDbPassword, 25, 25)
+	dao, err = dbl.Init(dbl.DBConfig{
+		Host:            testDbHost,
+		Port:            testDbPort,
+		Name:            testDbName,
+		Username:        testDbUser,
+		Password:        testDbPassword,
+		MaxOpenConns:    25,
+		MaxIdleConns:    25,
+		ConnMaxLifetime: 5 * time.Minute,
+		ConnMaxIdleTime: 1 * time.Minute,
+	})
 	if err != nil {
 		return dao, s3ao, err
 	}

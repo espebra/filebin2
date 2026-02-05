@@ -24,11 +24,21 @@ type DAO struct {
 	clientDao      *ClientDao
 }
 
-// Init a database connection given
-// a database name and user.
-func Init(dbHost string, dbPort int, dbName, dbUser, dbPassword string, maxOpenConns, maxIdleConns int) (DAO, error) {
+type DBConfig struct {
+	Host            string
+	Port            int
+	Name            string
+	Username        string
+	Password        string
+	MaxOpenConns    int
+	MaxIdleConns    int
+	ConnMaxLifetime time.Duration
+	ConnMaxIdleTime time.Duration
+}
+
+func Init(cfg DBConfig) (DAO, error) {
 	var dao DAO
-	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", dbHost, dbPort, dbUser, dbPassword, dbName)
+	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", cfg.Host, cfg.Port, cfg.Username, cfg.Password, cfg.Name)
 
 	// Retry logic for database connection with 30 second timeout
 	retryTimeout := 30 * time.Second
@@ -55,14 +65,14 @@ func Init(dbHost string, dbPort int, dbName, dbUser, dbPassword string, maxOpenC
 
 		err = db.Ping()
 		if err == nil {
-			slog.Info("connected to database", "host", dbHost, "port", dbPort)
+			slog.Info("connected to database", "host", cfg.Host, "port", cfg.Port)
 			break
 		}
 
 		db.Close()
 		elapsed := time.Since(startTime)
 		if elapsed >= retryTimeout {
-			return dao, fmt.Errorf("unable to ping database after %.0fs: %s:%d", elapsed.Seconds(), dbHost, dbPort)
+			return dao, fmt.Errorf("unable to ping database after %.0fs: %s:%d", elapsed.Seconds(), cfg.Host, cfg.Port)
 		}
 		slog.Warn("database not available yet, retrying",
 			"elapsed_seconds", elapsed.Seconds(),
@@ -71,10 +81,10 @@ func Init(dbHost string, dbPort int, dbName, dbUser, dbPassword string, maxOpenC
 		time.Sleep(retryInterval)
 	}
 
-	db.SetMaxOpenConns(maxOpenConns)
-	db.SetMaxIdleConns(maxIdleConns)
-	db.SetConnMaxLifetime(5 * time.Minute)
-	db.SetConnMaxIdleTime(1 * time.Minute)
+	db.SetMaxOpenConns(cfg.MaxOpenConns)
+	db.SetMaxIdleConns(cfg.MaxIdleConns)
+	db.SetConnMaxLifetime(cfg.ConnMaxLifetime)
+	db.SetConnMaxIdleTime(cfg.ConnMaxIdleTime)
 
 	dao = DAO{db: db}
 	dao.ConnStr = connStr

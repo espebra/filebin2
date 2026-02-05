@@ -354,6 +354,24 @@ Maximum number of idle database connections.
 
 ---
 
+**Connection Max Lifetime**
+- Environment Variable: `FILEBIN_DATABASE_CONN_MAX_LIFETIME`
+- Command Line Argument: `--db-conn-max-lifetime`
+- Default: `5m`
+
+Maximum time a database connection may be reused before it is closed and replaced. The value is specified using Go duration format, examples: `5m`, `10m`, `1h`.
+
+---
+
+**Connection Max Idle Time**
+- Environment Variable: `FILEBIN_DATABASE_CONN_MAX_IDLE_TIME`
+- Command Line Argument: `--db-conn-max-idle-time`
+- Default: `1m`
+
+Maximum time a database connection may sit idle before it is closed. The value is specified using Go duration format, examples: `1m`, `5m`, `10m`.
+
+---
+
 #### S3 Storage
 
 **S3 Endpoint**
