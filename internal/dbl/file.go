@@ -15,7 +15,8 @@ import (
 )
 
 type FileDao struct {
-	db *sql.DB
+	db      *sql.DB
+	metrics DBMetricsObserver
 }
 
 func setCategory(file *ds.File) {
@@ -100,7 +101,9 @@ func (d *FileDao) ValidateInput(file *ds.File) error {
 
 func (d *FileDao) GetByID(id int) (file ds.File, found bool, err error) {
 	sqlStatement := "SELECT f.id, f.bin_id, f.filename, fc.mime, fc.bytes, fc.md5, f.sha256, f.downloads, f.updates, fc.in_storage, f.ip, f.headers, f.updated_at, f.created_at, f.deleted_at, b.deleted_at, b.expired_at, f.upload_duration_ms FROM file f JOIN file_content fc ON f.sha256 = fc.sha256 LEFT JOIN bin b ON f.bin_id = b.id WHERE f.id = $1 LIMIT 1"
+	t0 := time.Now()
 	err = d.db.QueryRow(sqlStatement, id).Scan(&file.Id, &file.Bin, &file.Filename, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updates, &file.InStorage, &file.IP, &file.Headers, &file.UpdatedAt, &file.CreatedAt, &file.DeletedAt, &file.BinDeletedAt, &file.BinExpiredAt, &file.UploadDurationMs)
+	observeQuery(d.metrics, "file_get_by_id", t0, err)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return file, false, nil
@@ -138,7 +141,9 @@ func (d *FileDao) GetByID(id int) (file ds.File, found bool, err error) {
 
 func (d *FileDao) GetByName(bin string, filename string) (file ds.File, found bool, err error) {
 	sqlStatement := "SELECT f.id, f.bin_id, f.filename, fc.mime, fc.bytes, fc.md5, f.sha256, f.downloads, f.updates, fc.in_storage, f.ip, f.headers, f.updated_at, f.created_at, f.deleted_at, b.deleted_at, b.expired_at, f.upload_duration_ms FROM file f JOIN file_content fc ON f.sha256 = fc.sha256 LEFT JOIN bin b ON f.bin_id = b.id WHERE f.bin_id = $1 AND f.filename = $2 LIMIT 1"
+	t0 := time.Now()
 	err = d.db.QueryRow(sqlStatement, bin, filename).Scan(&file.Id, &file.Bin, &file.Filename, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updates, &file.InStorage, &file.IP, &file.Headers, &file.UpdatedAt, &file.CreatedAt, &file.DeletedAt, &file.BinDeletedAt, &file.BinExpiredAt, &file.UploadDurationMs)
+	observeQuery(d.metrics, "file_get_by_name", t0, err)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return file, false, nil
@@ -195,7 +200,9 @@ func (d *FileDao) IsAvailableForDownload(fileId int) (bool, error) {
 				AND fc.in_storage = true
 		)`
 
+	t0 := time.Now()
 	err := d.db.QueryRow(sqlStatement, fileId).Scan(&available)
+	observeQuery(d.metrics, "file_is_available", t0, err)
 	if err != nil {
 		return false, err
 	}
@@ -220,7 +227,9 @@ func (d *FileDao) Insert(file *ds.File) (err error) {
 	}
 
 	sqlStatement := "INSERT INTO file (bin_id, filename, sha256, downloads, updates, ip, headers, updated_at, created_at, deleted_at, upload_duration_ms) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id"
+	t0 := time.Now()
 	err = d.db.QueryRow(sqlStatement, file.Bin, file.Filename, file.SHA256, downloads, updates, file.IP, file.Headers, now, now, file.DeletedAt, file.UploadDurationMs).Scan(&file.Id)
+	observeQuery(d.metrics, "file_insert", t0, err)
 	if err != nil {
 		return err
 	}
@@ -242,7 +251,9 @@ func (d *FileDao) Update(file *ds.File) (err error) {
 	var id int
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	sqlStatement := "UPDATE file SET filename = $1, sha256 = $2, updates = $3, updated_at = $4, deleted_at = $5, ip = $6, headers = $7, upload_duration_ms = $8 WHERE id = $9 RETURNING id"
+	t0 := time.Now()
 	err = d.db.QueryRow(sqlStatement, file.Filename, file.SHA256, file.Updates, now, file.DeletedAt, file.IP, file.Headers, file.UploadDurationMs, file.Id).Scan(&id)
+	observeQuery(d.metrics, "file_update", t0, err)
 	if err != nil {
 		return err
 	}
@@ -258,7 +269,9 @@ func (d *FileDao) Update(file *ds.File) (err error) {
 
 func (d *FileDao) Delete(file *ds.File) (err error) {
 	sqlStatement := "DELETE FROM file WHERE id = $1"
+	t0 := time.Now()
 	res, err := d.db.Exec(sqlStatement, file.Id)
+	observeQuery(d.metrics, "file_delete", t0, err)
 	if err != nil {
 		return err
 	}
@@ -274,7 +287,9 @@ func (d *FileDao) Delete(file *ds.File) (err error) {
 
 func (d *FileDao) RegisterDownload(file *ds.File) (err error) {
 	sqlStatement := "UPDATE file SET downloads = downloads + 1 WHERE id = $1 RETURNING downloads"
+	t0 := time.Now()
 	err = d.db.QueryRow(sqlStatement, file.Id).Scan(&file.Downloads)
+	observeQuery(d.metrics, "file_register_download", t0, err)
 	if err != nil {
 		return err
 	}
@@ -373,7 +388,9 @@ func (d *FileDao) GetByUpdates(limit int) (files []ds.File, err error) {
 }
 
 func (d *FileDao) fileQuery(sqlStatement string, params ...interface{}) (files []ds.File, err error) {
+	t0 := time.Now()
 	rows, err := d.db.Query(sqlStatement, params...)
+	observeQuery(d.metrics, "file_query", t0, err)
 	if err != nil {
 		return files, err
 	}
@@ -426,7 +443,9 @@ func (d *FileDao) FilesByChecksum(limit int) (files []ds.FileByChecksum, err err
 		GROUP BY f.sha256, fc.mime, fc.bytes, fc.blocked
 		ORDER BY c DESC LIMIT $1`
 
+	t0 := time.Now()
 	rows, err := d.db.Query(sqlStatement, limit)
+	observeQuery(d.metrics, "file_by_checksum", t0, err)
 	if err != nil {
 		return files, err
 	}
@@ -453,7 +472,9 @@ func (d *FileDao) FilesByBytes(limit int) (files []ds.FileByChecksum, err error)
 		GROUP BY f.sha256, fc.mime, fc.bytes, fc.blocked
 		ORDER BY fc.bytes DESC LIMIT $1`
 
+	t0 := time.Now()
 	rows, err := d.db.Query(sqlStatement, limit)
+	observeQuery(d.metrics, "file_by_bytes", t0, err)
 	if err != nil {
 		return files, err
 	}
@@ -480,7 +501,9 @@ func (d *FileDao) FilesByBytesTotal(limit int) (files []ds.FileByChecksum, err e
 		GROUP BY f.sha256, fc.mime, fc.bytes, fc.blocked
 		ORDER BY bytes_total DESC LIMIT $1`
 
+	t0 := time.Now()
 	rows, err := d.db.Query(sqlStatement, limit)
+	observeQuery(d.metrics, "file_by_bytes_total", t0, err)
 	if err != nil {
 		return files, err
 	}
@@ -511,7 +534,9 @@ func (d *FileDao) CountBySHA256(sha256 string) (int, error) {
 	sqlStatement := `SELECT COUNT(*) FROM file f
 JOIN bin b ON f.bin_id = b.id
 WHERE f.sha256 = $1 AND f.deleted_at IS NULL AND b.deleted_at IS NULL AND b.expired_at > NOW()`
+	t0 := time.Now()
 	err := d.db.QueryRow(sqlStatement, sha256).Scan(&count)
+	observeQuery(d.metrics, "file_count_by_sha256", t0, err)
 	if err != nil {
 		return 0, err
 	}

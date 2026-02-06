@@ -32,7 +32,7 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile.release
+      dockerfile: Dockerfile.integration-tests
     restart: "no"
     environment:
       # Database
