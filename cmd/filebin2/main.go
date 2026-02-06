@@ -526,6 +526,12 @@ func main() {
 	metrics := ds.NewMetrics(*metricsIdFlag, metricsRegistry)
 	metrics.LimitBytes = config.LimitStorageBytes
 
+	// Wire S3 metrics
+	s3conn.SetMetrics(metrics)
+
+	// Wire database metrics
+	daoconn.SetMetrics(metrics)
+
 	// Create and initialize HTTP server
 	h := web.New(&daoconn, &s3conn, &geodb, wm, config, metrics, metricsRegistry)
 

@@ -233,6 +233,15 @@ func (h *HTTP) log(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc
 
 		completed := t0.Add(metrics.Duration)
 
+		// Derive a handler name from the matched route template
+		handler := "unknown"
+		if route := mux.CurrentRoute(r); route != nil {
+			if tmpl, err := route.GetPathTemplate(); err == nil {
+				handler = tmpl
+			}
+		}
+		h.metrics.ObserveHTTPRequest(r.Method, handler, metrics.Duration, metrics.Code)
+
 		// Only register transactions with a response status lower than 400, which
 		// includes file uploads, archive downloads and presigned downloads from S3.
 		// However, any client or server side errors are skipped to reduce the database

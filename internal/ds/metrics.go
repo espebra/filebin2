@@ -1,6 +1,10 @@
 package ds
 
 import (
+	"database/sql"
+	"strconv"
+	"time"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
@@ -37,6 +41,28 @@ type Metrics struct {
 	storageBytes         *prometheus.GaugeVec
 	files                prometheus.Gauge
 	bins                 prometheus.Gauge
+
+	// HTTP metrics
+	httpRequestDuration *prometheus.HistogramVec
+	httpResponseStatus  *prometheus.CounterVec
+
+	// S3 metrics
+	S3OperationDuration *prometheus.HistogramVec
+	S3OperationErrors   *prometheus.CounterVec
+
+	// Database query metrics
+	DBQueryDuration *prometheus.HistogramVec
+	DBQueryErrors   *prometheus.CounterVec
+
+	// Database connection pool metrics
+	dbOpenConnections      prometheus.Gauge
+	dbInUseConnections     prometheus.Gauge
+	dbIdleConnections      prometheus.Gauge
+	dbWaitCount            prometheus.Gauge
+	dbWaitDuration         prometheus.Gauge
+	dbMaxIdleClosed        prometheus.Gauge
+	dbMaxIdleTimeClosed    prometheus.Gauge
+	dbMaxLifetimeClosed    prometheus.Gauge
 }
 
 func NewMetrics(id string, registry *prometheus.Registry) *Metrics {
@@ -153,6 +179,123 @@ func NewMetrics(id string, registry *prometheus.Registry) *Metrics {
 		},
 	)
 
+	// HTTP request duration histogram
+	m.httpRequestDuration = factory.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "filebin_http_request_duration_seconds",
+			Help:    "HTTP request duration in seconds",
+			Buckets: []float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60},
+			ConstLabels: prometheus.Labels{
+				"id": id,
+			},
+		},
+		[]string{"method", "handler"},
+	)
+
+	// HTTP response status counter
+	m.httpResponseStatus = factory.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "filebin_http_responses_total",
+			Help: "Total HTTP responses by method and status code",
+			ConstLabels: prometheus.Labels{
+				"id": id,
+			},
+		},
+		[]string{"method", "code"},
+	)
+
+	// S3 operation duration histogram
+	m.S3OperationDuration = factory.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "filebin_s3_operation_duration_seconds",
+			Help:    "S3 operation duration in seconds",
+			Buckets: []float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60, 120},
+			ConstLabels: prometheus.Labels{
+				"id": id,
+			},
+		},
+		[]string{"operation"},
+	)
+
+	// S3 operation error counter
+	m.S3OperationErrors = factory.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "filebin_s3_operation_errors_total",
+			Help: "Total S3 operation errors",
+			ConstLabels: prometheus.Labels{
+				"id": id,
+			},
+		},
+		[]string{"operation"},
+	)
+
+	// Database query duration histogram
+	m.DBQueryDuration = factory.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "filebin_db_query_duration_seconds",
+			Help:    "Database query duration in seconds",
+			Buckets: []float64{0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5},
+			ConstLabels: prometheus.Labels{
+				"id": id,
+			},
+		},
+		[]string{"operation"},
+	)
+
+	// Database query error counter
+	m.DBQueryErrors = factory.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "filebin_db_query_errors_total",
+			Help: "Total database query errors",
+			ConstLabels: prometheus.Labels{
+				"id": id,
+			},
+		},
+		[]string{"operation"},
+	)
+
+	// Database connection pool gauges
+	m.dbOpenConnections = factory.NewGauge(prometheus.GaugeOpts{
+		Name:        "filebin_db_open_connections",
+		Help:        "Number of established database connections (in use + idle)",
+		ConstLabels: prometheus.Labels{"id": id},
+	})
+	m.dbInUseConnections = factory.NewGauge(prometheus.GaugeOpts{
+		Name:        "filebin_db_in_use_connections",
+		Help:        "Number of database connections currently in use",
+		ConstLabels: prometheus.Labels{"id": id},
+	})
+	m.dbIdleConnections = factory.NewGauge(prometheus.GaugeOpts{
+		Name:        "filebin_db_idle_connections",
+		Help:        "Number of idle database connections",
+		ConstLabels: prometheus.Labels{"id": id},
+	})
+	m.dbWaitCount = factory.NewGauge(prometheus.GaugeOpts{
+		Name:        "filebin_db_wait_count_total",
+		Help:        "Total number of connections waited for",
+		ConstLabels: prometheus.Labels{"id": id},
+	})
+	m.dbWaitDuration = factory.NewGauge(prometheus.GaugeOpts{
+		Name:        "filebin_db_wait_duration_seconds_total",
+		Help:        "Total time blocked waiting for a new connection in seconds",
+		ConstLabels: prometheus.Labels{"id": id},
+	})
+	m.dbMaxIdleClosed = factory.NewGauge(prometheus.GaugeOpts{
+		Name:        "filebin_db_max_idle_closed_total",
+		Help:        "Total connections closed due to SetMaxIdleConns",
+		ConstLabels: prometheus.Labels{"id": id},
+	})
+	m.dbMaxIdleTimeClosed = factory.NewGauge(prometheus.GaugeOpts{
+		Name:        "filebin_db_max_idle_time_closed_total",
+		Help:        "Total connections closed due to SetConnMaxIdleTime",
+		ConstLabels: prometheus.Labels{"id": id},
+	})
+	m.dbMaxLifetimeClosed = factory.NewGauge(prometheus.GaugeOpts{
+		Name:        "filebin_db_max_lifetime_closed_total",
+		Help:        "Total connections closed due to SetConnMaxLifetime",
+		ConstLabels: prometheus.Labels{"id": id},
+	})
+
 	return m
 }
 
@@ -261,4 +404,40 @@ func (m *Metrics) IncrStorageUploadInProgress() {
 
 func (m *Metrics) DecrStorageUploadInProgress() {
 	m.operationsInProgress.WithLabelValues("storage_upload").Dec()
+}
+
+// HTTP metrics methods
+func (m *Metrics) ObserveHTTPRequest(method, handler string, duration time.Duration, statusCode int) {
+	m.httpRequestDuration.WithLabelValues(method, handler).Observe(duration.Seconds())
+	m.httpResponseStatus.WithLabelValues(method, strconv.Itoa(statusCode)).Inc()
+}
+
+// S3 metrics methods
+func (m *Metrics) ObserveS3Operation(operation string, duration time.Duration) {
+	m.S3OperationDuration.WithLabelValues(operation).Observe(duration.Seconds())
+}
+
+func (m *Metrics) IncrS3OperationError(operation string) {
+	m.S3OperationErrors.WithLabelValues(operation).Inc()
+}
+
+// Database query metrics methods
+func (m *Metrics) ObserveDBQuery(operation string, duration time.Duration) {
+	m.DBQueryDuration.WithLabelValues(operation).Observe(duration.Seconds())
+}
+
+func (m *Metrics) IncrDBQueryError(operation string) {
+	m.DBQueryErrors.WithLabelValues(operation).Inc()
+}
+
+// Database connection pool metrics
+func (m *Metrics) UpdateDBStats(stats sql.DBStats) {
+	m.dbOpenConnections.Set(float64(stats.OpenConnections))
+	m.dbInUseConnections.Set(float64(stats.InUse))
+	m.dbIdleConnections.Set(float64(stats.Idle))
+	m.dbWaitCount.Set(float64(stats.WaitCount))
+	m.dbWaitDuration.Set(stats.WaitDuration.Seconds())
+	m.dbMaxIdleClosed.Set(float64(stats.MaxIdleClosed))
+	m.dbMaxIdleTimeClosed.Set(float64(stats.MaxIdleTimeClosed))
+	m.dbMaxLifetimeClosed.Set(float64(stats.MaxLifetimeClosed))
 }

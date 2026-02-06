@@ -12,12 +12,15 @@ import (
 )
 
 type ClientDao struct {
-	db *sql.DB
+	db      *sql.DB
+	metrics DBMetricsObserver
 }
 
 func (c *ClientDao) GetByIP(ip net.IP) (client ds.Client, found bool, err error) {
 	sqlStatement := "SELECT ip, asn, asn_organization, network, city, country, continent, proxy, requests, first_active_at, last_active_at, banned_at, banned_by FROM client WHERE ip = $1 LIMIT 1"
+	t0 := time.Now()
 	err = c.db.QueryRow(sqlStatement, ip.String()).Scan(&client.IP, &client.ASN, &client.ASNOrganization, &client.Network, &client.City, &client.Country, &client.Continent, &client.Proxy, &client.Requests, &client.FirstActiveAt, &client.LastActiveAt, &client.BannedAt, &client.BannedBy)
+	observeQuery(c.metrics, "client_get_by_ip", t0, err)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			client.IP = ip.String()
@@ -62,10 +65,13 @@ func (c *ClientDao) GetByRemoteAddr(remoteAddr string) (client ds.Client, found 
 func (c *ClientDao) Update(client *ds.Client) (err error) {
 	now := time.Now().UTC()
 	sqlStatement := "INSERT INTO client (ip, asn, asn_organization, network, city, country, continent, proxy, requests, first_active_at, last_active_at, banned_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, '') ON CONFLICT(ip) DO UPDATE SET asn=$12, asn_organization=$13, network=$14, city=$15, country=$16, continent=$17, proxy=$18, requests=client.requests+1, last_active_at=$19 RETURNING ip, requests"
-	if err := c.db.QueryRow(sqlStatement, client.IP, client.ASN, client.ASNOrganization, client.Network, client.City, client.Country, client.Continent, client.Proxy, 1, now, now, client.ASN, client.ASNOrganization, client.Network, client.City, client.Country, client.Continent, client.Proxy, now).Scan(&client.IP, &client.Requests); err != nil {
+	t0 := time.Now()
+	err = c.db.QueryRow(sqlStatement, client.IP, client.ASN, client.ASNOrganization, client.Network, client.City, client.Country, client.Continent, client.Proxy, 1, now, now, client.ASN, client.ASNOrganization, client.Network, client.City, client.Country, client.Continent, client.Proxy, now).Scan(&client.IP, &client.Requests)
+	observeQuery(c.metrics, "client_update", t0, err)
+	if err != nil {
 		return err
 	}
-	return err
+	return nil
 }
 
 func (c *ClientDao) GetAll() (clients []ds.Client, err error) {
@@ -93,7 +99,9 @@ func (c *ClientDao) GetByBannedAt(limit int) (clients []ds.Client, err error) {
 }
 
 func (c *ClientDao) clientQuery(sqlStatement string, params ...interface{}) (clients []ds.Client, err error) {
+	t0 := time.Now()
 	rows, err := c.db.Query(sqlStatement, params...)
+	observeQuery(c.metrics, "client_query", t0, err)
 	if err != nil {
 		return clients, err
 	}
@@ -124,7 +132,10 @@ func (c *ClientDao) Ban(IPsToBan []string, banByRemoteAddr string) (err error) {
 	sqlStatement := "UPDATE client SET banned_at=$1, banned_by=$2 WHERE ip=$3 RETURNING ip"
 	var ret string
 	for _, ipToBan := range IPsToBan {
-		if err := c.db.QueryRow(sqlStatement, now, banByRemoteAddr, ipToBan).Scan(&ret); err != nil {
+		t0 := time.Now()
+		err = c.db.QueryRow(sqlStatement, now, banByRemoteAddr, ipToBan).Scan(&ret)
+		observeQuery(c.metrics, "client_ban", t0, err)
+		if err != nil {
 			return err
 		}
 	}
@@ -133,7 +144,9 @@ func (c *ClientDao) Ban(IPsToBan []string, banByRemoteAddr string) (err error) {
 
 func (c *ClientDao) Cleanup(days uint64) (count int64, err error) {
 	sqlStatement := "DELETE FROM client WHERE last_active_at < CURRENT_DATE - ($1 || ' days')::interval AND banned_at IS NULL"
+	t0 := time.Now()
 	res, err := c.db.Exec(sqlStatement, days)
+	observeQuery(c.metrics, "client_cleanup", t0, err)
 	if err != nil {
 		return 0, err
 	}
@@ -157,7 +170,9 @@ func (c *ClientDao) GetByFilesUploaded(limit int) (clients []ds.Client, err erro
 		GROUP BY c.ip
 		ORDER BY files_uploaded DESC, bytes_uploaded DESC
 		LIMIT $1`
+	t0 := time.Now()
 	rows, err := c.db.Query(sqlStatement, limit)
+	observeQuery(c.metrics, "client_get_by_files_uploaded", t0, err)
 	if err != nil {
 		return clients, err
 	}
@@ -200,7 +215,9 @@ func (c *ClientDao) GetByBytesUploaded(limit int) (clients []ds.Client, err erro
 		GROUP BY c.ip
 		ORDER BY bytes_uploaded DESC, files_uploaded DESC
 		LIMIT $1`
+	t0 := time.Now()
 	rows, err := c.db.Query(sqlStatement, limit)
+	observeQuery(c.metrics, "client_get_by_bytes_uploaded", t0, err)
 	if err != nil {
 		return clients, err
 	}
@@ -266,7 +283,9 @@ func (c *ClientDao) GetByCountry(limit int) (countries []ds.ClientByCountry, err
 		LEFT JOIN file_stats fs ON fs.country = cs.country
 		ORDER BY cs.requests DESC, COALESCE(fs.files_uploaded, 0) DESC
 		LIMIT $1`
+	t0 := time.Now()
 	rows, err := c.db.Query(sqlStatement, limit)
+	observeQuery(c.metrics, "client_get_by_country", t0, err)
 	if err != nil {
 		return countries, err
 	}
@@ -327,7 +346,9 @@ func (c *ClientDao) GetByNetwork(limit int) (networks []ds.ClientByNetwork, err 
 		LEFT JOIN file_stats fs ON fs.network = cs.network
 		ORDER BY cs.requests DESC, COALESCE(fs.files_uploaded, 0) DESC
 		LIMIT $1`
+	t0 := time.Now()
 	rows, err := c.db.Query(sqlStatement, limit)
+	observeQuery(c.metrics, "client_get_by_network", t0, err)
 	if err != nil {
 		return networks, err
 	}
@@ -390,7 +411,9 @@ func (c *ClientDao) GetASNWithStats(limit int) (asns []ds.AutonomousSystem, err 
 		LEFT JOIN file_stats fs ON fs.asn = cs.asn
 		ORDER BY cs.requests DESC, COALESCE(fs.files_uploaded, 0) DESC
 		LIMIT $1`
+	t0 := time.Now()
 	rows, err := c.db.Query(sqlStatement, limit)
+	observeQuery(c.metrics, "client_get_asn_with_stats", t0, err)
 	if err != nil {
 		return asns, err
 	}

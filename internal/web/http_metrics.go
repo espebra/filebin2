@@ -45,6 +45,7 @@ func (h *HTTP) viewMetrics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.metrics.UpdateGauges()
+	h.metrics.UpdateDBStats(h.dao.Stats())
 
 	// Serve Prometheus metrics
 	handler := promhttp.HandlerFor(h.metricsRegistry, promhttp.HandlerOpts{})

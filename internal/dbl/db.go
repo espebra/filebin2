@@ -10,12 +10,30 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// DBMetricsObserver allows DAO to report metrics without importing the ds package.
+type DBMetricsObserver interface {
+	ObserveDBQuery(operation string, duration time.Duration)
+	IncrDBQueryError(operation string)
+}
+
+// observeQuery records query duration and errors. Safe to call with nil metrics.
+func observeQuery(m DBMetricsObserver, operation string, t0 time.Time, err error) {
+	if m == nil {
+		return
+	}
+	m.ObserveDBQuery(operation, time.Since(t0))
+	if err != nil && err != sql.ErrNoRows {
+		m.IncrDBQueryError(operation)
+	}
+}
+
 //go:embed schema.sql
 var schemaSQL string
 
 type DAO struct {
 	db             *sql.DB
 	ConnStr        string
+	metrics        DBMetricsObserver
 	binDao         *BinDao
 	fileDao        *FileDao
 	fileContentDao *FileContentDao
@@ -166,4 +184,15 @@ func (dao DAO) Status() bool {
 
 func (dao DAO) Stats() sql.DBStats {
 	return dao.db.Stats()
+}
+
+// SetMetrics sets the metrics observer for database operations.
+func (dao *DAO) SetMetrics(m DBMetricsObserver) {
+	dao.metrics = m
+	dao.binDao.metrics = m
+	dao.fileDao.metrics = m
+	dao.fileContentDao.metrics = m
+	dao.metricsDao.metrics = m
+	dao.transactionDao.metrics = m
+	dao.clientDao.metrics = m
 }

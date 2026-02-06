@@ -14,7 +14,8 @@ import (
 )
 
 type TransactionDao struct {
-	db *sql.DB
+	db      *sql.DB
+	metrics DBMetricsObserver
 }
 
 func (d *TransactionDao) Register(r *http.Request, bin string, filename string, timestamp time.Time, completed time.Time, status int, size int64) (transaction *ds.Transaction, err error) {
@@ -77,7 +78,9 @@ func (d *TransactionDao) Register(r *http.Request, bin string, filename string, 
 
 func (d *TransactionDao) GetByIP(ip string) (transactions []ds.Transaction, err error) {
 	sqlStatement := "SELECT id, bin_id, filename, operation, method, path, ip, headers, timestamp, req_bytes, resp_bytes, status, completed FROM transaction WHERE ip = $1 ORDER BY timestamp DESC"
+	t0 := time.Now()
 	rows, err := d.db.Query(sqlStatement, ip)
+	observeQuery(d.metrics, "transaction_get_by_ip", t0, err)
 	if err != nil {
 		return transactions, err
 	}
@@ -100,7 +103,9 @@ func (d *TransactionDao) GetByIP(ip string) (transactions []ds.Transaction, err 
 
 func (d *TransactionDao) GetByBin(bin string) (transactions []ds.Transaction, err error) {
 	sqlStatement := "SELECT id, bin_id, filename, operation, method, path, ip, headers, timestamp, req_bytes, resp_bytes, status, completed FROM transaction WHERE bin_id = $1 ORDER BY timestamp DESC"
+	t0 := time.Now()
 	rows, err := d.db.Query(sqlStatement, bin)
+	observeQuery(d.metrics, "transaction_get_by_bin", t0, err)
 	if err != nil {
 		return transactions, err
 	}
@@ -139,7 +144,10 @@ func (d *TransactionDao) Insert(t *ds.Transaction) (err error) {
 	//}
 
 	sqlStatement := "INSERT INTO transaction (bin_id, filename, operation, method, path, ip, headers, timestamp, status, req_bytes, resp_bytes, completed) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id"
-	if err := d.db.QueryRow(sqlStatement, t.BinId, t.Filename, t.Operation, t.Method, t.Path, t.IP, t.Headers, t.Timestamp, t.Status, t.ReqBytes, t.RespBytes, t.CompletedAt).Scan(&t.Id); err != nil {
+	t0 := time.Now()
+	err = d.db.QueryRow(sqlStatement, t.BinId, t.Filename, t.Operation, t.Method, t.Path, t.IP, t.Headers, t.Timestamp, t.Status, t.ReqBytes, t.RespBytes, t.CompletedAt).Scan(&t.Id)
+	observeQuery(d.metrics, "transaction_insert", t0, err)
+	if err != nil {
 		return err
 	}
 	t.TimestampRelative = humanize.Time(t.Timestamp)
@@ -150,7 +158,9 @@ func (d *TransactionDao) Update(t *ds.Transaction) (err error) {
 	var id string
 	//now := time.Now().UTC().Truncate(time.Microsecond)
 	sqlStatement := "UPDATE transaction SET headers = $1 WHERE id = $2 RETURNING id"
+	t0 := time.Now()
 	err = d.db.QueryRow(sqlStatement, t.Headers, t.Id).Scan(&id)
+	observeQuery(d.metrics, "transaction_update", t0, err)
 	if err != nil {
 		return err
 	}
@@ -161,7 +171,9 @@ func (d *TransactionDao) Update(t *ds.Transaction) (err error) {
 
 func (d *TransactionDao) Cleanup(retention uint64) (count int64, err error) {
 	sqlStatement := "DELETE FROM transaction WHERE timestamp < NOW() - ($1 || ' days')::interval"
+	t0 := time.Now()
 	res, err := d.db.Exec(sqlStatement, retention)
+	observeQuery(d.metrics, "transaction_cleanup", t0, err)
 	if err != nil {
 		return count, err
 	}

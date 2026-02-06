@@ -17,7 +17,8 @@ import (
 var invalidBin = regexp.MustCompile("[^A-Za-z0-9-_.]")
 
 type BinDao struct {
-	db *sql.DB
+	db      *sql.DB
+	metrics DBMetricsObserver
 }
 
 func (d *BinDao) ValidateInput(bin *ds.Bin) error {
@@ -96,7 +97,9 @@ func (d *BinDao) GenerateId() string {
 func (d *BinDao) GetByID(id string) (bin ds.Bin, found bool, err error) {
 	// Get bin info
 	sqlStatement := "SELECT bin.id, bin.readonly, bin.downloads, COALESCE(SUM(file.downloads), 0), COALESCE(SUM(file_content.bytes), 0), COUNT(file.filename), bin.updated_at, bin.created_at, bin.approved_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id = file.bin_id AND file.deleted_at IS NULL LEFT JOIN file_content ON file.sha256 = file_content.sha256 AND file_content.in_storage = true WHERE bin.id = $1 GROUP BY bin.id LIMIT 1"
+	t0 := time.Now()
 	err = d.db.QueryRow(sqlStatement, id).Scan(&bin.Id, &bin.Readonly, &bin.Downloads, &bin.FileDownloads, &bin.Bytes, &bin.Files, &bin.UpdatedAt, &bin.CreatedAt, &bin.ApprovedAt, &bin.ExpiredAt, &bin.DeletedAt)
+	observeQuery(d.metrics, "bin_get_by_id", t0, err)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return bin, false, nil
@@ -137,7 +140,10 @@ func (d *BinDao) Insert(bin *ds.Bin) (err error) {
 		bin.ApprovedAt.Time = bin.ApprovedAt.Time.UTC().Truncate(time.Microsecond)
 	}
 	sqlStatement := "INSERT INTO bin (id, readonly, downloads, updates, updated_at, created_at, approved_at, expired_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id"
-	if err := d.db.QueryRow(sqlStatement, bin.Id, readonly, downloads, updates, now, now, bin.ApprovedAt, bin.ExpiredAt).Scan(&bin.Id); err != nil {
+	t0 := time.Now()
+	err = d.db.QueryRow(sqlStatement, bin.Id, readonly, downloads, updates, now, now, bin.ApprovedAt, bin.ExpiredAt).Scan(&bin.Id)
+	observeQuery(d.metrics, "bin_insert", t0, err)
+	if err != nil {
 		return err
 	}
 	bin.UpdatedAt = now
@@ -170,7 +176,10 @@ func (d *BinDao) Upsert(bin *ds.Bin) (err error) {
 		bin.ApprovedAt.Time = bin.ApprovedAt.Time.UTC().Truncate(time.Microsecond)
 	}
 	sqlStatement := "INSERT INTO bin (id, readonly, downloads, updates, updated_at, created_at, approved_at, expired_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT(id) DO UPDATE SET updated_at=$9 RETURNING id"
-	if err := d.db.QueryRow(sqlStatement, bin.Id, readonly, downloads, updates, now, now, bin.ApprovedAt, bin.ExpiredAt, now).Scan(&bin.Id); err != nil {
+	t0 := time.Now()
+	err = d.db.QueryRow(sqlStatement, bin.Id, readonly, downloads, updates, now, now, bin.ApprovedAt, bin.ExpiredAt, now).Scan(&bin.Id)
+	observeQuery(d.metrics, "bin_upsert", t0, err)
+	if err != nil {
 		return err
 	}
 
@@ -208,7 +217,9 @@ func (d *BinDao) Update(bin *ds.Bin) (err error) {
 		return err
 	}
 	sqlStatement := "UPDATE bin SET readonly = $1, updated_at = $2, approved_at = $3, expired_at = $4, deleted_at = $5, updates = $6 WHERE id = $7 RETURNING id"
+	t0 := time.Now()
 	err = d.db.QueryRow(sqlStatement, bin.Readonly, now, bin.ApprovedAt, bin.ExpiredAt, bin.DeletedAt, bin.Updates, bin.Id).Scan(&id)
+	observeQuery(d.metrics, "bin_update", t0, err)
 	if err != nil {
 		return err
 	}
@@ -226,7 +237,9 @@ func (d *BinDao) Update(bin *ds.Bin) (err error) {
 
 func (d *BinDao) Delete(bin *ds.Bin) (err error) {
 	sqlStatement := "DELETE FROM bin WHERE id = $1"
+	t0 := time.Now()
 	res, err := d.db.Exec(sqlStatement, bin.Id)
+	observeQuery(d.metrics, "bin_delete", t0, err)
 	if err != nil {
 		return err
 	}
@@ -243,7 +256,9 @@ func (d *BinDao) Delete(bin *ds.Bin) (err error) {
 
 func (d *BinDao) RegisterDownload(bin *ds.Bin) (err error) {
 	sqlStatement := "UPDATE bin SET downloads = downloads + 1 WHERE id = $1 RETURNING downloads"
+	t0 := time.Now()
 	err = d.db.QueryRow(sqlStatement, bin.Id).Scan(&bin.Downloads)
+	observeQuery(d.metrics, "bin_register_download", t0, err)
 	if err != nil {
 		return err
 	}
@@ -253,7 +268,9 @@ func (d *BinDao) RegisterDownload(bin *ds.Bin) (err error) {
 func (d *BinDao) RegisterUpdate(bin *ds.Bin) (err error) {
 	bin.UpdatedAt = time.Now().UTC().Truncate(time.Microsecond)
 	sqlStatement := "UPDATE bin SET updates = udates + 1, updated_at = $1 WHERE id = $2 RETURNING updates"
+	t0 := time.Now()
 	err = d.db.QueryRow(sqlStatement, bin.UpdatedAt, bin.Id).Scan(&bin.Updates)
+	observeQuery(d.metrics, "bin_register_update", t0, err)
 	if err != nil {
 		return err
 	}
@@ -311,7 +328,9 @@ func (d *BinDao) GetByCreated(limit int) (bins []ds.Bin, err error) {
 }
 
 func (d *BinDao) binQuery(sqlStatement string, params ...interface{}) (bins []ds.Bin, err error) {
+	t0 := time.Now()
 	rows, err := d.db.Query(sqlStatement, params...)
+	observeQuery(d.metrics, "bin_query", t0, err)
 	if err != nil {
 		return bins, err
 	}

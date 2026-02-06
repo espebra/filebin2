@@ -23,6 +23,12 @@ import (
 	"github.com/dustin/go-humanize"
 )
 
+// S3MetricsObserver allows S3AO to report metrics without importing the ds package.
+type S3MetricsObserver interface {
+	ObserveS3Operation(operation string, duration time.Duration)
+	IncrS3OperationError(operation string)
+}
+
 type S3AO struct {
 	client          *s3.Client
 	presignClient   *s3.PresignClient
@@ -34,6 +40,12 @@ type S3AO struct {
 	timeout         time.Duration // timeout for quick operations (delete, head, stat)
 	transferTimeout time.Duration // timeout for data transfers (put, get, copy)
 	partSize        int64         // multipart upload part size in bytes
+	metrics         S3MetricsObserver
+}
+
+// SetMetrics sets the metrics observer for S3 operations.
+func (s *S3AO) SetMetrics(m S3MetricsObserver) {
+	s.metrics = m
 }
 
 type BucketMetrics struct {
@@ -194,12 +206,19 @@ func (s S3AO) upload(key string, data io.Reader, size int64) error {
 		ctx = context.Background()
 	}
 
+	t0 := time.Now()
 	_, err := s.uploader.Upload(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(s.bucket),
 		Key:         aws.String(key),
 		Body:        data,
 		ContentType: aws.String("application/octet-stream"),
 	})
+	if s.metrics != nil {
+		s.metrics.ObserveS3Operation("put", time.Since(t0))
+		if err != nil {
+			s.metrics.IncrS3OperationError("put")
+		}
+	}
 	return err
 }
 
@@ -231,6 +250,12 @@ func (s S3AO) RemoveKey(key string) error {
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
 	})
+	if s.metrics != nil {
+		s.metrics.ObserveS3Operation("delete", time.Since(t0))
+		if err != nil {
+			s.metrics.IncrS3OperationError("delete")
+		}
+	}
 	if err != nil {
 		slog.Error("unable to remove object", "key", key, "error", err)
 		return err
@@ -303,6 +328,12 @@ func (s S3AO) GetObject(contentSHA256 string, start int64, end int64) (io.ReadCl
 	// A timeout context would cancel the read mid-stream when defer cancel() fires.
 	// The caller manages the body's lifetime by calling Close() when done.
 	result, err := s.client.GetObject(context.Background(), input)
+	if s.metrics != nil {
+		s.metrics.ObserveS3Operation("get", time.Since(t0))
+		if err != nil {
+			s.metrics.IncrS3OperationError("get")
+		}
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -332,6 +363,7 @@ func (s S3AO) PresignedGetObject(contentSHA256 string, filename string, mime str
 
 	cacheControl := fmt.Sprintf("max-age=%.0f", s.expiry.Seconds())
 
+	t0 := time.Now()
 	request, err := s.presignClient.PresignGetObject(context.Background(), &s3.GetObjectInput{
 		Bucket:                     aws.String(s.bucket),
 		Key:                        aws.String(objectKey),
@@ -355,6 +387,12 @@ func (s S3AO) PresignedGetObject(contentSHA256 string, filename string, mime str
 			})
 		}
 	})
+	if s.metrics != nil {
+		s.metrics.ObserveS3Operation("presign", time.Since(t0))
+		if err != nil {
+			s.metrics.IncrS3OperationError("presign")
+		}
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -439,6 +477,12 @@ func (s S3AO) RemoveObjectByHash(contentSHA256 string) error {
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(contentSHA256),
 	})
+	if s.metrics != nil {
+		s.metrics.ObserveS3Operation("delete", time.Since(t0))
+		if err != nil {
+			s.metrics.IncrS3OperationError("delete")
+		}
+	}
 	if err != nil {
 		slog.Error("unable to remove object", "sha256", contentSHA256, "error", err)
 		return err

@@ -28,8 +28,9 @@ type PostgresStats struct {
 	TransactionIDAge      int64     `json:"transaction_id_age"`
 }
 
-func (d *MetricsDao) PostgresStats() (PostgresStats, error) {
-	var stats PostgresStats
+func (d *MetricsDao) PostgresStats() (stats PostgresStats, retErr error) {
+	t0 := time.Now()
+	defer func() { observeQuery(d.metrics, "metrics_postgres_stats", t0, retErr) }()
 
 	// Version
 	if err := d.db.QueryRow("SELECT version()").Scan(&stats.Version); err != nil {
@@ -81,20 +82,27 @@ func (d *MetricsDao) PostgresStats() (PostgresStats, error) {
 }
 
 type MetricsDao struct {
-	db *sql.DB
+	db      *sql.DB
+	metrics DBMetricsObserver
 }
 
 func (d *MetricsDao) StorageBytesAllocated() (totalBytes uint64) {
 	// Assume that each file consumes at least 256KB, to align with minimum billable object size in AWS.
 	minBytes := 262144
 	sqlStatement := "SELECT COALESCE((SELECT SUM(GREATEST(file_content.bytes, $1)) FROM file JOIN file_content ON file.sha256 = file_content.sha256 WHERE file_content.in_storage = true AND file.deleted_at IS NULL), 0)"
-	if err := d.db.QueryRow(sqlStatement, minBytes).Scan(&totalBytes); err != nil {
+	t0 := time.Now()
+	err := d.db.QueryRow(sqlStatement, minBytes).Scan(&totalBytes)
+	observeQuery(d.metrics, "metrics_storage_bytes", t0, err)
+	if err != nil {
 		slog.Error("unable to calculate total storage bytes allocated", "error", err)
 	}
 	return totalBytes
 }
 
-func (d *MetricsDao) UpdateMetrics(metrics *ds.Metrics) (err error) {
+func (d *MetricsDao) UpdateMetrics(metrics *ds.Metrics) (retErr error) {
+	t0 := time.Now()
+	defer func() { observeQuery(d.metrics, "metrics_update", t0, retErr) }()
+
 	now := time.Now().UTC().Truncate(time.Microsecond)
 
 	var currentLogEntries, currentFiles, currentBytes, currentBins int64

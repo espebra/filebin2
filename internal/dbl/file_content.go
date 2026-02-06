@@ -11,13 +11,15 @@ import (
 )
 
 type FileContentDao struct {
-	db *sql.DB
+	db      *sql.DB
+	metrics DBMetricsObserver
 }
 
 // GetBySHA256 retrieves a file content record by its SHA256 hash
 func (d *FileContentDao) GetBySHA256(sha256 string) (*ds.FileContent, error) {
 	var content ds.FileContent
 	sqlStatement := "SELECT sha256, bytes, md5, mime, in_storage, blocked, created_at, last_referenced_at FROM file_content WHERE sha256 = $1"
+	t0 := time.Now()
 	err := d.db.QueryRow(sqlStatement, sha256).Scan(
 		&content.SHA256,
 		&content.Bytes,
@@ -28,6 +30,7 @@ func (d *FileContentDao) GetBySHA256(sha256 string) (*ds.FileContent, error) {
 		&content.CreatedAt,
 		&content.LastReferencedAt,
 	)
+	observeQuery(d.metrics, "file_content_get_by_sha256", t0, err)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.New("File content not found")
@@ -47,6 +50,7 @@ ON CONFLICT (sha256) DO UPDATE SET
     in_storage = EXCLUDED.in_storage,
     last_referenced_at = EXCLUDED.last_referenced_at`
 
+	t0 := time.Now()
 	_, err := d.db.Exec(sqlStatement,
 		content.SHA256,
 		content.Bytes,
@@ -56,6 +60,7 @@ ON CONFLICT (sha256) DO UPDATE SET
 		now,
 		now,
 	)
+	observeQuery(d.metrics, "file_content_insert_or_increment", t0, err)
 
 	if err != nil {
 		return err
@@ -78,7 +83,9 @@ GROUP BY fc.sha256, fc.bytes, fc.md5, fc.mime, fc.in_storage, fc.blocked, fc.cre
 HAVING COUNT(CASE WHEN f.id IS NOT NULL AND f.deleted_at IS NULL AND b.deleted_at IS NULL AND b.expired_at > NOW() THEN 1 END) = 0
 ORDER BY fc.last_referenced_at ASC`
 
+	t0 := time.Now()
 	rows, err := d.db.Query(sqlStatement)
+	observeQuery(d.metrics, "file_content_get_pending_delete", t0, err)
 	if err != nil {
 		return nil, err
 	}
@@ -118,6 +125,7 @@ func (d *FileContentDao) Update(content *ds.FileContent) error {
 SET bytes = $2, md5 = $3, mime = $4, in_storage = $5, last_referenced_at = $6
 WHERE sha256 = $1`
 
+	t0 := time.Now()
 	res, err := d.db.Exec(sqlStatement,
 		content.SHA256,
 		content.Bytes,
@@ -126,6 +134,7 @@ WHERE sha256 = $1`
 		content.InStorage,
 		now,
 	)
+	observeQuery(d.metrics, "file_content_update", t0, err)
 	if err != nil {
 		return err
 	}
@@ -145,7 +154,9 @@ WHERE sha256 = $1`
 // Delete removes a file content record from the database
 func (d *FileContentDao) Delete(sha256 string) error {
 	sqlStatement := "DELETE FROM file_content WHERE sha256 = $1"
+	t0 := time.Now()
 	res, err := d.db.Exec(sqlStatement, sha256)
+	observeQuery(d.metrics, "file_content_delete", t0, err)
 	if err != nil {
 		return err
 	}
@@ -165,7 +176,9 @@ func (d *FileContentDao) GetAll() ([]ds.FileContent, error) {
 FROM file_content
 ORDER BY bytes DESC, created_at DESC`
 
+	t0 := time.Now()
 	rows, err := d.db.Query(sqlStatement)
+	observeQuery(d.metrics, "file_content_get_all", t0, err)
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +213,10 @@ ORDER BY bytes DESC, created_at DESC`
 }
 
 // BlockContent marks content as blocked and soft-deletes all file references
-func (d *FileContentDao) BlockContent(sha256 string) error {
+func (d *FileContentDao) BlockContent(sha256 string) (retErr error) {
+	t0 := time.Now()
+	defer func() { observeQuery(d.metrics, "file_content_block", t0, retErr) }()
+
 	// Start a transaction to ensure atomicity
 	tx, err := d.db.Begin()
 	if err != nil {
@@ -239,7 +255,9 @@ func (d *FileContentDao) BlockContent(sha256 string) error {
 // UnblockContent unblocks content by setting blocked = false
 func (d *FileContentDao) UnblockContent(sha256 string) error {
 	sqlStatement := `UPDATE file_content SET blocked = false WHERE sha256 = $1`
+	t0 := time.Now()
 	res, err := d.db.Exec(sqlStatement, sha256)
+	observeQuery(d.metrics, "file_content_unblock", t0, err)
 	if err != nil {
 		return err
 	}
@@ -261,7 +279,9 @@ func (d *FileContentDao) DeleteFileReferences(sha256 string) error {
 
 	// Mark all file references with this SHA256 as deleted
 	sqlDeleteFiles := `UPDATE file SET deleted_at = $1 WHERE sha256 = $2 AND deleted_at IS NULL`
+	t0 := time.Now()
 	res, err := d.db.Exec(sqlDeleteFiles, now, sha256)
+	observeQuery(d.metrics, "file_content_delete_refs", t0, err)
 	if err != nil {
 		return err
 	}
@@ -292,7 +312,9 @@ func (d *FileContentDao) GetByCreated(limit int) (contents []ds.FileByChecksum, 
 		ORDER BY fc.created_at DESC
 		LIMIT $1`
 
+	t0 := time.Now()
 	rows, err := d.db.Query(sqlStatement, limit)
+	observeQuery(d.metrics, "file_content_get_by_created", t0, err)
 	if err != nil {
 		return contents, err
 	}
@@ -331,7 +353,9 @@ func (d *FileContentDao) GetBlocked(limit int) (contents []ds.FileByChecksum, er
 		ORDER BY fc.last_referenced_at DESC
 		LIMIT $1`
 
+	t0 := time.Now()
 	rows, err := d.db.Query(sqlStatement, limit)
+	observeQuery(d.metrics, "file_content_get_blocked", t0, err)
 	if err != nil {
 		return contents, err
 	}
