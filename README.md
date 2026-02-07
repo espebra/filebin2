@@ -5,27 +5,31 @@
 [![CodeQL](https://github.com/espebra/filebin2/actions/workflows/github-code-scanning/codeql/badge.svg?branch=master)](https://github.com/espebra/filebin2/actions/workflows/github-code-scanning/codeql)
 [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat)](https://pkg.go.dev/github.com/espebra/filebin2)
 
-Filebin2 is a web application that facilitates convenient file sharing over the web. It is the software that powers https://filebin.net. It is still in development status and will see breaking changes.
+Filebin2 is a web application that facilitates convenient file sharing over the web. It is the software that powers https://filebin.net/. It is still in development status and will see breaking changes.
 
 ## Table of contents
 
-* [Getting started](#getting-started)
-  * [Using Docker Compose](#using-docker-compose)
-  * [Using the container image](#using-the-container-image)
-  * [Using the binary](#using-the-binary)
 * [Why filebin2?](#why-filebin2)
+* [Getting started](#getting-started)
+  * [With Docker Compose](#with-docker-compose)
+  * [With the container image](#with-the-container-image)
+  * [From the binary](#from-the-binary)
 * [Development environment](#development-environment)
 * [Usage](#usage)
   * [Configuration](#configuration)
 * [Integrations](#integrations)
 
+## Why filebin2?
+
+A couple of (in hindsight) bad architectural decisions in the [previous version of filebin](https://github.com/espebra/filebin) paved the road for filebin2. Filebin2 is using a PostgreSQL database to handle meta data and S3 to store files. I decided to move to a new repository because of breaking changes from the previous verson of filebin.
+
 ## Getting started
 
-Filebin requires a PostgreSQL database and an S3-compatible object storage bucket. Once these are available, you can run Filebin using Docker Compose, a container image, or a standalone binary.
+Filebin2 requires read write access to an S3 bucket for file storage and a PostgreSQL database that it will use for meta data. The Filebin application itself is written in Go and builds to a single binary that is configured using command line arguments and/or environment variables.
 
 ### Using Docker Compose
 
-The quickest way to get a fully working setup is to use the included `docker-compose.yml`, which builds Filebin from source and starts it together with PostgreSQL and S3 (using [Stupid Simple S3](https://github.com/espebra/stupid-simple-s3)):
+The quickest way to get a fully working setup is to use the included `docker-compose.yml`, which builds Filebin from source and starts it together with [PostgreSQL](https://hub.docker.com/_/postgres) and [Stupid Simple S3](https://github.com/espebra/stupid-simple-s3/pkgs/container/stupid-simple-s3)):
 
 ```bash
 docker compose up --build
@@ -37,7 +41,7 @@ Review and adjust the environment variables in `docker-compose.yml` to suit your
 
 ### Using the container image
 
-Multi-arch container images (`linux/amd64` and `linux/arm64`) are published to GitHub Container Registry for each release:
+Multi-arch container images (`linux/amd64` and `linux/arm64`) are published to GitHub Container Registry for each release. The container images are distroless and contain only the filebin binary:
 
 ```
 ghcr.io/espebra/filebin2:latest
@@ -63,7 +67,7 @@ docker run -p 8080:8080 \
 
 ### Using the binary
 
-Pre-built binaries for Linux and macOS (amd64 and arm64) are attached to each [GitHub release](https://github.com/espebra/filebin2/releases). Download the appropriate binary for your platform:
+Pre-built binaries for Linux and macOS (amd64 and arm64) are attached to [each release](https://github.com/espebra/filebin2/releases). Download the appropriate binary for your platform:
 
 | Binary | Platform |
 | ------ | -------- |
@@ -90,63 +94,6 @@ chmod +x filebin2-linux-amd64
   --listen-host 0.0.0.0 \
   --contact you@example.com
 ```
-
-All flags can also be set using environment variables. See the [Configuration](#configuration) section for the full reference.
-
-## Why filebin2?
-
-A couple of (in hindsight) bad architectural decisions in the [previous version of filebin](https://github.com/espebra/filebin) paved the road for filebin2. Filebin2 is using a PostgreSQL database to handle meta data and S3 to store files. I decided to move to a new repository because of breaking changes from the previous verson of filebin.
-
-## Development environment
-
-The development environment consists of one PostgreSQL instance, one [Stupid Simple S3](https://github.com/espebra/stupid-simple-s3) object storage instance and an instance of filebin2. The easiest way to set up this environment from source code is to clone this repository and do:
-
-```bash
-# With Docker
-docker compose up --build
-
-# With Podman
-podman compose up --build
-```
-
-This will make:
-
-* Filebin2 available on [http://localhost:8080/](http://localhost:8080/).
-* Filebin2 admin available on [http://admin:changeme@localhost:8080/admin](http://admin:changeme@localhost:8080/admin).
-* Stupid Simple S3 available on [http://localhost:5553/](http://localhost:5553/).
-* PostgreSQL available on `localhost:5432`.
-
-## Usage
-
-Filebin can run in most Linux distributions, and most likely other operating systems like MacOS. It runs fine containerized.
-
-Filebin requires read write access to an S3 bucket for file storage and a PostgreSQL database that it will use for meta data.
-
-The Filebin program itself is written in Go and builds to a single binary that is configured using command line arguments.
-
-### Testing and building
-
-The easiest way to run the test suite is to run it in docker compose. Docker will exit successfully (return code 0) if the tests succeed, and exit with an error code other than 0 if the tests fail.
-
-```bash
-# Docker
-docker compose -f integration-tests.yml up --abort-on-container-exit
-
-# Podman
-podman compose -f integration-tests.yml up --abort-on-container-exit
-```
-
-The program can be built using:
-
-```bash
-# Build for Linux amd64 only
-make linux
-
-# Build for all platforms:
-make build-all
-```
-
-The output will be the Filebin program as binaries in the `artifacts/` folder called `filebin2-linux-amd64` (depending on the platform). The filebin binary take the following environment variables and command line parameters.
 
 ### Configuration
 
@@ -664,6 +611,53 @@ Limits which Slack domain is allowed to access the http api. Other domains will 
 - Default: (not set)
 
 If Filebin is set to require manual approval of new bins, then this approval can be given using the user interface, the http api directly or via Slack (using the http api). The http endpoint `/integration/slack` can be accessed using a webhook from Slack. This parameter limits which Slack channel is allowed to access the http api. Requests from other channels will be rejected.
+
+## Development
+
+### Local development environment
+
+The development environment consists of one PostgreSQL instance, one [Stupid Simple S3](https://github.com/espebra/stupid-simple-s3) object storage instance and an instance of filebin2 built from source. The easiest way to set up this environment is to clone this repository and do:
+
+```bash
+# With Docker
+docker compose up --build
+
+# With Podman
+podman compose up --build
+```
+
+This will make:
+
+* Filebin2 available on [http://localhost:8080/](http://localhost:8080/).
+* Filebin2 admin available on [http://admin:changeme@localhost:8080/admin](http://admin:changeme@localhost:8080/admin).
+* Stupid Simple S3 available on [http://localhost:5553/](http://localhost:5553/).
+* PostgreSQL available on `localhost:5432`.
+
+### Testing
+
+The easiest way to run the test suite is to run it in docker compose. Docker will exit successfully (return code 0) if the tests succeed, and exit with an error code other than 0 if the tests fail.
+
+```bash
+# Docker
+docker compose -f integration-tests.yml up --abort-on-container-exit
+
+# Podman
+podman compose -f integration-tests.yml up --abort-on-container-exit
+```
+
+### Building
+
+The program can be built using:
+
+```bash
+# Build for Linux amd64 only
+make linux
+
+# Build for all platforms:
+make build-all
+```
+
+The output will be the Filebin program as binaries in the `artifacts/` folder called `filebin2-linux-amd64` (depending on the platform). The filebin binary take the following environment variables and command line parameters.
 
 ## Integrations
 
