@@ -50,8 +50,7 @@ CREATE TABLE IF NOT EXISTS transaction (
 	headers		TEXT NOT NULL,
 	status		INT NOT NULL,
 	req_bytes	BIGINT NOT NULL,
-	resp_bytes	BIGINT NOT NULL,
-	UNIQUE(id)
+	resp_bytes	BIGINT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS client (
