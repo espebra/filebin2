@@ -335,6 +335,9 @@ func (d *FileContentDao) GetByCreated(limit int) (contents []ds.FileByChecksum, 
 		content.BytesTotalReadable = humanize.Bytes(content.BytesTotal)
 		contents = append(contents, content)
 	}
+	if err = rows.Err(); err != nil {
+		return contents, err
+	}
 	return contents, nil
 }
 
@@ -375,6 +378,9 @@ func (d *FileContentDao) GetBlocked(limit int) (contents []ds.FileByChecksum, er
 		content.BytesReadable = humanize.Bytes(content.Bytes)
 		content.BytesTotalReadable = humanize.Bytes(content.BytesTotal)
 		contents = append(contents, content)
+	}
+	if err = rows.Err(); err != nil {
+		return contents, err
 	}
 	return contents, nil
 }

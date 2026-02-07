@@ -119,6 +119,9 @@ func (c *ClientDao) clientQuery(sqlStatement string, params ...interface{}) (cli
 		}
 		clients = append(clients, client)
 	}
+	if err = rows.Err(); err != nil {
+		return clients, err
+	}
 	return clients, nil
 }
 
@@ -195,6 +198,9 @@ func (c *ClientDao) GetByFilesUploaded(limit int) (clients []ds.Client, err erro
 		}
 		clients = append(clients, client)
 	}
+	if err = rows.Err(); err != nil {
+		return clients, err
+	}
 	return clients, nil
 }
 
@@ -239,6 +245,9 @@ func (c *ClientDao) GetByBytesUploaded(limit int) (clients []ds.Client, err erro
 			client.BannedAtRelative = humanize.Time(client.BannedAt.Time)
 		}
 		clients = append(clients, client)
+	}
+	if err = rows.Err(); err != nil {
+		return clients, err
 	}
 	return clients, nil
 }
@@ -303,6 +312,9 @@ func (c *ClientDao) GetByCountry(limit int) (countries []ds.ClientByCountry, err
 		country.BytesUploadedReadable = humanize.Bytes(country.BytesUploaded)
 		countries = append(countries, country)
 	}
+	if err = rows.Err(); err != nil {
+		return countries, err
+	}
 	return countries, nil
 }
 
@@ -365,6 +377,9 @@ func (c *ClientDao) GetByNetwork(limit int) (networks []ds.ClientByNetwork, err 
 		network.LastActiveAtRelative = humanize.Time(network.LastActiveAt)
 		network.BytesUploadedReadable = humanize.Bytes(network.BytesUploaded)
 		networks = append(networks, network)
+	}
+	if err = rows.Err(); err != nil {
+		return networks, err
 	}
 	return networks, nil
 }
@@ -430,6 +445,9 @@ func (c *ClientDao) GetASNWithStats(limit int) (asns []ds.AutonomousSystem, err 
 		asn.LastActiveAtRelative = humanize.Time(asn.LastActiveAt)
 		asn.BytesUploadedReadable = humanize.Bytes(asn.BytesUploaded)
 		asns = append(asns, asn)
+	}
+	if err = rows.Err(); err != nil {
+		return asns, err
 	}
 	return asns, nil
 }

@@ -85,6 +85,9 @@ func (d *TransactionDao) GetByIP(ip string) (transactions []ds.Transaction, err 
 
 		transactions = append(transactions, t)
 	}
+	if err = rows.Err(); err != nil {
+		return transactions, err
+	}
 	return transactions, nil
 }
 
@@ -109,6 +112,9 @@ func (d *TransactionDao) GetByBin(bin string) (transactions []ds.Transaction, er
 		t.Duration = t.CompletedAt.Sub(t.Timestamp)
 
 		transactions = append(transactions, t)
+	}
+	if err = rows.Err(); err != nil {
+		return transactions, err
 	}
 	return transactions, nil
 }
