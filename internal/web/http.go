@@ -257,11 +257,9 @@ func (h *HTTP) log(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc
 
 func (h *HTTP) auth(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Let the client know authentication is required
-		w.Header().Set("WWW-Authenticate", "Basic realm='Filebin'")
-
 		// Abort here if the admin username or password is not set
 		if h.config.AdminUsername == "" || h.config.AdminPassword == "" {
+			w.Header().Set("WWW-Authenticate", "Basic realm='Filebin'")
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -269,6 +267,7 @@ func (h *HTTP) auth(fn func(http.ResponseWriter, *http.Request)) http.HandlerFun
 		// Read the authorization request header
 		username, password, ok := r.BasicAuth()
 		if !ok {
+			w.Header().Set("WWW-Authenticate", "Basic realm='Filebin'")
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -279,6 +278,7 @@ func (h *HTTP) auth(fn func(http.ResponseWriter, *http.Request)) http.HandlerFun
 
 		if !usernameMatch || !passwordMatch {
 			time.Sleep(3 * time.Second)
+			w.Header().Set("WWW-Authenticate", "Basic realm='Filebin'")
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
