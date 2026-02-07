@@ -160,7 +160,7 @@ func (c *ClientDao) Cleanup(days uint64) (count int64, err error) {
 func (c *ClientDao) GetByFilesUploaded(limit int) (clients []ds.Client, err error) {
 	sqlStatement := `
 		SELECT
-			c.ip, c.asn, c.network, c.city, c.country, c.continent, c.proxy,
+			c.ip, c.asn, c.asn_organization, c.network, c.city, c.country, c.continent, c.proxy,
 			c.requests, c.first_active_at, c.last_active_at, c.banned_at, c.banned_by,
 			COALESCE(COUNT(f.id), 0) as files_uploaded,
 			COALESCE(SUM(fc.bytes), 0) as bytes_uploaded
@@ -180,7 +180,7 @@ func (c *ClientDao) GetByFilesUploaded(limit int) (clients []ds.Client, err erro
 	for rows.Next() {
 		var client ds.Client
 		err = rows.Scan(
-			&client.IP, &client.ASN, &client.Network, &client.City, &client.Country,
+			&client.IP, &client.ASN, &client.ASNOrganization, &client.Network, &client.City, &client.Country,
 			&client.Continent, &client.Proxy, &client.Requests, &client.FirstActiveAt,
 			&client.LastActiveAt, &client.BannedAt, &client.BannedBy,
 			&client.FilesUploaded, &client.BytesUploaded,
@@ -205,7 +205,7 @@ func (c *ClientDao) GetByFilesUploaded(limit int) (clients []ds.Client, err erro
 func (c *ClientDao) GetByBytesUploaded(limit int) (clients []ds.Client, err error) {
 	sqlStatement := `
 		SELECT
-			c.ip, c.asn, c.network, c.city, c.country, c.continent, c.proxy,
+			c.ip, c.asn, c.asn_organization, c.network, c.city, c.country, c.continent, c.proxy,
 			c.requests, c.first_active_at, c.last_active_at, c.banned_at, c.banned_by,
 			COALESCE(COUNT(f.id), 0) as files_uploaded,
 			COALESCE(SUM(fc.bytes), 0) as bytes_uploaded
@@ -225,7 +225,7 @@ func (c *ClientDao) GetByBytesUploaded(limit int) (clients []ds.Client, err erro
 	for rows.Next() {
 		var client ds.Client
 		err = rows.Scan(
-			&client.IP, &client.ASN, &client.Network, &client.City, &client.Country,
+			&client.IP, &client.ASN, &client.ASNOrganization, &client.Network, &client.City, &client.Country,
 			&client.Continent, &client.Proxy, &client.Requests, &client.FirstActiveAt,
 			&client.LastActiveAt, &client.BannedAt, &client.BannedBy,
 			&client.FilesUploaded, &client.BytesUploaded,
