@@ -52,8 +52,14 @@ func httpRequest(tc TestCase) (statuscode int, body string, err error) {
 			req.Header.Set("Content-SHA256", tc.SHA256)
 		}
 		if tc.MD5 != "" {
-			md5Bytes, _ := hex.DecodeString(tc.MD5)
-			checksum := base64.StdEncoding.EncodeToString(md5Bytes)
+			md5Bytes, err := hex.DecodeString(tc.MD5)
+			var checksum string
+			if err != nil {
+				// Not valid hex — send as-is to trigger a mismatch
+				checksum = tc.MD5
+			} else {
+				checksum = base64.StdEncoding.EncodeToString(md5Bytes)
+			}
 			fmt.Printf("Content-MD5 request header: %s\n", checksum)
 			req.Header.Set("Content-MD5", checksum)
 		}
