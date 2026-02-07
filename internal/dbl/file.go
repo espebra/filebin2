@@ -325,6 +325,9 @@ func (d *FileDao) fileQuery(sqlStatement string, params ...interface{}) (files [
 		hydrateFile(&file)
 		files = append(files, file)
 	}
+	if err = rows.Err(); err != nil {
+		return files, err
+	}
 	return files, nil
 }
 
@@ -353,6 +356,9 @@ func (d *FileDao) FilesByChecksum(limit int) (files []ds.FileByChecksum, err err
 		file.BytesReadable = humanize.Bytes(file.Bytes)
 		file.BytesTotalReadable = humanize.Bytes(file.BytesTotal)
 		files = append(files, file)
+	}
+	if err = rows.Err(); err != nil {
+		return files, err
 	}
 	return files, nil
 }
@@ -383,6 +389,9 @@ func (d *FileDao) FilesByBytes(limit int) (files []ds.FileByChecksum, err error)
 		file.BytesTotalReadable = humanize.Bytes(file.BytesTotal)
 		files = append(files, file)
 	}
+	if err = rows.Err(); err != nil {
+		return files, err
+	}
 	return files, nil
 }
 
@@ -411,6 +420,9 @@ func (d *FileDao) FilesByBytesTotal(limit int) (files []ds.FileByChecksum, err e
 		file.BytesReadable = humanize.Bytes(file.Bytes)
 		file.BytesTotalReadable = humanize.Bytes(file.BytesTotal)
 		files = append(files, file)
+	}
+	if err = rows.Err(); err != nil {
+		return files, err
 	}
 	return files, nil
 }

@@ -327,5 +327,8 @@ func (d *BinDao) binQuery(sqlStatement string, params ...interface{}) (bins []ds
 		hydrateBin(&bin)
 		bins = append(bins, bin)
 	}
+	if err = rows.Err(); err != nil {
+		return bins, err
+	}
 	return bins, nil
 }
