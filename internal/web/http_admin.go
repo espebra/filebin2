@@ -28,13 +28,13 @@ func (h *HTTP) viewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type Data struct {
-		BucketMetrics  s3.BucketMetrics `json:"bucketmetrics"`
-		Page           string           `json:"page"`
-		DBMetrics      ds.Metrics       `json:"db_metrics"`
-		DBStats        sql.DBStats      `json:"db_stats"`
-		Config         ds.Config        `json:"-"`
-		AdminLogins    []AdminLogin     `json:"admin_logins"`
-		StorageMetrics StorageMetrics      `json:"storage_metrics"`
+		BucketMetrics  s3.BucketMetrics   `json:"bucketmetrics"`
+		Page           string             `json:"page"`
+		DBMetrics      ds.Metrics         `json:"db_metrics"`
+		DBStats        sql.DBStats        `json:"db_stats"`
+		Config         ds.Config          `json:"-"`
+		AdminLogins    []AdminLogin       `json:"admin_logins"`
+		StorageMetrics StorageMetrics     `json:"storage_metrics"`
 		PostgresStats  *dbl.PostgresStats `json:"postgres_stats,omitempty"`
 		StartedAt      time.Time          `json:"started_at"`
 		UptimeReadable string             `json:"uptime_readable"`

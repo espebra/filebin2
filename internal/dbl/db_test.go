@@ -14,11 +14,11 @@ const (
 
 func tearUp() (DAO, error) {
 	dao, err := Init(DBConfig{
-		Host:     testDbHost,
-		Port:     testDbPort,
-		Name:     testDbName,
-		Username: testDbUser,
-		Password: testDbPassword,
+		Host:         testDbHost,
+		Port:         testDbPort,
+		Name:         testDbName,
+		Username:     testDbUser,
+		Password:     testDbPassword,
 		MaxOpenConns: 25,
 		MaxIdleConns: 25,
 	})
