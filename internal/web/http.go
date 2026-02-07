@@ -127,7 +127,7 @@ func (h *HTTP) Stop() {
 	}
 }
 
-func (h *HTTP) Init() (err error) {
+func (h *HTTP) Init() error {
 	h.router = mux.NewRouter()
 	h.templates = h.ParseTemplates()
 
@@ -183,7 +183,7 @@ func (h *HTTP) Init() (err error) {
 	// Start background updater for storage bytes cache
 	h.startStorageBytesUpdater()
 
-	return err
+	return nil
 }
 
 func CacheControl(h http.Handler) http.Handler {
@@ -341,6 +341,7 @@ func (h *HTTP) Run() {
 	slog.Info("starting HTTP server", "host", h.config.HttpHost, "port", h.config.HttpPort)
 
 	// Add gzip compression, but exclude /archive endpoints (they're already compressed)
+	compressedRouter := handlers.CompressHandler(h.router)
 	var handler http.Handler
 	handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/archive/") {
@@ -348,7 +349,7 @@ func (h *HTTP) Run() {
 			h.router.ServeHTTP(w, r)
 		} else {
 			// Apply compression for all other endpoints
-			handlers.CompressHandler(h.router).ServeHTTP(w, r)
+			compressedRouter.ServeHTTP(w, r)
 		}
 	})
 

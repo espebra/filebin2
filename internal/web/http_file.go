@@ -133,7 +133,6 @@ func (h *HTTP) getFile(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Location", presignedURL.String())
 	w.WriteHeader(http.StatusFound)
-	_, _ = io.WriteString(w, "")
 
 	slog.Info("presigned download", "filename", inputFilename, "bytes", file.Bytes, "sha256", file.SHA256, "bin", inputBin, "duration_seconds", time.Since(t0).Seconds(), "downloads", file.Downloads)
 
@@ -241,7 +240,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 		} else if bin.Readonly {
 			// Reject uploads to readonly bins
 			w.Header().Set("Allow", "GET, HEAD")
-			h.Error(w, r, fmt.Sprintf("Rejected upload of filename %q to readonly bin %q", inputFilename, inputBin), "Uploads to locked binds are not allowed", 123, http.StatusMethodNotAllowed)
+			h.Error(w, r, fmt.Sprintf("Rejected upload of filename %q to readonly bin %q", inputFilename, inputBin), "Uploads to locked bins are not allowed", 123, http.StatusMethodNotAllowed)
 			return
 		} else {
 			h.Error(w, r, fmt.Sprintf("Rejected upload of filename %q to bin %q for unknown reason", inputFilename, inputBin), "Unexpected upload failure", 134, http.StatusInternalServerError)
@@ -255,7 +254,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	if h.config.LimitStorageBytes > 0 {
 		totalBytesConsumed := h.getCachedStorageBytes()
 		if totalBytesConsumed >= h.config.LimitStorageBytes {
-			h.Error(w, r, fmt.Sprintf("Storage limit reached (currently consuming %s) when trying to upload file %q to bin %q", humanize.Bytes(totalBytesConsumed), inputFilename, inputBin), "Insufficient storage, please retry later\n", 633, http.StatusInsufficientStorage)
+			h.Error(w, r, fmt.Sprintf("Storage limit reached (currently consuming %s) when trying to upload file %q to bin %q", humanize.Bytes(totalBytesConsumed), inputFilename, inputBin), "Insufficient storage, please retry later", 633, http.StatusInsufficientStorage)
 			return
 		}
 	}
@@ -295,7 +294,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	t2 := time.Now()
 
 	// Checksums are already calculated from the write above
-	md5ChecksumString := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%x", md5Checksum.Sum(nil))))
+	md5ChecksumString := base64.StdEncoding.EncodeToString(md5Checksum.Sum(nil))
 	if inputMD5 != "" {
 		if md5ChecksumString != inputMD5 {
 			h.Error(w, r, fmt.Sprintf("Rejecting upload for file %q to bin %q due to wrong MD5 checksum (got %s and calculated %s)", inputFilename, bin.Id, inputMD5, md5ChecksumString), "MD5 checksum did not match", 129, http.StatusBadRequest)
@@ -460,7 +459,9 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	// Metrics
 	h.metrics.IncrFileUploadCount()
 	h.metrics.IncrBytesClientToFilebin(file.Bytes)
-	h.metrics.IncrBytesFilebinToStorage(file.Bytes)
+	if !skipS3Upload {
+		h.metrics.IncrBytesFilebinToStorage(file.Bytes)
+	}
 
 	type Data struct {
 		Bin  ds.Bin  `json:"bin"`
@@ -499,7 +500,7 @@ func (h *HTTP) deleteFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !found {
-		http.Error(w, "The file does not exist", http.StatusNotFound)
+		http.Error(w, "The bin does not exist", http.StatusNotFound)
 		return
 	}
 

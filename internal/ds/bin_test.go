@@ -284,10 +284,7 @@ func TestBinGenerateURL(t *testing.T) {
 				t.Fatalf("Failed to parse URL: %v", err)
 			}
 
-			err = bin.GenerateURL(*u)
-			if err != nil {
-				t.Errorf("GenerateURL() error = %v", err)
-			}
+			bin.GenerateURL(*u)
 
 			if bin.URL != tt.want {
 				t.Errorf("GenerateURL() set URL = %v, want %v", bin.URL, tt.want)

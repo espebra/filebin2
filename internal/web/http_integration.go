@@ -41,8 +41,7 @@ func (h *HTTP) integrationSlack(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	epoch := now.Unix()
 	if epoch-60 > ts_int {
-		http.Error(w, "Replay rejected", http.StatusBadRequest)
-		h.Error(w, r, fmt.Sprintf("Replay rejected. Got timestamp: %q, actual timestamp: %d\n", ts, epoch), "Unauthorized", 834, http.StatusUnauthorized)
+		h.Error(w, r, fmt.Sprintf("Replay rejected. Got timestamp: %q, actual timestamp: %d\n", ts, epoch), "Replay rejected", 834, http.StatusBadRequest)
 		return
 	}
 
@@ -55,7 +54,7 @@ func (h *HTTP) integrationSlack(w http.ResponseWriter, r *http.Request) {
 	hash.Write([]byte(sig_basestring))
 	hash_signature := hex.EncodeToString(hash.Sum(nil))
 	slog.Debug("generated hash signature", "signature", hash_signature)
-	if sig != fmt.Sprintf("v0=%s", hash_signature) {
+	if !hmac.Equal([]byte(sig), []byte(fmt.Sprintf("v0=%s", hash_signature))) {
 		h.Error(w, r, fmt.Sprintf("Slack signature not correct: Got %q, generated %q\n", sig, hash_signature), "Unauthorized", 835, http.StatusUnauthorized)
 		return
 	}
@@ -145,7 +144,7 @@ func (h *HTTP) integrationSlack(w http.ResponseWriter, r *http.Request) {
 
 			_, _ = io.WriteString(w, fmt.Sprintf("%d last updated bins:\n", limit))
 			for _, bin := range bins {
-				out := fmt.Sprintf("%s: https://filebin2.varnish-software.com/%s", bin.UpdatedAtRelative, bin.Id)
+				out := fmt.Sprintf("%s: %s/%s", bin.UpdatedAtRelative, h.config.BaseUrl.String(), bin.Id)
 				if bin.IsApproved() {
 					out = fmt.Sprintf("%s (approved)", out)
 				} else {

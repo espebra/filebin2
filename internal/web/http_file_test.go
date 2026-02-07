@@ -2,11 +2,11 @@ package web
 
 import (
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
-	//"net/http/httputil"
 	"net/url"
 	"os"
 	"path"
@@ -52,7 +52,8 @@ func httpRequest(tc TestCase) (statuscode int, body string, err error) {
 			req.Header.Set("Content-SHA256", tc.SHA256)
 		}
 		if tc.MD5 != "" {
-			checksum := string(base64.StdEncoding.EncodeToString([]byte(tc.MD5)))
+			md5Bytes, _ := hex.DecodeString(tc.MD5)
+			checksum := base64.StdEncoding.EncodeToString(md5Bytes)
 			fmt.Printf("Content-MD5 request header: %s\n", checksum)
 			req.Header.Set("Content-MD5", checksum)
 		}

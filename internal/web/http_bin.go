@@ -35,7 +35,7 @@ func (h *HTTP) viewBinRedirect(w http.ResponseWriter, r *http.Request) {
 	binURL.Scheme = h.config.BaseUrl.Scheme
 	binURL.Host = h.config.BaseUrl.Host
 	binURL.Path = path.Join(h.config.BaseUrl.Path, inputBin)
-	http.Redirect(w, r, binURL.String(), 301)
+	http.Redirect(w, r, binURL.String(), http.StatusMovedPermanently)
 }
 
 func (h *HTTP) viewBin(w http.ResponseWriter, r *http.Request) {
@@ -87,7 +87,7 @@ func (h *HTTP) viewBin(w http.ResponseWriter, r *http.Request) {
 			data.Files = files
 		}
 	} else {
-		// Synthetize a bin without creating it. It will be created when a file is uploaded.
+		// Synthesize a bin without creating it. It will be created when a file is uploaded.
 		bin = ds.Bin{}
 		bin.Id = inputBin
 		bin.ExpiredAt = time.Now().UTC().Add(h.config.ExpirationDuration)
@@ -108,20 +108,19 @@ func (h *HTTP) viewBin(w http.ResponseWriter, r *http.Request) {
 
 	if r.Header.Get("accept") == "application/json" {
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(code)
 		out, err := json.MarshalIndent(data, "", "    ")
 		if err != nil {
 			slog.Error("failed to parse json", "error", err)
 			http.Error(w, "Errno 201", http.StatusInternalServerError)
 			return
 		}
+		w.WriteHeader(code)
 		_, _ = w.Write(out)
 	} else {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(code)
 		if err := h.renderTemplate(w, "bin", data); err != nil {
 			slog.Error("failed to execute template", "error", err)
-			http.Error(w, "Errno 203", http.StatusInternalServerError)
 			return
 		}
 	}
@@ -158,7 +157,7 @@ func (h *HTTP) viewBinPlainText(w http.ResponseWriter, r *http.Request) {
 			data.Files = files
 		}
 	} else {
-		// Synthetize a bin without creating it. It will be created when a file is uploaded.
+		// Synthesize a bin without creating it. It will be created when a file is uploaded.
 		bin = ds.Bin{}
 		bin.Id = inputBin
 		bin.ExpiredAt = time.Now().UTC().Add(h.config.ExpirationDuration)
@@ -204,7 +203,6 @@ func (h *HTTP) binQR(w http.ResponseWriter, r *http.Request) {
 	binURL.Host = h.config.BaseUrl.Host
 	binURL.Path = path.Join(h.config.BaseUrl.Path, inputBin)
 
-	var q *qrcode.QRCode
 	q, err := qrcode.New(binURL.String(), qrcode.Medium)
 	if err != nil {
 		slog.Error("error generating qr code", "url", binURL.String(), "error", err)
@@ -215,16 +213,10 @@ func (h *HTTP) binQR(w http.ResponseWriter, r *http.Request) {
 	q.DisableBorder = true
 
 	img := q.Image(size)
-	if err != nil {
-		slog.Error("error generating qr code", "url", binURL.String(), "error", err)
-		http.Error(w, "Unable to generate QR code", http.StatusInternalServerError)
-		return
-	}
 
 	w.Header().Set("Content-Type", "image/png")
 	if err := png.Encode(w, img); err != nil {
 		slog.Error("unable to write image", "error", err)
-		http.Error(w, "Unable to generate QR code", http.StatusInternalServerError)
 	}
 }
 
@@ -247,7 +239,7 @@ func (z *zipArchiveWriter) addFile(file ds.File) (io.Writer, error) {
 	header := &zip.FileHeader{}
 	header.Name = file.Filename
 	header.Modified = file.UpdatedAt
-	header.SetMode(0400) // RW for the file owner
+	header.SetMode(0600) // Read-write for the file owner
 	return z.writer.CreateHeader(header)
 }
 
@@ -294,7 +286,6 @@ func (h *HTTP) addFilesToArchive(w http.ResponseWriter, r *http.Request, bin ds.
 			h.Error(w, r, fmt.Sprintf("Failed to archive object in bin %q: filename %q: %s", bin.Id, file.Filename, err.Error()), "Archive error", 300, http.StatusInternalServerError)
 			return err
 		}
-		defer fp.Close()
 
 		// Increment download counter for the file (tracks downloads per file)
 		if err := h.dao.File().RegisterDownload(&file); err != nil {
@@ -304,6 +295,7 @@ func (h *HTTP) addFilesToArchive(w http.ResponseWriter, r *http.Request, bin ds.
 		h.metrics.IncrBytesStorageToFilebin(file.Bytes)
 
 		bytes, err := io.Copy(writer, fp)
+		fp.Close()
 		if err != nil {
 			return err
 		}
@@ -345,6 +337,14 @@ func (h *HTTP) archive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// If approvals are required, reject downloads from bins that are not approved
+	if h.config.RequireApproval {
+		if !bin.IsApproved() {
+			h.Error(w, r, "", "This bin requires approval before files can be downloaded.", 522, http.StatusForbidden)
+			return
+		}
+	}
+
 	files, err := h.dao.File().GetByBin(inputBin, true)
 	if err != nil {
 		slog.Error("unable to get files by bin", "bin", inputBin, "error", err)
@@ -356,6 +356,21 @@ func (h *HTTP) archive(w http.ResponseWriter, r *http.Request) {
 		// The bin does not contain any files
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
+	}
+
+	// Filter out files that have exceeded the download limit
+	if h.config.LimitFileDownloads > 0 {
+		var allowed []ds.File
+		for _, file := range files {
+			if file.Downloads < h.config.LimitFileDownloads {
+				allowed = append(allowed, file)
+			}
+		}
+		files = allowed
+		if len(files) == 0 {
+			h.Error(w, r, "", "All files in this bin have exceeded the download limit.", 422, http.StatusForbidden)
+			return
+		}
 	}
 
 	// The file is downloadable at this point
@@ -375,7 +390,7 @@ func (h *HTTP) archive(w http.ResponseWriter, r *http.Request) {
 			var nextUrl url.URL
 			nextUrl.Scheme = h.config.BaseUrl.Scheme
 			nextUrl.Host = h.config.BaseUrl.Host
-			nextUrl.Path = path.Join(h.config.BaseUrl.Path, r.RequestURI)
+			nextUrl.Path = path.Join(h.config.BaseUrl.Path, r.URL.Path)
 			data.NextUrl = nextUrl.String()
 			if err := h.renderTemplate(w, "cookie", data); err != nil {
 				slog.Error("failed to execute template", "error", err)
@@ -398,7 +413,7 @@ func (h *HTTP) archive(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.addFilesToArchive(w, r, bin, files, archiver, inputFormat); err != nil {
-		fmt.Println(err)
+		slog.Error("failed to create archive", "bin", bin.Id, "format", inputFormat, "error", err)
 		return
 	}
 
@@ -445,7 +460,7 @@ func (h *HTTP) deleteBin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.metrics.IncrBinDeleteCount()
-	http.Error(w, "Bin deleted successfully ", http.StatusOK)
+	http.Error(w, "Bin deleted successfully", http.StatusOK)
 }
 
 func (h *HTTP) lockBin(w http.ResponseWriter, r *http.Request) {

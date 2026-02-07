@@ -536,6 +536,7 @@ func main() {
 
 	if err := h.Init(); err != nil {
 		slog.Error("unable to start the HTTP server", "error", err)
+		os.Exit(2)
 	}
 	slog.Info("uploaded files expiration configured", "expiration_seconds", config.ExpirationDuration.Seconds())
 

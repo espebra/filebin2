@@ -46,7 +46,7 @@ func (b *Bin) IsWritable() bool {
 	if !b.IsReadable() {
 		return false
 	}
-	// Not readable if bin is readonly
+	// Not writable if bin is readonly
 	if b.Readonly {
 		return false
 	}
@@ -65,8 +65,7 @@ func (b *Bin) IsDeleted() bool {
 	return b.DeletedAt.Valid && !b.DeletedAt.Time.IsZero()
 }
 
-func (b *Bin) GenerateURL(u url.URL) error {
+func (b *Bin) GenerateURL(u url.URL) {
 	u.Path = path.Join(u.Path, b.Id)
 	b.URL = u.String()
-	return nil
 }
