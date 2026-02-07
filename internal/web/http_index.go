@@ -36,11 +36,7 @@ func (h *HTTP) index(w http.ResponseWriter, r *http.Request) {
 	bin.ExpiredAt = time.Now().UTC().Add(h.config.ExpirationDuration)
 	bin.ExpiredAtRelative = humanize.Time(bin.ExpiredAt)
 	bin.Id = h.dao.Bin().GenerateId()
-	if err := bin.GenerateURL(h.config.BaseUrl); err != nil {
-		slog.Error("unable to generate URL", "error", err)
-		http.Error(w, "Errno 9824", http.StatusInternalServerError)
-		return
-	}
+	bin.GenerateURL(h.config.BaseUrl)
 	data.Bin = *bin
 
 	// Storage limit

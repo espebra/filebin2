@@ -41,7 +41,7 @@ func (h *HTTP) viewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 	var data Data
 	data.Config = *h.config
-	data.Page = "about"
+	data.Page = "dashboard"
 	data.StartedAt = h.startedAt
 	data.UptimeReadable = time.Since(h.startedAt).Round(time.Second).String()
 
@@ -780,12 +780,12 @@ func (h *HTTP) updateSiteMessage(w http.ResponseWriter, r *http.Request) {
 	// Input validation
 	if len(title) > 200 {
 		slog.Warn("unable to update site message: title must be 200 characters or less")
-		http.Error(w, "Errno 803", http.StatusInternalServerError)
+		http.Error(w, "Errno 803", http.StatusBadRequest)
 		return
 	}
 	if len(content) > 5000 {
 		slog.Warn("unable to update site message: content must be 5000 characters or less")
-		http.Error(w, "Errno 803", http.StatusInternalServerError)
+		http.Error(w, "Errno 803", http.StatusBadRequest)
 		return
 	}
 
