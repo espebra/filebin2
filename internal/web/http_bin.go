@@ -404,11 +404,11 @@ func (h *HTTP) archive(w http.ResponseWriter, r *http.Request) {
 	var archiver archiveWriter
 	if inputFormat == "zip" {
 		w.Header().Set("Content-Type", "application/zip")
-		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s.zip\"", bin.Id))
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", bin.Id+".zip"))
 		archiver = newZipArchiveWriter(w)
 	} else {
 		w.Header().Set("Content-Type", "application/x-tar")
-		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s.tar\"", bin.Id))
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", bin.Id+".tar"))
 		archiver = newTarArchiveWriter(w)
 	}
 
