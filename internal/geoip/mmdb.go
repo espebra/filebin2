@@ -134,12 +134,10 @@ func (dao DAO) Lookup(remoteAddr string, client *ds.Client) (err error) {
 	}
 
 	if err := dao.LookupASN(ip, client); err != nil {
-		//fmt.Printf("ASN lookup error: %s\n", err.Error())
 		return err
 	}
 
 	if err := dao.LookupCity(ip, client); err != nil {
-		//fmt.Printf("City lookup error: %s\n", err.Error())
 		return err
 	}
 	return nil
