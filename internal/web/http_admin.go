@@ -28,8 +28,6 @@ func (h *HTTP) viewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type Data struct {
-		//Bins Bins `json:"bins"`
-		//Files []ds.File `json:"files"`
 		BucketMetrics  s3.BucketMetrics `json:"bucketmetrics"`
 		Page           string           `json:"page"`
 		DBMetrics      ds.Metrics       `json:"db_metrics"`
@@ -78,20 +76,6 @@ func (h *HTTP) viewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 		data.StorageMetrics.FreeBytesReadable = "Unlimited"
 		data.StorageMetrics.UsedPercent = 0
 	}
-	//data.BucketMetrics = h.s3.GetBucketMetrics()
-	//err := h.dao.Metrics().GetMetrics(h.metrics)
-	//if err != nil {
-	//	fmt.Printf("Unable to GetMetrics(): %s\n", err.Error())
-	//	http.Error(w, "Errno 326", http.StatusInternalServerError)
-	//	return
-	//}
-	//data.DBMetrics = metrics
-	//freeBytes := int64(h.config.LimitStorageBytes) - metrics.CurrentBytes
-	//if freeBytes < 0 {
-	//	freeBytes = 0
-	//}
-	//data.DBMetrics.FreeBytes = freeBytes
-	//data.DBMetrics.FreeBytesReadable = humanize.Bytes(uint64(freeBytes))
 
 	data.DBStats = h.dao.Stats()
 
@@ -101,18 +85,6 @@ func (h *HTTP) viewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	} else {
 		data.PostgresStats = &pgStats
 	}
-
-	//binsAvailable, err := h.dao.Bin().GetAll()
-	//if err != nil {
-	//	slog.Error("unable to get all", "error", err)
-	//	http.Error(w, "Errno 200", http.StatusInternalServerError)
-	//	return
-	//}
-
-	//var bins Bins
-	//bins.Available = binsAvailable
-
-	//data.Bins = bins
 
 	if r.Header.Get("accept") == "application/json" {
 		w.Header().Set("Content-Type", "application/json")
@@ -459,8 +431,7 @@ func (h *HTTP) viewAdminBins(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type Data struct {
-		Bins Bins `json:"bins"`
-		//Files []ds.File `json:"files"`
+		Bins          Bins             `json:"bins"`
 		BucketMetrics s3.BucketMetrics `json:"bucketmetrics"`
 		Page          string           `json:"page"`
 		DBMetrics     ds.Metrics       `json:"db_metrics"`
@@ -538,22 +509,12 @@ func (h *HTTP) viewAdminBinsAll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type Data struct {
-		Bins Bins `json:"bins"`
-		//Files []ds.File `json:"files"`
+		Bins          Bins             `json:"bins"`
 		BucketMetrics s3.BucketMetrics `json:"bucketmetrics"`
 		Page          string           `json:"page"`
 		DBMetrics     ds.Metrics       `json:"db_metrics"`
 	}
 	var data Data
-	//data.Page = "about"
-	//data.BucketMetrics = h.s3.GetBucketMetrics()
-	//metrics, err := h.dao.Metrics().GetMetrics()
-	//if err != nil {
-	//	fmt.Printf("Unable to GetMetrics(): %s\n", err.Error())
-	//	http.Error(w, "Errno 326", http.StatusInternalServerError)
-	//	return
-	//}
-	//data.DBMetrics = metrics
 
 	binsAvailable, err := h.dao.Bin().GetAll()
 	if err != nil {

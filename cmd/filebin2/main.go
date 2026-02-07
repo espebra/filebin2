@@ -41,8 +41,7 @@ var (
 	requireCookieFlag       = flag.Bool("require-verification-cookie", false, "Require cookie before allowing a download to happen.")
 	cookieLifetimeFlag      = flag.Int("verification-cookie-lifetime", 365, "Number of days before cookie expiration.")
 	expectedCookieValueFlag = flag.String("expected-cookie-value", "2024-05-24", "Which cookie value to expect to avoid showing a warning message.")
-	//enableBanningFlag = flag.Bool("enable-banning", false, "Enable banning. This will allow anyone to ban client IP addresses that upload files to filebin.")
-	mmdbCityPathFlag = flag.String("mmdb-city", "", "The path to an mmdb formatted geoip database like GeoLite2-City.mmdb.")
+	mmdbCityPathFlag        = flag.String("mmdb-city", "", "The path to an mmdb formatted geoip database like GeoLite2-City.mmdb.")
 	mmdbASNPathFlag  = flag.String("mmdb-asn", "", "The path to an mmdb formatted geoip database like GeoLite2-ASN.mmdb.")
 	allowRobotsFlag  = flag.Bool("allow-robots", false, "Allow robots to crawl and index the site (using X-Robots-Tag response header).")
 
