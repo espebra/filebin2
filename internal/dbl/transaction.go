@@ -63,19 +63,6 @@ func (d *TransactionDao) Register(r *http.Request, bin string, filename string, 
 	return tr, err
 }
 
-//func (d *TransactionDao) Finish(tr *ds.Transaction) (err error) {
-//	var id string
-//	now := time.Now().UTC().Truncate(time.Microsecond)
-//	sqlStatement := "UPDATE transaction SET finished_at = $1 WHERE id = $2 RETURNING id"
-//	err = d.db.QueryRow(sqlStatement, now, tr.Id).Scan(&id)
-//	if err != nil {
-//		return err
-//	}
-//	tr.FinishedAt.Time = now
-//	tr.FinishedAtRelative = humanize.Time(tr.FinishedAt.Time)
-//	return nil
-//}
-
 func (d *TransactionDao) GetByIP(ip string) (transactions []ds.Transaction, err error) {
 	sqlStatement := "SELECT id, bin_id, filename, operation, method, path, ip, headers, timestamp, req_bytes, resp_bytes, status, completed FROM transaction WHERE ip = $1 ORDER BY timestamp DESC"
 	t0 := time.Now()
@@ -127,22 +114,6 @@ func (d *TransactionDao) GetByBin(bin string) (transactions []ds.Transaction, er
 }
 
 func (d *TransactionDao) Insert(t *ds.Transaction) (err error) {
-	//if t.Method == "POST" && t.Path == path.Join("/", t.BinId, t.Filename) {
-	//	t.Operation = "file-upload"
-	//} else if t.Method == "GET" && t.Path == path.Join("/", t.BinId, t.Filename) {
-	//	t.Operation = "file-download"
-	//} else if t.Path == path.Join("/archive", t.BinId, "zip") {
-	//	t.Operation = "zip-download"
-	//} else if t.Path == path.Join("/archive", t.BinId, "tar") {
-	//	t.Operation = "tar-download"
-	//} else if t.Method == "DELETE" && t.Path == path.Join("/", t.BinId) && t.Filename == "" {
-	//	t.Operation = "bin-delete"
-	//} else if t.Method == "DELETE" && t.Path == path.Join("/", t.BinId, t.Filename) && t.Filename != "" {
-	//	t.Operation = "file-delete"
-	//} else if t.Method == "PUT" && t.Path == path.Join("/", t.BinId) && t.Filename == "" {
-	//	t.Operation = "bin-lock"
-	//}
-
 	sqlStatement := "INSERT INTO transaction (bin_id, filename, operation, method, path, ip, headers, timestamp, status, req_bytes, resp_bytes, completed) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id"
 	t0 := time.Now()
 	err = d.db.QueryRow(sqlStatement, t.BinId, t.Filename, t.Operation, t.Method, t.Path, t.IP, t.Headers, t.Timestamp, t.Status, t.ReqBytes, t.RespBytes, t.CompletedAt).Scan(&t.Id)
@@ -156,7 +127,6 @@ func (d *TransactionDao) Insert(t *ds.Transaction) (err error) {
 
 func (d *TransactionDao) Update(t *ds.Transaction) (err error) {
 	var id string
-	//now := time.Now().UTC().Truncate(time.Microsecond)
 	sqlStatement := "UPDATE transaction SET headers = $1 WHERE id = $2 RETURNING id"
 	t0 := time.Now()
 	err = d.db.QueryRow(sqlStatement, t.Headers, t.Id).Scan(&id)
@@ -164,8 +134,6 @@ func (d *TransactionDao) Update(t *ds.Transaction) (err error) {
 	if err != nil {
 		return err
 	}
-	//bin.UpdatedAt = now
-	//bin.UpdatedAtRelative = humanize.Time(bin.UpdatedAt)
 	return nil
 }
 

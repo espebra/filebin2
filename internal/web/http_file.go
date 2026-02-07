@@ -260,8 +260,6 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	//fmt.Printf("Uploading filename %s (%s) to bin %s\n", inputFilename, humanize.Bytes(inputBytes), bin.Id)
-
 	// Add timestamp to the temporary file to make it easy to see when
 	// an upload was started.
 	fp, err := h.workspace.CreateTempFile(inputBytes, fmt.Sprintf("filebin-%s-", t0.Format("20060102-150405")))
@@ -414,8 +412,6 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 
 				// Sleep a little before retrying
 				time.Sleep(time.Duration(retryCounter) * time.Second)
-
-				// Get some more debug data in case the retry also fails
 			}
 		}
 	}

@@ -24,10 +24,6 @@ func (c *ClientDao) GetByIP(ip net.IP) (client ds.Client, found bool, err error)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			client.IP = ip.String()
-			//client.Requests = 0
-			//now := time.Now().UTC()
-			//client.FirstActiveAt = now
-			//client.LastActiveAt = now
 			return client, false, nil
 		}
 		return client, false, err

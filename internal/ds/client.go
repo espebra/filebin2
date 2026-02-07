@@ -2,8 +2,6 @@ package ds
 
 import (
 	"database/sql"
-	//"fmt"
-	//"net"
 	"time"
 )
 

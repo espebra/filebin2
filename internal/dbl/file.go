@@ -43,7 +43,6 @@ func (d *FileDao) ValidateInput(file *ds.File) error {
 
 	// Extract the basename from the filename, in case the filename
 	// is not clean and contains a folder structure.
-	// folder structure.
 	n = filepath.Base(n)
 
 	// Replace all invalid UTF-8 characters in the filename with _
@@ -54,23 +53,14 @@ func (d *FileDao) ValidateInput(file *ds.File) error {
 	// unicode categories.
 	safe := func(r rune) rune {
 		switch {
-		// Allow numbers
 		case unicode.IsNumber(r):
-			//fmt.Printf("Character check: r=%q is a number\n", r)
 			return r
-		// Allow letters
 		case unicode.IsLetter(r):
-			//fmt.Printf("Character check: r=%q is a letter\n", r)
 			return r
-		// Allow certain other characters
 		case strings.ContainsAny(string(r), "-_=+,.()[] "):
-			//fmt.Printf("Character check: r=%q is a valid character\n", r)
 			return r
 		}
-		//fmt.Printf("Invalid character (%q) in filename replaced with underscore\n", r)
-		// All other characters are replaced with an underscore
 		return '_'
-
 	}
 	n = strings.Map(safe, n)
 
