@@ -267,7 +267,7 @@ func (d *BinDao) RegisterDownload(bin *ds.Bin) (err error) {
 
 func (d *BinDao) RegisterUpdate(bin *ds.Bin) (err error) {
 	bin.UpdatedAt = time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "UPDATE bin SET updates = udates + 1, updated_at = $1 WHERE id = $2 RETURNING updates"
+	sqlStatement := "UPDATE bin SET updates = updates + 1, updated_at = $1 WHERE id = $2 RETURNING updates"
 	t0 := time.Now()
 	err = d.db.QueryRow(sqlStatement, bin.UpdatedAt, bin.Id).Scan(&bin.Updates)
 	observeQuery(d.metrics, "bin_register_update", t0, err)
