@@ -10,7 +10,7 @@ paths:
       tags:
         - file
       summary: Download a file from a bin
-      description: This is a regular file download, which includes content-length and checksums of the content in the response headers. The content-type will be set according to the content.
+      description: The client will be redirected to a time-limited presigned URL pointing to the object in S3 for direct download.
       parameters:
         - name: bin
           in: path
@@ -25,10 +25,10 @@ paths:
           schema:
             type: string
       responses:
-        '301':
-          description: Signed redirect pointing to the object in S3 for direct download.
+        '302':
+          description: Temporary redirect to a presigned URL pointing to the object in S3 for direct download.
         '403':
-          description: The file download count limitation was reached.
+          description: The bin is not approved or the file download count limitation was reached.
           content:
             application/json: {}
         '404':
@@ -73,9 +73,15 @@ paths:
             schema:
               type: string
       parameters:
-        - name: cid
+        - name: Content-MD5
           in: header
-          description: A custom id of the client uploading
+          description: Base64-encoded MD5 checksum of the file content for integrity verification.
+          required: false
+          schema:
+            type: string
+        - name: Content-SHA256
+          in: header
+          description: Hex-encoded SHA256 checksum of the file content for integrity verification.
           required: false
           schema:
             type: string
@@ -97,15 +103,23 @@ paths:
           content:
             application/json: {}
         '400':
-          description: Invalid input, typically invalid bin or filename specified.
+          description: Invalid input such as invalid bin or filename, or checksum mismatch.
           content:
             application/json: {}
         '403':
-          description: The storage limitation was reached.
+          description: The file extension is not allowed.
           content:
             application/json: {}
         '405':
-          description: The bin is locked and can not be written to
+          description: The bin is locked, expired, or deleted and can not be written to.
+          content:
+            application/json: {}
+        '411':
+          description: Missing or invalid content-length header.
+          content:
+            application/json: {}
+        '507':
+          description: The storage limitation was reached. Please retry later.
           content:
             application/json: {}
   /:
@@ -113,17 +127,18 @@ paths:
       tags:
         - file
       summary: Upload a file to a bin (Deprecated)
-      description: This is kept to achieve backwards compatibility with a redirect.
+      description: This is kept to achieve backwards compatibility. The bin and filename are specified as request headers instead of in the URL path. The upload is processed directly.
+      deprecated: true
       parameters:
         - in: header
           name: bin
-          description: The bin to upload the file to
-          required: true
+          description: The bin to upload the file to. A bin will be generated if not specified.
+          required: false
           schema:
             type: string
         - in: header
           name: filename
-          description: The filename of the file to upload
+          description: The filename of the file to upload.
           required: true
           schema:
             type: string
@@ -133,8 +148,12 @@ paths:
             schema:
               type: string
       responses:
-        '307':
-          description: Redirect to the new location
+        '201':
+          description: Successful upload.
+          content:
+            application/json: {}
+        '400':
+          description: Missing filename header or invalid input.
           content:
             application/json: {}
   '/{bin}':
@@ -201,27 +220,6 @@ paths:
           description: The bin does not exist or is not available
           content:
             application/json: {}
-    ban:
-      tags:
-        - bin
-      summary: Delete an entire bin and all of its files, and ban the client IP address that uploaded the files.
-      description: This is is the same as deleting a bin, except that the client IP addresses that uploaded the files to the bin are banned. Use this endpoint only to reduce abuse, malicious use and sharing of illegal content.
-      parameters:
-        - name: bin
-          in: path
-          description: The bin to ban.
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json: {}
-        '404':
-          description: The bin does not exist or is not available
-          content:
-            application/json: {}
   '/qr/{bin}':
     get:
       tags:
@@ -256,6 +254,10 @@ paths:
       responses:
         '200':
           description: Successful operation
+        '403':
+          description: The bin is not approved or all files have exceeded the download limit.
+          content:
+            application/json: {}
         '404':
           description: The bin does not exist or is not available
           content:
@@ -276,6 +278,10 @@ paths:
       responses:
         '200':
           description: Successful operation
+        '403':
+          description: The bin is not approved or all files have exceeded the download limit.
+          content:
+            application/json: {}
         '404':
           description: The bin does not exist or is not available
           content:
