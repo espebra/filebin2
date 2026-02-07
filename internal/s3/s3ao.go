@@ -350,19 +350,15 @@ func (s S3AO) PresignedGetObject(contentSHA256 string, filename string, mime str
 	// Use content SHA256 as the object key for content-addressable storage
 	objectKey := contentSHA256
 
-	// Sanitize filename for Content-Disposition header to prevent header injection
-	sanitizedFilename := strings.ReplaceAll(filename, "\"", "_")
-	sanitizedFilename = strings.ReplaceAll(sanitizedFilename, "\\", "_")
-
 	var contentDisposition string
 	switch {
 	case strings.HasPrefix(mime, "text/html"), strings.HasPrefix(mime, "application/pdf"):
 		// Tell browser to handle this as an attachment. For text/html, this
 		// is a small barrier to reduce phishing.
-		contentDisposition = fmt.Sprintf("attachment; filename=\"%s\"", sanitizedFilename)
+		contentDisposition = fmt.Sprintf("attachment; filename=%q", filename)
 	default:
 		// Browser to decide how to handle the rest of the content-types
-		contentDisposition = fmt.Sprintf("inline; filename=\"%s\"", sanitizedFilename)
+		contentDisposition = fmt.Sprintf("inline; filename=%q", filename)
 	}
 
 	cacheControl := fmt.Sprintf("max-age=%.0f", s.expiry.Seconds())
