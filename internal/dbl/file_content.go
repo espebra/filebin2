@@ -3,7 +3,6 @@ package dbl
 import (
 	"database/sql"
 	"errors"
-	"log/slog"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -198,8 +197,7 @@ ORDER BY bytes DESC, created_at DESC`
 			&content.LastReferencedAt,
 		)
 		if err != nil {
-			slog.Error("error scanning file content row", "error", err)
-			continue
+			return nil, err
 		}
 		content.BytesReadable = humanize.Bytes(content.Bytes)
 		contents = append(contents, content)

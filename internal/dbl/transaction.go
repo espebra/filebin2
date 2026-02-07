@@ -55,8 +55,9 @@ func (d *TransactionDao) Register(r *http.Request, bin string, filename string, 
 			// something is wrong. The request should be
 			// aborted, but the logging should not.
 			tr.ReqBytes = -1
+		} else {
+			tr.ReqBytes = i
 		}
-		tr.ReqBytes = i
 	}
 
 	err = d.Insert(tr)
@@ -79,7 +80,9 @@ func (d *TransactionDao) GetByIP(ip string) (transactions []ds.Transaction, err 
 			return transactions, err
 		}
 		t.TimestampRelative = humanize.Time(t.Timestamp)
-		t.ReqBytesReadable = humanize.Bytes(uint64(t.ReqBytes))
+		if t.ReqBytes >= 0 {
+			t.ReqBytesReadable = humanize.Bytes(uint64(t.ReqBytes))
+		}
 		t.RespBytesReadable = humanize.Bytes(uint64(t.RespBytes))
 		t.Duration = t.CompletedAt.Sub(t.Timestamp)
 
@@ -107,7 +110,9 @@ func (d *TransactionDao) GetByBin(bin string) (transactions []ds.Transaction, er
 			return transactions, err
 		}
 		t.TimestampRelative = humanize.Time(t.Timestamp)
-		t.ReqBytesReadable = humanize.Bytes(uint64(t.ReqBytes))
+		if t.ReqBytes >= 0 {
+			t.ReqBytesReadable = humanize.Bytes(uint64(t.ReqBytes))
+		}
 		t.RespBytesReadable = humanize.Bytes(uint64(t.RespBytes))
 		t.Duration = t.CompletedAt.Sub(t.Timestamp)
 

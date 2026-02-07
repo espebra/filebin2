@@ -88,8 +88,9 @@ type MetricsDao struct {
 
 func (d *MetricsDao) StorageBytesAllocated() (totalBytes uint64) {
 	// Assume that each file consumes at least 256KB, to align with minimum billable object size in AWS.
+	// Count each unique file_content row once (not per file reference) to avoid over-counting deduplicated content.
 	minBytes := 262144
-	sqlStatement := "SELECT COALESCE((SELECT SUM(GREATEST(file_content.bytes, $1)) FROM file JOIN file_content ON file.sha256 = file_content.sha256 WHERE file_content.in_storage = true AND file.deleted_at IS NULL), 0)"
+	sqlStatement := "SELECT COALESCE(SUM(GREATEST(fc.bytes, $1)), 0) FROM file_content fc WHERE fc.in_storage = true AND EXISTS (SELECT 1 FROM file f WHERE f.sha256 = fc.sha256 AND f.deleted_at IS NULL)"
 	t0 := time.Now()
 	err := d.db.QueryRow(sqlStatement, minBytes).Scan(&totalBytes)
 	observeQuery(d.metrics, "metrics_storage_bytes", t0, err)

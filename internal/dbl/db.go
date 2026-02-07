@@ -31,9 +31,8 @@ func observeQuery(m DBMetricsObserver, operation string, t0 time.Time, err error
 var schemaSQL string
 
 type DAO struct {
-	db             *sql.DB
-	ConnStr        string
-	metrics        DBMetricsObserver
+	db      *sql.DB
+	metrics DBMetricsObserver
 	binDao         *BinDao
 	fileDao        *FileDao
 	fileContentDao *FileContentDao
@@ -105,7 +104,6 @@ func Init(cfg DBConfig) (DAO, error) {
 	db.SetConnMaxIdleTime(cfg.ConnMaxIdleTime)
 
 	dao = DAO{db: db}
-	dao.ConnStr = connStr
 	dao.binDao = &BinDao{db: db}
 	dao.fileDao = &FileDao{db: db}
 	dao.fileContentDao = &FileContentDao{db: db}
