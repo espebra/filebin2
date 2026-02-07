@@ -129,6 +129,35 @@ func TestArchiveDownload(t *testing.T) {
 		}
 	})
 
+}
+
+func TestArchiveDoubleCompression(t *testing.T) {
+	// Use a separate bin to avoid download limit exhaustion from TestArchiveDownload
+	binID := "archivetest07"
+	files := map[string]string{
+		"file1.txt": "content of file 1",
+		"file2.txt": "content of file 2",
+	}
+
+	// Upload files
+	for filename, content := range files {
+		tc := TestCase{
+			Description:   fmt.Sprintf("Upload %s for double-compression test", filename),
+			Method:        "POST",
+			Bin:           binID,
+			Filename:      filename,
+			UploadContent: content,
+			StatusCode:    http.StatusCreated,
+		}
+		statusCode, _, err := httpRequest(tc)
+		if err != nil {
+			t.Fatalf("Failed to upload test file %s: %s", filename, err.Error())
+		}
+		if statusCode != http.StatusCreated {
+			t.Fatalf("Expected status %d for upload, got %d", http.StatusCreated, statusCode)
+		}
+	}
+
 	t.Run("verify tar archive is not double-compressed", func(t *testing.T) {
 		statusCode, body, err := downloadArchiveWithAcceptEncoding(binID, "tar", "gzip")
 		if err != nil {

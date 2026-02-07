@@ -318,9 +318,9 @@ func TestAdminMessageValidationError(t *testing.T) {
 	rr := httptest.NewRecorder()
 	h.router.ServeHTTP(rr, req)
 
-	// Should return 500 due to validation error
-	if rr.Code != http.StatusInternalServerError {
-		t.Errorf("POST /admin/message with invalid content: got status %v, want %v", rr.Code, http.StatusInternalServerError)
+	// Should return 400 due to validation error
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("POST /admin/message with invalid content: got status %v, want %v", rr.Code, http.StatusBadRequest)
 	}
 
 	// Verify original message unchanged (should still be empty)
