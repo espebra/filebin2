@@ -30,43 +30,46 @@ services:
       - local
 
   app:
+    ## Build fra source code or
     build:
       context: .
       dockerfile: Dockerfile.integration-tests
+    ## Use the latest release
+    #image: "ghcr.io/espebra/filebin2:latest"
     restart: "no"
     environment:
-      # Database
+      ## Database
       - FILEBIN_DATABASE_HOST=db
       - FILEBIN_DATABASE_PORT=5432
       - FILEBIN_DATABASE_NAME=db
       - FILEBIN_DATABASE_USERNAME=username
       - FILEBIN_DATABASE_PASSWORD=changeme
-      # S3
+      ## S3
       - FILEBIN_S3_ENDPOINT=s3:5553
       - FILEBIN_S3_REGION=us-east-1
       - FILEBIN_S3_BUCKET=filebin
       - FILEBIN_S3_ACCESS_KEY=s3accesskey
       - FILEBIN_S3_SECRET_KEY=s3secretkey
       - FILEBIN_S3_SECURE=false
-      # HTTP
+      ## HTTP
       - FILEBIN_LISTEN_HOST=0.0.0.0
-      - FILEBIN_ACCESS_LOG=access.log
-      # Admin
+      #- FILEBIN_ACCESS_LOG=access.log
+      ## Admin
       - FILEBIN_ADMIN_USERNAME=admin
       - FILEBIN_ADMIN_PASSWORD=changeme
-      # Metrics
+      ## Metrics
       - FILEBIN_METRICS=true
       - FILEBIN_METRICS_USERNAME=metrics
       - FILEBIN_METRICS_PASSWORD=changeme
       - FILEBIN_METRICS_AUTH=basic
-      # Lurker
-      - FILEBIN_LURKER_INTERVAL=10
-      - FILEBIN_EXPIRATION=3600
-      # Limits
-      - FILEBIN_LIMIT_STORAGE=1G
-      # Features
-      - FILEBIN_REQUIRE_VERIFICATION_COOKIE=true
-      # Contact
+      ## Lurker
+      #- FILEBIN_LURKER_INTERVAL=10
+      #- FILEBIN_EXPIRATION=3600
+      ## Limits
+      #- FILEBIN_LIMIT_STORAGE=1G
+      ## Features
+      #- FILEBIN_REQUIRE_VERIFICATION_COOKIE=true
+      ## Contact
       - FILEBIN_CONTACT=changeme@filebin.net
     expose:
       - "8080"

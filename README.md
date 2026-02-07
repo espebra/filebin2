@@ -9,11 +9,89 @@ Filebin2 is a web application that facilitates convenient file sharing over the 
 
 ## Table of contents
 
+* [Getting started](#getting-started)
+  * [Using Docker Compose](#using-docker-compose)
+  * [Using the container image](#using-the-container-image)
+  * [Using the binary](#using-the-binary)
 * [Why filebin2?](#why-filebin2)
 * [Development environment](#development-environment)
 * [Usage](#usage)
   * [Configuration](#configuration)
 * [Integrations](#integrations)
+
+## Getting started
+
+Filebin requires a PostgreSQL database and an S3-compatible object storage bucket. Once these are available, you can run Filebin using Docker Compose, a container image, or a standalone binary.
+
+### Using Docker Compose
+
+The quickest way to get a fully working setup is to use the included `docker-compose.yml`, which builds Filebin from source and starts it together with PostgreSQL and S3 (using [Stupid Simple S3](https://github.com/espebra/stupid-simple-s3)):
+
+```bash
+docker compose up --build
+```
+
+This makes Filebin available at [http://localhost:8080/](http://localhost:8080/) with an admin interface at [http://admin:changeme@localhost:8080/admin](http://admin:changeme@localhost:8080/admin).
+
+Review and adjust the environment variables in `docker-compose.yml` to suit your needs. See the [Configuration](#configuration) section for all available options.
+
+### Using the container image
+
+Multi-arch container images (`linux/amd64` and `linux/arm64`) are published to GitHub Container Registry for each release:
+
+```
+ghcr.io/espebra/filebin2:latest
+```
+
+Run the container with the required environment variables pointing to your PostgreSQL database and S3 bucket:
+
+```bash
+docker run -p 8080:8080 \
+  -e FILEBIN_DATABASE_HOST=db.example.com \
+  -e FILEBIN_DATABASE_NAME=filebin \
+  -e FILEBIN_DATABASE_USERNAME=filebin \
+  -e FILEBIN_DATABASE_PASSWORD=secret \
+  -e FILEBIN_S3_ENDPOINT=s3.example.com \
+  -e FILEBIN_S3_REGION=us-east-1 \
+  -e FILEBIN_S3_BUCKET=filebin \
+  -e FILEBIN_S3_ACCESS_KEY=accesskey \
+  -e FILEBIN_S3_SECRET_KEY=secretkey \
+  -e FILEBIN_LISTEN_HOST=0.0.0.0 \
+  -e FILEBIN_CONTACT=you@example.com \
+  ghcr.io/espebra/filebin2:latest
+```
+
+### Using the binary
+
+Pre-built binaries for Linux and macOS (amd64 and arm64) are attached to each [GitHub release](https://github.com/espebra/filebin2/releases). Download the appropriate binary for your platform:
+
+| Binary | Platform |
+| ------ | -------- |
+| `filebin2-linux-amd64` | Linux x86_64 |
+| `filebin2-linux-arm64` | Linux ARM64 |
+| `filebin2-darwin-amd64` | macOS x86_64 |
+| `filebin2-darwin-arm64` | macOS ARM64 (Apple Silicon) |
+
+Make the binary executable and run it with the required flags:
+
+```bash
+chmod +x filebin2-linux-amd64
+
+./filebin2-linux-amd64 \
+  --db-host db.example.com \
+  --db-name filebin \
+  --db-username filebin \
+  --db-password secret \
+  --s3-endpoint s3.example.com \
+  --s3-region us-east-1 \
+  --s3-bucket filebin \
+  --s3-access-key accesskey \
+  --s3-secret-key secretkey \
+  --listen-host 0.0.0.0 \
+  --contact you@example.com
+```
+
+All flags can also be set using environment variables. See the [Configuration](#configuration) section for the full reference.
 
 ## Why filebin2?
 
