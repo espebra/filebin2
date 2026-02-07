@@ -55,7 +55,6 @@ func (l *Lurker) runOnce() {
 		}
 	}()
 	t0 := time.Now()
-	l.DeletePendingFiles()
 	l.DeletePendingBins()
 	l.DeletePendingContent()
 	l.CleanTransactions()
@@ -69,18 +68,6 @@ func (l *Lurker) Stop() {
 	}
 }
 
-func (l *Lurker) DeletePendingFiles() {
-	files, err := l.dao.File().GetPendingDelete()
-	if err != nil {
-		slog.Error("unable to get pending file deletions", "error", err)
-		return
-	}
-	if len(files) > 0 {
-		slog.Info("found files pending removal (already marked deleted)", "count", len(files))
-		// Files are already marked as deleted (deleted_at is set)
-		// Orphaned content will be detected by DeletePendingContent using COUNT(*)
-	}
-}
 
 func (l *Lurker) DeletePendingBins() {
 	bins, err := l.dao.Bin().GetPendingDelete()

@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"math/big"
-	"path"
 	"regexp"
 	"strings"
 	"time"
@@ -107,23 +106,7 @@ func (d *BinDao) GetByID(id string) (bin ds.Bin, found bool, err error) {
 			return bin, false, err
 		}
 	}
-	// https://github.com/lib/pq/issues/329
-	bin.UpdatedAt = bin.UpdatedAt.UTC()
-	bin.CreatedAt = bin.CreatedAt.UTC()
-	bin.ExpiredAt = bin.ExpiredAt.UTC()
-	bin.BytesReadable = humanize.Bytes(bin.Bytes)
-	bin.UpdatedAtRelative = humanize.Time(bin.UpdatedAt)
-	bin.CreatedAtRelative = humanize.Time(bin.CreatedAt)
-	if bin.IsApproved() {
-		bin.ApprovedAt.Time = bin.ApprovedAt.Time.UTC()
-		bin.ApprovedAtRelative = humanize.Time(bin.ApprovedAt.Time)
-	}
-	bin.ExpiredAtRelative = humanize.Time(bin.ExpiredAt)
-	if bin.IsDeleted() {
-		bin.DeletedAt.Time = bin.DeletedAt.Time.UTC()
-		bin.DeletedAtRelative = humanize.Time(bin.DeletedAt.Time)
-	}
-	bin.URL = path.Join("/", bin.Id)
+	hydrateBin(&bin)
 	return bin, true, nil
 }
 
@@ -341,23 +324,7 @@ func (d *BinDao) binQuery(sqlStatement string, params ...interface{}) (bins []ds
 		if err != nil {
 			return bins, err
 		}
-		// https://github.com/lib/pq/issues/329
-		bin.UpdatedAt = bin.UpdatedAt.UTC()
-		bin.CreatedAt = bin.CreatedAt.UTC()
-		bin.ExpiredAt = bin.ExpiredAt.UTC()
-		bin.UpdatedAtRelative = humanize.Time(bin.UpdatedAt)
-		bin.CreatedAtRelative = humanize.Time(bin.CreatedAt)
-		if bin.IsApproved() {
-			bin.ApprovedAt.Time = bin.ApprovedAt.Time.UTC()
-			bin.ApprovedAtRelative = humanize.Time(bin.ApprovedAt.Time)
-		}
-		bin.ExpiredAtRelative = humanize.Time(bin.ExpiredAt)
-		if bin.IsDeleted() {
-			bin.DeletedAt.Time = bin.DeletedAt.Time.UTC()
-			bin.DeletedAtRelative = humanize.Time(bin.DeletedAt.Time)
-		}
-		bin.BytesReadable = humanize.Bytes(bin.Bytes)
-		bin.URL = path.Join("/", bin.Id)
+		hydrateBin(&bin)
 		bins = append(bins, bin)
 	}
 	return bins, nil
