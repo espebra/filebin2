@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"log/slog"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -17,16 +16,6 @@ import (
 type FileDao struct {
 	db      *sql.DB
 	metrics DBMetricsObserver
-}
-
-func setCategory(file *ds.File) {
-	if strings.HasPrefix(file.Mime, "image") {
-		file.Category = "image"
-	} else if strings.HasPrefix(file.Mime, "video") {
-		file.Category = "video"
-	} else {
-		file.Category = "unknown"
-	}
 }
 
 func (d *FileDao) ValidateInput(file *ds.File) error {
@@ -100,32 +89,7 @@ func (d *FileDao) GetByID(id int) (file ds.File, found bool, err error) {
 		}
 		return file, false, err
 	}
-	// https://github.com/lib/pq/issues/329
-	file.UpdatedAt = file.UpdatedAt.UTC()
-	file.CreatedAt = file.CreatedAt.UTC()
-	file.BinExpiredAt = file.BinExpiredAt.UTC()
-	file.UpdatedAtRelative = humanize.Time(file.UpdatedAt)
-	file.CreatedAtRelative = humanize.Time(file.CreatedAt)
-	if file.IsDeleted() {
-		file.DeletedAt.Time = file.DeletedAt.Time.UTC()
-		file.DeletedAtRelative = humanize.Time(file.DeletedAt.Time)
-	}
-	if file.BinDeletedAt.Valid && !file.BinDeletedAt.Time.IsZero() {
-		file.BinDeletedAt.Time = file.BinDeletedAt.Time.UTC()
-		file.BinDeletedAtRelative = humanize.Time(file.BinDeletedAt.Time)
-	}
-	if !file.BinExpiredAt.IsZero() {
-		file.BinExpiredAtRelative = humanize.Time(file.BinExpiredAt)
-	}
-	file.BytesReadable = humanize.Bytes(file.Bytes)
-	file.UploadDuration = time.Duration(file.UploadDurationMs) * time.Millisecond
-	file.UploadDurationReadable = file.UploadDuration.String()
-
-	// Compute availability: file not deleted, bin not deleted, bin not expired, content in storage
-	binDeleted := file.BinDeletedAt.Valid && !file.BinDeletedAt.Time.IsZero()
-	binExpired := !file.BinExpiredAt.IsZero() && file.BinExpiredAt.Before(time.Now())
-	file.AvailableForDownload = !file.IsDeleted() && !binDeleted && !binExpired && file.InStorage
-
+	hydrateFile(&file)
 	return file, true, nil
 }
 
@@ -140,33 +104,7 @@ func (d *FileDao) GetByName(bin string, filename string) (file ds.File, found bo
 		}
 		return file, false, err
 	}
-	// https://github.com/lib/pq/issues/329
-	file.UpdatedAt = file.UpdatedAt.UTC()
-	file.CreatedAt = file.CreatedAt.UTC()
-	file.BinExpiredAt = file.BinExpiredAt.UTC()
-	file.UpdatedAtRelative = humanize.Time(file.UpdatedAt)
-	file.CreatedAtRelative = humanize.Time(file.CreatedAt)
-	if file.IsDeleted() {
-		file.DeletedAt.Time = file.DeletedAt.Time.UTC()
-		file.DeletedAtRelative = humanize.Time(file.DeletedAt.Time)
-	}
-	if file.BinDeletedAt.Valid && !file.BinDeletedAt.Time.IsZero() {
-		file.BinDeletedAt.Time = file.BinDeletedAt.Time.UTC()
-		file.BinDeletedAtRelative = humanize.Time(file.BinDeletedAt.Time)
-	}
-	if !file.BinExpiredAt.IsZero() {
-		file.BinExpiredAtRelative = humanize.Time(file.BinExpiredAt)
-	}
-	file.BytesReadable = humanize.Bytes(file.Bytes)
-	file.UploadDuration = time.Duration(file.UploadDurationMs) * time.Millisecond
-	file.UploadDurationReadable = file.UploadDuration.String()
-
-	// Compute availability: file not deleted, bin not deleted, bin not expired, content in storage
-	binDeleted := file.BinDeletedAt.Valid && !file.BinDeletedAt.Time.IsZero()
-	binExpired := !file.BinExpiredAt.IsZero() && file.BinExpiredAt.Before(time.Now())
-	file.AvailableForDownload = !file.IsDeleted() && !binDeleted && !binExpired && file.InStorage
-
-	setCategory(&file)
+	hydrateFile(&file)
 	return file, true, nil
 }
 
@@ -310,13 +248,6 @@ func (d *FileDao) GetAll(available bool) (files []ds.File, err error) {
 	return files, err
 }
 
-func (d *FileDao) GetPendingDelete() (files []ds.File, err error) {
-	// Files are soft-deleted by setting deleted_at. No further action needed by lurker.
-	// Content cleanup is handled by FileContent.GetPendingDelete() which checks for orphaned content.
-	// Return empty list to avoid logging "pending removal" for already-deleted files.
-	return files, nil
-}
-
 func (d *FileDao) GetTopDownloads(limit int) (files []ds.File, err error) {
 	// Join with file_content to only show files whose content is still in storage
 	sqlStatement := `SELECT f.id, f.bin_id, f.filename, fc.mime, fc.bytes, fc.md5, f.sha256, f.downloads, f.updates, fc.in_storage, f.ip, f.headers, f.updated_at, f.created_at, f.deleted_at, b.deleted_at, b.expired_at, f.upload_duration_ms
@@ -391,34 +322,7 @@ func (d *FileDao) fileQuery(sqlStatement string, params ...interface{}) (files [
 		if err != nil {
 			return files, err
 		}
-		// https://github.com/lib/pq/issues/329
-		file.UpdatedAt = file.UpdatedAt.UTC()
-		file.CreatedAt = file.CreatedAt.UTC()
-		file.BinExpiredAt = file.BinExpiredAt.UTC()
-		file.UpdatedAtRelative = humanize.Time(file.UpdatedAt)
-		file.CreatedAtRelative = humanize.Time(file.CreatedAt)
-		if file.IsDeleted() {
-			file.DeletedAt.Time = file.DeletedAt.Time.UTC()
-			file.DeletedAtRelative = humanize.Time(file.DeletedAt.Time)
-		}
-		if file.BinDeletedAt.Valid && !file.BinDeletedAt.Time.IsZero() {
-			file.BinDeletedAt.Time = file.BinDeletedAt.Time.UTC()
-			file.BinDeletedAtRelative = humanize.Time(file.BinDeletedAt.Time)
-		}
-		if !file.BinExpiredAt.IsZero() {
-			file.BinExpiredAtRelative = humanize.Time(file.BinExpiredAt)
-		}
-		file.BytesReadable = humanize.Bytes(file.Bytes)
-		file.UploadDuration = time.Duration(file.UploadDurationMs) * time.Millisecond
-		file.UploadDurationReadable = file.UploadDuration.String()
-		file.URL = path.Join("/", file.Bin, file.Filename)
-
-		// Compute availability: file not deleted, bin not deleted, bin not expired, content in storage
-		binDeleted := file.BinDeletedAt.Valid && !file.BinDeletedAt.Time.IsZero()
-		binExpired := !file.BinExpiredAt.IsZero() && file.BinExpiredAt.Before(time.Now())
-		file.AvailableForDownload = !file.IsDeleted() && !binDeleted && !binExpired && file.InStorage
-
-		setCategory(&file)
+		hydrateFile(&file)
 		files = append(files, file)
 	}
 	return files, nil
