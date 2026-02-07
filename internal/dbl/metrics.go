@@ -11,21 +11,21 @@ import (
 )
 
 type PostgresStats struct {
-	Version               string    `json:"version"`
-	ServerStartedAt       time.Time `json:"server_started_at"`
-	ServerUptime          string    `json:"server_uptime"`
-	DatabaseSize          uint64    `json:"database_size"`
-	DatabaseSizeReadable  string    `json:"database_size_readable"`
-	ActiveConnections     int       `json:"active_connections"`
-	TxCommitted           int64     `json:"tx_committed"`
-	TxRolledBack          int64     `json:"tx_rolled_back"`
-	CacheHitRatio         float64   `json:"cache_hit_ratio"`
-	CacheHitRatioReadable string    `json:"cache_hit_ratio_readable"`
-	TotalLiveTuples       int64     `json:"total_live_tuples"`
-	TotalDeadTuples       int64     `json:"total_dead_tuples"`
-	DeadTupleRatio        float64   `json:"dead_tuple_ratio"`
-	DeadTupleRatioReadable string   `json:"dead_tuple_ratio_readable"`
-	TransactionIDAge      int64     `json:"transaction_id_age"`
+	Version                string    `json:"version"`
+	ServerStartedAt        time.Time `json:"server_started_at"`
+	ServerUptime           string    `json:"server_uptime"`
+	DatabaseSize           uint64    `json:"database_size"`
+	DatabaseSizeReadable   string    `json:"database_size_readable"`
+	ActiveConnections      int       `json:"active_connections"`
+	TxCommitted            int64     `json:"tx_committed"`
+	TxRolledBack           int64     `json:"tx_rolled_back"`
+	CacheHitRatio          float64   `json:"cache_hit_ratio"`
+	CacheHitRatioReadable  string    `json:"cache_hit_ratio_readable"`
+	TotalLiveTuples        int64     `json:"total_live_tuples"`
+	TotalDeadTuples        int64     `json:"total_dead_tuples"`
+	DeadTupleRatio         float64   `json:"dead_tuple_ratio"`
+	DeadTupleRatioReadable string    `json:"dead_tuple_ratio_readable"`
+	TransactionIDAge       int64     `json:"transaction_id_age"`
 }
 
 func (d *MetricsDao) PostgresStats() (stats PostgresStats, retErr error) {

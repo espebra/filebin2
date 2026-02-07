@@ -31,8 +31,8 @@ func observeQuery(m DBMetricsObserver, operation string, t0 time.Time, err error
 var schemaSQL string
 
 type DAO struct {
-	db      *sql.DB
-	metrics DBMetricsObserver
+	db             *sql.DB
+	metrics        DBMetricsObserver
 	binDao         *BinDao
 	fileDao        *FileDao
 	fileContentDao *FileContentDao

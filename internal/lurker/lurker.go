@@ -68,7 +68,6 @@ func (l *Lurker) Stop() {
 	}
 }
 
-
 func (l *Lurker) DeletePendingBins() {
 	bins, err := l.dao.Bin().GetPendingDelete()
 	if err != nil {

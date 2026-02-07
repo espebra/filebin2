@@ -55,14 +55,14 @@ type Metrics struct {
 	DBQueryErrors   *prometheus.CounterVec
 
 	// Database connection pool metrics
-	dbOpenConnections      prometheus.Gauge
-	dbInUseConnections     prometheus.Gauge
-	dbIdleConnections      prometheus.Gauge
-	dbWaitCount            prometheus.Gauge
-	dbWaitDuration         prometheus.Gauge
-	dbMaxIdleClosed        prometheus.Gauge
-	dbMaxIdleTimeClosed    prometheus.Gauge
-	dbMaxLifetimeClosed    prometheus.Gauge
+	dbOpenConnections   prometheus.Gauge
+	dbInUseConnections  prometheus.Gauge
+	dbIdleConnections   prometheus.Gauge
+	dbWaitCount         prometheus.Gauge
+	dbWaitDuration      prometheus.Gauge
+	dbMaxIdleClosed     prometheus.Gauge
+	dbMaxIdleTimeClosed prometheus.Gauge
+	dbMaxLifetimeClosed prometheus.Gauge
 }
 
 func NewMetrics(id string, registry *prometheus.Registry) *Metrics {
