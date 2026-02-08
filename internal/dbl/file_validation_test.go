@@ -3,6 +3,7 @@ package dbl
 import (
 	"strings"
 	"testing"
+	"unicode"
 
 	"github.com/espebra/filebin2/internal/ds"
 )
@@ -356,4 +357,79 @@ func TestValidateInputIdempotency(t *testing.T) {
 			}
 		})
 	}
+}
+
+func FuzzFileValidateInput(f *testing.F) {
+	// Seed corpus with interesting inputs
+	f.Add("test.txt")
+	f.Add("")
+	f.Add("   ")
+	f.Add(".hidden")
+	f.Add("../../etc/passwd")
+	f.Add("folder/subfolder/file.txt")
+	f.Add("C:\\Users\\test\\file.txt")
+	f.Add(strings.Repeat("a", 200))
+	f.Add("test\x00file.txt")
+	f.Add("test\nfile.txt")
+	f.Add("café.txt")
+	f.Add("test😀file.txt")
+	f.Add("文档.txt")
+	f.Add("test@#$%^&*.txt")
+	f.Add("\xff\xfe")
+
+	d := &FileDao{}
+
+	f.Fuzz(func(t *testing.T, input string) {
+		file := &ds.File{Filename: input}
+		err := d.ValidateInput(file)
+
+		if err != nil {
+			// Validation errors are expected for some inputs
+			return
+		}
+
+		output := file.Filename
+
+		// Output must not be empty
+		if len(output) == 0 {
+			t.Error("ValidateInput produced empty filename without error")
+		}
+
+		// Output must not exceed 120 characters
+		if len(output) > 120 {
+			t.Errorf("ValidateInput produced filename longer than 120 chars: %d", len(output))
+		}
+
+		// Output must not start with a dot
+		if strings.HasPrefix(output, ".") {
+			t.Errorf("ValidateInput produced filename starting with dot: %q", output)
+		}
+
+		// Output must not contain path separators
+		if strings.Contains(output, "/") {
+			t.Errorf("ValidateInput produced filename containing slash: %q", output)
+		}
+
+		// Output must contain only allowed characters
+		for _, r := range output {
+			if !unicode.IsNumber(r) && !unicode.IsLetter(r) && !strings.ContainsAny(string(r), "-_=+,.()[] ") {
+				t.Errorf("ValidateInput produced filename with disallowed rune %U (%q) in %q", r, string(r), output)
+			}
+		}
+
+		// Output must not have redundant spaces
+		if strings.Contains(output, "  ") {
+			t.Errorf("ValidateInput produced filename with redundant spaces: %q", output)
+		}
+
+		// Output must be idempotent
+		file2 := &ds.File{Filename: output}
+		err2 := d.ValidateInput(file2)
+		if err2 != nil {
+			t.Errorf("ValidateInput is not idempotent: second pass returned error: %v", err2)
+		}
+		if file2.Filename != output {
+			t.Errorf("ValidateInput is not idempotent: %q -> %q", output, file2.Filename)
+		}
+	})
 }

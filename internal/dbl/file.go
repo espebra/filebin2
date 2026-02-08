@@ -53,19 +53,24 @@ func (d *FileDao) ValidateInput(file *ds.File) error {
 	}
 	n = strings.Map(safe, n)
 
+	// Replace redundant spaces with single spaces
+	n = strings.Join(strings.Fields(n), " ")
+
 	// . is not allowed as the first character
 	if strings.HasPrefix(n, ".") {
 		n = strings.Replace(n, ".", "_", 1)
 	}
 
-	// Replace redundant spaces with single spaces
-	n = strings.Join(strings.Fields(n), " ")
-
 	// Truncate long filenames
 	// XXX: The maximum length could be made configurable
 	if len(n) > 120 {
 		slog.Debug("truncating filename to 120 characters", "original_length", len(n), "filename", n)
-		n = n[:120]
+		n = strings.ToValidUTF8(strings.TrimRight(n[:120], " "), "_")
+	}
+
+	// Reject if the filename became empty after sanitization
+	if len(n) == 0 {
+		return errors.New("Filename not specified")
 	}
 
 	if file.Filename != n {

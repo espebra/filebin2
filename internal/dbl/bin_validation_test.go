@@ -2,7 +2,11 @@ package dbl
 
 import (
 	"regexp"
+	"strings"
 	"testing"
+	"time"
+
+	"github.com/espebra/filebin2/internal/ds"
 )
 
 func TestGenerateId(t *testing.T) {
@@ -76,4 +80,56 @@ func TestGenerateIdCharacterDistribution(t *testing.T) {
 	if !hasNumbers {
 		t.Error("GenerateId() did not generate any numbers in 10 attempts")
 	}
+}
+
+func FuzzBinValidateInput(f *testing.F) {
+	// Seed corpus with interesting inputs
+	f.Add("abcdefgh")
+	f.Add("")
+	f.Add("short")
+	f.Add(strings.Repeat("a", 61))
+	f.Add(strings.Repeat("a", 60))
+	f.Add(".abcdefgh")
+	f.Add("valid-bin_name.1")
+	f.Add("has spaces!!")
+	f.Add("UPPERCASE123")
+	f.Add("bin@#$%^&*")
+	f.Add("\x00\x00\x00\x00\x00\x00\x00\x00")
+	f.Add("café-latte1")
+	f.Add("abcdefghijklmnop")
+
+	d := &BinDao{}
+
+	f.Fuzz(func(t *testing.T, input string) {
+		bin := &ds.Bin{
+			Id:        input,
+			ExpiredAt: time.Now().Add(time.Hour),
+		}
+		err := d.ValidateInput(bin)
+
+		if err != nil {
+			return
+		}
+
+		// If validation passed, verify the invariants hold
+
+		// Length must be between 8 and 60
+		if len(input) < 8 {
+			t.Errorf("ValidateInput accepted too short bin ID: %q (len=%d)", input, len(input))
+		}
+		if len(input) > 60 {
+			t.Errorf("ValidateInput accepted too long bin ID: %q (len=%d)", input, len(input))
+		}
+
+		// Must not start with dot
+		if strings.HasPrefix(input, ".") {
+			t.Errorf("ValidateInput accepted bin ID starting with dot: %q", input)
+		}
+
+		// Must contain only valid characters [A-Za-z0-9-_.]
+		validBin := regexp.MustCompile("^[A-Za-z0-9._-]+$")
+		if !validBin.MatchString(input) {
+			t.Errorf("ValidateInput accepted bin ID with invalid characters: %q", input)
+		}
+	})
 }
