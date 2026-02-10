@@ -79,9 +79,44 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  build-packages:
+    runs-on: ubuntu-latest
+    needs: [build-binaries]
+    strategy:
+      matrix:
+        goarch: [amd64, arm64]
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries
+          path: artifacts/
+
+      - name: Install nfpm
+        uses: goreleaser/nfpm@v2
+
+      - name: Build DEB package
+        run: |
+          VERSION=${{ github.ref_name }} GOARCH=${{ matrix.goarch }} nfpm package --packager deb --target artifacts/
+
+      - name: Build RPM package
+        run: |
+          VERSION=${{ github.ref_name }} GOARCH=${{ matrix.goarch }} nfpm package --packager rpm --target artifacts/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.goarch }}
+          path: |
+            artifacts/*.deb
+            artifacts/*.rpm
+
   release:
     runs-on: ubuntu-latest
-    needs: [build-binaries, build-container]
+    needs: [build-binaries, build-container, build-packages]
     permissions:
       contents: write
     steps:
@@ -92,13 +127,26 @@ jobs:
           name: binaries
           path: artifacts/
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: packages-amd64
+          path: packages/
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: packages-arm64
+          path: packages/
+
       - name: List downloaded artifacts
-        run: ls -la artifacts/
+        run: |
+          ls -la artifacts/
+          ls -la packages/
 
       - name: Prepare release files
         run: |
           mkdir -p release
           cp artifacts/filebin2-* release/
+          cp packages/*.deb packages/*.rpm release/
           cd release
           sha256sum * > checksums.txt
 

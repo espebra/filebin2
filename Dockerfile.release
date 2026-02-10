@@ -15,7 +15,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -mod=vendor \
 
 FROM gcr.io/distroless/static:nonroot
 
-COPY --from=build /app/filebin2 /filebin2
+COPY --from=builder /app/filebin2 /filebin2
 
 EXPOSE 8080
 

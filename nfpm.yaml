@@ -1,0 +1,16 @@
+name: filebin2
+arch: ${GOARCH}
+platform: linux
+version: ${VERSION}
+maintainer: Filebin <packages@filebin.net>
+description: Web application for convenient file sharing
+vendor: Filebin
+homepage: https://github.com/espebra/filebin2
+license: BSD-3-Clause
+section: web
+
+contents:
+  - src: artifacts/filebin2-linux-${GOARCH}
+    dst: /usr/bin/filebin2
+    file_info:
+      mode: 0755
