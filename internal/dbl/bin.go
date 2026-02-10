@@ -23,21 +23,21 @@ type BinDao struct {
 func (d *BinDao) ValidateInput(bin *ds.Bin) error {
 	// Reject invalid bins
 	if invalidBin.MatchString(bin.Id) {
-		return errors.New("The bin contains invalid characters.")
+		return errors.New("the bin contains invalid characters")
 	}
 	// Ensure decent length
 	if len(bin.Id) < 8 {
-		return errors.New("The bin is too short.")
+		return errors.New("the bin is too short")
 	}
 	if len(bin.Id) > 60 {
-		return errors.New("The bin is too long.")
+		return errors.New("the bin is too long")
 	}
 	// Do not allow the bin to start with .
 	if strings.HasPrefix(bin.Id, ".") {
-		return errors.New("Invalid bin specified.")
+		return errors.New("invalid bin specified")
 	}
 	if bin.UpdatedAt.After(bin.ExpiredAt) {
-		return errors.New("The bin cannot be updated when it has expired.")
+		return errors.New("the bin cannot be updated when it has expired")
 	}
 	return nil
 }
@@ -317,7 +317,7 @@ func (d *BinDao) binQuery(sqlStatement string, params ...interface{}) (bins []ds
 	if err != nil {
 		return bins, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var bin ds.Bin
 		err = rows.Scan(&bin.Id, &bin.Readonly, &bin.Downloads, &bin.FileDownloads, &bin.Bytes, &bin.Files, &bin.Updates, &bin.UpdatedAt, &bin.CreatedAt, &bin.ApprovedAt, &bin.ExpiredAt, &bin.DeletedAt)

@@ -359,7 +359,7 @@ func (h *HTTP) Run() {
 		slog.Error("unable to open log file", "path", h.config.HttpAccessLog, "error", err)
 		os.Exit(2)
 	}
-	defer accessLog.Close()
+	defer func() { _ = accessLog.Close() }()
 	handler = handlers.CombinedLoggingHandler(accessLog, handler)
 
 	// Add proxy header handling

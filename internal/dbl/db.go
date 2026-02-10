@@ -86,7 +86,7 @@ func Init(cfg DBConfig) (DAO, error) {
 			break
 		}
 
-		db.Close()
+		_ = db.Close()
 		elapsed := time.Since(startTime)
 		if elapsed >= retryTimeout {
 			return dao, fmt.Errorf("unable to ping database after %.0fs: %s:%d", elapsed.Seconds(), cfg.Host, cfg.Port)

@@ -88,7 +88,7 @@ ORDER BY fc.last_referenced_at ASC`
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var contents []ds.FileContent
 	for rows.Next() {
@@ -181,7 +181,7 @@ ORDER BY bytes DESC, created_at DESC`
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var contents []ds.FileContent
 	for rows.Next() {
@@ -289,7 +289,7 @@ func (d *FileContentDao) DeleteFileReferences(sha256 string) error {
 		return err
 	}
 	if count == 0 {
-		return errors.New("No file references found for this content")
+		return errors.New("no file references found for this content")
 	}
 
 	return nil
@@ -316,7 +316,7 @@ func (d *FileContentDao) GetByCreated(limit int) (contents []ds.FileByChecksum, 
 	if err != nil {
 		return contents, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var content ds.FileByChecksum
 		err = rows.Scan(&content.SHA256, &content.Count, &content.Mime, &content.Bytes,
@@ -360,7 +360,7 @@ func (d *FileContentDao) GetBlocked(limit int) (contents []ds.FileByChecksum, er
 	if err != nil {
 		return contents, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var content ds.FileByChecksum
 		err = rows.Scan(&content.SHA256, &content.Count, &content.Mime, &content.Bytes,

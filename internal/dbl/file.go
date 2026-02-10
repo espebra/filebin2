@@ -24,7 +24,7 @@ func (d *FileDao) ValidateInput(file *ds.File) error {
 
 	// If the filename is empty, error out.
 	if len(file.Filename) == 0 {
-		return errors.New("Filename not specified")
+		return errors.New("filename not specified")
 	}
 
 	// Create a new variable to use for filename modifications.
@@ -70,7 +70,7 @@ func (d *FileDao) ValidateInput(file *ds.File) error {
 
 	// Reject if the filename became empty after sanitization
 	if len(n) == 0 {
-		return errors.New("Filename not specified")
+		return errors.New("filename not specified")
 	}
 
 	if file.Filename != n {
@@ -320,7 +320,7 @@ func (d *FileDao) fileQuery(sqlStatement string, params ...interface{}) (files [
 	if err != nil {
 		return files, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var file ds.File
 		err = rows.Scan(&file.Id, &file.Bin, &file.Filename, &file.Mime, &file.Bytes, &file.MD5, &file.SHA256, &file.Downloads, &file.Updates, &file.InStorage, &file.IP, &file.Headers, &file.UpdatedAt, &file.CreatedAt, &file.DeletedAt, &file.BinDeletedAt, &file.BinExpiredAt, &file.UploadDurationMs)
@@ -351,7 +351,7 @@ func (d *FileDao) FilesByChecksum(limit int) (files []ds.FileByChecksum, err err
 	if err != nil {
 		return files, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var file ds.FileByChecksum
 		err = rows.Scan(&file.SHA256, &file.Count, &file.Mime, &file.Bytes, &file.BytesTotal, &file.DownloadsTotal, &file.UpdatesTotal, &file.Blocked)
@@ -383,7 +383,7 @@ func (d *FileDao) FilesByBytes(limit int) (files []ds.FileByChecksum, err error)
 	if err != nil {
 		return files, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var file ds.FileByChecksum
 		err = rows.Scan(&file.SHA256, &file.Count, &file.Mime, &file.Bytes, &file.BytesTotal, &file.DownloadsTotal, &file.UpdatesTotal, &file.Blocked)
@@ -415,7 +415,7 @@ func (d *FileDao) FilesByBytesTotal(limit int) (files []ds.FileByChecksum, err e
 	if err != nil {
 		return files, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var file ds.FileByChecksum
 		err = rows.Scan(&file.SHA256, &file.Count, &file.Mime, &file.Bytes, &file.BytesTotal, &file.DownloadsTotal, &file.UpdatesTotal, &file.Blocked)

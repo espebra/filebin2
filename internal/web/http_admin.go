@@ -557,7 +557,8 @@ func (h *HTTP) viewAdminLog(w http.ResponseWriter, r *http.Request) {
 	inputCategory := params["category"]
 	inputFilter := params["filter"]
 
-	if inputCategory == "bin" {
+	switch inputCategory {
+	case "bin":
 		bin := inputFilter
 		trs, err := h.dao.Transaction().GetByBin(bin)
 		if err != nil {
@@ -565,7 +566,7 @@ func (h *HTTP) viewAdminLog(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		data.Transactions = trs
-	} else if inputCategory == "ip" {
+	case "ip":
 		ip := inputFilter
 		trs, err := h.dao.Transaction().GetByIP(ip)
 		if err != nil {

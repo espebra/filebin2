@@ -127,7 +127,7 @@ func TestGetObject(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unable to get object: %s\n", err.Error())
 	}
-	defer fp.Close()
+	defer func() { _ = fp.Close() }()
 
 	buf := new(bytes.Buffer)
 	_, _ = buf.ReadFrom(fp)

@@ -25,7 +25,7 @@ func (h *HTTP) integrationSlack(w http.ResponseWriter, r *http.Request) {
 	ts := r.Header.Get("X-Slack-Request-Timestamp")
 	sig := r.Header.Get("X-Slack-Signature")
 	body, err := io.ReadAll(r.Body)
-	defer r.Body.Close()
+	defer func() { _ = r.Body.Close() }()
 	if err != nil {
 		h.Error(w, r, fmt.Sprintf("Failed to read request body: %s\n", err.Error()), "Internal Server Error", 833, http.StatusInternalServerError)
 		return

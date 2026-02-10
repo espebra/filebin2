@@ -32,8 +32,8 @@ func TestNewManager_MultipleWorkspaces(t *testing.T) {
 	baseDir := os.TempDir()
 	dir1 := filepath.Join(baseDir, "workspace-test-1")
 	dir2 := filepath.Join(baseDir, "workspace-test-2")
-	defer os.RemoveAll(dir1)
-	defer os.RemoveAll(dir2)
+	defer func() { _ = os.RemoveAll(dir1) }()
+	defer func() { _ = os.RemoveAll(dir2) }()
 
 	tmpdirs := dir1 + "," + dir2
 	m, err := NewManager(tmpdirs, 4.0)
@@ -59,8 +59,8 @@ func TestNewManager_WithSpaces(t *testing.T) {
 	baseDir := os.TempDir()
 	dir1 := filepath.Join(baseDir, "workspace-test-3")
 	dir2 := filepath.Join(baseDir, "workspace-test-4")
-	defer os.RemoveAll(dir1)
-	defer os.RemoveAll(dir2)
+	defer func() { _ = os.RemoveAll(dir1) }()
+	defer func() { _ = os.RemoveAll(dir2) }()
 
 	// Add spaces around commas
 	tmpdirs := dir1 + " , " + dir2
@@ -255,8 +255,8 @@ func TestManager_CreateTempFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateTempFile failed: %s", err)
 	}
-	defer os.Remove(fp.Name())
-	defer fp.Close()
+	defer func() { _ = os.Remove(fp.Name()) }()
+	defer func() { _ = fp.Close() }()
 
 	// Verify file was created
 	info, err := fp.Stat()
@@ -509,8 +509,8 @@ func TestManager_CreateTempFile_FallbackBehavior(t *testing.T) {
 
 	// Clean up if it succeeded
 	if fp != nil {
-		os.Remove(fp.Name())
-		fp.Close()
+		_ = os.Remove(fp.Name())
+		_ = fp.Close()
 		t.Logf("CreateTempFile succeeded with warning (will fail on actual write)")
 	}
 }
