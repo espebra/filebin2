@@ -92,7 +92,7 @@ func httpRequest(tc TestCase) (statuscode int, body string, err error) {
 		return -3, "", err
 	}
 	body = string(content)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	return resp.StatusCode, body, err
 }
 
@@ -588,7 +588,7 @@ func httpAdminRequest(method, path string) (statuscode int, body string, err err
 		return -3, "", err
 	}
 	body = string(content)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	return resp.StatusCode, body, err
 }
 

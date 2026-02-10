@@ -101,7 +101,7 @@ func (c *ClientDao) clientQuery(sqlStatement string, params ...interface{}) (cli
 	if err != nil {
 		return clients, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var client ds.Client
 		err = rows.Scan(&client.IP, &client.ASN, &client.ASNOrganization, &client.Network, &client.City, &client.Country, &client.Continent, &client.Proxy, &client.Requests, &client.FirstActiveAt, &client.LastActiveAt, &client.BannedAt, &client.BannedBy)
@@ -175,7 +175,7 @@ func (c *ClientDao) GetByFilesUploaded(limit int) (clients []ds.Client, err erro
 	if err != nil {
 		return clients, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var client ds.Client
 		err = rows.Scan(
@@ -223,7 +223,7 @@ func (c *ClientDao) GetByBytesUploaded(limit int) (clients []ds.Client, err erro
 	if err != nil {
 		return clients, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var client ds.Client
 		err = rows.Scan(
@@ -294,7 +294,7 @@ func (c *ClientDao) GetByCountry(limit int) (countries []ds.ClientByCountry, err
 	if err != nil {
 		return countries, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var country ds.ClientByCountry
 		err = rows.Scan(
@@ -360,7 +360,7 @@ func (c *ClientDao) GetByNetwork(limit int) (networks []ds.ClientByNetwork, err 
 	if err != nil {
 		return networks, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var network ds.ClientByNetwork
 		err = rows.Scan(
@@ -428,7 +428,7 @@ func (c *ClientDao) GetASNWithStats(limit int) (asns []ds.AutonomousSystem, err 
 	if err != nil {
 		return asns, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var asn ds.AutonomousSystem
 		err = rows.Scan(

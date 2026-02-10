@@ -179,7 +179,7 @@ func (h *HTTP) viewBinPlainText(w http.ResponseWriter, r *http.Request) {
 		u.Scheme = h.config.BaseUrl.Scheme
 		u.Host = h.config.BaseUrl.Host
 		u.Path = path.Join(h.config.BaseUrl.Path, file.URL)
-		fmt.Fprintf(w, "%s\n", u.String())
+		_, _ = fmt.Fprintf(w, "%s\n", u.String())
 	}
 }
 

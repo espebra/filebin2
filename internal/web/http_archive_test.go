@@ -107,7 +107,7 @@ func TestArchiveDownload(t *testing.T) {
 				t.Fatalf("Error opening file in zip: %s", err.Error())
 			}
 			content, err := io.ReadAll(rc)
-			rc.Close()
+			_ = rc.Close()
 			if err != nil {
 				t.Fatalf("Error reading file content from zip: %s", err.Error())
 			}
@@ -171,7 +171,7 @@ func TestArchiveDoubleCompression(t *testing.T) {
 		gzipReader, err := gzip.NewReader(strings.NewReader(body))
 		if err == nil {
 			// If it successfully opens as gzip, the archive was compressed
-			gzipReader.Close()
+			_ = gzipReader.Close()
 			t.Error("Archive appears to be gzip compressed when it shouldn't be")
 		}
 
@@ -196,7 +196,7 @@ func TestArchiveDoubleCompression(t *testing.T) {
 		gzipReader, err := gzip.NewReader(strings.NewReader(body))
 		if err == nil {
 			// If it successfully opens as gzip, the archive was compressed
-			gzipReader.Close()
+			_ = gzipReader.Close()
 			t.Error("Archive appears to be gzip compressed when it shouldn't be")
 		}
 
@@ -375,7 +375,7 @@ func TestArchiveSingleFile(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error opening file: %s", err.Error())
 		}
-		defer rc.Close()
+		defer func() { _ = rc.Close() }()
 
 		fileContent, err := io.ReadAll(rc)
 		if err != nil {
@@ -448,7 +448,7 @@ func downloadArchiveWithAcceptEncoding(binID, format, acceptEncoding string) (in
 	if err != nil {
 		return -1, "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Read the body - important: do not automatically decompress
 	var body bytes.Buffer
@@ -479,7 +479,7 @@ func getArchiveContentType(binID, format string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	return resp.Header.Get("Content-Type"), nil
 }

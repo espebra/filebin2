@@ -143,7 +143,7 @@ func TestMain(m *testing.M) {
 	waitForServer.Add(1)
 	go startHTTPServer(tcpListener, &waitForServer, h.router)
 	retCode := m.Run()
-	tcpListener.Close()
+	_ = tcpListener.Close()
 	h.Stop()
 	_ = tearDown(dao)
 	os.Exit(retCode)

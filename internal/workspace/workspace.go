@@ -102,8 +102,8 @@ func (ws *Workspace) Benchmark() error {
 	if err != nil {
 		return fmt.Errorf("failed to create benchmark file: %w", err)
 	}
-	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close()
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	defer func() { _ = tmpFile.Close() }()
 
 	// Write 10MB of data to measure performance
 	benchmarkSize := 10 * 1024 * 1024 // 10MB

@@ -17,7 +17,7 @@ func TestLookupASN(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to initialize geoip: %s", err)
 	}
-	defer dao.Close()
+	defer func() { _ = dao.Close() }()
 
 	tests := []struct {
 		name         string
@@ -86,7 +86,7 @@ func TestLookupCity(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to initialize geoip: %s", err)
 	}
-	defer dao.Close()
+	defer func() { _ = dao.Close() }()
 
 	tests := []struct {
 		name            string
@@ -162,7 +162,7 @@ func TestLookupFull(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to initialize geoip: %s", err)
 	}
-	defer dao.Close()
+	defer func() { _ = dao.Close() }()
 
 	var client ds.Client
 	err = dao.Lookup("8.8.8.8", &client)
@@ -198,7 +198,7 @@ func TestLookupWithPort(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to initialize geoip: %s", err)
 	}
-	defer dao.Close()
+	defer func() { _ = dao.Close() }()
 
 	// Test with IP:port format (common in RemoteAddr)
 	var client ds.Client

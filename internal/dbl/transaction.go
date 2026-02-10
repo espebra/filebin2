@@ -72,7 +72,7 @@ func (d *TransactionDao) GetByIP(ip string) (transactions []ds.Transaction, err 
 	if err != nil {
 		return transactions, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var t ds.Transaction
 		err = rows.Scan(&t.Id, &t.BinId, &t.Filename, &t.Operation, &t.Method, &t.Path, &t.IP, &t.Headers, &t.Timestamp, &t.ReqBytes, &t.RespBytes, &t.Status, &t.CompletedAt)
@@ -102,7 +102,7 @@ func (d *TransactionDao) GetByBin(bin string) (transactions []ds.Transaction, er
 	if err != nil {
 		return transactions, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var t ds.Transaction
 		err = rows.Scan(&t.Id, &t.BinId, &t.Filename, &t.Operation, &t.Method, &t.Path, &t.IP, &t.Headers, &t.Timestamp, &t.ReqBytes, &t.RespBytes, &t.Status, &t.CompletedAt)
