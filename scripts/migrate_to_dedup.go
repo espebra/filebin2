@@ -56,7 +56,7 @@ func main() {
 		fmt.Printf("Failed to initialize database: %s\n", err)
 		os.Exit(1)
 	}
-	defer dao.Close()
+	defer func() { _ = dao.Close() }()
 
 	// Initialize S3
 	s3ao, err := s3.Init(s3.Config{

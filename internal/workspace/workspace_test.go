@@ -78,7 +78,7 @@ func TestNewManager_InvalidPath(t *testing.T) {
 	// Using an invalid path should not fail completely if there are other valid paths
 	baseDir := os.TempDir()
 	validDir := filepath.Join(baseDir, "workspace-test-valid")
-	defer os.RemoveAll(validDir)
+	defer func() { _ = os.RemoveAll(validDir) }()
 
 	// Mix valid and invalid paths - on Unix systems, /proc/sys/kernel is usually not writable
 	tmpdirs := "/proc/sys/kernel/invalid," + validDir
@@ -171,8 +171,8 @@ func TestManager_SelectWorkspace_PrefersFastest(t *testing.T) {
 	baseDir := os.TempDir()
 	dir1 := filepath.Join(baseDir, "workspace-test-5")
 	dir2 := filepath.Join(baseDir, "workspace-test-6")
-	defer os.RemoveAll(dir1)
-	defer os.RemoveAll(dir2)
+	defer func() { _ = os.RemoveAll(dir1) }()
+	defer func() { _ = os.RemoveAll(dir2) }()
 
 	m, err := NewManager(dir1+","+dir2, 4.0)
 	if err != nil {
@@ -302,8 +302,8 @@ func TestManager_GetAllPaths(t *testing.T) {
 	baseDir := os.TempDir()
 	dir1 := filepath.Join(baseDir, "workspace-test-7")
 	dir2 := filepath.Join(baseDir, "workspace-test-8")
-	defer os.RemoveAll(dir1)
-	defer os.RemoveAll(dir2)
+	defer func() { _ = os.RemoveAll(dir1) }()
+	defer func() { _ = os.RemoveAll(dir2) }()
 
 	m, err := NewManager(dir1+","+dir2, 4.0)
 	if err != nil {

@@ -151,7 +151,7 @@ func TestUnknownObject(t *testing.T) {
 		// AWS SDK returns an error when the object does not exist (unlike Minio SDK)
 		// Close the reader if we got one
 		if fp != nil {
-			fp.Close()
+			_ = fp.Close()
 		}
 		t.Errorf("Expected an error when getting a non-existing object")
 	}
@@ -162,7 +162,7 @@ func TestUnknownObject(t *testing.T) {
 		// If we somehow got a reader, verify it's empty
 		buf := new(bytes.Buffer)
 		_, _ = io.Copy(buf, fp)
-		fp.Close()
+		_ = fp.Close()
 		s := buf.String()
 		if len(s) != 0 {
 			t.Errorf("Expected empty response, but got %s\n", s)
@@ -221,7 +221,7 @@ func TestMultipartUpload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to get object: %s", err)
 	}
-	defer fp.Close()
+	defer func() { _ = fp.Close() }()
 
 	downloaded, err := io.ReadAll(fp)
 	if err != nil {
