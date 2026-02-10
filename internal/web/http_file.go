@@ -268,7 +268,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer func() { _ = os.Remove(fp.Name()) }()
-	defer fp.Close()
+	defer func() { _ = fp.Close() }()
 
 	t1 := time.Now()
 
