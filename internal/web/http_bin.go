@@ -295,7 +295,7 @@ func (h *HTTP) addFilesToArchive(w http.ResponseWriter, r *http.Request, bin ds.
 		h.metrics.IncrBytesStorageToFilebin(file.Bytes)
 
 		bytes, err := io.Copy(writer, fp)
-		fp.Close()
+		_ = fp.Close()
 		if err != nil {
 			return err
 		}
