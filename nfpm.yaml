@@ -10,7 +10,7 @@ license: BSD-3-Clause
 section: web
 
 contents:
-  - src: artifacts/filebin2-linux-${GOARCH}
+  - src: artifacts/filebin2
     dst: /usr/bin/filebin2
     file_info:
       mode: 0755

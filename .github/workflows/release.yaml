@@ -104,6 +104,9 @@ jobs:
       - name: Install nfpm
         run: go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
 
+      - name: Prepare binary
+        run: cp artifacts/filebin2-linux-${{ matrix.goarch }} artifacts/filebin2
+
       - name: Build DEB package
         run: |
           VERSION=${{ github.ref_name }} GOARCH=${{ matrix.goarch }} nfpm package --packager deb --target artifacts/
