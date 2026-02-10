@@ -267,7 +267,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 		h.Error(w, r, fmt.Sprintf("Failed to create temporary upload file: %s", err.Error()), "Storage error", 124, http.StatusInternalServerError)
 		return
 	}
-	defer os.Remove(fp.Name())
+	defer func() { _ = os.Remove(fp.Name()) }()
 	defer fp.Close()
 
 	t1 := time.Now()
