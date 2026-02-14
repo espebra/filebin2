@@ -41,7 +41,7 @@ func TestUpsert(t *testing.T) {
 	// Create bin first
 	bin := &ds.Bin{}
 	bin.Id = "1234567890"
-	err = dao.Bin().Upsert(bin)
+	err = dao.Bin().Insert(bin)
 
 	if err != nil {
 		t.Error(err)
@@ -849,7 +849,7 @@ func TestUpsertWiderCharacterSet(t *testing.T) {
 	// Create bin first
 	bin := &ds.Bin{}
 	bin.Id = "sometestbin"
-	err = dao.Bin().Upsert(bin)
+	err = dao.Bin().Insert(bin)
 
 	if err != nil {
 		t.Error(err)

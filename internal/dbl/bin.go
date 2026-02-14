@@ -145,53 +145,6 @@ func (d *BinDao) Insert(bin *ds.Bin) (err error) {
 	return nil
 }
 
-func (d *BinDao) Upsert(bin *ds.Bin) (err error) {
-	if err := d.ValidateInput(bin); err != nil {
-		return err
-	}
-
-	now := time.Now().UTC().Truncate(time.Microsecond)
-	downloads := uint64(0)
-	updates := uint64(0)
-	readonly := false
-	bin.ExpiredAt = bin.ExpiredAt.UTC().Truncate(time.Microsecond)
-	if bin.IsApproved() {
-		bin.ApprovedAt.Time = bin.ApprovedAt.Time.UTC().Truncate(time.Microsecond)
-	}
-	sqlStatement := "INSERT INTO bin (id, readonly, downloads, updates, updated_at, created_at, approved_at, expired_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT(id) DO UPDATE SET updated_at=$9 RETURNING id"
-	t0 := time.Now()
-	err = d.db.QueryRow(sqlStatement, bin.Id, readonly, downloads, updates, now, now, bin.ApprovedAt, bin.ExpiredAt, now).Scan(&bin.Id)
-	observeQuery(d.metrics, "bin_upsert", t0, err)
-	if err != nil {
-		return err
-	}
-
-	bin.UpdatedAt = now
-	bin.CreatedAt = now
-	bin.UpdatedAtRelative = humanize.Time(bin.UpdatedAt)
-	bin.CreatedAtRelative = humanize.Time(bin.CreatedAt)
-	if bin.IsApproved() {
-		bin.ApprovedAt.Time = bin.ApprovedAt.Time.UTC()
-		bin.ApprovedAtRelative = humanize.Time(bin.ApprovedAt.Time)
-	}
-	bin.ExpiredAtRelative = humanize.Time(bin.ExpiredAt)
-	if bin.IsDeleted() {
-		bin.DeletedAtRelative = humanize.Time(bin.DeletedAt.Time)
-	}
-	bin.Downloads = downloads
-	bin.Readonly = readonly
-
-	_, found, err := d.GetByID(bin.Id)
-	if err != nil {
-		return err
-	}
-
-	if !found {
-		return nil
-	}
-	return nil
-}
-
 func (d *BinDao) Update(bin *ds.Bin) (err error) {
 	var id string
 	now := time.Now().UTC().Truncate(time.Microsecond)
