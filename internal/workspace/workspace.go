@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -270,6 +271,56 @@ func (m *Manager) GetPrimaryPath() string {
 		return m.workspaces[0].Path
 	}
 	return ""
+}
+
+// CleanStaleFiles removes temporary upload files older than maxAge from all workspaces.
+// It targets files with the "filebin-" prefix that were left behind by interrupted uploads.
+// Returns the number of files removed.
+func (m *Manager) CleanStaleFiles(maxAge time.Duration) int {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	removed := 0
+	cutoff := time.Now().Add(-maxAge)
+
+	for _, ws := range m.workspaces {
+		entries, err := os.ReadDir(ws.Path)
+		if err != nil {
+			slog.Warn("unable to read workspace directory", "path", ws.Path, "error", err)
+			continue
+		}
+
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+			if !strings.HasPrefix(entry.Name(), "filebin-") {
+				continue
+			}
+
+			info, err := entry.Info()
+			if err != nil {
+				slog.Warn("unable to stat file", "path", filepath.Join(ws.Path, entry.Name()), "error", err)
+				continue
+			}
+
+			if info.ModTime().Before(cutoff) {
+				fullPath := filepath.Join(ws.Path, entry.Name())
+				if err := os.Remove(fullPath); err != nil {
+					slog.Warn("unable to remove stale temp file", "path", fullPath, "error", err)
+					continue
+				}
+				slog.Info("removed stale temporary file", "path", fullPath, "mod_time", info.ModTime())
+				removed++
+			}
+		}
+	}
+
+	if removed > 0 {
+		slog.Info("stale temporary file cleanup complete", "removed", removed)
+	}
+
+	return removed
 }
 
 // GetAllPaths returns all workspace paths

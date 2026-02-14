@@ -463,8 +463,19 @@ func main() {
 		os.Exit(2)
 	}
 
+	// Initialize workspace manager
+	wm, err := workspace.NewManager(*tmpdirFlag, *tmpdirThresholdFlag)
+	if err != nil {
+		slog.Error("unable to initialize workspace manager", "error", err)
+		os.Exit(2)
+	}
+	slog.Info("workspace capacity threshold configured", "threshold", fmt.Sprintf("%.1fx file size", *tmpdirThresholdFlag))
+
+	// Clean up stale temporary files from previous runs
+	wm.CleanStaleFiles(24 * time.Hour)
+
 	// Create and start the lurker process
-	l := lurker.New(&daoconn, &s3conn)
+	l := lurker.New(&daoconn, &s3conn, wm)
 	l.Init(*lurkerIntervalFlag, *lurkerThrottleFlag, *logRetentionFlag)
 	l.Run()
 
@@ -512,14 +523,6 @@ func main() {
 		os.Exit(2)
 	}
 	config.LimitStorageReadable = humanize.Bytes(config.LimitStorageBytes)
-
-	// Initialize workspace manager
-	wm, err := workspace.NewManager(*tmpdirFlag, *tmpdirThresholdFlag)
-	if err != nil {
-		slog.Error("unable to initialize workspace manager", "error", err)
-		os.Exit(2)
-	}
-	slog.Info("workspace capacity threshold configured", "threshold", fmt.Sprintf("%.1fx file size", *tmpdirThresholdFlag))
 
 	// Create Prometheus registry and metrics
 	metricsRegistry := prometheus.NewRegistry()
