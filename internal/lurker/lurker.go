@@ -6,11 +6,13 @@ import (
 
 	"github.com/espebra/filebin2/internal/dbl"
 	"github.com/espebra/filebin2/internal/s3"
+	"github.com/espebra/filebin2/internal/workspace"
 )
 
 type Lurker struct {
 	dao       *dbl.DAO
 	s3        *s3.S3AO
+	workspace *workspace.Manager
 	interval  time.Duration
 	throttle  time.Duration
 	retention uint64
@@ -18,10 +20,11 @@ type Lurker struct {
 }
 
 // New creates a new Lurker instance
-func New(dao *dbl.DAO, s3ao *s3.S3AO) *Lurker {
+func New(dao *dbl.DAO, s3ao *s3.S3AO, wm *workspace.Manager) *Lurker {
 	return &Lurker{
-		dao: dao,
-		s3:  s3ao,
+		dao:       dao,
+		s3:        s3ao,
+		workspace: wm,
 	}
 }
 
@@ -59,6 +62,7 @@ func (l *Lurker) runOnce() {
 	l.DeletePendingContent()
 	l.CleanTransactions()
 	l.CleanClients()
+	l.CleanWorkspaceFiles()
 	slog.Debug("lurker completed run", "duration_seconds", time.Since(t0).Seconds())
 }
 
@@ -140,6 +144,13 @@ func (l *Lurker) CleanTransactions() {
 	if count > 0 {
 		slog.Info("removed log transactions", "count", count)
 	}
+}
+
+func (l *Lurker) CleanWorkspaceFiles() {
+	if l.workspace == nil {
+		return
+	}
+	l.workspace.CleanStaleFiles(24 * time.Hour)
 }
 
 func (l *Lurker) CleanClients() {

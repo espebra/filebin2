@@ -487,6 +487,168 @@ func TestManager_ThresholdAffectsSelection(t *testing.T) {
 	}
 }
 
+func TestManager_CleanStaleFiles_RemovesOldFiles(t *testing.T) {
+	dir := t.TempDir()
+	m := &Manager{
+		workspaces: []*Workspace{{Path: dir}},
+	}
+
+	// Create a stale file with filebin- prefix and set its mod time to 25 hours ago
+	staleFile := filepath.Join(dir, "filebin-20240101-120000-123456")
+	if err := os.WriteFile(staleFile, []byte("stale"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	staleTime := time.Now().Add(-25 * time.Hour)
+	if err := os.Chtimes(staleFile, staleTime, staleTime); err != nil {
+		t.Fatal(err)
+	}
+
+	removed := m.CleanStaleFiles(24 * time.Hour)
+	if removed != 1 {
+		t.Errorf("Expected 1 file removed, got %d", removed)
+	}
+
+	if _, err := os.Stat(staleFile); !os.IsNotExist(err) {
+		t.Error("Expected stale file to be removed")
+	}
+}
+
+func TestManager_CleanStaleFiles_KeepsRecentFiles(t *testing.T) {
+	dir := t.TempDir()
+	m := &Manager{
+		workspaces: []*Workspace{{Path: dir}},
+	}
+
+	// Create a recent file with filebin- prefix (mod time is now)
+	recentFile := filepath.Join(dir, "filebin-20240101-120000-789012")
+	if err := os.WriteFile(recentFile, []byte("recent"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	removed := m.CleanStaleFiles(24 * time.Hour)
+	if removed != 0 {
+		t.Errorf("Expected 0 files removed, got %d", removed)
+	}
+
+	if _, err := os.Stat(recentFile); err != nil {
+		t.Error("Expected recent file to still exist")
+	}
+}
+
+func TestManager_CleanStaleFiles_IgnoresNonFilebinFiles(t *testing.T) {
+	dir := t.TempDir()
+	m := &Manager{
+		workspaces: []*Workspace{{Path: dir}},
+	}
+
+	// Create an old file without filebin- prefix
+	otherFile := filepath.Join(dir, "other-temp-file")
+	if err := os.WriteFile(otherFile, []byte("other"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	oldTime := time.Now().Add(-48 * time.Hour)
+	if err := os.Chtimes(otherFile, oldTime, oldTime); err != nil {
+		t.Fatal(err)
+	}
+
+	removed := m.CleanStaleFiles(24 * time.Hour)
+	if removed != 0 {
+		t.Errorf("Expected 0 files removed, got %d", removed)
+	}
+
+	if _, err := os.Stat(otherFile); err != nil {
+		t.Error("Expected non-filebin file to still exist")
+	}
+}
+
+func TestManager_CleanStaleFiles_IgnoresDirectories(t *testing.T) {
+	dir := t.TempDir()
+	m := &Manager{
+		workspaces: []*Workspace{{Path: dir}},
+	}
+
+	// Create a directory with filebin- prefix
+	subDir := filepath.Join(dir, "filebin-subdir")
+	if err := os.Mkdir(subDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	oldTime := time.Now().Add(-48 * time.Hour)
+	if err := os.Chtimes(subDir, oldTime, oldTime); err != nil {
+		t.Fatal(err)
+	}
+
+	removed := m.CleanStaleFiles(24 * time.Hour)
+	if removed != 0 {
+		t.Errorf("Expected 0 files removed, got %d", removed)
+	}
+
+	if _, err := os.Stat(subDir); err != nil {
+		t.Error("Expected directory to still exist")
+	}
+}
+
+func TestManager_CleanStaleFiles_MultipleWorkspaces(t *testing.T) {
+	dir1 := t.TempDir()
+	dir2 := t.TempDir()
+	m := &Manager{
+		workspaces: []*Workspace{{Path: dir1}, {Path: dir2}},
+	}
+
+	oldTime := time.Now().Add(-48 * time.Hour)
+
+	// Create stale files in both workspaces
+	for _, dir := range []string{dir1, dir2} {
+		f := filepath.Join(dir, "filebin-20240101-120000-stale")
+		if err := os.WriteFile(f, []byte("stale"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chtimes(f, oldTime, oldTime); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	removed := m.CleanStaleFiles(24 * time.Hour)
+	if removed != 2 {
+		t.Errorf("Expected 2 files removed, got %d", removed)
+	}
+}
+
+func TestManager_CleanStaleFiles_EmptyWorkspace(t *testing.T) {
+	dir := t.TempDir()
+	m := &Manager{
+		workspaces: []*Workspace{{Path: dir}},
+	}
+
+	removed := m.CleanStaleFiles(24 * time.Hour)
+	if removed != 0 {
+		t.Errorf("Expected 0 files removed, got %d", removed)
+	}
+}
+
+func TestManager_CleanStaleFiles_KeepsBenchmarkFiles(t *testing.T) {
+	dir := t.TempDir()
+	m := &Manager{
+		workspaces: []*Workspace{{Path: dir}},
+	}
+
+	// filebin-benchmark- files also match the filebin- prefix, which is fine
+	// since stale benchmark files should also be cleaned up. But verify that
+	// recent benchmark files are kept.
+	benchFile := filepath.Join(dir, "filebin-benchmark-123456")
+	if err := os.WriteFile(benchFile, []byte("bench"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	removed := m.CleanStaleFiles(24 * time.Hour)
+	if removed != 0 {
+		t.Errorf("Expected 0 files removed (recent benchmark file), got %d", removed)
+	}
+
+	if _, err := os.Stat(benchFile); err != nil {
+		t.Error("Expected recent benchmark file to still exist")
+	}
+}
+
 func TestManager_CreateTempFile_FallbackBehavior(t *testing.T) {
 	m, err := NewManager(os.TempDir(), 4.0)
 	if err != nil {
