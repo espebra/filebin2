@@ -10,7 +10,15 @@ paths:
       tags:
         - file
       summary: Download a file from a bin
-      description: The client will be redirected to a time-limited presigned URL pointing to the object in S3 for direct download.
+      description: |-
+        The client will be redirected to a time-limited presigned URL pointing to the object in S3 for direct download.
+
+        **Example using curl:**
+        ```
+        curl -L https://filebin.net/mybin/photo.jpg -o photo.jpg
+        ```
+
+        Use `-L` to follow the redirect to the presigned S3 URL. The presigned URL expires after a short time (default: 1 minute).
       parameters:
         - name: bin
           in: path
@@ -18,28 +26,43 @@ paths:
           required: true
           schema:
             type: string
+          example: mybin
         - name: filename
           in: path
           description: The filename of the file to download from the bin specified.
           required: true
           schema:
             type: string
+          example: photo.jpg
       responses:
         '302':
           description: Temporary redirect to a presigned URL pointing to the object in S3 for direct download.
+          headers:
+            Location:
+              description: Presigned S3 URL for direct download.
+              schema:
+                type: string
         '403':
           description: The bin is not approved or the file download count limitation was reached.
           content:
-            application/json: {}
+            text/plain:
+              example: Forbidden
         '404':
           description: The file was not found. The bin may be expired, the file is deleted or it did never exist in the first place.
           content:
-            application/json: {}
+            text/plain:
+              example: Not found
     delete:
       tags:
         - file
       summary: Delete a file from a bin
-      description: This will delete a file from a bin. Everyone knowing the URL to the bin have access to deleting files from it.
+      description: |-
+        This will delete a file from a bin. Everyone knowing the URL to the bin have access to deleting files from it.
+
+        **Example using curl:**
+        ```
+        curl -X DELETE https://filebin.net/mybin/photo.jpg
+        ```
       parameters:
         - name: bin
           in: path
@@ -47,31 +70,51 @@ paths:
           required: true
           schema:
             type: string
+          example: mybin
         - name: filename
           in: path
           description: The filename of the file to delete.
           required: true
           schema:
             type: string
+          example: photo.jpg
       responses:
         '200':
           description: The file was successfully flagged for deletion.
           content:
-            application/json: {}
+            text/plain:
+              example: File deleted successfully
         '404':
           description: The file was not found. The bin may be expired or it did never exist in the first place.
           content:
-            application/json: {}
+            text/plain:
+              example: The file does not exist
     post:
       tags:
         - file
       summary: Upload a file to a bin
-      description: Upload a file to a new or existing bin. The bin will be created if it does not exist prior to the upload.
+      description: |-
+        Upload a file to a new or existing bin. The bin will be created if it does not exist prior to the upload.
+
+        **Example using curl:**
+        ```
+        curl -X POST --data-binary @photo.jpg https://filebin.net/mybin/photo.jpg
+        ```
+
+        **Example with checksum verification:**
+        ```
+        curl -X POST \
+          -H "Content-SHA256: $(sha256sum photo.jpg | cut -d' ' -f1)" \
+          --data-binary @photo.jpg \
+          https://filebin.net/mybin/photo.jpg
+        ```
       requestBody:
+        description: The raw file content to upload.
         content:
           application/octet-stream:
             schema:
               type: string
+              format: binary
       parameters:
         - name: Content-MD5
           in: header
@@ -79,55 +122,105 @@ paths:
           required: false
           schema:
             type: string
+          example: XUFAKrxLKna5cZ2REBfFkg==
         - name: Content-SHA256
           in: header
           description: Hex-encoded SHA256 checksum of the file content for integrity verification.
           required: false
           schema:
             type: string
+          example: 2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae
         - name: bin
           in: path
           description: The bin to upload to.
           required: true
           schema:
             type: string
+          example: mybin
         - name: filename
           in: path
           description: The filename of the uploaded file.
           required: true
           schema:
             type: string
+          example: photo.jpg
       responses:
         '201':
           description: Successful upload.
           content:
-            application/json: {}
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bin:
+                    $ref: '#/components/schemas/Bin'
+                  file:
+                    $ref: '#/components/schemas/File'
+              example:
+                bin:
+                  id: mybin
+                  readonly: false
+                  bytes: 482100
+                  bytes_readable: 482 kB
+                  files: 1
+                  updated_at: '2024-06-15T14:30:00Z'
+                  updated_at_relative: just now
+                  created_at: '2024-06-15T14:30:00Z'
+                  created_at_relative: just now
+                  expired_at: '2024-06-22T14:30:00Z'
+                  expired_at_relative: 1 week from now
+                file:
+                  filename: photo.jpg
+                  content-type: image/jpeg
+                  bytes: 482100
+                  bytes_readable: 482 kB
+                  md5: 5d41402abc4b2a76b9719d911017c592
+                  sha256: 2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae
+                  updated_at: '2024-06-15T14:30:00Z'
+                  updated_at_relative: just now
+                  created_at: '2024-06-15T14:30:00Z'
+                  created_at_relative: just now
         '400':
           description: Invalid input such as invalid bin or filename, or checksum mismatch.
           content:
-            application/json: {}
+            text/plain:
+              example: Checksum did not match the uploaded content
         '403':
           description: The file extension is not allowed.
           content:
-            application/json: {}
+            text/plain:
+              example: Forbidden
         '405':
           description: The bin is locked, expired, or deleted and can not be written to.
           content:
-            application/json: {}
+            text/plain:
+              example: This bin is locked and can not be written to
         '411':
           description: Missing or invalid content-length header.
           content:
-            application/json: {}
+            text/plain:
+              example: Length Required
         '507':
           description: The storage limitation was reached. Please retry later.
           content:
-            application/json: {}
+            text/plain:
+              example: Storage limit reached. Please retry later.
   /:
     post:
       tags:
         - file
       summary: Upload a file to a bin (Deprecated)
-      description: This is kept to achieve backwards compatibility. The bin and filename are specified as request headers instead of in the URL path. The upload is processed directly.
+      description: |-
+        This is kept to achieve backwards compatibility. The bin and filename are specified as request headers instead of in the URL path. The upload is processed directly.
+
+        **Example using curl:**
+        ```
+        curl -X POST \
+          -H "bin: mybin" \
+          -H "filename: photo.jpg" \
+          --data-binary @photo.jpg \
+          https://filebin.net/
+        ```
       deprecated: true
       parameters:
         - in: header
@@ -136,32 +229,51 @@ paths:
           required: false
           schema:
             type: string
+          example: mybin
         - in: header
           name: filename
           description: The filename of the file to upload.
           required: true
           schema:
             type: string
+          example: photo.jpg
       requestBody:
         content:
           application/octet-stream:
             schema:
               type: string
+              format: binary
       responses:
         '201':
           description: Successful upload.
           content:
-            application/json: {}
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bin:
+                    $ref: '#/components/schemas/Bin'
+                  file:
+                    $ref: '#/components/schemas/File'
         '400':
           description: Missing filename header or invalid input.
           content:
-            application/json: {}
+            text/plain:
+              example: Missing filename header
   '/{bin}':
     get:
       tags:
         - bin
       summary: Show a bin
-      description: This will show meta data about the bin such as timestamps, file sizes, file names and so on.
+      description: |-
+        This will show meta data about the bin such as timestamps, file sizes, file names and so on.
+
+        Requires the `Accept: application/json` header to receive JSON. Without it, the response will be HTML.
+
+        **Example using curl:**
+        ```
+        curl -H "Accept: application/json" https://filebin.net/mybin
+        ```
       parameters:
         - name: bin
           in: path
@@ -169,20 +281,71 @@ paths:
           required: true
           schema:
             type: string
+          example: mybin
       responses:
         '200':
           description: Successful operation
           content:
-            application/json: {}
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bin:
+                    $ref: '#/components/schemas/Bin'
+                  files:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/File'
+              example:
+                bin:
+                  id: mybin
+                  readonly: false
+                  bytes: 1548276
+                  bytes_readable: 1.5 MB
+                  files: 2
+                  updated_at: '2024-06-15T14:35:00Z'
+                  updated_at_relative: 5 minutes ago
+                  created_at: '2024-06-15T14:30:00Z'
+                  created_at_relative: 10 minutes ago
+                  expired_at: '2024-06-22T14:30:00Z'
+                  expired_at_relative: 1 week from now
+                files:
+                  - filename: photo.jpg
+                    content-type: image/jpeg
+                    bytes: 482100
+                    bytes_readable: 482 kB
+                    md5: 5d41402abc4b2a76b9719d911017c592
+                    sha256: 2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae
+                    updated_at: '2024-06-15T14:30:00Z'
+                    updated_at_relative: 10 minutes ago
+                    created_at: '2024-06-15T14:30:00Z'
+                    created_at_relative: 10 minutes ago
+                  - filename: document.pdf
+                    content-type: application/pdf
+                    bytes: 1066176
+                    bytes_readable: 1.1 MB
+                    md5: 098f6bcd4621d373cade4e832627b4f6
+                    sha256: 9b71d224bd62f3785d96d46ad3ea3d73319bfbc2890caadae2dff72519673ca7
+                    updated_at: '2024-06-15T14:35:00Z'
+                    updated_at_relative: 5 minutes ago
+                    created_at: '2024-06-15T14:35:00Z'
+                    created_at_relative: 5 minutes ago
         '404':
           description: The bin does not exist or is not available
           content:
-            application/json: {}
+            text/plain:
+              example: Not found
     put:
       tags:
         - bin
       summary: Lock an entire bin to make it read only
-      description: This will make a bin read only. A read only bin does not accept new files to be uploaded or existing files to be updated. This provides some content integrity when distributing a bin to multiple parties. Note that it is possible to delete a read only bin.
+      description: |-
+        This will make a bin read only. A read only bin does not accept new files to be uploaded or existing files to be updated. This provides some content integrity when distributing a bin to multiple parties. Note that it is possible to delete a read only bin.
+
+        **Example using curl:**
+        ```
+        curl -X PUT https://filebin.net/mybin
+        ```
       parameters:
         - name: bin
           in: path
@@ -190,20 +353,29 @@ paths:
           required: true
           schema:
             type: string
+          example: mybin
       responses:
         '200':
           description: Successful operation
           content:
-            application/json: {}
+            text/plain:
+              example: Bin locked successfully.
         '404':
           description: The bin does not exist or is not available
           content:
-            application/json: {}
+            text/plain:
+              example: Bin does not exist
     delete:
       tags:
         - bin
       summary: Delete an entire bin and all of its files
-      description: This will delete all files from a bin. It is not possible to reuse a bin that has been deleted. Everyone knowing the URL to the bin have access to delete it.
+      description: |-
+        This will delete all files from a bin. It is not possible to reuse a bin that has been deleted. Everyone knowing the URL to the bin have access to delete it.
+
+        **Example using curl:**
+        ```
+        curl -X DELETE https://filebin.net/mybin
+        ```
       parameters:
         - name: bin
           in: path
@@ -211,21 +383,30 @@ paths:
           required: true
           schema:
             type: string
+          example: mybin
       responses:
         '200':
           description: Successful operation
           content:
-            application/json: {}
+            text/plain:
+              example: Bin deleted successfully
         '404':
           description: The bin does not exist or is not available
           content:
-            application/json: {}
+            text/plain:
+              example: Bin does not exist
   '/qr/{bin}':
     get:
       tags:
         - bin
       summary: Generate a QR code with the absolute URL to the bin
-      description: This will generate a PNG image with a QR code that has embedded the absolute URL to the bin. This makes it convenient to share the bin across mobile devices.
+      description: |-
+        This will generate a PNG image with a QR code that has embedded the absolute URL to the bin. This makes it convenient to share the bin across mobile devices.
+
+        **Example using curl:**
+        ```
+        curl https://filebin.net/qr/mybin -o qr.png
+        ```
       parameters:
         - name: bin
           in: path
@@ -233,6 +414,7 @@ paths:
           required: true
           schema:
             type: string
+          example: mybin
       responses:
         '200':
           description: Successful operation
@@ -243,7 +425,13 @@ paths:
       tags:
         - bin
       summary: Get all the files in the bin in a tar archive
-      description: This will tar archive the files on the fly and deliver a response with chunked transfer encoding since the final size is not known.
+      description: |-
+        This will tar archive the files on the fly and deliver a response with chunked transfer encoding since the final size is not known.
+
+        **Example using curl:**
+        ```
+        curl https://filebin.net/archive/mybin/tar -o mybin.tar
+        ```
       parameters:
         - name: bin
           in: path
@@ -251,23 +439,34 @@ paths:
           required: true
           schema:
             type: string
+          example: mybin
       responses:
         '200':
           description: Successful operation
+          content:
+            application/x-tar: {}
         '403':
           description: The bin is not approved or all files have exceeded the download limit.
           content:
-            application/json: {}
+            text/plain:
+              example: Forbidden
         '404':
           description: The bin does not exist or is not available
           content:
-            application/json: {}
+            text/plain:
+              example: Not found
   '/archive/{bin}/zip':
     get:
       tags:
         - bin
       summary: Get all the files in the bin in a zip compressed file
-      description: This will zip compress the files on the fly and deliver a response with chunked transfer encoding since the final size is not known.
+      description: |-
+        This will zip compress the files on the fly and deliver a response with chunked transfer encoding since the final size is not known.
+
+        **Example using curl:**
+        ```
+        curl https://filebin.net/archive/mybin/zip -o mybin.zip
+        ```
       parameters:
         - name: bin
           in: path
@@ -275,15 +474,117 @@ paths:
           required: true
           schema:
             type: string
+          example: mybin
       responses:
         '200':
           description: Successful operation
+          content:
+            application/zip: {}
         '403':
           description: The bin is not approved or all files have exceeded the download limit.
           content:
-            application/json: {}
+            text/plain:
+              example: Forbidden
         '404':
           description: The bin does not exist or is not available
           content:
-            application/json: {}
+            text/plain:
+              example: Not found
+components:
+  schemas:
+    Bin:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The bin identifier.
+          example: mybin
+        readonly:
+          type: boolean
+          description: Whether the bin is locked (read only).
+          example: false
+        bytes:
+          type: integer
+          description: Total size in bytes of all files in the bin.
+          example: 482100
+        bytes_readable:
+          type: string
+          description: Human-readable total size.
+          example: 482 kB
+        files:
+          type: integer
+          description: Number of files in the bin.
+          example: 1
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp of the last update in UTC (RFC 3339).
+          example: '2024-06-15T14:30:00Z'
+        updated_at_relative:
+          type: string
+          description: Human-readable relative time since the last update.
+          example: 10 minutes ago
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp of when the bin was created in UTC (RFC 3339).
+          example: '2024-06-15T14:30:00Z'
+        created_at_relative:
+          type: string
+          description: Human-readable relative time since creation.
+          example: 10 minutes ago
+        expired_at:
+          type: string
+          format: date-time
+          description: Timestamp of when the bin will expire in UTC (RFC 3339).
+          example: '2024-06-22T14:30:00Z'
+        expired_at_relative:
+          type: string
+          description: Human-readable relative time until expiration.
+          example: 1 week from now
+    File:
+      type: object
+      properties:
+        filename:
+          type: string
+          description: The name of the file.
+          example: photo.jpg
+        content-type:
+          type: string
+          description: Detected MIME type of the file.
+          example: image/jpeg
+        bytes:
+          type: integer
+          description: File size in bytes.
+          example: 482100
+        bytes_readable:
+          type: string
+          description: Human-readable file size.
+          example: 482 kB
+        md5:
+          type: string
+          description: MD5 checksum of the file content (hex-encoded).
+          example: 5d41402abc4b2a76b9719d911017c592
+        sha256:
+          type: string
+          description: SHA256 checksum of the file content (hex-encoded).
+          example: 2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp of the last update in UTC (RFC 3339).
+          example: '2024-06-15T14:30:00Z'
+        updated_at_relative:
+          type: string
+          description: Human-readable relative time since the last update.
+          example: just now
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp of when the file was uploaded in UTC (RFC 3339).
+          example: '2024-06-15T14:30:00Z'
+        created_at_relative:
+          type: string
+          description: Human-readable relative time since upload.
+          example: just now
 {{ end }}
