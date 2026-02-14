@@ -22,6 +22,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 )
 
 // Version information (set via ldflags at build time)
@@ -522,8 +523,8 @@ func main() {
 
 	// Create Prometheus registry and metrics
 	metricsRegistry := prometheus.NewRegistry()
-	metricsRegistry.MustRegister(prometheus.NewGoCollector())
-	metricsRegistry.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+	metricsRegistry.MustRegister(collectors.NewGoCollector())
+	metricsRegistry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 	metrics := ds.NewMetrics(*metricsIdFlag, metricsRegistry)
 	metrics.LimitBytes = config.LimitStorageBytes
 
