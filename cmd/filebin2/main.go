@@ -522,6 +522,8 @@ func main() {
 
 	// Create Prometheus registry and metrics
 	metricsRegistry := prometheus.NewRegistry()
+	metricsRegistry.MustRegister(prometheus.NewGoCollector())
+	metricsRegistry.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
 	metrics := ds.NewMetrics(*metricsIdFlag, metricsRegistry)
 	metrics.LimitBytes = config.LimitStorageBytes
 
