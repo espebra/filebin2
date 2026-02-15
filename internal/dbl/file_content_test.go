@@ -72,7 +72,7 @@ func TestFileContentGetPendingDelete(t *testing.T) {
 		Id:        "testbin789",
 		ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
 	}
-	_ = dao.Bin().Insert(bin)
+	_, _ = dao.Bin().Insert(bin)
 
 	// Create content1 with no file references (should be pending delete)
 	content1 := &ds.FileContent{
@@ -175,14 +175,14 @@ func TestFileContentGetPendingDeleteWithExpiredBin(t *testing.T) {
 		Id:        "activebin",
 		ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
 	}
-	_ = dao.Bin().Insert(activeBin)
+	_, _ = dao.Bin().Insert(activeBin)
 
 	// Create an expired bin
 	expiredBin := &ds.Bin{
 		Id:        "expiredbin",
 		ExpiredAt: time.Now().UTC().Add(-time.Hour), // Expired 1 hour ago
 	}
-	_ = dao.Bin().Insert(expiredBin)
+	_, _ = dao.Bin().Insert(expiredBin)
 
 	// Create content with file in active bin (should NOT be pending delete)
 	activeContent := &ds.FileContent{
@@ -324,7 +324,7 @@ func TestFileCountBySHA256(t *testing.T) {
 		Id:        "testbin123",
 		ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
 	}
-	err = dao.Bin().Insert(bin)
+	_, err = dao.Bin().Insert(bin)
 	if err != nil {
 		t.Error(err)
 	}
@@ -428,7 +428,7 @@ func TestFileCountBySHA256WithExpiredBin(t *testing.T) {
 		Id:        "activebintest",
 		ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
 	}
-	err = dao.Bin().Insert(activeBin)
+	_, err = dao.Bin().Insert(activeBin)
 	if err != nil {
 		t.Error(err)
 	}
@@ -438,7 +438,7 @@ func TestFileCountBySHA256WithExpiredBin(t *testing.T) {
 		Id:        "expiredbintest",
 		ExpiredAt: time.Now().UTC().Add(-time.Hour),
 	}
-	err = dao.Bin().Insert(expiredBin)
+	_, err = dao.Bin().Insert(expiredBin)
 	if err != nil {
 		t.Error(err)
 	}
@@ -524,7 +524,7 @@ func TestDeduplicationFlow(t *testing.T) {
 	bin := &ds.Bin{}
 	bin.Id = "testbin456"
 	bin.ExpiredAt = time.Now().UTC().Add(time.Hour * 24)
-	err = dao.Bin().Insert(bin)
+	_, err = dao.Bin().Insert(bin)
 	if err != nil {
 		t.Fatalf("Failed to insert bin: %s", err)
 	}

@@ -17,12 +17,9 @@ func TestGetBinById(t *testing.T) {
 	id := "1234567890"
 	bin := &ds.Bin{}
 	bin.Id = id
-	err = dao.Bin().Insert(bin)
+	_, err = dao.Bin().Insert(bin)
 	if err != nil {
 		t.Error(err)
-	}
-	if bin.Id != id {
-		t.Errorf("Was expecting bin id %s, got %s instead.", id, bin.Id)
 	}
 
 	dbBin, found, err := dao.Bin().GetByID(id)
@@ -65,14 +62,20 @@ func TestInsertDuplicatedBin(t *testing.T) {
 
 	bin := &ds.Bin{}
 	bin.Id = "1234567890"
-	err = dao.Bin().Insert(bin)
+	inserted, err := dao.Bin().Insert(bin)
 	if err != nil {
 		t.Error(err)
 	}
+	if !inserted {
+		t.Error("Expected the first insert to succeed")
+	}
 
-	err = dao.Bin().Insert(bin)
-	if err == nil {
-		t.Errorf("Was expecting an error here, cannot insert the same bid twice.")
+	inserted, err = dao.Bin().Insert(bin)
+	if err != nil {
+		t.Error(err)
+	}
+	if inserted {
+		t.Error("Expected the second insert to be a no-op due to conflict")
 	}
 }
 
@@ -85,7 +88,7 @@ func TestBinTooLong(t *testing.T) {
 
 	bin := &ds.Bin{}
 	bin.Id = "1234567890123456789012345678901234567890123456789012345678901"
-	err = dao.Bin().Insert(bin)
+	_, err = dao.Bin().Insert(bin)
 	if err == nil {
 		t.Errorf("Was expecting an error here, the bin id is too long.")
 	}
@@ -103,7 +106,7 @@ func TestGetAllBins(t *testing.T) {
 		bin := &ds.Bin{}
 		bin.Id = fmt.Sprintf("somebin-%d", i)
 		bin.ExpiredAt = time.Now().UTC().Add(time.Hour * 1)
-		if err := dao.Bin().Insert(bin); err != nil {
+		if _, err := dao.Bin().Insert(bin); err != nil {
 			t.Error(err)
 			break
 		}
@@ -128,7 +131,7 @@ func TestDeleteBin(t *testing.T) {
 
 	bin := &ds.Bin{}
 	bin.Id = "1234567890"
-	err = dao.Bin().Insert(bin)
+	_, err = dao.Bin().Insert(bin)
 	if err != nil {
 		t.Error(err)
 	}
@@ -162,7 +165,7 @@ func TestUpdateBin(t *testing.T) {
 	bin := &ds.Bin{}
 	bin.Id = "1234567890"
 	bin.ExpiredAt = time.Now().UTC().Add(time.Hour * 1)
-	err = dao.Bin().Insert(bin)
+	_, err = dao.Bin().Insert(bin)
 	if err != nil {
 		t.Error(err)
 	}
@@ -225,19 +228,19 @@ func TestInvalidBinInput(t *testing.T) {
 
 	bin := &ds.Bin{}
 	bin.Id = "12345"
-	err = dao.Bin().Insert(bin)
+	_, err = dao.Bin().Insert(bin)
 	if err == nil {
 		t.Error("Expected an error since bin is too short")
 	}
 
 	bin.Id = "..."
-	err = dao.Bin().Insert(bin)
+	_, err = dao.Bin().Insert(bin)
 	if err == nil {
 		t.Error("Expected an error since bin is invalid")
 	}
 
 	bin.Id = "%&/()"
-	err = dao.Bin().Insert(bin)
+	_, err = dao.Bin().Insert(bin)
 	if err == nil {
 		t.Error("Expected an error since bin contains invalid characters")
 	}
@@ -298,7 +301,7 @@ func TestFileCount(t *testing.T) {
 		bin := &ds.Bin{}
 		bin.Id = tc.Bin
 		bin.ExpiredAt = time.Now().UTC().Add(time.Hour * 1)
-		err = dao.Bin().Insert(bin)
+		_, err = dao.Bin().Insert(bin)
 		if err != nil {
 			t.Error(err)
 		}
