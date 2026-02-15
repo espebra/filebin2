@@ -82,6 +82,11 @@ jobs:
           name: test-results
           path: tests/tests.xml
 
+      - uses: codecov/codecov-action@v5
+        if: always()
+        with:
+          files: coverage.out
+
   build:
     runs-on: ubuntu-latest
     steps:
