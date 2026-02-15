@@ -17,7 +17,7 @@ func TestGetByBin(t *testing.T) {
 	binID := "1234567890"
 	bin := &ds.Bin{}
 	bin.Id = binID
-	err = dao.Bin().Insert(bin)
+	_, err = dao.Bin().Insert(bin)
 	if err != nil {
 		t.Error(err)
 	}

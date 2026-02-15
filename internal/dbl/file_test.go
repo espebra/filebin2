@@ -41,7 +41,7 @@ func TestUpsert(t *testing.T) {
 	// Create bin first
 	bin := &ds.Bin{}
 	bin.Id = "1234567890"
-	err = dao.Bin().Insert(bin)
+	_, err = dao.Bin().Insert(bin)
 
 	if err != nil {
 		t.Error(err)
@@ -83,7 +83,7 @@ func TestGetFileById(t *testing.T) {
 	// Create bin first
 	bin := &ds.Bin{}
 	bin.Id = "1234567890"
-	err = dao.Bin().Insert(bin)
+	_, err = dao.Bin().Insert(bin)
 
 	if err != nil {
 		t.Error(err)
@@ -164,7 +164,7 @@ func TestGetFileByName(t *testing.T) {
 	// Create bin first
 	bin := &ds.Bin{}
 	bin.Id = "1234567890"
-	err = dao.Bin().Insert(bin)
+	_, err = dao.Bin().Insert(bin)
 	if err != nil {
 		t.Error(err)
 	}
@@ -230,7 +230,7 @@ func TestInsertDuplicatedFile(t *testing.T) {
 	// Create bin first
 	bin := &ds.Bin{}
 	bin.Id = "1234567890"
-	err = dao.Bin().Insert(bin)
+	_, err = dao.Bin().Insert(bin)
 
 	if err != nil {
 		t.Error(err)
@@ -278,7 +278,7 @@ func TestGetAllFiles(t *testing.T) {
 	// Create bin first
 	bin := &ds.Bin{}
 	bin.Id = "1234567890"
-	err = dao.Bin().Insert(bin)
+	_, err = dao.Bin().Insert(bin)
 
 	if err != nil {
 		t.Error(err)
@@ -354,7 +354,7 @@ func TestDeleteFile(t *testing.T) {
 	// Create bin first
 	bin := &ds.Bin{}
 	bin.Id = "1234567890"
-	err = dao.Bin().Insert(bin)
+	_, err = dao.Bin().Insert(bin)
 
 	if err != nil {
 		t.Error(err)
@@ -409,7 +409,7 @@ func TestUpdateFile(t *testing.T) {
 	// Create bin first
 	bin := &ds.Bin{}
 	bin.Id = "1234567890"
-	err = dao.Bin().Insert(bin)
+	_, err = dao.Bin().Insert(bin)
 	if err != nil {
 		t.Error(err)
 	}
@@ -514,7 +514,7 @@ func TestGetFilesByBin(t *testing.T) {
 	// Create bin first
 	bin := &ds.Bin{}
 	bin.Id = "1234567890"
-	err = dao.Bin().Insert(bin)
+	_, err = dao.Bin().Insert(bin)
 	if err != nil {
 		t.Error(err)
 	}
@@ -614,7 +614,7 @@ func TestIsAvailableForDownload(t *testing.T) {
 
 	// Test 1: File should be available (all conditions met)
 	bin1 := &ds.Bin{Id: "availablebin1", ExpiredAt: time.Now().UTC().Add(time.Hour * 24)}
-	err = dao.Bin().Insert(bin1)
+	_, err = dao.Bin().Insert(bin1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -633,7 +633,7 @@ func TestIsAvailableForDownload(t *testing.T) {
 
 	// Test 2: File not available when file is deleted
 	bin2 := &ds.Bin{Id: "availablebin2", ExpiredAt: time.Now().UTC().Add(time.Hour * 24)}
-	err = dao.Bin().Insert(bin2)
+	_, err = dao.Bin().Insert(bin2)
 	if err != nil {
 		t.Error(err)
 	}
@@ -658,7 +658,7 @@ func TestIsAvailableForDownload(t *testing.T) {
 
 	// Test 3: File not available when bin is expired
 	bin3 := &ds.Bin{Id: "expiredbin123", ExpiredAt: time.Now().UTC().Add(-time.Hour)}
-	err = dao.Bin().Insert(bin3)
+	_, err = dao.Bin().Insert(bin3)
 	if err != nil {
 		t.Error(err)
 	}
@@ -677,7 +677,7 @@ func TestIsAvailableForDownload(t *testing.T) {
 
 	// Test 4: File not available when bin is deleted
 	bin4 := &ds.Bin{Id: "deletedbin123", ExpiredAt: time.Now().UTC().Add(time.Hour * 24)}
-	err = dao.Bin().Insert(bin4)
+	_, err = dao.Bin().Insert(bin4)
 	if err != nil {
 		t.Error(err)
 	}
@@ -714,7 +714,7 @@ func TestIsAvailableForDownload(t *testing.T) {
 		t.Error(err)
 	}
 	bin5 := &ds.Bin{Id: "availablebin5", ExpiredAt: time.Now().UTC().Add(time.Hour * 24)}
-	err = dao.Bin().Insert(bin5)
+	_, err = dao.Bin().Insert(bin5)
 	if err != nil {
 		t.Error(err)
 	}
@@ -751,7 +751,7 @@ func TestInvalidFileInput(t *testing.T) {
 	// Create bin first
 	bin := &ds.Bin{}
 	bin.Id = "1234567890"
-	err = dao.Bin().Insert(bin)
+	_, err = dao.Bin().Insert(bin)
 	if err != nil {
 		t.Error(err)
 	}
@@ -849,7 +849,7 @@ func TestUpsertWiderCharacterSet(t *testing.T) {
 	// Create bin first
 	bin := &ds.Bin{}
 	bin.Id = "sometestbin"
-	err = dao.Bin().Insert(bin)
+	_, err = dao.Bin().Insert(bin)
 
 	if err != nil {
 		t.Error(err)

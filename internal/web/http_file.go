@@ -220,15 +220,17 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 		}
 
 		bin.ExpiredAt = time.Now().UTC().Add(h.config.ExpirationDuration)
-		if err := h.dao.Bin().Insert(&bin); err != nil {
-			// Race condition: another concurrent upload may have created this bin first.
-			// Re-fetch and continue if the bin now exists, otherwise fail.
-			bin, found, err = h.dao.Bin().GetByID(inputBin)
-			if err != nil || !found {
-				h.Error(w, r, fmt.Sprintf("Unable to insert bin %q: %s", inputBin, err), "Database error", 121, http.StatusInternalServerError)
-				return
-			}
-		} else {
+		inserted, err := h.dao.Bin().Insert(&bin)
+		if err != nil {
+			h.Error(w, r, fmt.Sprintf("Unable to insert bin %q: %s", inputBin, err), "Database error", 121, http.StatusInternalServerError)
+			return
+		}
+		bin, found, err = h.dao.Bin().GetByID(inputBin)
+		if err != nil || !found {
+			h.Error(w, r, fmt.Sprintf("Unable to fetch bin %q after insert: %s", inputBin, err), "Database error", 121, http.StatusInternalServerError)
+			return
+		}
+		if inserted {
 			// TODO: Execute new bin created trigger
 			h.metrics.IncrNewBinCount()
 		}

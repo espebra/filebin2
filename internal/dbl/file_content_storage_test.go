@@ -145,7 +145,7 @@ func TestFileInStorageReflectsS3State(t *testing.T) {
 		Id:        "teststoragebin",
 		ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
 	}
-	err = dao.Bin().Insert(bin)
+	_, err = dao.Bin().Insert(bin)
 	if err != nil {
 		t.Fatalf("Failed to insert bin: %s", err)
 	}
@@ -242,7 +242,7 @@ func TestDeduplicationWithS3Storage(t *testing.T) {
 		Id:        "dedupbin123",
 		ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
 	}
-	err = dao.Bin().Insert(bin)
+	_, err = dao.Bin().Insert(bin)
 	if err != nil {
 		t.Fatalf("Failed to insert bin: %s", err)
 	}
@@ -439,13 +439,13 @@ func TestReuploadAfterDeletion(t *testing.T) {
 			Id:        "reupload-bin1",
 			ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
 		}
-		_ = dao.Bin().Insert(bin1)
+		_, _ = dao.Bin().Insert(bin1)
 
 		bin2 := &ds.Bin{
 			Id:        "reupload-bin2",
 			ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
 		}
-		_ = dao.Bin().Insert(bin2)
+		_, _ = dao.Bin().Insert(bin2)
 
 		// Upload same content to both bins
 		fileContent := &ds.FileContent{
@@ -536,7 +536,7 @@ func TestReuploadAfterDeletion(t *testing.T) {
 			Id:        "reupload-bin3",
 			ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
 		}
-		_ = dao.Bin().Insert(bin3)
+		_, _ = dao.Bin().Insert(bin3)
 
 		// Upload to S3 again
 		err = s3ao.PutObjectByHash(sha256, strings.NewReader(content), int64(len(content)))
@@ -598,13 +598,13 @@ func TestReuploadAfterDeletion(t *testing.T) {
 			Id:        "reupload-bin4",
 			ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
 		}
-		_ = dao.Bin().Insert(bin4)
+		_, _ = dao.Bin().Insert(bin4)
 
 		bin5 := &ds.Bin{
 			Id:        "reupload-bin5",
 			ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
 		}
-		_ = dao.Bin().Insert(bin5)
+		_, _ = dao.Bin().Insert(bin5)
 
 		// Upload same content to both bins
 		fileContent := &ds.FileContent{
@@ -696,7 +696,7 @@ func TestReuploadAfterDeletion(t *testing.T) {
 			Id:        "reupload-bin6",
 			ExpiredAt: time.Now().UTC().Add(time.Hour * 24),
 		}
-		_ = dao.Bin().Insert(bin6)
+		_, _ = dao.Bin().Insert(bin6)
 
 		// Upload to S3 again
 		err = s3ao.PutObjectByHash(sha256_v2, strings.NewReader(content_v2), int64(len(content_v2)))
