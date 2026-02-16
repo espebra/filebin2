@@ -182,7 +182,7 @@ func TestFileInStorageReflectsS3State(t *testing.T) {
 		Bytes:    uint64(len(content)),
 		SHA256:   sha256,
 	}
-	err = dao.File().Insert(file)
+	_, err = dao.File().Insert(file)
 	if err != nil {
 		t.Fatalf("Failed to insert file: %s", err)
 	}
@@ -279,7 +279,7 @@ func TestDeduplicationWithS3Storage(t *testing.T) {
 		Bytes:    uint64(len(content)),
 		SHA256:   sha256,
 	}
-	err = dao.File().Insert(file1)
+	_, err = dao.File().Insert(file1)
 	if err != nil {
 		t.Fatalf("Failed to insert file1: %s", err)
 	}
@@ -320,7 +320,7 @@ func TestDeduplicationWithS3Storage(t *testing.T) {
 		Bytes:    uint64(len(content)),
 		SHA256:   sha256,
 	}
-	err = dao.File().Insert(file2)
+	_, err = dao.File().Insert(file2)
 	if err != nil {
 		t.Fatalf("Failed to insert file2: %s", err)
 	}
@@ -473,7 +473,7 @@ func TestReuploadAfterDeletion(t *testing.T) {
 			Bytes:    uint64(len(content)),
 			SHA256:   sha256,
 		}
-		_ = dao.File().Insert(file1)
+		_, _ = dao.File().Insert(file1)
 
 		file2 := &ds.File{
 			Filename: "file2.txt",
@@ -481,7 +481,7 @@ func TestReuploadAfterDeletion(t *testing.T) {
 			Bytes:    uint64(len(content)),
 			SHA256:   sha256,
 		}
-		_ = dao.File().Insert(file2)
+		_, _ = dao.File().Insert(file2)
 
 		// Delete both files
 		_ = file1.DeletedAt.Scan(time.Now().UTC())
@@ -564,7 +564,7 @@ func TestReuploadAfterDeletion(t *testing.T) {
 			Bytes:    uint64(len(content)),
 			SHA256:   sha256,
 		}
-		_ = dao.File().Insert(file3)
+		_, _ = dao.File().Insert(file3)
 
 		// Verify in_storage is now true
 		finalContent, err := dao.FileContent().GetBySHA256(sha256)
@@ -632,7 +632,7 @@ func TestReuploadAfterDeletion(t *testing.T) {
 			Bytes:    uint64(len(content_v2)),
 			SHA256:   sha256_v2,
 		}
-		_ = dao.File().Insert(file4)
+		_, _ = dao.File().Insert(file4)
 
 		file5 := &ds.File{
 			Filename: "file5.txt",
@@ -640,7 +640,7 @@ func TestReuploadAfterDeletion(t *testing.T) {
 			Bytes:    uint64(len(content_v2)),
 			SHA256:   sha256_v2,
 		}
-		_ = dao.File().Insert(file5)
+		_, _ = dao.File().Insert(file5)
 
 		// Delete both bins (soft delete)
 		_ = bin4.DeletedAt.Scan(time.Now().UTC())
@@ -724,7 +724,7 @@ func TestReuploadAfterDeletion(t *testing.T) {
 			Bytes:    uint64(len(content_v2)),
 			SHA256:   sha256_v2,
 		}
-		_ = dao.File().Insert(file6)
+		_, _ = dao.File().Insert(file6)
 
 		// Verify in_storage is now true
 		finalContent, err := dao.FileContent().GetBySHA256(sha256_v2)

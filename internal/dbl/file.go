@@ -143,9 +143,9 @@ func (d *FileDao) IsAvailableForDownload(fileId int) (bool, error) {
 	return available, nil
 }
 
-func (d *FileDao) Insert(file *ds.File) (err error) {
+func (d *FileDao) Insert(file *ds.File) (bool, error) {
 	if err := d.ValidateInput(file); err != nil {
-		return err
+		return false, err
 	}
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	downloads := 0
@@ -159,12 +159,15 @@ func (d *FileDao) Insert(file *ds.File) (err error) {
 		file.Headers = "N/A"
 	}
 
-	sqlStatement := "INSERT INTO file (bin_id, filename, sha256, downloads, updates, ip, headers, updated_at, created_at, deleted_at, upload_duration_ms) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id"
+	sqlStatement := "INSERT INTO file (bin_id, filename, sha256, downloads, updates, ip, headers, updated_at, created_at, deleted_at, upload_duration_ms) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) ON CONFLICT (bin_id, filename) DO NOTHING RETURNING id"
 	t0 := time.Now()
-	err = d.db.QueryRow(sqlStatement, file.Bin, file.Filename, file.SHA256, downloads, updates, file.IP, file.Headers, now, now, file.DeletedAt, file.UploadDurationMs).Scan(&file.Id)
+	err := d.db.QueryRow(sqlStatement, file.Bin, file.Filename, file.SHA256, downloads, updates, file.IP, file.Headers, now, now, file.DeletedAt, file.UploadDurationMs).Scan(&file.Id)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
 	observeQuery(d.metrics, "file_insert", t0, err)
 	if err != nil {
-		return err
+		return false, err
 	}
 	file.Downloads = uint64(downloads)
 	file.Updates = uint64(updates)
@@ -177,7 +180,7 @@ func (d *FileDao) Insert(file *ds.File) (err error) {
 	}
 	file.BytesReadable = humanize.Bytes(file.Bytes)
 	setCategory(file)
-	return nil
+	return true, nil
 }
 
 func (d *FileDao) Update(file *ds.File) (err error) {
