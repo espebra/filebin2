@@ -447,10 +447,31 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		if err := h.dao.File().Insert(&file); err != nil {
+		inserted, err := h.dao.File().Insert(&file)
+		if err != nil {
 			slog.Error("unable to insert file", "filename", file.Filename, "bin", bin.Id, "error", err)
 			http.Error(w, "Errno 108", http.StatusInternalServerError)
 			return
+		}
+		if !inserted {
+			// A concurrent upload of the same filename already inserted the row.
+			// Fetch the existing file and update it instead.
+			file, _, err = h.dao.File().GetByName(bin.Id, inputFilename)
+			if err != nil {
+				slog.Error("unable to load file after insert conflict", "filename", inputFilename, "bin", bin.Id, "error", err)
+				http.Error(w, "Errno 108", http.StatusInternalServerError)
+				return
+			}
+			file.SHA256 = sha256ChecksumString
+			file.Updates = file.Updates + 1
+			file.IP = ip
+			file.Headers = string(dump)
+			file.UploadDurationMs = time.Since(t0).Milliseconds()
+			if err := h.dao.File().Update(&file); err != nil {
+				slog.Error("unable to update file after insert conflict", "filename", file.Filename, "file_id", file.Id, "bin", bin.Id, "error", err)
+				http.Error(w, "Errno 108", http.StatusInternalServerError)
+				return
+			}
 		}
 		// TODO: Execute new file created trigger
 	}

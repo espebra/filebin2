@@ -60,7 +60,7 @@ func TestUpsert(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = dao.File().Insert(file)
+	_, err = dao.File().Insert(file)
 
 	if err != nil {
 		t.Error(err)
@@ -102,7 +102,7 @@ func TestGetFileById(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = dao.File().Insert(file)
+	_, err = dao.File().Insert(file)
 
 	if err != nil {
 		t.Error(err)
@@ -184,7 +184,7 @@ func TestGetFileByName(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = dao.File().Insert(file)
+	_, err = dao.File().Insert(file)
 	if err != nil {
 		t.Error(err)
 	}
@@ -248,7 +248,7 @@ func TestInsertDuplicatedFile(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = dao.File().Insert(file)
+	_, err = dao.File().Insert(file)
 
 	if err != nil {
 		t.Error(err)
@@ -260,10 +260,14 @@ func TestInsertDuplicatedFile(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = dao.File().Insert(file)
+	inserted, err := dao.File().Insert(file)
 
-	if err == nil {
-		t.Errorf("Was expecting an error here, cannot insert the same file name twice.")
+	if err != nil {
+		t.Errorf("Was not expecting an error here, got: %s", err.Error())
+	}
+
+	if inserted {
+		t.Errorf("Was expecting inserted to be false since the same file name was inserted twice.")
 	}
 }
 
@@ -307,7 +311,7 @@ func TestGetAllFiles(t *testing.T) {
 		file.Bin = bin.Id
 		file.Bytes = 1
 		file.SHA256 = sha256
-		err = dao.File().Insert(file)
+		_, err = dao.File().Insert(file)
 
 		if err != nil {
 			t.Error(err)
@@ -372,7 +376,7 @@ func TestDeleteFile(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = dao.File().Insert(file)
+	_, err = dao.File().Insert(file)
 
 	if err != nil {
 		t.Error(err)
@@ -428,7 +432,7 @@ func TestUpdateFile(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = dao.File().Insert(file)
+	_, err = dao.File().Insert(file)
 	if err != nil {
 		t.Error(err)
 	}
@@ -550,7 +554,7 @@ func TestGetFilesByBin(t *testing.T) {
 	file1.Bin = bin.Id // Foreign key
 	file1.Bytes = 1
 	file1.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-	err = dao.File().Insert(file1)
+	_, err = dao.File().Insert(file1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -560,7 +564,7 @@ func TestGetFilesByBin(t *testing.T) {
 	file2.Bin = bin.Id // Foreign key
 	file2.Bytes = 2
 	file2.SHA256 = "ff0350c8a7fea1087c5300e9ae922a7ab453648b1c156d5c58437d9f4565244b"
-	err = dao.File().Insert(file2)
+	_, err = dao.File().Insert(file2)
 	if err != nil {
 		t.Error(err)
 	}
@@ -619,7 +623,7 @@ func TestIsAvailableForDownload(t *testing.T) {
 		t.Error(err)
 	}
 	file1 := &ds.File{Filename: "test1.txt", Bin: bin1.Id, Bytes: 100, SHA256: sha256}
-	err = dao.File().Insert(file1)
+	_, err = dao.File().Insert(file1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -638,7 +642,7 @@ func TestIsAvailableForDownload(t *testing.T) {
 		t.Error(err)
 	}
 	file2 := &ds.File{Filename: "test2.txt", Bin: bin2.Id, Bytes: 100, SHA256: sha256}
-	err = dao.File().Insert(file2)
+	_, err = dao.File().Insert(file2)
 	if err != nil {
 		t.Error(err)
 	}
@@ -663,7 +667,7 @@ func TestIsAvailableForDownload(t *testing.T) {
 		t.Error(err)
 	}
 	file3 := &ds.File{Filename: "test3.txt", Bin: bin3.Id, Bytes: 100, SHA256: sha256}
-	err = dao.File().Insert(file3)
+	_, err = dao.File().Insert(file3)
 	if err != nil {
 		t.Error(err)
 	}
@@ -688,7 +692,7 @@ func TestIsAvailableForDownload(t *testing.T) {
 		t.Error(err)
 	}
 	file4 := &ds.File{Filename: "test4.txt", Bin: bin4.Id, Bytes: 100, SHA256: sha256}
-	err = dao.File().Insert(file4)
+	_, err = dao.File().Insert(file4)
 	if err != nil {
 		t.Error(err)
 	}
@@ -719,7 +723,7 @@ func TestIsAvailableForDownload(t *testing.T) {
 		t.Error(err)
 	}
 	file5 := &ds.File{Filename: "test5.txt", Bin: bin5.Id, Bytes: 100, SHA256: sha256_2}
-	err = dao.File().Insert(file5)
+	_, err = dao.File().Insert(file5)
 	if err != nil {
 		t.Error(err)
 	}
@@ -765,7 +769,7 @@ func TestInvalidFileInput(t *testing.T) {
 	// Ensure file_content exists (required by foreign key constraint)
 	_ = ensureFileContent(dao, file) // ignore error since we expect Insert to fail anyway
 
-	err = dao.File().Insert(file)
+	_, err = dao.File().Insert(file)
 	if err == nil {
 		t.Error("Expected an error since filename is not set")
 	}
@@ -876,7 +880,7 @@ func TestUpsertWiderCharacterSet(t *testing.T) {
 		file.Filename = test.InputFilename
 		file.Bin = bin.Id
 		file.SHA256 = defaultSHA256 // Set SHA256 to satisfy foreign key constraint
-		err = dao.File().Insert(file)
+		_, err = dao.File().Insert(file)
 
 		if !test.Valid {
 			if err == nil {

@@ -313,7 +313,7 @@ func TestFileCount(t *testing.T) {
 			file.Filename = fmt.Sprintf("testfile-%d", i)
 			// Use different SHA256 for different byte sizes (content-addressable storage)
 			file.SHA256 = sha256ForBytes[tc.Bytes]
-			err = dao.File().Insert(file)
+			_, err = dao.File().Insert(file)
 			if err != nil {
 				t.Error(err)
 			}

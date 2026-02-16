@@ -100,7 +100,7 @@ func TestFileContentGetPendingDelete(t *testing.T) {
 		Bytes:    200,
 		SHA256:   content2.SHA256,
 	}
-	_ = dao.File().Insert(file2)
+	_, _ = dao.File().Insert(file2)
 
 	// Create content3 with files but all marked as deleted (should be pending delete)
 	content3 := &ds.FileContent{
@@ -117,7 +117,7 @@ func TestFileContentGetPendingDelete(t *testing.T) {
 		Bytes:    300,
 		SHA256:   content3.SHA256,
 	}
-	_ = dao.File().Insert(file3)
+	_, _ = dao.File().Insert(file3)
 	// Mark as deleted
 	_ = file3.DeletedAt.Scan(time.Now().UTC())
 	_ = dao.File().Update(file3)
@@ -199,7 +199,7 @@ func TestFileContentGetPendingDeleteWithExpiredBin(t *testing.T) {
 		Bytes:    100,
 		SHA256:   activeContent.SHA256,
 	}
-	_ = dao.File().Insert(activeFile)
+	_, _ = dao.File().Insert(activeFile)
 
 	// Create content with file in expired bin (should be pending delete)
 	expiredContent := &ds.FileContent{
@@ -216,7 +216,7 @@ func TestFileContentGetPendingDeleteWithExpiredBin(t *testing.T) {
 		Bytes:    200,
 		SHA256:   expiredContent.SHA256,
 	}
-	_ = dao.File().Insert(expiredFile)
+	_, _ = dao.File().Insert(expiredFile)
 
 	// Get pending deletes
 	pending, err := dao.FileContent().GetPendingDelete()
@@ -360,7 +360,7 @@ func TestFileCountBySHA256(t *testing.T) {
 			Bytes:    100,
 			SHA256:   sha256,
 		}
-		err = dao.File().Insert(file)
+		_, err = dao.File().Insert(file)
 		if err != nil {
 			t.Error(err)
 		}
@@ -475,7 +475,7 @@ func TestFileCountBySHA256WithExpiredBin(t *testing.T) {
 		Bytes:    100,
 		SHA256:   sha256Active,
 	}
-	err = dao.File().Insert(activeFile)
+	_, err = dao.File().Insert(activeFile)
 	if err != nil {
 		t.Error(err)
 	}
@@ -487,7 +487,7 @@ func TestFileCountBySHA256WithExpiredBin(t *testing.T) {
 		Bytes:    100,
 		SHA256:   sha256Expired,
 	}
-	err = dao.File().Insert(expiredFile)
+	_, err = dao.File().Insert(expiredFile)
 	if err != nil {
 		t.Error(err)
 	}
@@ -552,7 +552,7 @@ func TestDeduplicationFlow(t *testing.T) {
 			Bytes:    100,
 			SHA256:   sha256,
 		}
-		err = dao.File().Insert(file)
+		_, err = dao.File().Insert(file)
 		if err != nil {
 			t.Fatalf("Upload %d: Failed to insert file: %s (bin=%s, filename=%s)", i, err, bin.Id, file.Filename)
 		}
