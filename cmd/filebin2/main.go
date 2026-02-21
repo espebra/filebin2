@@ -86,6 +86,7 @@ var (
 	s3TransferTimeoutFlag      = flag.String("s3-transfer-timeout", "10m", "Timeout for S3 data transfers (put, get, copy)")
 	s3MultipartPartSizeFlag    = flag.String("s3-multipart-part-size", "64MB", "Multipart upload part size (e.g. 5MB, 64MB, 128MB). Files larger than this use multipart upload.")
 	s3MultipartConcurrencyFlag = flag.Int("s3-multipart-concurrency", 3, "Number of concurrent part uploads for multipart uploads")
+	s3PresignLockToIPFlag      = flag.Bool("s3-presign-lock-to-ip", false, "Lock presigned S3 URLs to the client IP by including X-Forwarded-For in the signature")
 
 	// Lurker
 	lurkerIntervalFlag = flag.Int("lurker-interval", 300, "Lurker interval is the delay to sleep between each run in seconds")
@@ -308,6 +309,10 @@ func main() {
 			*s3MultipartConcurrencyFlag = i
 		}
 	}
+	switch os.Getenv("FILEBIN_S3_PRESIGN_LOCK_TO_IP") {
+	case "true", "1", "yes":
+		*s3PresignLockToIPFlag = true
+	}
 
 	// Lurker
 	if v := os.Getenv("FILEBIN_LURKER_INTERVAL"); v != "" && *lurkerIntervalFlag == 300 {
@@ -496,6 +501,7 @@ func main() {
 		MetricsProxyURL:      *metricsProxyURLFlag,
 		AllowRobots:          *allowRobotsFlag,
 		BaseUrl:              *u,
+		S3PresignLockToIP:    *s3PresignLockToIPFlag,
 		Expiration:           *expirationFlag,
 		HttpHost:             *listenHostFlag,
 		HttpAccessLog:        *accessLogFlag,

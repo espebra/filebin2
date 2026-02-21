@@ -33,6 +33,7 @@ type Config struct {
 	ExpectedCookieValue  string
 	AllowRobots          bool
 	BaseUrl              url.URL
+	S3PresignLockToIP    bool
 	RejectFileExtensions []string
 
 	// Timeouts for the HTTP server
