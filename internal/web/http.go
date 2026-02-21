@@ -186,6 +186,18 @@ func (h *HTTP) Init() error {
 	return nil
 }
 
+// proxyHeaders sets r.RemoteAddr from the X-Real-IP header when the
+// application is running behind a reverse proxy.
+func proxyHeaders(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ip := strings.TrimSpace(r.Header.Get("X-Real-IP"))
+		if ip != "" && net.ParseIP(ip) != nil {
+			r.RemoteAddr = ip
+		}
+		h.ServeHTTP(w, r)
+	})
+}
+
 func CacheControl(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "max-age=86400")
@@ -364,7 +376,7 @@ func (h *HTTP) Run() {
 
 	// Add proxy header handling
 	if h.config.HttpProxyHeaders {
-		handler = handlers.ProxyHeaders(handler)
+		handler = proxyHeaders(handler)
 	}
 
 	slog.Info("HTTP server timeouts configured",

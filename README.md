@@ -272,7 +272,7 @@ Path to a filename for the access log output.
 - Command Line Argument: `--proxy-headers`
 - Default: `false`
 
-If enabled, the client IP will be read from the proxy headers provided in the incoming HTTP requests. This should only be enabled if there is an HTTP proxy running in front of Filebin that uses proxy headers to tell Filebin the original client IP address.
+If enabled, the client IP will be read from the `X-Real-IP` header in the incoming HTTP requests. This should only be enabled if there is a reverse proxy running in front of Filebin that sets this header to the original client IP address.
 
 ---
 
