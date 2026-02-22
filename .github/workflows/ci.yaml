@@ -23,6 +23,7 @@ jobs:
       - uses: golangci/golangci-lint-action@v9
         with:
           version: latest
+          args: --skip-dirs vendor
 
   vulncheck:
     runs-on: ubuntu-latest
