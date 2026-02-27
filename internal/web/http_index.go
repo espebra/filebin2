@@ -65,9 +65,11 @@ func (h *HTTP) about(w http.ResponseWriter, r *http.Request) {
 
 	type Data struct {
 		ds.Common
+		Version string
 	}
 	var data Data
 	data.Page = "about"
+	data.Version = h.config.Version
 
 	if err := h.renderTemplate(w, "about", data); err != nil {
 		slog.Error("failed to execute template", "error", err)
