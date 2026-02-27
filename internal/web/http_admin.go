@@ -3,8 +3,11 @@ package web
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
+	"path"
 	"strconv"
 	"time"
 
@@ -405,6 +408,93 @@ func (h *HTTP) deleteFileContent(w http.ResponseWriter, r *http.Request) {
 
 	// Redirect back to the file view page
 	http.Redirect(w, r, "/admin/file/"+sha256, http.StatusSeeOther)
+}
+
+// viewAdminRecentUploads renders an admin page listing recently uploaded files
+// with optional MIME type and time window filters (?mime=, ?hours=). Supports
+// JSON output when the Accept header is set to application/json.
+func (h *HTTP) viewAdminRecentUploads(w http.ResponseWriter, r *http.Request) {
+	mime := r.URL.Query().Get("mime")
+
+	// Default to 24 hours, clamped to 1–168 (1 week)
+	hours := 24
+	if v, err := strconv.Atoi(r.URL.Query().Get("hours")); err == nil && v >= 1 && v <= 168 {
+		hours = v
+	}
+
+	type Data struct {
+		Files        []ds.File `json:"files"`
+		MimeTypes    []string  `json:"mime_types"`
+		SelectedMime string    `json:"selected_mime"`
+		Hours        int       `json:"hours"`
+	}
+	var data Data
+	data.SelectedMime = mime
+	data.Hours = hours
+
+	mimeTypes, err := h.dao.File().GetDistinctMimeTypes(hours)
+	if err != nil {
+		slog.Error("unable to get distinct mime types", "error", err)
+		http.Error(w, "Errno 500", http.StatusInternalServerError)
+		return
+	}
+	data.MimeTypes = mimeTypes
+
+	files, err := h.dao.File().GetRecentUploads(mime, hours)
+	if err != nil {
+		slog.Error("unable to get recent uploads", "error", err)
+		http.Error(w, "Errno 501", http.StatusInternalServerError)
+		return
+	}
+	data.Files = files
+
+	if r.Header.Get("accept") == "application/json" {
+		w.Header().Set("Content-Type", "application/json")
+		out, err := json.MarshalIndent(data, "", "    ")
+		if err != nil {
+			slog.Error("failed to parse json", "error", err)
+			http.Error(w, "Errno 201", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(200)
+		_, _ = w.Write(out)
+	} else {
+		if err := h.renderTemplate(w, "admin_recent_uploads", data); err != nil {
+			slog.Error("failed to execute template", "error", err)
+			http.Error(w, "Errno 203", http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+// viewAdminRecentUploadsText returns a plain text list of full URLs for
+// recently uploaded files, one per line. Supports the same ?mime= and ?hours=
+// filters as the HTML endpoint.
+func (h *HTTP) viewAdminRecentUploadsText(w http.ResponseWriter, r *http.Request) {
+	mime := r.URL.Query().Get("mime")
+
+	// Default to 24 hours, clamped to 1–168 (1 week)
+	hours := 24
+	if v, err := strconv.Atoi(r.URL.Query().Get("hours")); err == nil && v >= 1 && v <= 168 {
+		hours = v
+	}
+
+	files, err := h.dao.File().GetRecentUploads(mime, hours)
+	if err != nil {
+		slog.Error("unable to get recent uploads", "error", err)
+		http.Error(w, "Errno 501", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(200)
+	for _, file := range files {
+		var u url.URL
+		u.Scheme = h.config.BaseUrl.Scheme
+		u.Host = h.config.BaseUrl.Host
+		u.Path = path.Join(h.config.BaseUrl.Path, file.URL)
+		_, _ = fmt.Fprintf(w, "%s\n", u.String())
+	}
 }
 
 func (h *HTTP) viewAdminBins(w http.ResponseWriter, r *http.Request) {

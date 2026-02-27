@@ -161,6 +161,8 @@ func (h *HTTP) Init() error {
 	h.router.HandleFunc("/admin/file/{sha256:[0-9a-z]+}/block", h.log(h.auth(h.blockFileContent))).Methods("POST")
 	h.router.HandleFunc("/admin/file/{sha256:[0-9a-z]+}/unblock", h.log(h.auth(h.unblockFileContent))).Methods("POST")
 	h.router.HandleFunc("/admin/file/{sha256:[0-9a-z]+}/delete", h.log(h.auth(h.deleteFileContent))).Methods("POST")
+	h.router.HandleFunc("/admin/recent/uploads.txt", h.auth(h.viewAdminRecentUploadsText)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin/recent/uploads", h.auth(h.viewAdminRecentUploads)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/message", h.auth(h.viewAdminSiteMessage)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/message", h.log(h.auth(h.updateSiteMessage))).Methods("POST")
 	h.router.HandleFunc("/admin", h.auth(h.viewAdminDashboard)).Methods(http.MethodHead, http.MethodGet)

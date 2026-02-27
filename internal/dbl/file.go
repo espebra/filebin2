@@ -316,6 +316,57 @@ func (d *FileDao) GetByUpdates(limit int) (files []ds.File, err error) {
 	return files, err
 }
 
+// GetRecentUploads returns files uploaded in the last N hours. If mime is
+// non-empty, only files matching that MIME type are returned.
+func (d *FileDao) GetRecentUploads(mime string, hours int) (files []ds.File, err error) {
+	if mime == "" {
+		sqlStatement := `SELECT f.id, f.bin_id, f.filename, fc.mime, fc.bytes, fc.md5, f.sha256, f.downloads, f.updates, fc.in_storage, f.ip, f.headers, f.updated_at, f.created_at, f.deleted_at, b.deleted_at, b.expired_at, f.upload_duration_ms
+			FROM file f
+			JOIN file_content fc ON f.sha256 = fc.sha256
+			LEFT JOIN bin b ON f.bin_id = b.id
+			WHERE f.created_at > NOW() - $1 * INTERVAL '1 hour' AND f.deleted_at IS NULL
+			ORDER BY f.created_at DESC`
+		files, err = d.fileQuery(sqlStatement, hours)
+	} else {
+		sqlStatement := `SELECT f.id, f.bin_id, f.filename, fc.mime, fc.bytes, fc.md5, f.sha256, f.downloads, f.updates, fc.in_storage, f.ip, f.headers, f.updated_at, f.created_at, f.deleted_at, b.deleted_at, b.expired_at, f.upload_duration_ms
+			FROM file f
+			JOIN file_content fc ON f.sha256 = fc.sha256
+			LEFT JOIN bin b ON f.bin_id = b.id
+			WHERE f.created_at > NOW() - $1 * INTERVAL '1 hour' AND f.deleted_at IS NULL AND fc.mime = $2
+			ORDER BY f.created_at DESC`
+		files, err = d.fileQuery(sqlStatement, hours, mime)
+	}
+	return files, err
+}
+
+// GetDistinctMimeTypes returns the set of unique MIME types seen across
+// non-deleted files uploaded in the last N hours, sorted alphabetically.
+func (d *FileDao) GetDistinctMimeTypes(hours int) (mimeTypes []string, err error) {
+	sqlStatement := `SELECT DISTINCT fc.mime
+		FROM file f
+		JOIN file_content fc ON f.sha256 = fc.sha256
+		WHERE f.created_at > NOW() - $1 * INTERVAL '1 hour' AND f.deleted_at IS NULL
+		ORDER BY fc.mime ASC`
+	t0 := time.Now()
+	rows, err := d.db.Query(sqlStatement, hours)
+	observeQuery(d.metrics, "file_distinct_mime_types", t0, err)
+	if err != nil {
+		return mimeTypes, err
+	}
+	defer func() { _ = rows.Close() }()
+	for rows.Next() {
+		var mime string
+		if err = rows.Scan(&mime); err != nil {
+			return mimeTypes, err
+		}
+		mimeTypes = append(mimeTypes, mime)
+	}
+	if err = rows.Err(); err != nil {
+		return mimeTypes, err
+	}
+	return mimeTypes, nil
+}
+
 func (d *FileDao) fileQuery(sqlStatement string, params ...interface{}) (files []ds.File, err error) {
 	t0 := time.Now()
 	rows, err := d.db.Query(sqlStatement, params...)

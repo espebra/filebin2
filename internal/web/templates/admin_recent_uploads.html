@@ -1,0 +1,88 @@
+{{ define "admin_recent_uploads" }}<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <link rel="icon" href="/static/img/favicon.png">
+        <link rel="stylesheet" href="/static/css/bootstrap.min.css"/>
+        <link rel="stylesheet" href="/static/css/fontawesome.all.min.css"/>
+        <link rel="stylesheet" href="/static/css/custom.css"/>
+        <script src="/static/js/sorttable.js"></script>
+        <script src="/static/js/filebin2.js"></script>
+        <title>Filebin | Recent uploads</title>
+    </head>
+    <body class="container-fluid">
+        <a id="top"></a>
+
+        {{template "admin_bar" .}}
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1>Recent uploads (last {{ .Hours }} hours)</h1>
+            <div class="d-flex align-items-center gap-3">
+                <div>
+                    <label for="hoursSelect" class="form-label me-2">Hours:</label>
+                    <select id="hoursSelect" class="form-select form-select-sm d-inline-block w-auto" onchange="updateFilters()">
+                        <option value="1" {{ if eq .Hours 1 }}selected{{ end }}>1</option>
+                        <option value="6" {{ if eq .Hours 6 }}selected{{ end }}>6</option>
+                        <option value="12" {{ if eq .Hours 12 }}selected{{ end }}>12</option>
+                        <option value="24" {{ if eq .Hours 24 }}selected{{ end }}>24</option>
+                        <option value="48" {{ if eq .Hours 48 }}selected{{ end }}>48</option>
+                        <option value="72" {{ if eq .Hours 72 }}selected{{ end }}>72</option>
+                        <option value="168" {{ if eq .Hours 168 }}selected{{ end }}>168</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="mimeSelect" class="form-label me-2">MIME type:</label>
+                    <select id="mimeSelect" class="form-select form-select-sm d-inline-block w-auto" onchange="updateFilters()">
+                        <option value="" {{ if eq .SelectedMime "" }}selected{{ end }}>All</option>
+                        {{ range .MimeTypes }}
+                            <option value="{{ . }}" {{ if eq $.SelectedMime . }}selected{{ end }}>{{ . }}</option>
+                        {{ end }}
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <p>{{ len .Files }} files{{ if .SelectedMime }} matching <strong>{{ .SelectedMime }}</strong>{{ end }} — <a id="textLink" href="/admin/recent/uploads.txt?hours={{ .Hours }}{{ if .SelectedMime }}&mime={{ .SelectedMime }}{{ end }}">Plain text URL list</a></p>
+
+        <table class="table sortable">
+            <tr>
+                <th>Created</th>
+                <th>Filename</th>
+                <th>Bin</th>
+                <th>MIME</th>
+                <th>Bytes</th>
+                <th>File Content</th>
+                <th>Downloads</th>
+                <th>IP</th>
+            </tr>
+            {{ range .Files }}
+                <tr>
+                    <td sorttable_customkey="{{ .CreatedAt }}">{{ .CreatedAtRelative }}</td>
+                    <td><a href="/{{ .Bin }}/{{ .Filename }}">{{ .Filename }}</a></td>
+                    <td><a href="/{{ .Bin }}">{{ .Bin }}</a> (<a href="/admin/log/bin/{{ .Bin }}">log</a>)</td>
+                    <td>{{ .Mime }}</td>
+                    <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
+                    <td><code><a href="/admin/file/{{ .SHA256 }}">{{ slice .SHA256 0 7 }}</a></code></td>
+                    <td>{{ .Downloads }}</td>
+                    <td><a href="/admin/log/ip/{{ .IP }}">{{ .IP }}</a></td>
+                </tr>
+            {{ end }}
+        </table>
+
+        <script>
+            function updateFilters() {
+                var hours = document.getElementById('hoursSelect').value;
+                var mime = document.getElementById('mimeSelect').value;
+                var url = '/admin/recent/uploads?hours=' + hours;
+                if (mime !== '') {
+                    url += '&mime=' + encodeURIComponent(mime);
+                }
+                window.location.href = url;
+            }
+        </script>
+        <script src="/static/js/popper.min.js"></script>
+        <script src="/static/js/bootstrap.min.js"></script>
+    </body>
+</html>
+{{ end }}
