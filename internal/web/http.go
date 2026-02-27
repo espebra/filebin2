@@ -364,7 +364,15 @@ func (h *HTTP) Run() {
 
 	// Add proxy header handling
 	if h.config.HttpProxyHeaders {
-		handler = handlers.ProxyHeaders(handler)
+		next := handler
+		handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if ip := r.Header.Get("X-Real-IP"); ip != "" {
+				if net.ParseIP(ip) != nil {
+					r.RemoteAddr = ip
+				}
+			}
+			next.ServeHTTP(w, r)
+		})
 	}
 
 	slog.Info("HTTP server timeouts configured",
