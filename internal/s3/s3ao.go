@@ -18,8 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/aws/smithy-go/middleware"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
+
 	"github.com/dustin/go-humanize"
 )
 
@@ -343,10 +342,7 @@ func (s S3AO) GetObject(contentSHA256 string, start int64, end int64) (io.ReadCl
 }
 
 // PresignedGetObject generates a presigned URL for downloading an object.
-// If clientIP is provided, the URL will require the X-Forwarded-For header to be set
-// to that value when making the request (the header is included in the signature).
-// This only works with objects that are not encrypted.
-func (s S3AO) PresignedGetObject(contentSHA256 string, filename string, mime string, clientIP string) (presignedURL *url.URL, err error) {
+func (s S3AO) PresignedGetObject(contentSHA256 string, filename string, mime string) (presignedURL *url.URL, err error) {
 	// Use content SHA256 as the object key for content-addressable storage
 	objectKey := contentSHA256
 
@@ -372,20 +368,6 @@ func (s S3AO) PresignedGetObject(contentSHA256 string, filename string, mime str
 		ResponseCacheControl:       aws.String(cacheControl),
 	}, func(opts *s3.PresignOptions) {
 		opts.Expires = s.expiry
-		if clientIP != "" {
-			opts.ClientOptions = append(opts.ClientOptions, func(o *s3.Options) {
-				o.APIOptions = append(o.APIOptions, func(stack *middleware.Stack) error {
-					return stack.Build.Add(middleware.BuildMiddlewareFunc("AddXForwardedForHeader", func(
-						ctx context.Context, in middleware.BuildInput, next middleware.BuildHandler,
-					) (middleware.BuildOutput, middleware.Metadata, error) {
-						if req, ok := in.Request.(*smithyhttp.Request); ok {
-							req.Header.Set("X-Forwarded-For", clientIP)
-						}
-						return next.HandleBuild(ctx, in)
-					}), middleware.Before)
-				})
-			})
-		}
 	})
 	if s.metrics != nil {
 		s.metrics.ObserveS3Operation("presign", time.Since(t0))

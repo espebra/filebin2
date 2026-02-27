@@ -316,9 +316,7 @@ func (h *HTTP) viewAdminFile(w http.ResponseWriter, r *http.Request) {
 		data.FileContent = fileContent
 
 		// Generate presigned URL for direct S3 access
-		// Bind the presigned URL to X-Forwarded-For if present.
-		clientIP := r.Header.Get("X-Forwarded-For")
-		presignedURL, err := h.s3.PresignedGetObject(inputSHA256, inputSHA256, fileContent.Mime, clientIP)
+		presignedURL, err := h.s3.PresignedGetObject(inputSHA256, inputSHA256, fileContent.Mime)
 		if err != nil {
 			slog.Error("unable to generate presigned URL", "sha256", inputSHA256, "error", err)
 			data.S3PresignedURL = ""
