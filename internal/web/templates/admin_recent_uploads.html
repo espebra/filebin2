@@ -74,11 +74,12 @@
             function updateFilters() {
                 var hours = document.getElementById('hoursSelect').value;
                 var mime = document.getElementById('mimeSelect').value;
-                var url = '/admin/recent/uploads?hours=' + hours;
+                var url = new URL('/admin/recent/uploads', window.location.origin);
+                url.searchParams.set('hours', hours);
                 if (mime !== '') {
-                    url += '&mime=' + encodeURIComponent(mime);
+                    url.searchParams.set('mime', mime);
                 }
-                window.location.href = url;
+                window.location.href = url.toString();
             }
         </script>
         <script src="/static/js/popper.min.js"></script>
