@@ -486,6 +486,7 @@ func main() {
 	}
 
 	config := &ds.Config{
+		Version:              version,
 		AdminPassword:        *adminPasswordFlag,
 		AdminUsername:        *adminUsernameFlag,
 		Contact:              *contactFlag,

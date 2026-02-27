@@ -102,6 +102,10 @@
             </tr>
         </table>
 
+{{ if .Version }}
+        <p>This environment is running Filebin version {{ .Version }}.</p>
+{{ end }}
+
         {{ template "footer" . }}
     </body>
 {{ end }}

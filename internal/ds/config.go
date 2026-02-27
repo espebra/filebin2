@@ -6,6 +6,7 @@ import (
 )
 
 type Config struct {
+	Version              string
 	Contact              string
 	CookieLifetime       int
 	Expiration           int
