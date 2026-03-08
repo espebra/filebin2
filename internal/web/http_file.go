@@ -14,10 +14,12 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/dustin/go-humanize"
 	"github.com/espebra/filebin2/internal/ds"
+	"github.com/espebra/filebin2/internal/phash"
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/gorilla/mux"
 )
@@ -323,6 +325,18 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 	_, _ = fp.Seek(0, 0)
 
+	var pHashValue string
+	var pHashDuration time.Duration
+	if strings.HasPrefix(mime.String(), "image/") {
+		tPhash := time.Now()
+		pHashValue, err = phash.Compute(fp)
+		pHashDuration = time.Since(tPhash)
+		if err != nil {
+			slog.Warn("failed to compute phash", "filename", inputFilename, "error", err)
+		}
+		_, _ = fp.Seek(0, 0)
+	}
+
 	// Check if file exists
 	file, found, err := h.dao.File().GetByName(bin.Id, inputFilename)
 	if err != nil {
@@ -378,6 +392,9 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 			h.Error(w, r, fmt.Sprintf("Rejecting upload of file %q to bin %q: content with SHA256 %s is blocked", inputFilename, bin.Id, sha256ChecksumString), "This content has been blocked and cannot be uploaded", 993, http.StatusForbidden)
 			return
 		}
+		if existingContent.PHash != "" && pHashValue == "" {
+			pHashValue = existingContent.PHash
+		}
 		if existingContent.InStorage {
 			// Content already in S3, skip upload
 			skipS3Upload = true
@@ -427,6 +444,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 		Bytes:     file.Bytes,
 		MD5:       file.MD5,
 		Mime:      file.Mime,
+		PHash:     pHashValue,
 		InStorage: true,
 	}
 	if err := h.dao.FileContent().InsertOrIncrement(&fileContent); err != nil {
@@ -505,7 +523,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	t5 := time.Now()
-	slog.Info("uploaded file", "filename", file.Filename, "bytes", file.Bytes, "sha256", file.SHA256, "bin", bin.Id, "db_seconds", t1.Sub(t0).Seconds(), "buffer_seconds", t2.Sub(t1).Seconds(), "store_seconds", t4.Sub(t3).Seconds(), "total_seconds", t5.Sub(t0).Seconds())
+	slog.Info("uploaded file", "filename", file.Filename, "bytes", file.Bytes, "sha256", file.SHA256, "bin", bin.Id, "db_seconds", t1.Sub(t0).Seconds(), "buffer_seconds", t2.Sub(t1).Seconds(), "phash_seconds", pHashDuration.Seconds(), "store_seconds", t4.Sub(t3).Seconds(), "total_seconds", t5.Sub(t0).Seconds())
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)

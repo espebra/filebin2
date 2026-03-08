@@ -14,16 +14,26 @@ type FileContentDao struct {
 	metrics DBMetricsObserver
 }
 
+// nullString converts empty string to nil (SQL NULL), non-empty to *string
+func nullString(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
 // GetBySHA256 retrieves a file content record by its SHA256 hash
 func (d *FileContentDao) GetBySHA256(sha256 string) (*ds.FileContent, error) {
 	var content ds.FileContent
-	sqlStatement := "SELECT sha256, bytes, md5, mime, in_storage, blocked, created_at, last_referenced_at FROM file_content WHERE sha256 = $1"
+	var phash sql.NullString
+	sqlStatement := "SELECT sha256, bytes, md5, mime, phash, in_storage, blocked, created_at, last_referenced_at FROM file_content WHERE sha256 = $1"
 	t0 := time.Now()
 	err := d.db.QueryRow(sqlStatement, sha256).Scan(
 		&content.SHA256,
 		&content.Bytes,
 		&content.MD5,
 		&content.Mime,
+		&phash,
 		&content.InStorage,
 		&content.Blocked,
 		&content.CreatedAt,
@@ -36,6 +46,7 @@ func (d *FileContentDao) GetBySHA256(sha256 string) (*ds.FileContent, error) {
 		}
 		return nil, err
 	}
+	content.PHash = phash.String
 	content.BytesReadable = humanize.Bytes(content.Bytes)
 	return &content, nil
 }
@@ -43,10 +54,11 @@ func (d *FileContentDao) GetBySHA256(sha256 string) (*ds.FileContent, error) {
 // InsertOrIncrement inserts a new file content record or updates last_referenced_at if it already exists
 func (d *FileContentDao) InsertOrIncrement(content *ds.FileContent) error {
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := `INSERT INTO file_content (sha256, bytes, md5, mime, in_storage, created_at, last_referenced_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+	sqlStatement := `INSERT INTO file_content (sha256, bytes, md5, mime, phash, in_storage, created_at, last_referenced_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 ON CONFLICT (sha256) DO UPDATE SET
     in_storage = EXCLUDED.in_storage,
+    phash = COALESCE(EXCLUDED.phash, file_content.phash),
     last_referenced_at = EXCLUDED.last_referenced_at`
 
 	t0 := time.Now()
@@ -55,6 +67,7 @@ ON CONFLICT (sha256) DO UPDATE SET
 		content.Bytes,
 		content.MD5,
 		content.Mime,
+		nullString(content.PHash),
 		content.InStorage,
 		now,
 		now,
@@ -73,12 +86,12 @@ ON CONFLICT (sha256) DO UPDATE SET
 // GetPendingDelete returns file content records that have zero active references
 // (active = file exists AND file not deleted AND bin not deleted AND bin not expired) and still in storage
 func (d *FileContentDao) GetPendingDelete() ([]ds.FileContent, error) {
-	sqlStatement := `SELECT fc.sha256, fc.bytes, fc.md5, fc.mime, fc.in_storage, fc.blocked, fc.created_at, fc.last_referenced_at
+	sqlStatement := `SELECT fc.sha256, fc.bytes, fc.md5, fc.mime, fc.phash, fc.in_storage, fc.blocked, fc.created_at, fc.last_referenced_at
 FROM file_content fc
 LEFT JOIN file f ON fc.sha256 = f.sha256
 LEFT JOIN bin b ON f.bin_id = b.id
 WHERE fc.in_storage = true
-GROUP BY fc.sha256, fc.bytes, fc.md5, fc.mime, fc.in_storage, fc.blocked, fc.created_at, fc.last_referenced_at
+GROUP BY fc.sha256, fc.bytes, fc.md5, fc.mime, fc.phash, fc.in_storage, fc.blocked, fc.created_at, fc.last_referenced_at
 HAVING COUNT(CASE WHEN f.id IS NOT NULL AND f.deleted_at IS NULL AND b.deleted_at IS NULL AND b.expired_at > NOW() THEN 1 END) = 0
 ORDER BY fc.last_referenced_at ASC`
 
@@ -93,11 +106,13 @@ ORDER BY fc.last_referenced_at ASC`
 	var contents []ds.FileContent
 	for rows.Next() {
 		var content ds.FileContent
+		var phash sql.NullString
 		err := rows.Scan(
 			&content.SHA256,
 			&content.Bytes,
 			&content.MD5,
 			&content.Mime,
+			&phash,
 			&content.InStorage,
 			&content.Blocked,
 			&content.CreatedAt,
@@ -106,6 +121,7 @@ ORDER BY fc.last_referenced_at ASC`
 		if err != nil {
 			return nil, err
 		}
+		content.PHash = phash.String
 		content.BytesReadable = humanize.Bytes(content.Bytes)
 		contents = append(contents, content)
 	}
@@ -121,7 +137,7 @@ ORDER BY fc.last_referenced_at ASC`
 func (d *FileContentDao) Update(content *ds.FileContent) error {
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	sqlStatement := `UPDATE file_content
-SET bytes = $2, md5 = $3, mime = $4, in_storage = $5, last_referenced_at = $6
+SET bytes = $2, md5 = $3, mime = $4, phash = COALESCE($5, phash), in_storage = $6, last_referenced_at = $7
 WHERE sha256 = $1`
 
 	t0 := time.Now()
@@ -130,6 +146,7 @@ WHERE sha256 = $1`
 		content.Bytes,
 		content.MD5,
 		content.Mime,
+		nullString(content.PHash),
 		content.InStorage,
 		now,
 	)
@@ -171,7 +188,7 @@ func (d *FileContentDao) Delete(sha256 string) error {
 
 // GetAll returns all file content records
 func (d *FileContentDao) GetAll() ([]ds.FileContent, error) {
-	sqlStatement := `SELECT sha256, bytes, md5, mime, in_storage, blocked, created_at, last_referenced_at
+	sqlStatement := `SELECT sha256, bytes, md5, mime, phash, in_storage, blocked, created_at, last_referenced_at
 FROM file_content
 ORDER BY bytes DESC, created_at DESC`
 
@@ -186,11 +203,13 @@ ORDER BY bytes DESC, created_at DESC`
 	var contents []ds.FileContent
 	for rows.Next() {
 		var content ds.FileContent
+		var phash sql.NullString
 		err := rows.Scan(
 			&content.SHA256,
 			&content.Bytes,
 			&content.MD5,
 			&content.Mime,
+			&phash,
 			&content.InStorage,
 			&content.Blocked,
 			&content.CreatedAt,
@@ -199,6 +218,7 @@ ORDER BY bytes DESC, created_at DESC`
 		if err != nil {
 			return nil, err
 		}
+		content.PHash = phash.String
 		content.BytesReadable = humanize.Bytes(content.Bytes)
 		contents = append(contents, content)
 	}
