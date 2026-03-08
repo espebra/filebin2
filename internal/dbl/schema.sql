@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS file_content (
 	bytes		BIGINT NOT NULL,
 	md5		VARCHAR(128) NOT NULL,
 	mime		VARCHAR(128) NOT NULL,
+	phash		VARCHAR(16),
 	in_storage	BOOLEAN NOT NULL DEFAULT false,
 	blocked		BOOLEAN NOT NULL DEFAULT false,
 	created_at	TIMESTAMP NOT NULL,
@@ -80,3 +81,5 @@ CREATE INDEX IF NOT EXISTS idx_file_content_in_storage ON file_content(in_storag
 CREATE INDEX IF NOT EXISTS idx_file_content_blocked ON file_content(blocked) WHERE blocked = true;
 CREATE INDEX IF NOT EXISTS idx_file_sha256_deleted ON file(sha256, deleted_at);
 CREATE INDEX IF NOT EXISTS idx_file_active ON file(bin_id, sha256) WHERE deleted_at IS NULL;
+
+ALTER TABLE file_content ADD COLUMN IF NOT EXISTS phash VARCHAR(16);

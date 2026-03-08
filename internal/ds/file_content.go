@@ -10,6 +10,7 @@ type FileContent struct {
 	BytesReadable            string    `json:"bytes_readable"`
 	MD5                      string    `json:"md5"`
 	Mime                     string    `json:"mime"`
+	PHash                    string    `json:"phash,omitempty"`
 	InStorage                bool      `json:"in_storage"`
 	Blocked                  bool      `json:"blocked"`
 	CreatedAt                time.Time `json:"created_at"`

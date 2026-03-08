@@ -416,8 +416,8 @@ func (h *HTTP) deleteFileContent(w http.ResponseWriter, r *http.Request) {
 func (h *HTTP) viewAdminRecentUploads(w http.ResponseWriter, r *http.Request) {
 	mime := r.URL.Query().Get("mime")
 
-	// Default to 24 hours, clamped to 1–168 (1 week)
-	hours := 24
+	// Default to 1 hour, clamped to 1–168 (1 week)
+	hours := 1
 	if v, err := strconv.Atoi(r.URL.Query().Get("hours")); err == nil && v >= 1 && v <= 168 {
 		hours = v
 	}
@@ -473,8 +473,8 @@ func (h *HTTP) viewAdminRecentUploads(w http.ResponseWriter, r *http.Request) {
 func (h *HTTP) viewAdminRecentUploadsText(w http.ResponseWriter, r *http.Request) {
 	mime := r.URL.Query().Get("mime")
 
-	// Default to 24 hours, clamped to 1–168 (1 week)
-	hours := 24
+	// Default to 1 hour, clamped to 1–168 (1 week)
+	hours := 1
 	if v, err := strconv.Atoi(r.URL.Query().Get("hours")); err == nil && v >= 1 && v <= 168 {
 		hours = v
 	}
