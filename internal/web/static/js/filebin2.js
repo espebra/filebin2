@@ -447,6 +447,38 @@ function lockBin (bin, messageBoxID) {
     xhr.send();
 };
 
+function banBin (bin, messageBoxID) {
+    console.log("Ban bin: " + bin);
+    var xhr = new XMLHttpRequest();
+    var box = document.getElementById(messageBoxID);
+
+    box.textContent = "Ban operation in progress ..."
+    box.className = "alert alert-dark";
+
+    xhr.onload = function() {
+        if (xhr.status === 200 && xhr.readyState === 4) {
+            console.log("Banned successfully");
+            box.textContent = "Ban operation completed successfully. The bin has been deleted and the uploader IPs have been banned.";
+            box.className = "alert alert-success";
+        } else {
+            console.log("Failed to ban");
+            box.textContent = "Error " + xhr.status + ". Unable to verify the operation.";
+            box.className = "alert alert-danger";
+        }
+    };
+
+    xhr.onerror = function () {
+        console.log("onerror: status: " + xhr.status + ", readystate: " + xhr.readyState);
+    };
+
+    xhr.open(
+        "BAN",
+        "/" + bin
+    );
+
+    xhr.send();
+};
+
 function approveBin (bin, messageBoxID) {
     console.log("Approve bin: " + bin);
     var xhr = new XMLHttpRequest();

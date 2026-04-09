@@ -497,6 +497,105 @@ func (h *HTTP) viewAdminRecentUploadsText(w http.ResponseWriter, r *http.Request
 	}
 }
 
+func (h *HTTP) viewAdminBin(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	inputBin := params["bin"]
+
+	type Data struct {
+		Bin    *ds.Bin   `json:"bin"`
+		Files  []ds.File `json:"files"`
+		Config ds.Config `json:"-"`
+	}
+	var data Data
+	data.Config = *h.config
+
+	bin, found, err := h.dao.Bin().GetByID(inputBin)
+	if err != nil {
+		slog.Error("unable to get bin by ID", "bin", inputBin, "error", err)
+		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		return
+	}
+	if !found {
+		http.NotFound(w, r)
+		return
+	}
+	data.Bin = &bin
+
+	files, err := h.dao.File().GetByBinAll(inputBin)
+	if err != nil {
+		slog.Error("unable to get files by bin", "bin", inputBin, "error", err)
+		http.Error(w, "Errno 201", http.StatusInternalServerError)
+		return
+	}
+	data.Files = files
+
+	if r.Header.Get("accept") == "application/json" {
+		w.Header().Set("Content-Type", "application/json")
+		out, err := json.MarshalIndent(data, "", "    ")
+		if err != nil {
+			slog.Error("failed to parse json", "error", err)
+			http.Error(w, "Errno 202", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(200)
+		_, _ = w.Write(out)
+	} else {
+		if err := h.renderTemplate(w, "admin_bin", data); err != nil {
+			slog.Error("failed to execute template", "error", err)
+			http.Error(w, "Errno 203", http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+func (h *HTTP) banBinUploaders(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	binID := params["bin"]
+
+	ips, err := h.dao.File().GetUploaderIPsByBin(binID)
+	if err != nil {
+		slog.Error("unable to get uploader IPs", "bin", binID, "error", err)
+		http.Error(w, "Failed to get uploader IPs", http.StatusInternalServerError)
+		return
+	}
+
+	if len(ips) > 0 {
+		err = h.dao.Client().Ban(ips, r.RemoteAddr)
+		if err != nil {
+			slog.Error("unable to ban uploaders", "bin", binID, "error", err)
+			http.Error(w, "Failed to ban uploaders", http.StatusInternalServerError)
+			return
+		}
+		slog.Info("banned uploaders", "bin", binID, "ips", ips)
+	}
+
+	http.Redirect(w, r, "/admin/bin/"+binID, http.StatusSeeOther)
+}
+
+func (h *HTTP) banBinDownloaders(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	binID := params["bin"]
+
+	ips, err := h.dao.Transaction().GetDownloaderIPsByBin(binID)
+	if err != nil {
+		slog.Error("unable to get downloader IPs", "bin", binID, "error", err)
+		http.Error(w, "Failed to get downloader IPs", http.StatusInternalServerError)
+		return
+	}
+
+	if len(ips) > 0 {
+		err = h.dao.Client().Ban(ips, r.RemoteAddr)
+		if err != nil {
+			slog.Error("unable to ban downloaders", "bin", binID, "error", err)
+			http.Error(w, "Failed to ban downloaders", http.StatusInternalServerError)
+			return
+		}
+		slog.Info("banned downloaders", "bin", binID, "ips", ips)
+	}
+
+	http.Redirect(w, r, "/admin/bin/"+binID, http.StatusSeeOther)
+}
+
 func (h *HTTP) viewAdminBins(w http.ResponseWriter, r *http.Request) {
 	inputLimit := r.URL.Query().Get("limit")
 
@@ -635,36 +734,50 @@ func (h *HTTP) viewAdminBinsAll(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *HTTP) viewAdminLog(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) viewAdminLogBin(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	binID := params["bin"]
+
 	type Data struct {
 		Transactions []ds.Transaction `json:"transactions"`
+		BinID        string           `json:"bin_id"`
 	}
 	var data Data
+	data.BinID = binID
 
-	params := mux.Vars(r)
-	inputCategory := params["category"]
-	inputFilter := params["filter"]
-
-	switch inputCategory {
-	case "bin":
-		bin := inputFilter
-		trs, err := h.dao.Transaction().GetByBin(bin)
-		if err != nil {
-			http.Error(w, "Errno 361", http.StatusInternalServerError)
-			return
-		}
-		data.Transactions = trs
-	case "ip":
-		ip := inputFilter
-		trs, err := h.dao.Transaction().GetByIP(ip)
-		if err != nil {
-			http.Error(w, "Errno 361", http.StatusInternalServerError)
-			return
-		}
-		data.Transactions = trs
+	trs, err := h.dao.Transaction().GetByBin(binID)
+	if err != nil {
+		http.Error(w, "Errno 361", http.StatusInternalServerError)
+		return
 	}
+	data.Transactions = trs
 
-	if err := h.renderTemplate(w, "log", data); err != nil {
+	if err := h.renderTemplate(w, "log_bin", data); err != nil {
+		slog.Error("failed to execute template", "error", err)
+		http.Error(w, "Errno 203", http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *HTTP) viewAdminLogIP(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	ip := params["ip"]
+
+	type Data struct {
+		Transactions []ds.Transaction `json:"transactions"`
+		ClientIP     string           `json:"client_ip"`
+	}
+	var data Data
+	data.ClientIP = ip
+
+	trs, err := h.dao.Transaction().GetByIP(ip)
+	if err != nil {
+		http.Error(w, "Errno 361", http.StatusInternalServerError)
+		return
+	}
+	data.Transactions = trs
+
+	if err := h.renderTemplate(w, "log_ip", data); err != nil {
 		slog.Error("failed to execute template", "error", err)
 		http.Error(w, "Errno 203", http.StatusInternalServerError)
 		return

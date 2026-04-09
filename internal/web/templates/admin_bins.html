@@ -60,7 +60,7 @@
                 <th>Bin downloads</th>
                 <th>File downloads</th>
                 <th>Locked</th>
-                <th>Log</th>
+                <th></th>
             </tr>
             {{ range $index, $value := .Bins.ByLastUpdated }}
                 <tr>
@@ -86,7 +86,7 @@
                             <i class="fas fa-fw fa-lock-open text-success"></i>
                         {{ end }}
                     </td>
-                    <td><a href="/admin/log/bin/{{ .Id }}">Log</a></td>
+                    <td><a href="/admin/bin/{{ .Id }}">Details</a> &middot; <a href="/admin/log/bin/{{ .Id }}">Log</a></td>
                 </tr>
             {{ end }}
         </table>
@@ -138,7 +138,7 @@
                 <th>Bin downloads</th>
                 <th>File downloads</th>
                 <th>Locked</th>
-                <th>Log</th>
+                <th></th>
             </tr>
             {{ range $index, $value := .Bins.ByCreated }}
                 <tr>
@@ -164,7 +164,7 @@
                             <i class="fas fa-fw fa-lock-open text-success"></i>
                         {{ end }}
                     </td>
-                    <td><a href="/admin/log/bin/{{ .Id }}">Log</a></td>
+                    <td><a href="/admin/bin/{{ .Id }}">Details</a> &middot; <a href="/admin/log/bin/{{ .Id }}">Log</a></td>
                 </tr>
             {{ end }}
         </table>
@@ -216,7 +216,7 @@
                 <th>Bin downloads</th>
                 <th>File downloads</th>
                 <th>Locked</th>
-                <th>Log</th>
+                <th></th>
             </tr>
             {{ range $index, $value := .Bins.ByBytes }}
                 <tr>
@@ -242,7 +242,7 @@
                             <i class="fas fa-fw fa-lock-open text-success"></i>
                         {{ end }}
                     </td>
-                    <td><a href="/admin/log/bin/{{ .Id }}">Log</a></td>
+                    <td><a href="/admin/bin/{{ .Id }}">Details</a> &middot; <a href="/admin/log/bin/{{ .Id }}">Log</a></td>
                 </tr>
             {{ end }}
         </table>
@@ -294,7 +294,7 @@
                 <th>Bin downloads</th>
                 <th>File downloads</th>
                 <th>Locked</th>
-                <th>Log</th>
+                <th></th>
             </tr>
             {{ range $index, $value := .Bins.ByFiles }}
                 <tr>
@@ -320,7 +320,7 @@
                             <i class="fas fa-fw fa-lock-open text-success"></i>
                         {{ end }}
                     </td>
-                    <td><a href="/admin/log/bin/{{ .Id }}">Log</a></td>
+                    <td><a href="/admin/bin/{{ .Id }}">Details</a> &middot; <a href="/admin/log/bin/{{ .Id }}">Log</a></td>
                 </tr>
             {{ end }}
         </table>
@@ -372,7 +372,7 @@
                 <th>Bin downloads</th>
                 <th>File downloads</th>
                 <th>Locked</th>
-                <th>Log</th>
+                <th></th>
             </tr>
             {{ range $index, $value := .Bins.ByDownloads }}
                 <tr>
@@ -398,7 +398,7 @@
                             <i class="fas fa-fw fa-lock-open text-success"></i>
                         {{ end }}
                     </td>
-                    <td><a href="/admin/log/bin/{{ .Id }}">Log</a></td>
+                    <td><a href="/admin/bin/{{ .Id }}">Details</a> &middot; <a href="/admin/log/bin/{{ .Id }}">Log</a></td>
                 </tr>
             {{ end }}
         </table>

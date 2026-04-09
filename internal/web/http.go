@@ -150,13 +150,17 @@ func (h *HTTP) Init() error {
 	h.router.HandleFunc("/contact", h.contact).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/terms", h.terms).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/integration/slack", h.integrationSlack).Methods(http.MethodPost)
-	h.router.HandleFunc("/admin/log/{category:[a-z]+}/{filter:[A-Za-z0-9.:_-]+}", h.auth(h.viewAdminLog)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin/log/bin/{bin:[A-Za-z0-9_-]+}", h.auth(h.viewAdminLogBin)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin/log/ip/{ip:[A-Za-z0-9.:_-]+}", h.auth(h.viewAdminLogIP)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/bins", h.auth(h.viewAdminBins)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/bins/all", h.auth(h.viewAdminBinsAll)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/clients", h.auth(h.viewAdminClients)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/clients/all", h.auth(h.viewAdminClientsAll)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/files", h.auth(h.viewAdminFiles)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/filecontent", h.auth(h.viewAdminFileContent)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin/bin/{bin:[A-Za-z0-9_-]+}", h.auth(h.viewAdminBin)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin/bin/{bin:[A-Za-z0-9_-]+}/ban-uploaders", h.log(h.auth(h.banBinUploaders))).Methods("POST")
+	h.router.HandleFunc("/admin/bin/{bin:[A-Za-z0-9_-]+}/ban-downloaders", h.log(h.auth(h.banBinDownloaders))).Methods("POST")
 	h.router.HandleFunc("/admin/file/{sha256:[0-9a-z]+}", h.auth(h.viewAdminFile)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/file/{sha256:[0-9a-z]+}/block", h.log(h.auth(h.blockFileContent))).Methods("POST")
 	h.router.HandleFunc("/admin/file/{sha256:[0-9a-z]+}/unblock", h.log(h.auth(h.unblockFileContent))).Methods("POST")
@@ -468,7 +472,7 @@ func (h *HTTP) ParseTemplates() *template.Template {
 			elapsed := t1.Sub(t0)
 			return elapsed.String()
 		},
-		"finished": func(t sql.NullTime) bool {
+		"isSet": func(t sql.NullTime) bool {
 			return t.Valid && !t.Time.IsZero()
 		},
 		"durationInSeconds": func(dur time.Duration) string {

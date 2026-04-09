@@ -124,6 +124,25 @@ func (d *TransactionDao) GetByBin(bin string) (transactions []ds.Transaction, er
 	return transactions, nil
 }
 
+func (d *TransactionDao) GetDownloaderIPsByBin(bin string) (ips []string, err error) {
+	sqlStatement := `SELECT DISTINCT ip FROM transaction WHERE bin_id = $1 AND method = 'GET' AND ip != ''`
+	t0 := time.Now()
+	rows, err := d.db.Query(sqlStatement, bin)
+	observeQuery(d.metrics, "transaction_get_downloader_ips_by_bin", t0, err)
+	if err != nil {
+		return ips, err
+	}
+	defer func() { _ = rows.Close() }()
+	for rows.Next() {
+		var ip string
+		if err := rows.Scan(&ip); err != nil {
+			return ips, err
+		}
+		ips = append(ips, ip)
+	}
+	return ips, nil
+}
+
 func (d *TransactionDao) Insert(t *ds.Transaction) (err error) {
 	sqlStatement := "INSERT INTO transaction (bin_id, filename, operation, method, path, ip, headers, timestamp, status, req_bytes, resp_bytes, completed) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id"
 	t0 := time.Now()
