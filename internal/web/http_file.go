@@ -1,7 +1,9 @@
 package web
 
 import (
+	"context"
 	"crypto/md5"
+	"errors"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -12,6 +14,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"os/exec"
 	"path"
 	"strconv"
 	"strings"
@@ -337,6 +340,44 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 		_, _ = fp.Seek(0, 0)
 	}
 
+	// Execute upload hook if configured
+	var hookDuration time.Duration
+	if h.config.UploadHook != "" {
+		hookStart := time.Now()
+		hookCtx, hookCancel := context.WithTimeout(r.Context(), h.config.UploadHookTimeout)
+		defer hookCancel()
+		hookCmd := exec.CommandContext(hookCtx, h.config.UploadHook,
+			bin.Id, inputFilename, mime.String(),
+			strconv.FormatInt(nBytes, 10), fp.Name(),
+		)
+		hookOutput, hookErr := hookCmd.Output()
+		hookDuration = time.Since(hookStart)
+		if hookErr != nil {
+			hookMessage := ""
+			if len(hookOutput) > 0 {
+				output := strings.TrimRight(string(hookOutput), "\n")
+				hookMessage = output[strings.LastIndex(output, "\n")+1:]
+			}
+			exitCode := -1
+			var exitErr *exec.ExitError
+			if errors.As(hookErr, &exitErr) {
+				exitCode = exitErr.ExitCode()
+			}
+			if exitCode == 1 {
+				if hookMessage == "" {
+					hookMessage = "Upload rejected"
+				}
+				h.Error(w, r, fmt.Sprintf("Upload hook rejected file %q in bin %q: %s", inputFilename, bin.Id, hookErr.Error()), hookMessage, 140, http.StatusForbidden)
+			} else {
+				if hookMessage == "" {
+					hookMessage = "Internal server error"
+				}
+				h.Error(w, r, fmt.Sprintf("Upload hook failed for file %q in bin %q: %s", inputFilename, bin.Id, hookErr.Error()), hookMessage, 141, http.StatusInternalServerError)
+			}
+			return
+		}
+	}
+
 	// Check if file exists
 	file, found, err := h.dao.File().GetByName(bin.Id, inputFilename)
 	if err != nil {
@@ -523,7 +564,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	t5 := time.Now()
-	slog.Info("uploaded file", "filename", file.Filename, "bytes", file.Bytes, "sha256", file.SHA256, "bin", bin.Id, "db_seconds", t1.Sub(t0).Seconds(), "buffer_seconds", t2.Sub(t1).Seconds(), "phash_seconds", pHashDuration.Seconds(), "store_seconds", t4.Sub(t3).Seconds(), "total_seconds", t5.Sub(t0).Seconds())
+	slog.Info("uploaded file", "filename", file.Filename, "bytes", file.Bytes, "sha256", file.SHA256, "bin", bin.Id, "db_seconds", t1.Sub(t0).Seconds(), "buffer_seconds", t2.Sub(t1).Seconds(), "phash_seconds", pHashDuration.Seconds(), "hook_seconds", hookDuration.Seconds(), "store_seconds", t4.Sub(t3).Seconds(), "total_seconds", t5.Sub(t0).Seconds())
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
