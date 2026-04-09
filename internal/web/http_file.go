@@ -3,10 +3,10 @@ package web
 import (
 	"context"
 	"crypto/md5"
-	"errors"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"

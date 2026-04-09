@@ -263,7 +263,7 @@ func (d *FileDao) GetUploaderIPsByBin(id string) (ips []string, err error) {
 	if err != nil {
 		return ips, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var ip string
 		if err := rows.Scan(&ip); err != nil {
