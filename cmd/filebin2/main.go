@@ -45,6 +45,8 @@ var (
 	mmdbCityPathFlag        = flag.String("mmdb-city", "", "The path to an mmdb formatted geoip database like GeoLite2-City.mmdb.")
 	mmdbASNPathFlag         = flag.String("mmdb-asn", "", "The path to an mmdb formatted geoip database like GeoLite2-ASN.mmdb.")
 	allowRobotsFlag         = flag.Bool("allow-robots", false, "Allow robots to crawl and index the site (using X-Robots-Tag response header).")
+	uploadHookFlag          = flag.String("upload-hook", "", "Command to execute on every file upload for validation. The command receives five arguments: bin ID, filename, content type, file size in bytes, and path to temporary file. Exit code 0 accepts the upload, exit code 1 rejects it with 403, and any other exit code rejects it with 500. The last line of stdout is returned to the client as the response message.")
+	uploadHookTimeoutFlag   = flag.Duration("upload-hook-timeout", 10*time.Second, "Timeout for the upload hook command execution")
 
 	// Limits
 	limitFileDownloadsFlag = flag.Uint64("limit-file-downloads", 0, "Limit the number of downloads per file. 0 disables this limit.")
@@ -182,6 +184,14 @@ func main() {
 	}
 	if v := os.Getenv("FILEBIN_ALLOW_ROBOTS"); v != "" {
 		*allowRobotsFlag = v == "true" || v == "1" || v == "yes"
+	}
+	if *uploadHookFlag == "" {
+		*uploadHookFlag = os.Getenv("FILEBIN_UPLOAD_HOOK")
+	}
+	if v := os.Getenv("FILEBIN_UPLOAD_HOOK_TIMEOUT"); v != "" && *uploadHookTimeoutFlag == 10*time.Second {
+		if d, err := time.ParseDuration(v); err == nil {
+			*uploadHookTimeoutFlag = d
+		}
 	}
 
 	// Limits
@@ -511,6 +521,8 @@ func main() {
 		CookieLifetime:       *cookieLifetimeFlag,
 		ExpectedCookieValue:  *expectedCookieValueFlag,
 		RejectFileExtensions: strings.Fields(*rejectFileExtensions),
+		UploadHook:           *uploadHookFlag,
+		UploadHookTimeout:    *uploadHookTimeoutFlag,
 		SlackSecret:          *slackSecretFlag,
 		SlackDomain:          *slackDomainFlag,
 		SlackChannel:         *slackChannelFlag,
