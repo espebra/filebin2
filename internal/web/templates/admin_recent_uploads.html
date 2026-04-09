@@ -53,17 +53,35 @@
                 <th>MIME</th>
                 <th>Bytes</th>
                 <th>File Content</th>
+                <th>Status</th>
                 <th>Downloads</th>
                 <th>IP</th>
             </tr>
             {{ range .Files }}
-                <tr>
+                <tr{{ if or .IsDeleted (isSet .BinDeletedAt) }} class="table-secondary"{{ end }}>
                     <td sorttable_customkey="{{ .CreatedAt }}">{{ .CreatedAtRelative }}</td>
-                    <td><a href="/{{ .Bin }}/{{ .Filename }}">{{ .Filename }}</a></td>
-                    <td><a href="/{{ .Bin }}">{{ .Bin }}</a> (<a href="/admin/log/bin/{{ .Bin }}">log</a>)</td>
+                    <td>
+                        {{ if or .IsDeleted (isSet .BinDeletedAt) }}
+                            {{ .Filename }}
+                        {{ else }}
+                            <a href="/{{ .Bin }}/{{ .Filename }}">{{ .Filename }}</a>
+                        {{ end }}
+                    </td>
+                    <td><a href="/{{ .Bin }}">{{ .Bin }}</a> (<a href="/admin/bin/{{ .Bin }}">admin</a>)</td>
                     <td>{{ .Mime }}</td>
                     <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
                     <td><code><a href="/admin/file/{{ .SHA256 }}">{{ slice .SHA256 0 7 }}</a></code></td>
+                    <td>
+                        {{ if .IsDeleted }}
+                            <span class="badge bg-danger">File deleted</span>
+                        {{ else if isSet .BinDeletedAt }}
+                            <span class="badge bg-danger">Bin deleted</span>
+                        {{ else if not .InStorage }}
+                            <span class="badge bg-warning text-dark">Not in storage</span>
+                        {{ else }}
+                            <span class="badge bg-success">In storage</span>
+                        {{ end }}
+                    </td>
                     <td>{{ .Downloads }}</td>
                     <td><a href="/admin/log/ip/{{ .IP }}">{{ .IP }}</a></td>
                 </tr>

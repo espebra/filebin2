@@ -244,6 +244,36 @@ func (d *FileDao) GetByBin(id string, inStorage bool) (files []ds.File, err erro
 	return files, err
 }
 
+func (d *FileDao) GetByBinAll(id string) (files []ds.File, err error) {
+	sqlStatement := `SELECT f.id, f.bin_id, f.filename, fc.mime, fc.bytes, fc.md5, f.sha256, f.downloads, f.updates, fc.in_storage, f.ip, f.headers, f.updated_at, f.created_at, f.deleted_at, b.deleted_at, b.expired_at, f.upload_duration_ms
+		FROM file f
+		JOIN file_content fc ON f.sha256 = fc.sha256
+		LEFT JOIN bin b ON f.bin_id = b.id
+		WHERE f.bin_id = $1
+		ORDER BY f.filename ASC`
+	files, err = d.fileQuery(sqlStatement, id)
+	return files, err
+}
+
+func (d *FileDao) GetUploaderIPsByBin(id string) (ips []string, err error) {
+	sqlStatement := `SELECT DISTINCT f.ip FROM file f WHERE f.bin_id = $1 AND f.ip != ''`
+	t0 := time.Now()
+	rows, err := d.db.Query(sqlStatement, id)
+	observeQuery(d.metrics, "file_get_uploader_ips_by_bin", t0, err)
+	if err != nil {
+		return ips, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var ip string
+		if err := rows.Scan(&ip); err != nil {
+			return ips, err
+		}
+		ips = append(ips, ip)
+	}
+	return ips, nil
+}
+
 func (d *FileDao) GetAll(available bool) (files []ds.File, err error) {
 	// Join with file_content to check if content is actually in storage
 	sqlStatement := `SELECT f.id, f.bin_id, f.filename, fc.mime, fc.bytes, fc.md5, f.sha256, f.downloads, f.updates, fc.in_storage, f.ip, f.headers, f.updated_at, f.created_at, f.deleted_at, b.deleted_at, b.expired_at, f.upload_duration_ms
@@ -324,7 +354,7 @@ func (d *FileDao) GetRecentUploads(mime string, hours int) (files []ds.File, err
 			FROM file f
 			JOIN file_content fc ON f.sha256 = fc.sha256
 			LEFT JOIN bin b ON f.bin_id = b.id
-			WHERE f.created_at > NOW() - $1 * INTERVAL '1 hour' AND f.deleted_at IS NULL
+			WHERE f.created_at > NOW() - $1 * INTERVAL '1 hour'
 			ORDER BY f.created_at DESC`
 		files, err = d.fileQuery(sqlStatement, hours)
 	} else {
@@ -332,7 +362,7 @@ func (d *FileDao) GetRecentUploads(mime string, hours int) (files []ds.File, err
 			FROM file f
 			JOIN file_content fc ON f.sha256 = fc.sha256
 			LEFT JOIN bin b ON f.bin_id = b.id
-			WHERE f.created_at > NOW() - $1 * INTERVAL '1 hour' AND f.deleted_at IS NULL AND fc.mime = $2
+			WHERE f.created_at > NOW() - $1 * INTERVAL '1 hour' AND fc.mime = $2
 			ORDER BY f.created_at DESC`
 		files, err = d.fileQuery(sqlStatement, hours, mime)
 	}

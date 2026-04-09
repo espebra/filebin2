@@ -16,7 +16,14 @@
 
         {{template "admin_bar" .}}
 
-        <h1>File by SHA256 checksum</h1>
+        <h1>File admin for {{ if .FileContent }}{{ .FileContent.SHA256 }}{{ end }}</h1>
+
+        <nav aria-label="Related pages">
+            <span class="text-muted">See also:</span>
+            <a href="/admin/filecontent">File contents</a>
+            &middot;
+            <a href="/admin/files">Files</a>
+        </nav>
 
         {{ if .FileContent }}
         <h2>Content Information</h2>

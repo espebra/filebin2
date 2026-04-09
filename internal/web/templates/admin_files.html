@@ -63,7 +63,7 @@
             {{ range $index, $value := .Files.ByCreated }}
                 <tr>
                     <td><a href="/{{ .Bin }}/{{ .Filename }}">{{ .Filename }}</a></td>
-                    <td><a href="/{{ .Bin }}">{{ .Bin }}</a></td>
+                    <td><a href="/{{ .Bin }}">{{ .Bin }}</a> (<a href="/admin/bin/{{ .Bin }}">admin</a>)</td>
                     <td>{{ .Mime }}</td>
                     <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
                     <td><code><a href="/admin/file/{{ .SHA256 }}">{{ slice .SHA256 0 7 }}</a></code></td>
@@ -94,7 +94,7 @@
             {{ range $index, $value := .Files.ByUpdated }}
                 <tr>
                     <td><a href="/{{ .Bin }}/{{ .Filename }}">{{ .Filename }}</a></td>
-                    <td><a href="/{{ .Bin }}">{{ .Bin }}</a></td>
+                    <td><a href="/{{ .Bin }}">{{ .Bin }}</a> (<a href="/admin/bin/{{ .Bin }}">admin</a>)</td>
                     <td>{{ .Mime }}</td>
                     <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
                     <td><code><a href="/admin/file/{{ .SHA256 }}">{{ slice .SHA256 0 7 }}</a></code></td>
@@ -125,7 +125,7 @@
             {{ range $index, $value := .Files.ByBytes }}
                 <tr>
                     <td><a href="/{{ .Bin }}/{{ .Filename }}">{{ .Filename }}</a></td>
-                    <td><a href="/{{ .Bin }}">{{ .Bin }}</a></td>
+                    <td><a href="/{{ .Bin }}">{{ .Bin }}</a> (<a href="/admin/bin/{{ .Bin }}">admin</a>)</td>
                     <td>{{ .Mime }}</td>
                     <td sorttable_customkey="{{ .Bytes }}" class="table-light"><strong>{{ .BytesReadable }}</strong></td>
                     <td><code><a href="/admin/file/{{ .SHA256 }}">{{ slice .SHA256 0 7 }}</a></code></td>
@@ -156,7 +156,7 @@
             {{ range $index, $value := .Files.ByDownloads }}
                 <tr>
                     <td><a href="/{{ .Bin }}/{{ .Filename }}">{{ .Filename }}</a></td>
-                    <td><a href="/{{ .Bin }}">{{ .Bin }}</a></td>
+                    <td><a href="/{{ .Bin }}">{{ .Bin }}</a> (<a href="/admin/bin/{{ .Bin }}">admin</a>)</td>
                     <td>{{ .Mime }}</td>
                     <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
                     <td><code><a href="/admin/file/{{ .SHA256 }}">{{ slice .SHA256 0 7 }}</a></code></td>
@@ -187,7 +187,7 @@
             {{ range $index, $value := .Files.ByUpdates }}
                 <tr>
                     <td><a href="/{{ .Bin }}/{{ .Filename }}">{{ .Filename }}</a></td>
-                    <td><a href="/{{ .Bin }}">{{ .Bin }}</a></td>
+                    <td><a href="/{{ .Bin }}">{{ .Bin }}</a> (<a href="/admin/bin/{{ .Bin }}">admin</a>)</td>
                     <td>{{ .Mime }}</td>
                     <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
                     <td><code><a href="/admin/file/{{ .SHA256 }}">{{ slice .SHA256 0 7 }}</a></code></td>

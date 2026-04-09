@@ -1,4 +1,4 @@
-{{ define "log" }}<!doctype html>
+{{ define "log_bin" }}<!doctype html>
 <html lang="en">
     <head>
         <meta charset="utf-8">
@@ -7,13 +7,20 @@
         <link rel="stylesheet" href="/static/css/bootstrap.min.css"/>
         <link rel="stylesheet" href="/static/css/fontawesome.all.min.css"/>
         <link rel="stylesheet" href="/static/css/custom.css"/>
-        <title>Filebin | Log</title>
+        <title>Filebin | Log | Bin {{ .BinID }}</title>
     </head>
     <body class="container-fluid">
 
         {{template "admin_bar" .}}
 
-        <h1>Log</h1>
+        <h1>Transaction log for {{ .BinID }}</h1>
+
+        <nav aria-label="Related pages">
+            <span class="text-muted">See also:</span>
+            <a href="/admin/bin/{{ .BinID }}">Bin admin</a>
+            &middot;
+            <a href="/{{ .BinID }}">View bin</a>
+        </nav>
 
         <table class="table table-sm">
             <thead>
