@@ -342,37 +342,26 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 
 	// Execute upload hook if configured
 	var hookDuration time.Duration
-	if h.config.UploadHook != "" {
+	if h.config.UploadExecHook != "" {
 		hookStart := time.Now()
-		hookCtx, hookCancel := context.WithTimeout(r.Context(), h.config.UploadHookTimeout)
+		hookCtx, hookCancel := context.WithTimeout(r.Context(), h.config.UploadExecHookTimeout)
 		defer hookCancel()
-		hookCmd := exec.CommandContext(hookCtx, h.config.UploadHook,
+		hookCmd := exec.CommandContext(hookCtx, h.config.UploadExecHook,
 			bin.Id, inputFilename, mime.String(),
 			strconv.FormatInt(nBytes, 10), fp.Name(),
 		)
-		hookOutput, hookErr := hookCmd.Output()
+		hookErr := hookCmd.Run()
 		hookDuration = time.Since(hookStart)
 		if hookErr != nil {
-			hookMessage := ""
-			if len(hookOutput) > 0 {
-				output := strings.TrimRight(string(hookOutput), "\n")
-				hookMessage = output[strings.LastIndex(output, "\n")+1:]
-			}
 			exitCode := -1
 			var exitErr *exec.ExitError
 			if errors.As(hookErr, &exitErr) {
 				exitCode = exitErr.ExitCode()
 			}
 			if exitCode == 1 {
-				if hookMessage == "" {
-					hookMessage = "Upload rejected"
-				}
-				h.Error(w, r, fmt.Sprintf("Upload hook rejected file %q in bin %q: %s", inputFilename, bin.Id, hookErr.Error()), hookMessage, 140, http.StatusForbidden)
+				h.Error(w, r, fmt.Sprintf("Upload hook rejected file %q in bin %q: %s", inputFilename, bin.Id, hookErr.Error()), "File rejected", 140, http.StatusForbidden)
 			} else {
-				if hookMessage == "" {
-					hookMessage = "Internal server error"
-				}
-				h.Error(w, r, fmt.Sprintf("Upload hook failed for file %q in bin %q: %s", inputFilename, bin.Id, hookErr.Error()), hookMessage, 141, http.StatusInternalServerError)
+				h.Error(w, r, fmt.Sprintf("Upload hook failed for file %q in bin %q: %s", inputFilename, bin.Id, hookErr.Error()), "Internal server error", 141, http.StatusInternalServerError)
 			}
 			return
 		}

@@ -22,7 +22,7 @@
 # when the upload is rejected.
 #
 # Usage:
-#   filebin2 --upload-hook /path/to/this/script
+#   filebin2 --upload-exec-hook /path/to/this/script
 #
 
 BIN="$1"

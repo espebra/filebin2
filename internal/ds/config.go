@@ -35,8 +35,8 @@ type Config struct {
 	AllowRobots          bool
 	BaseUrl              url.URL
 	RejectFileExtensions []string
-	UploadHook           string
-	UploadHookTimeout    time.Duration
+	UploadExecHook        string
+	UploadExecHookTimeout time.Duration
 
 	// Timeouts for the HTTP server
 	ReadTimeout       time.Duration

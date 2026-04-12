@@ -36,8 +36,8 @@ func setupUploadHookHandler(t *testing.T, uploadHook string, uploadHookTimeout t
 
 	c := ds.Config{
 		Expiration:        testExpiredAt,
-		UploadHook:        uploadHook,
-		UploadHookTimeout: uploadHookTimeout,
+		UploadExecHook:        uploadHook,
+		UploadExecHookTimeout: uploadHookTimeout,
 	}
 
 	metricsRegistry := prometheus.NewRegistry()
@@ -118,8 +118,8 @@ exit 1
 	}
 
 	body := rr.Body.String()
-	if body != "File rejected by policy" {
-		t.Errorf("Expected body %q, got %q", "File rejected by policy", body)
+	if body != "File rejected" {
+		t.Errorf("Expected body %q, got %q", "File rejected", body)
 	}
 }
 
@@ -138,8 +138,8 @@ exit 1
 	}
 
 	body := rr.Body.String()
-	if body != "Upload rejected" {
-		t.Errorf("Expected body %q, got %q", "Upload rejected", body)
+	if body != "File rejected" {
+		t.Errorf("Expected body %q, got %q", "File rejected", body)
 	}
 }
 
@@ -187,31 +187,8 @@ exit 2
 	}
 
 	body := rr.Body.String()
-	if body != "Something went wrong" {
-		t.Errorf("Expected body %q, got %q", "Something went wrong", body)
-	}
-}
-
-func TestUploadHookRejectUsesLastLine(t *testing.T) {
-	hook := writeHookScript(t, `#!/bin/sh
-echo "first line"
-echo "middle line"
-echo "last line is the reason"
-exit 1
-`)
-	h := setupUploadHookHandler(t, hook, 10*time.Second)
-
-	req := uploadRequest("/hooklastlinebin/testfile.txt", "hello world")
-	rr := httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
-
-	if rr.Code != http.StatusForbidden {
-		t.Errorf("Expected status %d, got %d. Body: %s", http.StatusForbidden, rr.Code, rr.Body.String())
-	}
-
-	body := rr.Body.String()
-	if body != "last line is the reason" {
-		t.Errorf("Expected body %q, got %q", "last line is the reason", body)
+	if body != "Internal server error" {
+		t.Errorf("Expected body %q, got %q", "Internal server error", body)
 	}
 }
 
