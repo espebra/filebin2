@@ -209,28 +209,23 @@ If enabled, the `X-Robots-Tag` response header will allow search engines to inde
 
 ---
 
-**Upload Hook**
-- Environment Variable: `FILEBIN_UPLOAD_HOOK`
-- Command Line Argument: `--upload-hook`
+**Post-Upload Hook**
+- Environment Variable: `FILEBIN_POST_UPLOAD_HOOK`
+- Command Line Argument: `--post-upload-hook`
 - Default: (not set)
 
-Command to execute on every file upload for validation. The command is called after the file has been received from the client but before it is stored in S3. It receives five arguments: bin ID, filename, content type, file size in bytes, and path to the temporary file.
+Command to execute after every successful file upload. The command runs after the file has been stored in S3 and its metadata persisted to the database, and is intended for notifications and post-processing (for example, triggering an indexing job or webhook). It is invoked with the following named arguments: `--bin-id`, `--filename`, `--content-type`, `--size`, and `--sha256`.
 
-The exit code determines the outcome:
-- `0` — Accept the upload.
-- `1` — Reject the upload with HTTP 403 (Forbidden).
-- Any other exit code — Reject the upload with HTTP 500 (Internal Server Error).
-
-When the upload is rejected, the last line of stdout from the command is returned to the client as the response message. An example hook script is provided in [`misc/upload-hook-example`](misc/upload-hook-example).
+The hook does not affect the response to the client: any non-zero exit code or stdout/stderr is logged but the upload is always reported as successful. An example hook script is provided in [`misc/upload-hook-example`](misc/upload-hook-example).
 
 ---
 
-**Upload Hook Timeout**
-- Environment Variable: `FILEBIN_UPLOAD_HOOK_TIMEOUT`
-- Command Line Argument: `--upload-hook-timeout`
+**Post-Upload Hook Timeout**
+- Environment Variable: `FILEBIN_POST_UPLOAD_HOOK_TIMEOUT`
+- Command Line Argument: `--post-upload-hook-timeout`
 - Default: `10s`
 
-Timeout for the upload hook command execution. If the command does not complete within this duration, it is killed and the upload is rejected with HTTP 500. The value is specified using Go duration format, examples: `5s`, `30s`, `1m`.
+Timeout for the post-upload hook command execution. If the command does not complete within this duration, it is killed and the failure is logged, but the upload is still reported as successful to the client. The value is specified using Go duration format, examples: `5s`, `30s`, `1m`.
 
 ---
 

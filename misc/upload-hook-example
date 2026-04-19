@@ -2,64 +2,45 @@
 #
 # Example upload hook for filebin2.
 #
-# This script is called during file upload, after the file has been received
-# from the client but before it is stored in S3. It can be used to validate
-# or inspect uploaded files, for example using an anti virus scanner.
+# This script is called after a file has been successfully uploaded: both
+# the S3 object and its database metadata have already been persisted. It
+# is intended for notifications and post-processing such as an indexing
+# job or a webhook.
 #
-# Arguments:
-#   $1 - Bin ID
-#   $2 - Filename
-#   $3 - Content type (MIME type)
-#   $4 - File size in bytes
-#   $5 - Path to the temporary file
+# The hook does not affect the response to the client. Exit codes and
+# stdout/stderr are logged by filebin2 but the upload is always reported
+# as successful.
 #
-# Exit codes:
-#   0 - Accept the upload
-#   1 - Reject the upload (403 Forbidden)
-#   Any other - Reject the upload (500 Internal Server Error)
-#
-# The last line of stdout is returned to the client as the response message
-# when the upload is rejected.
+# Named arguments:
+#   --bin-id        Bin ID
+#   --filename      Filename
+#   --content-type  Content type (MIME type)
+#   --size          File size in bytes
+#   --sha256        SHA256 checksum of the file contents
 #
 # Usage:
-#   filebin2 --upload-hook /path/to/this/script
+#   filebin2 --post-upload-hook /path/to/this/script
 #
 
-BIN="$1"
-FILENAME="$2"
-CONTENT_TYPE="$3"
-FILE_SIZE="$4"
-FILE_PATH="$5"
+BIN=""
+FILENAME=""
+CONTENT_TYPE=""
+FILE_SIZE=""
+SHA256=""
 
-# Example: reject files larger than 100 MB
-#MAX_SIZE=104857600
-#if [ "$FILE_SIZE" -gt "$MAX_SIZE" ]; then
-#    echo "File exceeds the maximum allowed size of 100 MB"
-#    exit 1
-#fi
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --bin-id) BIN="$2"; shift 2 ;;
+        --filename) FILENAME="$2"; shift 2 ;;
+        --content-type) CONTENT_TYPE="$2"; shift 2 ;;
+        --size) FILE_SIZE="$2"; shift 2 ;;
+        --sha256) SHA256="$2"; shift 2 ;;
+        *) shift ;;
+    esac
+done
 
-# Example: reject certain content types
-#case "$CONTENT_TYPE" in
-#    application/x-executable*|application/x-sharedlib*)
-#        echo "Executable files are not allowed"
-#        exit 1
-#        ;;
-#esac
+# Example: notify an external service
+#curl -s -X POST -d "bin=$BIN&file=$FILENAME&size=$FILE_SIZE&sha256=$SHA256" \
+#    https://example.com/filebin-webhook
 
-# Example: reject files with certain extensions
-#case "$FILENAME" in
-#    *.exe|*.bat|*.cmd|*.com|*.scr)
-#        echo "This file type is not allowed"
-#        exit 1
-#        ;;
-#esac
-
-# Example: scan the file with ClamAV
-#RESULT=$(clamdscan --no-summary "$FILE_PATH" 2>&1)
-#if [ $? -ne 0 ]; then
-#    echo "$RESULT"
-#    exit 1
-#fi
-
-# Accept the upload
 exit 0
