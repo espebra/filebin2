@@ -564,7 +564,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	t5 := time.Now()
-	slog.Info("uploaded file", "filename", file.Filename, "bytes", file.Bytes, "sha256", file.SHA256, "bin", bin.Id, "db_seconds", t1.Sub(t0).Seconds(), "buffer_seconds", t2.Sub(t1).Seconds(), "phash_seconds", pHashDuration.Seconds(), "hook_seconds", hookDuration.Seconds(), "store_seconds", t4.Sub(t3).Seconds(), "total_seconds", t5.Sub(t0).Seconds())
+	slog.Info("uploaded file", "filename", file.Filename, "bytes", file.Bytes, "sha256", file.SHA256, "bin", bin.Id, "db_seconds", t1.Sub(t0).Seconds(), "buffer_seconds", fmt.Sprintf("%f", t2.Sub(t1).Seconds()), "phash_seconds", pHashDuration.Seconds(), "hook_seconds", hookDuration.Seconds(), "store_seconds", t4.Sub(t3).Seconds(), "total_seconds", t5.Sub(t0).Seconds())
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
