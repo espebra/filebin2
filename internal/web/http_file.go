@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -340,44 +339,6 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 		_, _ = fp.Seek(0, 0)
 	}
 
-	// Execute upload hook if configured
-	var hookDuration time.Duration
-	if h.config.UploadHook != "" {
-		hookStart := time.Now()
-		hookCtx, hookCancel := context.WithTimeout(r.Context(), h.config.UploadHookTimeout)
-		defer hookCancel()
-		hookCmd := exec.CommandContext(hookCtx, h.config.UploadHook,
-			bin.Id, inputFilename, mime.String(),
-			strconv.FormatInt(nBytes, 10), fp.Name(),
-		)
-		hookOutput, hookErr := hookCmd.Output()
-		hookDuration = time.Since(hookStart)
-		if hookErr != nil {
-			hookMessage := ""
-			if len(hookOutput) > 0 {
-				output := strings.TrimRight(string(hookOutput), "\n")
-				hookMessage = output[strings.LastIndex(output, "\n")+1:]
-			}
-			exitCode := -1
-			var exitErr *exec.ExitError
-			if errors.As(hookErr, &exitErr) {
-				exitCode = exitErr.ExitCode()
-			}
-			if exitCode == 1 {
-				if hookMessage == "" {
-					hookMessage = "Upload rejected"
-				}
-				h.Error(w, r, fmt.Sprintf("Upload hook rejected file %q in bin %q: %s", inputFilename, bin.Id, hookErr.Error()), hookMessage, 140, http.StatusForbidden)
-			} else {
-				if hookMessage == "" {
-					hookMessage = "Internal server error"
-				}
-				h.Error(w, r, fmt.Sprintf("Upload hook failed for file %q in bin %q: %s", inputFilename, bin.Id, hookErr.Error()), hookMessage, 141, http.StatusInternalServerError)
-			}
-			return
-		}
-	}
-
 	// Check if file exists
 	file, found, err := h.dao.File().GetByName(bin.Id, inputFilename)
 	if err != nil {
@@ -546,6 +507,28 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	h.metrics.IncrBytesClientToFilebin(file.Bytes)
 	if !skipS3Upload {
 		h.metrics.IncrBytesFilebinToStorage(file.Bytes)
+	}
+
+	// Execute post-upload hook if configured. The hook runs after the upload
+	// has been persisted and is treated as a notification: its exit code and
+	// output are logged but do not affect the response to the client.
+	var hookDuration time.Duration
+	if h.config.PostUploadHook != "" {
+		hookStart := time.Now()
+		hookCtx, hookCancel := context.WithTimeout(r.Context(), h.config.PostUploadHookTimeout)
+		hookCmd := exec.CommandContext(hookCtx, h.config.PostUploadHook,
+			"--bin-id", bin.Id,
+			"--filename", inputFilename,
+			"--content-type", mime.String(),
+			"--size", strconv.FormatInt(nBytes, 10),
+			"--sha256", sha256ChecksumString,
+		)
+		hookOutput, hookErr := hookCmd.CombinedOutput()
+		hookDuration = time.Since(hookStart)
+		hookCancel()
+		if hookErr != nil {
+			slog.Warn("post-upload hook returned an error", "filename", inputFilename, "bin", bin.Id, "error", hookErr, "output", strings.TrimRight(string(hookOutput), "\n"))
+		}
 	}
 
 	type Data struct {
