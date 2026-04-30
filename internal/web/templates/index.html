@@ -48,7 +48,18 @@
 
         {{ template "topbar" . }}
 
-        <h1 class="display-1">Filebin</h1>
+        <div class="row">
+            <div class="col">
+                <h1 class="display-1">Filebin</h1>
+            </div>
+            <div class="col">
+                <div class="text-end">
+                    <a href="#" data-bs-toggle="modal" data-bs-target="#modalBinQR" aria-haspopup="true" aria-expanded="false">
+                        <img class="img-fluid" src="/qr/{{ .Bin.Id }}?thumbnail" alt="QR code for {{ .Bin.URL }}"/>
+                    </a>
+                </div>
+            </div>
+        </div>
 
         <!-- Only show the howto if there are no files in the bin -->
         <p class="lead">
@@ -103,6 +114,29 @@
         </p>
 
         {{ template "footer" . }}
+
+        <!-- Bin QR code modal start -->
+        <div class="modal fade" id="modalBinQR" tabindex="-1" role="dialog" aria-labelledby="modalBinQRTitle" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header alert-secondary">
+                        <h5 class="modal-title" id="modalBinQRTitle">QR code</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Files uploaded from this page will be available at <a href="{{ .Bin.URL }}">{{ .Bin.URL }}</a>, which is embedded in the QR code below. This can be used to conveniently share the URL across mobile devices without having to type out the URL.</p>
+
+                        <div class="text-center">
+                            <img src="/qr/{{ .Bin.Id }}" alt="QR code for {{ .Bin.URL }}"/>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Bin QR code modal end -->
 
         <!-- Storage Limit Modal start -->
         <div class="modal fade" id="modalStorageLimit" tabindex="-1" role="dialog" aria-labelledby="modalStorageLimitTitle" aria-hidden="true">
