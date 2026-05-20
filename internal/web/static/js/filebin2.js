@@ -234,27 +234,115 @@ function FileAPI (c, t, d, f, bin, binURL) {
             // For speed measurements
             var startTime = (new Date()).getTime();
 
-            // Stall detection: retry if no progress for 30 seconds
+            // For telemetry: how far the upload had progressed before failing
+            var bytesUploaded = 0;
+
+            // Stall detection. While the request body is still being sent we
+            // expect frequent progress events, so a short threshold is fine.
+            // Once the body is fully sent, progress events stop and we are
+            // waiting for the server to checksum, store, and respond — for
+            // large files this can legitimately take many minutes, so a much
+            // longer threshold applies to avoid retrying an upload the server
+            // is still finishing.
+            var stallThresholdUploadingMs = 60000;
+            var stallThresholdProcessingMs = 600000;
+            var uploadBodyComplete = false;
             var lastProgressTime = startTime;
             var stallCheckInterval = setInterval(function() {
-                if ((new Date()).getTime() - lastProgressTime > 30000) {
+                var threshold = uploadBodyComplete ? stallThresholdProcessingMs : stallThresholdUploadingMs;
+                if ((new Date()).getTime() - lastProgressTime > threshold) {
                     clearInterval(stallCheckInterval);
-                    if (!retryUpload("stalled")) {
+                    if (!retryUpload("stalled", xhr.status)) {
                         // Final failure after all retries exhausted
                         bar.className = "progress-bar bg-danger";
                         speed.textContent = "Upload stalled (" + filesize + ")";
                         counter_failed += 1;
                         counter_uploading -= 1;
+                        reportEvent("stalled", xhr.status);
                         updateFileCount();
                     }
                 }
             }, 5000);
 
-            // Helper function to retry the upload
-            var retryUpload = function(reason) {
+            // Helper that reports an upload event (retry or terminal failure)
+            // to the server.
+            var reportEvent = function(reason, httpStatus) {
+                var now = (new Date()).getTime();
+                var connType = "";
+                if (navigator.connection && navigator.connection.effectiveType) {
+                    connType = navigator.connection.effectiveType;
+                }
+                // Capture the upload response body when one is available
+                // (typically only for http_status reasons). Truncated client-side
+                // to keep the telemetry payload small.
+                var respBody = "";
+                try {
+                    if (xhr.responseType === "" || xhr.responseType === "text") {
+                        respBody = xhr.responseText || "";
+                    }
+                } catch (e) {
+                    respBody = "";
+                }
+                if (respBody.length > 512) {
+                    respBody = respBody.substring(0, 512);
+                }
+                var payload = {
+                    bin: bin,
+                    filename: file.name,
+                    reason: reason,
+                    http_status: httpStatus || 0,
+                    file_size: file.size,
+                    bytes_uploaded: bytesUploaded,
+                    duration_ms: now - startTime,
+                    time_since_last_progress_ms: now - lastProgressTime,
+                    retry_attempts: retryAttempt,
+                    connection_type: connType,
+                    response_body: respBody
+                };
+                try {
+                    var body = JSON.stringify(payload);
+                    console.log("Telemetry request: " + body);
+                    if (window.fetch) {
+                        // keepalive lets the request survive page unload,
+                        // similar to navigator.sendBeacon, but exposes the
+                        // response status.
+                        fetch("/api/telemetry", {
+                            method: "POST",
+                            headers: {"Content-Type": "application/json"},
+                            body: body,
+                            keepalive: true
+                        }).then(function(resp) {
+                            console.log("Telemetry response: " + resp.status + " " + resp.statusText);
+                        }).catch(function(e) {
+                            console.log("Telemetry request failed: " + e);
+                        });
+                    } else {
+                        // Fallback for browsers without fetch
+                        var t = new XMLHttpRequest();
+                        t.open("POST", "/api/telemetry", true);
+                        t.setRequestHeader("Content-Type", "application/json");
+                        t.onload = function () {
+                            console.log("Telemetry response: " + t.status);
+                        };
+                        t.onerror = function () {
+                            console.log("Telemetry request failed");
+                        };
+                        t.send(body);
+                    }
+                } catch (e) {
+                    console.log("Failed to report upload event: " + e);
+                }
+            };
+
+            // Helper function to retry the upload. The category argument is
+            // one of "network", "stalled", or "http_status" and is reported to
+            // the server prefixed with "retry_" so retries are distinguishable
+            // from terminal failures while preserving the underlying cause.
+            var retryUpload = function(category, httpStatus) {
                 clearInterval(stallCheckInterval);
                 if (retryAttempt < maxRetries) {
-                    console.log("Upload failed (" + reason + "), retrying... (attempt " + (retryAttempt + 1) + " of " + maxRetries + ")");
+                    console.log("Upload failed (" + category + "), retrying... (attempt " + (retryAttempt + 1) + " of " + maxRetries + ")");
+                    reportEvent("retry_" + category, httpStatus);
                     xhr.abort();
                     bar.className = "progress-bar progress-bar-striped bg-warning";
                     bar.setAttribute("style", "width: 0%");
@@ -271,9 +359,21 @@ function FileAPI (c, t, d, f, bin, binURL) {
                 return false;
             };
 
+            // Fires when the request body has been completely sent. After
+            // this point, progress events stop, so reset lastProgressTime to
+            // measure the (longer) processing threshold from here rather
+            // than from the last in-flight progress event.
+            upload.addEventListener("load", function () {
+                uploadBodyComplete = true;
+                lastProgressTime = (new Date()).getTime();
+            }, false);
+
             // Upload in progress
             upload.addEventListener("progress", function (e) {
                 lastProgressTime = (new Date()).getTime();
+                if (e.loaded) {
+                    bytesUploaded = e.loaded;
+                }
                 if (e.lengthComputable) {
                     bar.className = "progress-bar progress-bar-striped progress-bar-animated";
                     var progress_in_percent = (e.loaded / e.total) * 100;
@@ -316,7 +416,7 @@ function FileAPI (c, t, d, f, bin, binURL) {
                     updateFileCount();
                 } else {
                     // Try to retry on server errors (5xx)
-                    if (xhr.status >= 500 && retryUpload("status " + xhr.status)) {
+                    if (xhr.status >= 500 && retryUpload("http_status", xhr.status)) {
                         return;
                     }
                     counter_uploading -= 1;
@@ -325,6 +425,7 @@ function FileAPI (c, t, d, f, bin, binURL) {
                     console.log("Unexpected response code: " + xhr.status);
                     console.log("Response body: " + xhr.response);
                     counter_failed += 1;
+                    reportEvent("http_status", xhr.status);
                     updateFileCount();
                 }
             };
@@ -334,7 +435,7 @@ function FileAPI (c, t, d, f, bin, binURL) {
                 clearInterval(stallCheckInterval);
                 console.log("onerror: status: " + xhr.status + ", readystate: " + xhr.readyState);
                 // Try to retry on network errors
-                if (retryUpload("network error")) {
+                if (retryUpload("network", xhr.status)) {
                     return;
                 }
                 bar.className = "progress progress-danger";
@@ -342,6 +443,7 @@ function FileAPI (c, t, d, f, bin, binURL) {
                 speed.textContent = "Upload failed (" + filesize + ")";
                 counter_failed += 1;
                 counter_uploading -= 1;
+                reportEvent("network", xhr.status);
                 updateFileCount();
             };
 

@@ -11,9 +11,10 @@ type Config struct {
 	CookieLifetime       int
 	Expiration           int
 	ExpirationDuration   time.Duration
-	LimitFileDownloads   uint64
-	LimitStorageReadable string
-	LimitStorageBytes    uint64
+	LimitFileDownloads      uint64
+	LimitStorageReadable    string
+	LimitStorageBytes       uint64
+	ClientUploadErrorsCap   int
 	HttpPort             int
 	HttpHost             string
 	HttpProxyHeaders     bool

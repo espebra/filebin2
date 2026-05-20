@@ -106,7 +106,7 @@ func (d *MetricsDao) UpdateMetrics(metrics *ds.Metrics) (retErr error) {
 
 	now := time.Now().UTC().Truncate(time.Microsecond)
 
-	var currentLogEntries, currentFiles, currentBytes, currentBins int64
+	var currentLogEntries, currentFiles, currentBins int64
 
 	// Number of log entries
 	sqlStatement := "SELECT COUNT(*) FROM transaction"
@@ -120,13 +120,10 @@ func (d *MetricsDao) UpdateMetrics(metrics *ds.Metrics) (retErr error) {
 		return err
 	}
 
-	// Total number of bytes of current files
-	if currentFiles > 0 {
-		sqlStatement = "SELECT SUM(file_content.bytes) FROM file JOIN file_content ON file.sha256 = file_content.sha256 WHERE file_content.in_storage = true AND file.deleted_at IS NULL"
-		if err := d.db.QueryRow(sqlStatement).Scan(&currentBytes); err != nil {
-			return err
-		}
-	}
+	// Total bytes of current files, deduplicated and rounded up to the
+	// minimum billable object size — same calculation used for the
+	// configured storage limit.
+	currentBytes := int64(d.StorageBytesAllocated())
 
 	// Number of current bins
 	sqlStatement = "SELECT COUNT(*) FROM bin WHERE expired_at > $1 AND deleted_at IS NULL"

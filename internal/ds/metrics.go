@@ -54,6 +54,9 @@ type Metrics struct {
 	DBQueryDuration *prometheus.HistogramVec
 	DBQueryErrors   *prometheus.CounterVec
 
+	// Client-reported upload errors
+	clientUploadErrors *prometheus.CounterVec
+
 	// Database connection pool metrics
 	dbOpenConnections   prometheus.Gauge
 	dbInUseConnections  prometheus.Gauge
@@ -254,6 +257,17 @@ func NewMetrics(id string, registry *prometheus.Registry) *Metrics {
 		[]string{"operation"},
 	)
 
+	m.clientUploadErrors = factory.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "filebin_client_upload_errors_total",
+			Help: "Total client-reported upload failures, bucketed by reason",
+			ConstLabels: prometheus.Labels{
+				"id": id,
+			},
+		},
+		[]string{"reason"},
+	)
+
 	// Database connection pool gauges
 	m.dbOpenConnections = factory.NewGauge(prometheus.GaugeOpts{
 		Name:        "filebin_db_open_connections",
@@ -428,6 +442,11 @@ func (m *Metrics) ObserveDBQuery(operation string, duration time.Duration) {
 
 func (m *Metrics) IncrDBQueryError(operation string) {
 	m.DBQueryErrors.WithLabelValues(operation).Inc()
+}
+
+// Client-reported upload error counter
+func (m *Metrics) IncrClientUploadError(reason string) {
+	m.clientUploadErrors.WithLabelValues(reason).Inc()
 }
 
 // Database connection pool metrics

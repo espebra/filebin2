@@ -1,0 +1,99 @@
+{{ define "admin_errors" }}<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <link rel="icon" href="/static/img/favicon.png">
+        <link rel="stylesheet" href="/static/css/bootstrap.min.css"/>
+        <link rel="stylesheet" href="/static/css/fontawesome.all.min.css"/>
+        <link rel="stylesheet" href="/static/css/custom.css"/>
+        <script src="/static/js/sorttable.js"></script>
+        <title>Filebin | Client errors</title>
+    </head>
+    <body class="container-fluid">
+        <a id="top"></a>
+
+        {{template "admin_bar" .}}
+
+        <h1>Client-reported upload errors</h1>
+        <p class="text-muted">Last {{ len .Errors }} events (capacity {{ .Capacity }}). Stored in memory only; cleared on restart. Counters are also exposed via Prometheus as <code>filebin_client_upload_errors_total</code>.</p>
+
+        {{ if eq (len .Errors) 0 }}
+            <div class="alert alert-info">No client errors reported yet.</div>
+        {{ else }}
+            <table class="table sortable table-sm">
+                <tr>
+                    <th>When</th>
+                    <th>IP</th>
+                    <th>Bin</th>
+                    <th>Filename</th>
+                    <th>Reason</th>
+                    <th>HTTP</th>
+                    <th>File size</th>
+                    <th>Uploaded</th>
+                    <th>Duration</th>
+                    <th>Since last progress</th>
+                    <th>Retries</th>
+                    <th>Connection</th>
+                    <th>Response body</th>
+                    <th>User agent</th>
+                </tr>
+                {{ range .Errors }}
+                    <tr>
+                        <td sorttable_customkey="{{ .Event.Timestamp.Unix }}">{{ .TimestampReadable }}</td>
+                        <td><a href="/admin/log/ip/{{ .Event.IP }}">{{ .Event.IP }}</a></td>
+                        <td>
+                            {{ if .Event.Bin }}
+                                <a href="/admin/bin/{{ .Event.Bin }}">{{ .Event.Bin }}</a>
+                            {{ else }}
+                                <span class="text-muted">—</span>
+                            {{ end }}
+                        </td>
+                        <td>{{ if .Event.Filename }}<small>{{ .Event.Filename }}</small>{{ else }}<span class="text-muted">—</span>{{ end }}</td>
+                        <td>
+                            {{ if eq .Event.Reason "network" }}
+                                <span class="badge bg-danger">network</span>
+                            {{ else if eq .Event.Reason "stalled" }}
+                                <span class="badge bg-warning text-dark">stalled</span>
+                            {{ else if eq .Event.Reason "http_5xx" }}
+                                <span class="badge bg-danger">http 5xx</span>
+                            {{ else if eq .Event.Reason "http_4xx" }}
+                                <span class="badge bg-warning text-dark">http 4xx</span>
+                            {{ else if eq .Event.Reason "retry_network" }}
+                                <span class="badge bg-info text-dark">retry · network</span>
+                            {{ else if eq .Event.Reason "retry_stalled" }}
+                                <span class="badge bg-info text-dark">retry · stalled</span>
+                            {{ else if eq .Event.Reason "retry_http_5xx" }}
+                                <span class="badge bg-info text-dark">retry · http 5xx</span>
+                            {{ else if eq .Event.Reason "retry_http_4xx" }}
+                                <span class="badge bg-info text-dark">retry · http 4xx</span>
+                            {{ else if eq .Event.Reason "retry_http_other" }}
+                                <span class="badge bg-info text-dark">retry · http other</span>
+                            {{ else }}
+                                <span class="badge bg-secondary">{{ .Event.Reason }}</span>
+                            {{ end }}
+                        </td>
+                        <td>{{ if gt .Event.HTTPStatus 0 }}{{ .Event.HTTPStatus }}{{ else }}—{{ end }}</td>
+                        <td sorttable_customkey="{{ .Event.FileSize }}">{{ .FileSizeReadable }}</td>
+                        <td sorttable_customkey="{{ .Event.BytesUploaded }}">
+                            {{ .BytesUploadedReadable }}
+                            {{ if .ProgressPercent }}
+                                <small class="text-muted">({{ .ProgressPercent }})</small>
+                            {{ end }}
+                        </td>
+                        <td sorttable_customkey="{{ .Event.DurationMs }}">{{ .DurationReadable }}</td>
+                        <td sorttable_customkey="{{ .Event.TimeSinceLastProgressMs }}">{{ .TimeSinceLastProgressReadable }}</td>
+                        <td>{{ .Event.RetryAttempts }}</td>
+                        <td>{{ if .Event.ConnectionType }}{{ .Event.ConnectionType }}{{ else }}<span class="text-muted">—</span>{{ end }}</td>
+                        <td>{{ if .Event.ResponseBody }}<small><code>{{ .Event.ResponseBody }}</code></small>{{ else }}<span class="text-muted">—</span>{{ end }}</td>
+                        <td><small>{{ .Event.UserAgent }}</small></td>
+                    </tr>
+                {{ end }}
+            </table>
+        {{ end }}
+
+        <script src="/static/js/popper.min.js"></script>
+        <script src="/static/js/bootstrap.min.js"></script>
+    </body>
+</html>
+{{ end }}
