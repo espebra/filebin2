@@ -420,6 +420,24 @@ function FileAPI (c, t, d, f, bin, binURL) {
                     counter_completed += 1;
                     updateFileCount();
                 } else {
+                    // status === 0 in onload typically means a network-level
+                    // failure that landed here instead of onerror (CORS
+                    // rejection, some proxy disconnects). Treat it as a
+                    // network failure rather than an HTTP error so it
+                    // retries and is bucketed correctly in telemetry.
+                    if (xhr.status === 0) {
+                        if (retryUpload("network", 0)) {
+                            return;
+                        }
+                        counter_uploading -= 1;
+                        bar.className = "progress progress-danger";
+                        bar.setAttribute("aria-valuenow", 100);
+                        speed.textContent = "Upload failed (" + filesize + ")";
+                        counter_failed += 1;
+                        reportEvent("network", 0);
+                        updateFileCount();
+                        return;
+                    }
                     // Try to retry on server errors (5xx)
                     if (xhr.status >= 500 && retryUpload("http_status", xhr.status)) {
                         return;
