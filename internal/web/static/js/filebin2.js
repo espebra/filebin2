@@ -249,7 +249,12 @@ function FileAPI (c, t, d, f, bin, binURL) {
             var uploadBodyComplete = false;
             var lastProgressTime = startTime;
             var stallCheckInterval = setInterval(function() {
-                var threshold = uploadBodyComplete ? stallThresholdProcessingMs : stallThresholdUploadingMs;
+                var threshold;
+                if (uploadBodyComplete) {
+                    threshold = stallThresholdProcessingMs;
+                } else {
+                    threshold = stallThresholdUploadingMs;
+                }
                 if ((new Date()).getTime() - lastProgressTime > threshold) {
                     clearInterval(stallCheckInterval);
                     if (!retryUpload("stalled", xhr.status)) {
