@@ -49,9 +49,10 @@ var (
 	postUploadHookTimeoutFlag = flag.Duration("post-upload-hook-timeout", 10*time.Second, "Timeout for the post-upload hook command execution")
 
 	// Limits
-	limitFileDownloadsFlag = flag.Uint64("limit-file-downloads", 0, "Limit the number of downloads per file. 0 disables this limit.")
-	limitStorageFlag       = flag.String("limit-storage", "0", "Limit the storage capacity to use (examples: 100MB, 20GB, 2TB). 0 disables this limit.")
-	rejectFileExtensions   = flag.String("reject-file-extensions", "", "A whitespace separated list of file extensions that will be rejected")
+	limitFileDownloadsFlag    = flag.Uint64("limit-file-downloads", 0, "Limit the number of downloads per file. 0 disables this limit.")
+	limitStorageFlag          = flag.String("limit-storage", "0", "Limit the storage capacity to use (examples: 100MB, 20GB, 2TB). 0 disables this limit.")
+	rejectFileExtensions      = flag.String("reject-file-extensions", "", "A whitespace separated list of file extensions that will be rejected")
+	clientUploadErrorsCapFlag = flag.Int("client-upload-errors-cap", 500, "Maximum number of recent client-reported upload errors retained in memory for the /admin/errors page. 0 disables in-memory retention; the Prometheus counter is unaffected.")
 
 	// HTTP
 	listenHostFlag   = flag.String("listen-host", "127.0.0.1", "Listen host")
@@ -513,7 +514,8 @@ func main() {
 		HttpPort:             *listenPortFlag,
 		HttpProxyHeaders:     *proxyHeadersFlag,
 		IdleTimeout:          *idleTimeoutFlag,
-		LimitFileDownloads:   *limitFileDownloadsFlag,
+		LimitFileDownloads:    *limitFileDownloadsFlag,
+		ClientUploadErrorsCap: *clientUploadErrorsCapFlag,
 		ReadHeaderTimeout:    *readHeaderTimeoutFlag,
 		ReadTimeout:          *readTimeoutFlag,
 		RequireApproval:      *requireApprovalFlag,

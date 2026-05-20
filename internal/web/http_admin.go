@@ -108,6 +108,73 @@ func (h *HTTP) viewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *HTTP) viewAdminClientErrors(w http.ResponseWriter, r *http.Request) {
+	type ErrorView struct {
+		Event                         ds.ClientUploadError
+		TimestampReadable             string
+		FileSizeReadable              string
+		BytesUploadedReadable         string
+		ProgressPercent               string
+		DurationReadable              string
+		TimeSinceLastProgressReadable string
+	}
+	type Data struct {
+		Page     string
+		Errors   []ErrorView
+		Capacity int
+	}
+
+	events := h.recentClientUploadErrors()
+	data := Data{
+		Page:     "errors",
+		Errors:   make([]ErrorView, 0, len(events)),
+		Capacity: h.config.ClientUploadErrorsCap,
+	}
+	for _, ev := range events {
+		view := ErrorView{
+			Event:                         ev,
+			TimestampReadable:             humanize.Time(ev.Timestamp),
+			FileSizeReadable:              humanize.Bytes(ev.FileSize),
+			BytesUploadedReadable:         humanize.Bytes(ev.BytesUploaded),
+			DurationReadable:              formatMs(ev.DurationMs),
+			TimeSinceLastProgressReadable: formatMs(ev.TimeSinceLastProgressMs),
+		}
+		if ev.FileSize > 0 {
+			pct := float64(ev.BytesUploaded) / float64(ev.FileSize) * 100
+			view.ProgressPercent = fmt.Sprintf("%.1f%%", pct)
+		}
+		data.Errors = append(data.Errors, view)
+	}
+
+	if r.Header.Get("accept") == "application/json" {
+		w.Header().Set("Content-Type", "application/json")
+		out, err := json.MarshalIndent(data, "", "    ")
+		if err != nil {
+			slog.Error("failed to parse json", "error", err)
+			http.Error(w, "Errno 201", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(200)
+		_, _ = w.Write(out)
+		return
+	}
+
+	if err := h.renderTemplate(w, "admin_errors", data); err != nil {
+		slog.Error("failed to execute template", "error", err)
+		http.Error(w, "Errno 487", http.StatusInternalServerError)
+		return
+	}
+}
+
+// formatMs renders a millisecond duration in a compact human form.
+func formatMs(ms uint64) string {
+	if ms == 0 {
+		return "—"
+	}
+	d := time.Duration(ms) * time.Millisecond
+	return d.Round(time.Millisecond).String()
+}
+
 func (h *HTTP) viewAdminFiles(w http.ResponseWriter, r *http.Request) {
 	inputLimit := r.URL.Query().Get("limit")
 
