@@ -408,9 +408,16 @@ function FileAPI (c, t, d, f, bin, binURL) {
                 }
             }, false);
 
+            // Centralized cleanup. loadend fires once after any terminal
+            // outcome (success, error, abort), so the stall poller is
+            // guaranteed to stop here. Individual handlers no longer need to
+            // clear the interval themselves.
+            xhr.addEventListener("loadend", function () {
+                clearInterval(stallCheckInterval);
+            }, false);
+
             // Upload complete
             xhr.onload = function() {
-                clearInterval(stallCheckInterval);
                 bar.setAttribute("aria-valuenow", 100);
                 var body = xhr.response;
                 if (xhr.status === 201 && xhr.readyState === 4) {
@@ -453,11 +460,18 @@ function FileAPI (c, t, d, f, bin, binURL) {
                 }
             };
 
-            // Handle upload errors here
-            xhr.onerror = function () {
-                clearInterval(stallCheckInterval);
-                console.log("onerror: status: " + xhr.status + ", readystate: " + xhr.readyState);
-                // Try to retry on network errors
+            // Handle upload errors. A single network drop can fire both
+            // xhr.error (response phase) and upload.error (request body
+            // phase) — wiring the same handler to both closes a gap seen in
+            // Safari while networkErrorHandled prevents double counting and
+            // double retries when both fire.
+            var networkErrorHandled = false;
+            var handleNetworkError = function () {
+                if (networkErrorHandled) {
+                    return;
+                }
+                networkErrorHandled = true;
+                console.log("network error: status: " + xhr.status + ", readystate: " + xhr.readyState);
                 if (retryUpload("network", xhr.status)) {
                     return;
                 }
@@ -469,6 +483,8 @@ function FileAPI (c, t, d, f, bin, binURL) {
                 reportEvent("network", xhr.status);
                 updateFileCount();
             };
+            xhr.onerror = handleNetworkError;
+            upload.addEventListener("error", handleNetworkError, false);
 
             // XXX: Consider validating UTF-8 here
             var filename = file.name;
