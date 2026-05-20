@@ -245,7 +245,7 @@ function FileAPI (c, t, d, f, bin, binURL) {
             // longer threshold applies to avoid retrying an upload the server
             // is still finishing.
             var stallThresholdUploadingMs = 60000;
-            var stallThresholdProcessingMs = 600000;
+            var stallThresholdProcessingMs = 900000;
             var uploadBodyComplete = false;
             var lastProgressTime = startTime;
             var stallCheckInterval = setInterval(function() {
