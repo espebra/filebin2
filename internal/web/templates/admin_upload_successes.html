@@ -1,0 +1,86 @@
+{{ define "admin_upload_successes" }}<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <link rel="icon" href="/static/img/favicon.png">
+        <link rel="stylesheet" href="/static/css/bootstrap.min.css"/>
+        <link rel="stylesheet" href="/static/css/fontawesome.all.min.css"/>
+        <link rel="stylesheet" href="/static/css/custom.css"/>
+        <script src="/static/js/sorttable.js"></script>
+        <title>Filebin | Upload successes</title>
+    </head>
+    <body class="container-fluid">
+        <a id="top"></a>
+
+        {{template "admin_bar" .}}
+
+        <h1>Client-reported upload successes</h1>
+        <p class="text-muted">Last {{ len .Successes }} successful upload events (capacity {{ .Capacity }}). High-volume; rotates out faster than failures. Prometheus exposes the same data as <code>filebin_client_upload_outcomes_total{outcome="success"}</code> plus throughput, processing-time, and time-to-first-progress histograms.</p>
+
+        {{ if eq (len .Successes) 0 }}
+            <div class="alert alert-info">No successful uploads reported yet.</div>
+        {{ else }}
+            <table class="table sortable table-sm">
+                <tr>
+                    <th>When</th>
+                    <th>IP</th>
+                    <th>Bin</th>
+                    <th>Filename</th>
+                    <th>File size</th>
+                    <th>Total</th>
+                    <th>Uploading</th>
+                    <th>Processing</th>
+                    <th>Avg throughput</th>
+                    <th>Retries</th>
+                    <th>Connection</th>
+                    <th>Context</th>
+                    <th>User agent</th>
+                </tr>
+                {{ range .Successes }}
+                    <tr>
+                        <td sorttable_customkey="{{ .Event.Timestamp.Unix }}">{{ .TimestampReadable }}</td>
+                        <td><a href="/admin/log/ip/{{ .Event.IP }}">{{ .Event.IP }}</a></td>
+                        <td>
+                            {{ if .Event.Bin }}
+                                <a href="/admin/bin/{{ .Event.Bin }}">{{ .Event.Bin }}</a>
+                            {{ else }}
+                                <span class="text-muted">—</span>
+                            {{ end }}
+                        </td>
+                        <td>{{ if .Event.Filename }}<small>{{ .Event.Filename }}</small>{{ else }}<span class="text-muted">—</span>{{ end }}</td>
+                        <td sorttable_customkey="{{ .Event.FileSize }}">{{ .FileSizeReadable }}</td>
+                        <td sorttable_customkey="{{ .Event.DurationMs }}">{{ .DurationReadable }}</td>
+                        <td sorttable_customkey="{{ .Event.UploadingMs }}">{{ .UploadingReadable }}</td>
+                        <td sorttable_customkey="{{ .Event.ProcessingMs }}">{{ .ProcessingReadable }}</td>
+                        <td sorttable_customkey="{{ .Event.AverageBytesPerSecond }}">
+                            {{ if .AverageThroughputReadable }}{{ .AverageThroughputReadable }}{{ else }}<span class="text-muted">—</span>{{ end }}
+                        </td>
+                        <td sorttable_customkey="{{ .Event.RetryAttempts }}">
+                            {{ if gt .Event.RetryAttempts 0 }}
+                                <span class="badge bg-info text-dark">{{ .Event.RetryAttempts }}</span>
+                            {{ else }}
+                                0
+                            {{ end }}
+                        </td>
+                        <td>
+                            {{ if .Event.ConnectionType }}{{ .Event.ConnectionType }}{{ else }}<span class="text-muted">—</span>{{ end }}
+                            {{ if gt .Event.RTT 0 }}<div><small class="text-muted">rtt {{ .Event.RTT }} ms</small></div>{{ end }}
+                            {{ if gt .Event.Downlink 0.0 }}<div><small class="text-muted">downlink {{ printf "%.1f" .Event.Downlink }} Mbps</small></div>{{ end }}
+                            {{ if .Event.SaveData }}<div><small class="text-warning">save-data</small></div>{{ end }}
+                        </td>
+                        <td>
+                            {{ if eq .Event.Visibility "hidden" }}<div><span class="badge bg-secondary">hidden tab</span></div>{{ end }}
+                            {{ if gt .Event.TimeToFirstProgressMs 0 }}<div><small class="text-muted">ttfp {{ .TimeToFirstProgressReadable }}</small></div>{{ end }}
+                        </td>
+                        <td><small>{{ .Event.UserAgent }}</small></td>
+                    </tr>
+                {{ end }}
+            </table>
+        {{ end }}
+
+        <script src="/static/js/popper.min.js"></script>
+        <script src="/static/js/bootstrap.min.js"></script>
+    </body>
+</html>
+{{ end }}

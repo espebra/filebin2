@@ -1,4 +1,4 @@
-{{ define "admin_errors" }}<!doctype html>
+{{ define "admin_upload_failures" }}<!doctype html>
 <html lang="en">
     <head>
         <meta charset="utf-8">
@@ -8,18 +8,18 @@
         <link rel="stylesheet" href="/static/css/fontawesome.all.min.css"/>
         <link rel="stylesheet" href="/static/css/custom.css"/>
         <script src="/static/js/sorttable.js"></script>
-        <title>Filebin | Client errors</title>
+        <title>Filebin | Upload failures</title>
     </head>
     <body class="container-fluid">
         <a id="top"></a>
 
         {{template "admin_bar" .}}
 
-        <h1>Client-reported upload errors</h1>
-        <p class="text-muted">Last {{ len .Errors }} events (capacity {{ .Capacity }}). Stored in memory only; cleared on restart. Counters are also exposed via Prometheus as <code>filebin_client_upload_errors_total</code>.</p>
+        <h1>Client-reported upload failures</h1>
+        <p class="text-muted">Last {{ len .Failures }} terminal failure events (capacity {{ .Capacity }}). Stored in memory only; cleared on restart. Prometheus exposes the same data as <code>filebin_client_upload_outcomes_total{outcome="failure"}</code> with histograms for durations and time-to-first-progress.</p>
 
-        {{ if eq (len .Errors) 0 }}
-            <div class="alert alert-info">No client errors reported yet.</div>
+        {{ if eq (len .Failures) 0 }}
+            <div class="alert alert-info">No upload failures reported yet.</div>
         {{ else }}
             <table class="table sortable table-sm">
                 <tr>
@@ -35,10 +35,11 @@
                     <th>Since last progress</th>
                     <th>Retries</th>
                     <th>Connection</th>
+                    <th>Context</th>
                     <th>Response body</th>
                     <th>User agent</th>
                 </tr>
-                {{ range .Errors }}
+                {{ range .Failures }}
                     <tr>
                         <td sorttable_customkey="{{ .Event.Timestamp.Unix }}">{{ .TimestampReadable }}</td>
                         <td><a href="/admin/log/ip/{{ .Event.IP }}">{{ .Event.IP }}</a></td>
@@ -59,21 +60,18 @@
                                 <span class="badge bg-danger">http 5xx</span>
                             {{ else if eq .Event.Reason "http_4xx" }}
                                 <span class="badge bg-warning text-dark">http 4xx</span>
-                            {{ else if eq .Event.Reason "retry_network" }}
-                                <span class="badge bg-info text-dark">retry · network</span>
-                            {{ else if eq .Event.Reason "retry_stalled" }}
-                                <span class="badge bg-info text-dark">retry · stalled</span>
-                            {{ else if eq .Event.Reason "retry_http_5xx" }}
-                                <span class="badge bg-info text-dark">retry · http 5xx</span>
-                            {{ else if eq .Event.Reason "retry_http_4xx" }}
-                                <span class="badge bg-info text-dark">retry · http 4xx</span>
-                            {{ else if eq .Event.Reason "retry_http_other" }}
-                                <span class="badge bg-info text-dark">retry · http other</span>
+                            {{ else if eq .Event.Reason "http_other" }}
+                                <span class="badge bg-secondary">http other</span>
                             {{ else }}
                                 <span class="badge bg-secondary">{{ .Event.Reason }}</span>
                             {{ end }}
+                            {{ if .Event.Stage }}<div><small class="text-muted">{{ .Event.Stage }}</small></div>{{ end }}
                         </td>
-                        <td>{{ if gt .Event.HTTPStatus 0 }}{{ .Event.HTTPStatus }}{{ else }}—{{ end }}</td>
+                        <td>
+                            {{ if gt .Event.HTTPStatus 0 }}{{ .Event.HTTPStatus }}{{ else }}—{{ end }}
+                            {{ if .Event.StatusText }}<div><small class="text-muted">{{ .Event.StatusText }}</small></div>{{ end }}
+                            {{ if ne .Event.ReadyState 4 }}<div><small class="text-muted">ready {{ .Event.ReadyState }}</small></div>{{ end }}
+                        </td>
                         <td sorttable_customkey="{{ .Event.FileSize }}">{{ .FileSizeReadable }}</td>
                         <td sorttable_customkey="{{ .Event.BytesUploaded }}">
                             {{ .BytesUploadedReadable }}
@@ -84,8 +82,24 @@
                         <td sorttable_customkey="{{ .Event.DurationMs }}">{{ .DurationReadable }}</td>
                         <td sorttable_customkey="{{ .Event.TimeSinceLastProgressMs }}">{{ .TimeSinceLastProgressReadable }}</td>
                         <td>{{ .Event.RetryAttempts }}</td>
-                        <td>{{ if .Event.ConnectionType }}{{ .Event.ConnectionType }}{{ else }}<span class="text-muted">—</span>{{ end }}</td>
-                        <td>{{ if .Event.ResponseBody }}<small><code>{{ .Event.ResponseBody }}</code></small>{{ else }}<span class="text-muted">—</span>{{ end }}</td>
+                        <td>
+                            {{ if .Event.ConnectionType }}{{ .Event.ConnectionType }}{{ else }}<span class="text-muted">—</span>{{ end }}
+                            {{ if gt .Event.RTT 0 }}<div><small class="text-muted">rtt {{ .Event.RTT }} ms</small></div>{{ end }}
+                            {{ if gt .Event.Downlink 0.0 }}<div><small class="text-muted">downlink {{ printf "%.1f" .Event.Downlink }} Mbps</small></div>{{ end }}
+                            {{ if .Event.SaveData }}<div><small class="text-warning">save-data</small></div>{{ end }}
+                            {{ if .LastBytesPerSecondReadable }}<div><small class="text-muted">last {{ .LastBytesPerSecondReadable }}</small></div>{{ end }}
+                        </td>
+                        <td>
+                            {{ if not .Event.Online }}<div><span class="badge bg-warning text-dark">offline</span></div>{{ end }}
+                            {{ if eq .Event.Visibility "hidden" }}<div><span class="badge bg-secondary">hidden tab</span></div>{{ end }}
+                            {{ if gt .Event.TimeToFirstProgressMs 0 }}<div><small class="text-muted">ttfp {{ .TimeToFirstProgressReadable }}</small></div>{{ end }}
+                            {{ if gt .Event.ConcurrentUploads 0 }}<div><small class="text-muted">{{ .Event.ConcurrentUploads }} concurrent</small></div>{{ end }}
+                            {{ if .Event.RequestID }}<div><small class="text-muted">id <code>{{ .Event.RequestID }}</code></small></div>{{ end }}
+                        </td>
+                        <td>
+                            {{ if .Event.ResponseContentType }}<div><small class="text-muted">{{ .Event.ResponseContentType }}</small></div>{{ end }}
+                            {{ if .Event.ResponseBody }}<small><code>{{ .Event.ResponseBody }}</code></small>{{ else if not .Event.ResponseContentType }}<span class="text-muted">—</span>{{ end }}
+                        </td>
                         <td><small>{{ .Event.UserAgent }}</small></td>
                     </tr>
                 {{ end }}

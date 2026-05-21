@@ -12,61 +12,97 @@ import (
 )
 
 const (
-	telemetryMaxBodyBytes        = 4096
+	telemetryFailureMaxBodyBytes = 8192
+	telemetrySuccessMaxBodyBytes = 2048
 	telemetryMaxResponseBodyChrs = 512
 	telemetryMaxFilenameChrs     = 256
+	telemetryMaxStatusTextChrs   = 128
+	telemetryMaxHeaderChrs       = 128
 )
 
 var (
-	binIDPattern        = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
-	connectionPattern   = regexp.MustCompile(`^[a-z0-9-]{1,16}$`)
-	telemetryReasonsRaw = map[string]bool{
-		"network":           true,
-		"stalled":           true,
-		"http_status":       true,
-		"retry_network":     true,
-		"retry_stalled":     true,
-		"retry_http_status": true,
+	binIDPattern         = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
+	connectionPattern    = regexp.MustCompile(`^[a-z0-9-]{1,16}$`)
+	telemetryFailureRaws = map[string]bool{
+		"network":     true,
+		"stalled":     true,
+		"http_status": true,
+	}
+	telemetryStages = map[string]bool{
+		"":                  true,
+		"handshake":         true,
+		"uploading":         true,
+		"awaiting_response": true,
+	}
+	telemetryVisibilities = map[string]bool{
+		"":          true,
+		"visible":   true,
+		"hidden":    true,
+		"prerender": true,
+		"unloaded":  true,
 	}
 )
 
-// telemetryPayload is the JSON shape posted by the browser when an upload
-// fails terminally. Fields that are unknown or out of range are dropped or
-// clamped server-side.
-type telemetryPayload struct {
-	Bin                     string `json:"bin"`
-	Filename                string `json:"filename"`
-	Reason                  string `json:"reason"`
-	HTTPStatus              int    `json:"http_status"`
-	FileSize                uint64 `json:"file_size"`
-	BytesUploaded           uint64 `json:"bytes_uploaded"`
-	DurationMs              uint64 `json:"duration_ms"`
-	TimeSinceLastProgressMs uint64 `json:"time_since_last_progress_ms"`
-	RetryAttempts           int    `json:"retry_attempts"`
-	ConnectionType          string `json:"connection_type"`
-	ResponseBody            string `json:"response_body"`
+// failurePayload is the JSON shape posted by the browser when an upload
+// fails terminally. Retries are not reported as separate events; the
+// final RetryAttempts value tells the story.
+type failurePayload struct {
+	Bin                     string  `json:"bin"`
+	Filename                string  `json:"filename"`
+	Reason                  string  `json:"reason"`
+	HTTPStatus              int     `json:"http_status"`
+	FileSize                uint64  `json:"file_size"`
+	BytesUploaded           uint64  `json:"bytes_uploaded"`
+	DurationMs              uint64  `json:"duration_ms"`
+	TimeSinceLastProgressMs uint64  `json:"time_since_last_progress_ms"`
+	TimeToFirstProgressMs   uint64  `json:"time_to_first_progress_ms"`
+	LastBytesPerSecond      uint64  `json:"last_bytes_per_second"`
+	RetryAttempts           int     `json:"retry_attempts"`
+	ConnectionType          string  `json:"connection_type"`
+	Stage                   string  `json:"stage"`
+	ReadyState              int     `json:"ready_state"`
+	StatusText              string  `json:"status_text"`
+	Online                  bool    `json:"online"`
+	Visibility              string  `json:"visibility"`
+	ConcurrentUploads       int     `json:"concurrent_uploads"`
+	Downlink                float64 `json:"downlink"`
+	RTT                     int     `json:"rtt"`
+	SaveData                bool    `json:"save_data"`
+	ResponseBody            string  `json:"response_body"`
+	ResponseContentType     string  `json:"response_content_type"`
+	RequestID               string  `json:"request_id"`
 }
 
-func (h *HTTP) telemetry(w http.ResponseWriter, r *http.Request) {
+// successPayload is the JSON shape posted by the browser when an upload
+// completes successfully. Slimmer than failurePayload because the server
+// already records what was uploaded; this captures the perceptual
+// timings only the client can measure.
+type successPayload struct {
+	Bin                   string  `json:"bin"`
+	Filename              string  `json:"filename"`
+	FileSize              uint64  `json:"file_size"`
+	DurationMs            uint64  `json:"duration_ms"`
+	UploadingMs           uint64  `json:"uploading_ms"`
+	ProcessingMs          uint64  `json:"processing_ms"`
+	TimeToFirstProgressMs uint64  `json:"time_to_first_progress_ms"`
+	AverageBytesPerSecond uint64  `json:"average_bytes_per_second"`
+	RetryAttempts         int     `json:"retry_attempts"`
+	ConnectionType        string  `json:"connection_type"`
+	Downlink              float64 `json:"downlink"`
+	RTT                   int     `json:"rtt"`
+	SaveData              bool    `json:"save_data"`
+	Visibility            string  `json:"visibility"`
+}
+
+func (h *HTTP) telemetryFailure(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 
-	body, err := io.ReadAll(io.LimitReader(r.Body, telemetryMaxBodyBytes+1))
-	if err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
-	}
-	if len(body) > telemetryMaxBodyBytes {
-		http.Error(w, "Payload too large", http.StatusRequestEntityTooLarge)
+	var p failurePayload
+	if !decodeTelemetry(w, r, telemetryFailureMaxBodyBytes, &p) {
 		return
 	}
 
-	var p telemetryPayload
-	if err := json.Unmarshal(body, &p); err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
-		return
-	}
-
-	if !telemetryReasonsRaw[p.Reason] {
+	if !telemetryFailureRaws[p.Reason] {
 		http.Error(w, "Invalid reason", http.StatusBadRequest)
 		return
 	}
@@ -75,37 +111,42 @@ func (h *HTTP) telemetry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if p.ConnectionType != "" && !connectionPattern.MatchString(p.ConnectionType) {
-		// Don't fail the request for an unrecognized connection type, just drop it.
 		p.ConnectionType = ""
+	}
+	if !telemetryStages[p.Stage] {
+		p.Stage = ""
+	}
+	if !telemetryVisibilities[p.Visibility] {
+		p.Visibility = ""
 	}
 	if p.RetryAttempts < 0 {
 		p.RetryAttempts = 0
 	}
-	// Defense-in-depth truncation; the client also truncates.
-	if len(p.ResponseBody) > telemetryMaxResponseBodyChrs {
-		p.ResponseBody = p.ResponseBody[:telemetryMaxResponseBodyChrs]
+	if p.ConcurrentUploads < 0 {
+		p.ConcurrentUploads = 0
 	}
-	if len(p.Filename) > telemetryMaxFilenameChrs {
-		p.Filename = p.Filename[:telemetryMaxFilenameChrs]
+	if p.ReadyState < 0 || p.ReadyState > 4 {
+		p.ReadyState = 0
 	}
-
-	bucket := bucketReason(p.Reason, p.HTTPStatus)
-	h.metrics.IncrClientUploadError(bucket)
-
-	ip, err := extractIP(r.RemoteAddr)
-	if err != nil {
-		ip = ""
+	if p.Downlink < 0 {
+		p.Downlink = 0
 	}
-
-	ua := r.Header.Get("User-Agent")
-	if len(ua) > 256 {
-		ua = ua[:256]
+	if p.RTT < 0 {
+		p.RTT = 0
 	}
+	truncate(&p.Filename, telemetryMaxFilenameChrs)
+	truncate(&p.ResponseBody, telemetryMaxResponseBodyChrs)
+	truncate(&p.StatusText, telemetryMaxStatusTextChrs)
+	truncate(&p.ResponseContentType, telemetryMaxHeaderChrs)
+	truncate(&p.RequestID, telemetryMaxHeaderChrs)
 
-	ev := ds.ClientUploadError{
+	bucket := failureBucket(p.Reason, p.HTTPStatus)
+	h.metrics.ObserveClientUploadFailure(bucket, p.DurationMs, p.TimeToFirstProgressMs)
+
+	ev := ds.ClientUploadFailure{
 		Timestamp:               time.Now().UTC(),
-		IP:                      ip,
-		UserAgent:               ua,
+		IP:                      remoteIP(r),
+		UserAgent:               truncatedUserAgent(r),
 		Bin:                     p.Bin,
 		Filename:                p.Filename,
 		Reason:                  bucket,
@@ -114,15 +155,31 @@ func (h *HTTP) telemetry(w http.ResponseWriter, r *http.Request) {
 		BytesUploaded:           p.BytesUploaded,
 		DurationMs:              p.DurationMs,
 		TimeSinceLastProgressMs: p.TimeSinceLastProgressMs,
+		TimeToFirstProgressMs:   p.TimeToFirstProgressMs,
+		LastBytesPerSecond:      p.LastBytesPerSecond,
 		RetryAttempts:           p.RetryAttempts,
 		ConnectionType:          p.ConnectionType,
+		Stage:                   p.Stage,
+		ReadyState:              p.ReadyState,
+		StatusText:              p.StatusText,
+		Online:                  p.Online,
+		Visibility:              p.Visibility,
+		ConcurrentUploads:       p.ConcurrentUploads,
+		Downlink:                p.Downlink,
+		RTT:                     p.RTT,
+		SaveData:                p.SaveData,
 		ResponseBody:            p.ResponseBody,
+		ResponseContentType:     p.ResponseContentType,
+		RequestID:               p.RequestID,
 	}
-	h.recordClientUploadError(ev)
+	h.recordClientUploadFailure(ev)
 
-	slog.Debug("client upload error reported",
+	slog.Debug("client upload failure",
 		"reason", ev.Reason,
 		"http_status", ev.HTTPStatus,
+		"status_text", ev.StatusText,
+		"ready_state", ev.ReadyState,
+		"stage", ev.Stage,
 		"bin", ev.Bin,
 		"filename", ev.Filename,
 		"ip", ev.IP,
@@ -130,19 +187,120 @@ func (h *HTTP) telemetry(w http.ResponseWriter, r *http.Request) {
 		"bytes_uploaded", ev.BytesUploaded,
 		"duration_ms", ev.DurationMs,
 		"time_since_last_progress_ms", ev.TimeSinceLastProgressMs,
+		"time_to_first_progress_ms", ev.TimeToFirstProgressMs,
+		"last_bytes_per_second", ev.LastBytesPerSecond,
 		"retry_attempts", ev.RetryAttempts,
+		"concurrent_uploads", ev.ConcurrentUploads,
 		"connection_type", ev.ConnectionType,
+		"online", ev.Online,
+		"visibility", ev.Visibility,
+		"downlink", ev.Downlink,
+		"rtt", ev.RTT,
+		"save_data", ev.SaveData,
+		"response_content_type", ev.ResponseContentType,
+		"request_id", ev.RequestID,
 		"response_body", ev.ResponseBody,
 	)
 
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// bucketReason maps the raw client reason and HTTP status to a bounded
-// Prometheus label value, keeping label cardinality small. Retry events are
-// returned with a "retry_" prefix so they can be queried separately from
-// terminal failures.
-func bucketReason(rawReason string, httpStatus int) string {
+func (h *HTTP) telemetrySuccess(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+
+	var p successPayload
+	if !decodeTelemetry(w, r, telemetrySuccessMaxBodyBytes, &p) {
+		return
+	}
+
+	if p.Bin != "" && !binIDPattern.MatchString(p.Bin) {
+		http.Error(w, "Invalid bin", http.StatusBadRequest)
+		return
+	}
+	if p.ConnectionType != "" && !connectionPattern.MatchString(p.ConnectionType) {
+		p.ConnectionType = ""
+	}
+	if !telemetryVisibilities[p.Visibility] {
+		p.Visibility = ""
+	}
+	if p.RetryAttempts < 0 {
+		p.RetryAttempts = 0
+	}
+	if p.Downlink < 0 {
+		p.Downlink = 0
+	}
+	if p.RTT < 0 {
+		p.RTT = 0
+	}
+	truncate(&p.Filename, telemetryMaxFilenameChrs)
+
+	h.metrics.ObserveClientUploadSuccess(p.DurationMs, p.UploadingMs, p.ProcessingMs, p.TimeToFirstProgressMs, p.AverageBytesPerSecond)
+
+	ev := ds.ClientUploadSuccess{
+		Timestamp:             time.Now().UTC(),
+		IP:                    remoteIP(r),
+		UserAgent:             truncatedUserAgent(r),
+		Bin:                   p.Bin,
+		Filename:              p.Filename,
+		FileSize:              p.FileSize,
+		DurationMs:            p.DurationMs,
+		UploadingMs:           p.UploadingMs,
+		ProcessingMs:          p.ProcessingMs,
+		TimeToFirstProgressMs: p.TimeToFirstProgressMs,
+		AverageBytesPerSecond: p.AverageBytesPerSecond,
+		RetryAttempts:         p.RetryAttempts,
+		ConnectionType:        p.ConnectionType,
+		Downlink:              p.Downlink,
+		RTT:                   p.RTT,
+		SaveData:              p.SaveData,
+		Visibility:            p.Visibility,
+	}
+	h.recordClientUploadSuccess(ev)
+
+	slog.Debug("client upload success",
+		"bin", ev.Bin,
+		"filename", ev.Filename,
+		"ip", ev.IP,
+		"file_size", ev.FileSize,
+		"duration_ms", ev.DurationMs,
+		"uploading_ms", ev.UploadingMs,
+		"processing_ms", ev.ProcessingMs,
+		"time_to_first_progress_ms", ev.TimeToFirstProgressMs,
+		"average_bytes_per_second", ev.AverageBytesPerSecond,
+		"retry_attempts", ev.RetryAttempts,
+		"connection_type", ev.ConnectionType,
+		"visibility", ev.Visibility,
+		"downlink", ev.Downlink,
+		"rtt", ev.RTT,
+		"save_data", ev.SaveData,
+	)
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// decodeTelemetry reads, size-checks, and JSON-decodes a telemetry POST
+// body into v. On error it writes the response and returns false.
+func decodeTelemetry(w http.ResponseWriter, r *http.Request, maxBytes int64, v interface{}) bool {
+	body, err := io.ReadAll(io.LimitReader(r.Body, maxBytes+1))
+	if err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return false
+	}
+	if int64(len(body)) > maxBytes {
+		http.Error(w, "Payload too large", http.StatusRequestEntityTooLarge)
+		return false
+	}
+	if err := json.Unmarshal(body, v); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return false
+	}
+	return true
+}
+
+// failureBucket maps the client-supplied reason and HTTP status to a
+// bounded Prometheus label value. The label set is kept small to keep
+// cardinality low.
+func failureBucket(rawReason string, httpStatus int) string {
 	switch rawReason {
 	case "network":
 		return "network"
@@ -150,12 +308,6 @@ func bucketReason(rawReason string, httpStatus int) string {
 		return "stalled"
 	case "http_status":
 		return httpBucket(httpStatus)
-	case "retry_network":
-		return "retry_network"
-	case "retry_stalled":
-		return "retry_stalled"
-	case "retry_http_status":
-		return "retry_" + httpBucket(httpStatus)
 	default:
 		return "other"
 	}
@@ -169,5 +321,27 @@ func httpBucket(httpStatus int) string {
 		return "http_4xx"
 	default:
 		return "http_other"
+	}
+}
+
+func remoteIP(r *http.Request) string {
+	ip, err := extractIP(r.RemoteAddr)
+	if err != nil {
+		return ""
+	}
+	return ip
+}
+
+func truncatedUserAgent(r *http.Request) string {
+	ua := r.Header.Get("User-Agent")
+	if len(ua) > 256 {
+		ua = ua[:256]
+	}
+	return ua
+}
+
+func truncate(s *string, max int) {
+	if len(*s) > max {
+		*s = (*s)[:max]
 	}
 }
