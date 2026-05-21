@@ -108,42 +108,48 @@ func (h *HTTP) viewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *HTTP) viewAdminClientErrors(w http.ResponseWriter, r *http.Request) {
-	type ErrorView struct {
-		Event                         ds.ClientUploadError
+func (h *HTTP) viewAdminClientUploadFailures(w http.ResponseWriter, r *http.Request) {
+	type FailureView struct {
+		Event                         ds.ClientUploadFailure
 		TimestampReadable             string
 		FileSizeReadable              string
 		BytesUploadedReadable         string
 		ProgressPercent               string
 		DurationReadable              string
 		TimeSinceLastProgressReadable string
+		TimeToFirstProgressReadable   string
+		LastBytesPerSecondReadable    string
 	}
 	type Data struct {
 		Page     string
-		Errors   []ErrorView
+		Failures []FailureView
 		Capacity int
 	}
 
-	events := h.recentClientUploadErrors()
+	events := h.recentClientUploadFailures()
 	data := Data{
-		Page:     "errors",
-		Errors:   make([]ErrorView, 0, len(events)),
-		Capacity: h.config.ClientUploadErrorsCap,
+		Page:     "upload_failures",
+		Failures: make([]FailureView, 0, len(events)),
+		Capacity: h.config.ClientUploadFailuresCap,
 	}
 	for _, ev := range events {
-		view := ErrorView{
+		view := FailureView{
 			Event:                         ev,
 			TimestampReadable:             humanize.Time(ev.Timestamp),
 			FileSizeReadable:              humanize.Bytes(ev.FileSize),
 			BytesUploadedReadable:         humanize.Bytes(ev.BytesUploaded),
 			DurationReadable:              formatMs(ev.DurationMs),
 			TimeSinceLastProgressReadable: formatMs(ev.TimeSinceLastProgressMs),
+			TimeToFirstProgressReadable:   formatMs(ev.TimeToFirstProgressMs),
+		}
+		if ev.LastBytesPerSecond > 0 {
+			view.LastBytesPerSecondReadable = humanize.Bytes(ev.LastBytesPerSecond) + "/s"
 		}
 		if ev.FileSize > 0 {
 			pct := float64(ev.BytesUploaded) / float64(ev.FileSize) * 100
 			view.ProgressPercent = fmt.Sprintf("%.1f%%", pct)
 		}
-		data.Errors = append(data.Errors, view)
+		data.Failures = append(data.Failures, view)
 	}
 
 	if r.Header.Get("accept") == "application/json" {
@@ -159,9 +165,68 @@ func (h *HTTP) viewAdminClientErrors(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.renderTemplate(w, "admin_errors", data); err != nil {
+	if err := h.renderTemplate(w, "admin_upload_failures", data); err != nil {
 		slog.Error("failed to execute template", "error", err)
 		http.Error(w, "Errno 487", http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *HTTP) viewAdminClientUploadSuccesses(w http.ResponseWriter, r *http.Request) {
+	type SuccessView struct {
+		Event                       ds.ClientUploadSuccess
+		TimestampReadable           string
+		FileSizeReadable            string
+		DurationReadable            string
+		UploadingReadable           string
+		ProcessingReadable          string
+		TimeToFirstProgressReadable string
+		AverageThroughputReadable   string
+	}
+	type Data struct {
+		Page      string
+		Successes []SuccessView
+		Capacity  int
+	}
+
+	events := h.recentClientUploadSuccesses()
+	data := Data{
+		Page:      "upload_successes",
+		Successes: make([]SuccessView, 0, len(events)),
+		Capacity:  h.config.ClientUploadSuccessesCap,
+	}
+	for _, ev := range events {
+		view := SuccessView{
+			Event:                       ev,
+			TimestampReadable:           humanize.Time(ev.Timestamp),
+			FileSizeReadable:            humanize.Bytes(ev.FileSize),
+			DurationReadable:            formatMs(ev.DurationMs),
+			UploadingReadable:           formatMs(ev.UploadingMs),
+			ProcessingReadable:          formatMs(ev.ProcessingMs),
+			TimeToFirstProgressReadable: formatMs(ev.TimeToFirstProgressMs),
+		}
+		if ev.AverageBytesPerSecond > 0 {
+			view.AverageThroughputReadable = humanize.Bytes(ev.AverageBytesPerSecond) + "/s"
+		}
+		data.Successes = append(data.Successes, view)
+	}
+
+	if r.Header.Get("accept") == "application/json" {
+		w.Header().Set("Content-Type", "application/json")
+		out, err := json.MarshalIndent(data, "", "    ")
+		if err != nil {
+			slog.Error("failed to parse json", "error", err)
+			http.Error(w, "Errno 201", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(200)
+		_, _ = w.Write(out)
+		return
+	}
+
+	if err := h.renderTemplate(w, "admin_upload_successes", data); err != nil {
+		slog.Error("failed to execute template", "error", err)
+		http.Error(w, "Errno 488", http.StatusInternalServerError)
 		return
 	}
 }

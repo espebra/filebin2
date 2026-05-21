@@ -236,6 +236,14 @@ function FileAPI (c, t, d, f, bin, binURL) {
 
             // For telemetry: how far the upload had progressed before failing
             var bytesUploaded = 0;
+            // First progress event timestamp; together with startTime this
+            // estimates time spent in DNS / TLS / waiting for the server to
+            // accept the request — useful for diagnosing slow handshakes.
+            var firstProgressTime = 0;
+            // Last observed throughput in bytes per second, updated on each
+            // progress event. Reported on failure to distinguish "slow link"
+            // (low value, recent) from "frozen link" (any value, old).
+            var lastBytesPerSecond = 0;
 
             // Stall detection. While the request body is still being sent we
             // expect frequent progress events, so a short threshold is fine.
@@ -247,6 +255,10 @@ function FileAPI (c, t, d, f, bin, binURL) {
             var stallThresholdUploadingMs = 60000;
             var stallThresholdProcessingMs = 900000;
             var uploadBodyComplete = false;
+            // Timestamp when the request body finished being sent. Used to
+            // compute the server-side processing duration on successful
+            // uploads (gap between upload.load and xhr.onload).
+            var uploadBodyCompleteTime = 0;
             var lastProgressTime = startTime;
             var stallCheckInterval = setInterval(function() {
                 var threshold;
@@ -263,68 +275,34 @@ function FileAPI (c, t, d, f, bin, binURL) {
                         speed.textContent = "Upload stalled (" + filesize + ")";
                         counter_failed += 1;
                         counter_uploading -= 1;
-                        reportEvent("stalled", xhr.status);
+                        reportFailure("stalled", xhr.status);
                         updateFileCount();
                     }
                 }
             }, 5000);
 
-            // Helper that reports an upload event (retry or terminal failure)
-            // to the server.
-            var reportEvent = function(reason, httpStatus) {
-                var now = (new Date()).getTime();
-                var connType = "";
-                if (navigator.connection && navigator.connection.effectiveType) {
-                    connType = navigator.connection.effectiveType;
-                }
-                // Capture the upload response body when one is available
-                // (typically only for http_status reasons). Truncated client-side
-                // to keep the telemetry payload small.
-                var respBody = "";
-                try {
-                    if (xhr.responseType === "" || xhr.responseType === "text") {
-                        respBody = xhr.responseText || "";
-                    }
-                } catch (e) {
-                    respBody = "";
-                }
-                if (respBody.length > 512) {
-                    respBody = respBody.substring(0, 512);
-                }
-                var payload = {
-                    bin: bin,
-                    filename: file.name,
-                    reason: reason,
-                    http_status: httpStatus || 0,
-                    file_size: file.size,
-                    bytes_uploaded: bytesUploaded,
-                    duration_ms: now - startTime,
-                    time_since_last_progress_ms: now - lastProgressTime,
-                    retry_attempts: retryAttempt,
-                    connection_type: connType,
-                    response_body: respBody
-                };
+            // Posts a telemetry payload to the given endpoint. Uses fetch
+            // with keepalive so the request survives page unload (similar
+            // to navigator.sendBeacon but with a visible response status),
+            // falling back to XHR on browsers without fetch.
+            var postTelemetry = function (url, payload) {
                 try {
                     var body = JSON.stringify(payload);
-                    console.log("Telemetry request: " + body);
+                    console.log("Telemetry " + url + ": " + body);
                     if (window.fetch) {
-                        // keepalive lets the request survive page unload,
-                        // similar to navigator.sendBeacon, but exposes the
-                        // response status.
-                        fetch("/api/telemetry", {
+                        fetch(url, {
                             method: "POST",
                             headers: {"Content-Type": "application/json"},
                             body: body,
                             keepalive: true
-                        }).then(function(resp) {
+                        }).then(function (resp) {
                             console.log("Telemetry response: " + resp.status + " " + resp.statusText);
-                        }).catch(function(e) {
+                        }).catch(function (e) {
                             console.log("Telemetry request failed: " + e);
                         });
                     } else {
-                        // Fallback for browsers without fetch
                         var t = new XMLHttpRequest();
-                        t.open("POST", "/api/telemetry", true);
+                        t.open("POST", url, true);
                         t.setRequestHeader("Content-Type", "application/json");
                         t.onload = function () {
                             console.log("Telemetry response: " + t.status);
@@ -335,19 +313,119 @@ function FileAPI (c, t, d, f, bin, binURL) {
                         t.send(body);
                     }
                 } catch (e) {
-                    console.log("Failed to report upload event: " + e);
+                    console.log("Failed to send telemetry: " + e);
                 }
             };
 
-            // Helper function to retry the upload. The category argument is
-            // one of "network", "stalled", or "http_status" and is reported to
-            // the server prefixed with "retry_" so retries are distinguishable
-            // from terminal failures while preserving the underlying cause.
+            // reportFailure submits a terminal-failure telemetry record.
+            // Retries are not reported here; retryAttempt is carried along
+            // so the server sees how many attempts were tried.
+            var reportFailure = function (reason, httpStatus) {
+                var now = (new Date()).getTime();
+                var conn = navigator.connection || {};
+                var respBody = "";
+                try {
+                    if (xhr.responseType === "" || xhr.responseType === "text") {
+                        respBody = xhr.responseText || "";
+                    }
+                } catch (e) {}
+                if (respBody.length > 512) {
+                    respBody = respBody.substring(0, 512);
+                }
+                var contentType = "";
+                var requestId = "";
+                try {
+                    contentType = xhr.getResponseHeader("Content-Type") || "";
+                    requestId = xhr.getResponseHeader("X-Request-Id") || "";
+                } catch (e) {}
+                // Stage at which the failure was detected. handshake = no
+                // bytes acknowledged yet (DNS/TLS/server-accept issues);
+                // uploading = bytes in flight; awaiting_response = body sent,
+                // waiting on server (slow checksum / S3 PUT).
+                var stage;
+                if (uploadBodyComplete) {
+                    stage = "awaiting_response";
+                } else if (bytesUploaded > 0) {
+                    stage = "uploading";
+                } else {
+                    stage = "handshake";
+                }
+                postTelemetry("/api/telemetry/failure", {
+                    bin: bin,
+                    filename: file.name,
+                    reason: reason,
+                    http_status: httpStatus || 0,
+                    file_size: file.size,
+                    bytes_uploaded: bytesUploaded,
+                    duration_ms: now - startTime,
+                    time_since_last_progress_ms: now - lastProgressTime,
+                    time_to_first_progress_ms: firstProgressTime ? firstProgressTime - startTime : 0,
+                    last_bytes_per_second: Math.round(lastBytesPerSecond),
+                    retry_attempts: retryAttempt,
+                    connection_type: conn.effectiveType || "",
+                    stage: stage,
+                    ready_state: xhr.readyState,
+                    status_text: xhr.statusText || "",
+                    online: navigator.onLine !== false,
+                    visibility: (document && document.visibilityState) || "",
+                    concurrent_uploads: counter_uploading,
+                    downlink: conn.downlink || 0,
+                    rtt: conn.rtt || 0,
+                    save_data: !!conn.saveData,
+                    response_body: respBody,
+                    response_content_type: contentType.substring(0, 128),
+                    request_id: requestId.substring(0, 128)
+                });
+            };
+
+            // reportSuccess submits a successful-upload telemetry record
+            // with phase timings and average throughput.
+            var reportSuccess = function () {
+                var now = (new Date()).getTime();
+                var conn = navigator.connection || {};
+                // If upload.load fired we have a clean boundary between
+                // uploading and processing phases. If it did not (rare —
+                // e.g. very small files on some browsers), fall back to
+                // treating the whole duration as uploading.
+                var uploadingMs;
+                var processingMs;
+                if (uploadBodyCompleteTime > 0) {
+                    uploadingMs = uploadBodyCompleteTime - startTime;
+                    processingMs = now - uploadBodyCompleteTime;
+                } else {
+                    uploadingMs = now - startTime;
+                    processingMs = 0;
+                }
+                var avgBps = 0;
+                if (uploadingMs > 0) {
+                    avgBps = Math.round((file.size / uploadingMs) * 1000);
+                }
+                postTelemetry("/api/telemetry/success", {
+                    bin: bin,
+                    filename: file.name,
+                    file_size: file.size,
+                    duration_ms: now - startTime,
+                    uploading_ms: uploadingMs,
+                    processing_ms: processingMs,
+                    time_to_first_progress_ms: firstProgressTime ? firstProgressTime - startTime : 0,
+                    average_bytes_per_second: avgBps,
+                    retry_attempts: retryAttempt,
+                    connection_type: conn.effectiveType || "",
+                    downlink: conn.downlink || 0,
+                    rtt: conn.rtt || 0,
+                    save_data: !!conn.saveData,
+                    visibility: (document && document.visibilityState) || ""
+                });
+            };
+
+            // Helper that retries the upload. Retries are silent — no
+            // telemetry event is sent per attempt. The retry_attempts
+            // count is carried into the terminal success or failure event
+            // so the server still sees how many attempts were needed.
             var retryUpload = function(category, httpStatus) {
                 clearInterval(stallCheckInterval);
                 if (retryAttempt < maxRetries) {
                     console.log("Upload failed (" + category + "), retrying... (attempt " + (retryAttempt + 1) + " of " + maxRetries + ")");
-                    reportEvent("retry_" + category, httpStatus);
                     xhr.abort();
                     bar.className = "progress-bar progress-bar-striped bg-warning";
                     bar.setAttribute("style", "width: 0%");
@@ -370,14 +448,23 @@ function FileAPI (c, t, d, f, bin, binURL) {
             // than from the last in-flight progress event.
             upload.addEventListener("load", function () {
                 uploadBodyComplete = true;
-                lastProgressTime = (new Date()).getTime();
+                uploadBodyCompleteTime = (new Date()).getTime();
+                lastProgressTime = uploadBodyCompleteTime;
             }, false);
 
             // Upload in progress
             upload.addEventListener("progress", function (e) {
-                lastProgressTime = (new Date()).getTime();
+                var nowTs = (new Date()).getTime();
+                lastProgressTime = nowTs;
+                if (firstProgressTime === 0) {
+                    firstProgressTime = nowTs;
+                }
                 if (e.loaded) {
                     bytesUploaded = e.loaded;
+                }
+                var elapsed = nowTs - startTime;
+                if (elapsed > 0 && e.loaded > 0) {
+                    lastBytesPerSecond = (e.loaded / elapsed) * 1000;
                 }
                 if (e.lengthComputable) {
                     bar.className = "progress-bar progress-bar-striped progress-bar-animated";
@@ -391,9 +478,7 @@ function FileAPI (c, t, d, f, bin, binURL) {
                         speedText = "Server side processing... (" + filesize + ")";
                     } else if (e.loaded > 0) {
                         // Upload in progress
-                        var curTime = (new Date()).getTime();
-                        var seconds = curTime - startTime;
-                        var bps = seconds ? e.loaded / seconds : 0;
+                        var bps = elapsed ? e.loaded / elapsed : 0;
                         if (isNaN(bps)) {
                             speedText = "Uploading... (" + filesize + ")";
                         } else {
@@ -425,6 +510,7 @@ function FileAPI (c, t, d, f, bin, binURL) {
                     bar.className = "progress-bar bg-success";
                     speed.textContent = "Complete (" + filesize + ")";
                     counter_completed += 1;
+                    reportSuccess();
                     updateFileCount();
                 } else {
                     // status === 0 in onload typically means a network-level
@@ -441,7 +527,7 @@ function FileAPI (c, t, d, f, bin, binURL) {
                         bar.setAttribute("aria-valuenow", 100);
                         speed.textContent = "Upload failed (" + filesize + ")";
                         counter_failed += 1;
-                        reportEvent("network", 0);
+                        reportFailure("network", 0);
                         updateFileCount();
                         return;
                     }
@@ -455,7 +541,7 @@ function FileAPI (c, t, d, f, bin, binURL) {
                     console.log("Unexpected response code: " + xhr.status);
                     console.log("Response body: " + xhr.response);
                     counter_failed += 1;
-                    reportEvent("http_status", xhr.status);
+                    reportFailure("http_status", xhr.status);
                     updateFileCount();
                 }
             };
@@ -480,7 +566,7 @@ function FileAPI (c, t, d, f, bin, binURL) {
                 speed.textContent = "Upload failed (" + filesize + ")";
                 counter_failed += 1;
                 counter_uploading -= 1;
-                reportEvent("network", xhr.status);
+                reportFailure("network", xhr.status);
                 updateFileCount();
             };
             xhr.onerror = handleNetworkError;

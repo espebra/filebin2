@@ -14,7 +14,8 @@ type Config struct {
 	LimitFileDownloads      uint64
 	LimitStorageReadable    string
 	LimitStorageBytes       uint64
-	ClientUploadErrorsCap   int
+	ClientUploadFailuresCap   int
+	ClientUploadSuccessesCap  int
 	HttpPort             int
 	HttpHost             string
 	HttpProxyHeaders     bool

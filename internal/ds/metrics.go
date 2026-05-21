@@ -54,8 +54,12 @@ type Metrics struct {
 	DBQueryDuration *prometheus.HistogramVec
 	DBQueryErrors   *prometheus.CounterVec
 
-	// Client-reported upload errors
-	clientUploadErrors *prometheus.CounterVec
+	// Client-reported upload telemetry
+	clientUploadOutcomes       *prometheus.CounterVec
+	clientUploadDuration       *prometheus.HistogramVec
+	clientUploadThroughput     prometheus.Histogram
+	clientUploadProcessing     prometheus.Histogram
+	clientUploadTimeToFirstProgress *prometheus.HistogramVec
 
 	// Database connection pool metrics
 	dbOpenConnections   prometheus.Gauge
@@ -257,15 +261,61 @@ func NewMetrics(id string, registry *prometheus.Registry) *Metrics {
 		[]string{"operation"},
 	)
 
-	m.clientUploadErrors = factory.NewCounterVec(
+	m.clientUploadOutcomes = factory.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "filebin_client_upload_errors_total",
-			Help: "Total client-reported upload failures, bucketed by reason",
+			Name: "filebin_client_upload_outcomes_total",
+			Help: "Total client-reported upload outcomes. outcome=success|failure; reason is ok for success, or network|stalled|http_5xx|http_4xx|http_other for failure.",
 			ConstLabels: prometheus.Labels{
 				"id": id,
 			},
 		},
-		[]string{"reason"},
+		[]string{"outcome", "reason"},
+	)
+
+	m.clientUploadDuration = factory.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "filebin_client_upload_duration_seconds",
+			Help:    "Total client-perceived upload duration, by outcome.",
+			Buckets: []float64{0.1, 0.5, 1, 2, 5, 10, 30, 60, 120, 300, 600, 1800},
+			ConstLabels: prometheus.Labels{
+				"id": id,
+			},
+		},
+		[]string{"outcome"},
+	)
+
+	m.clientUploadThroughput = factory.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "filebin_client_upload_throughput_bytes_per_second",
+			Help:    "Average client-perceived throughput on successful uploads.",
+			Buckets: []float64{1e4, 1e5, 5e5, 1e6, 5e6, 1e7, 5e7, 1e8, 5e8, 1e9},
+			ConstLabels: prometheus.Labels{
+				"id": id,
+			},
+		},
+	)
+
+	m.clientUploadProcessing = factory.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "filebin_client_upload_processing_seconds",
+			Help:    "Time between request body fully sent and final server response, observed client-side. Successful uploads only.",
+			Buckets: []float64{0.1, 0.5, 1, 2, 5, 10, 30, 60, 120, 300, 600},
+			ConstLabels: prometheus.Labels{
+				"id": id,
+			},
+		},
+	)
+
+	m.clientUploadTimeToFirstProgress = factory.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "filebin_client_upload_ttfp_seconds",
+			Help:    "Time from request start to first upload-progress event (DNS+TLS+server accept), by outcome.",
+			Buckets: []float64{0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30},
+			ConstLabels: prometheus.Labels{
+				"id": id,
+			},
+		},
+		[]string{"outcome"},
 	)
 
 	// Database connection pool gauges
@@ -444,9 +494,31 @@ func (m *Metrics) IncrDBQueryError(operation string) {
 	m.DBQueryErrors.WithLabelValues(operation).Inc()
 }
 
-// Client-reported upload error counter
-func (m *Metrics) IncrClientUploadError(reason string) {
-	m.clientUploadErrors.WithLabelValues(reason).Inc()
+// ObserveClientUploadFailure records a terminal failure event with all
+// associated histograms. reason is the bucketed failure reason
+// (network|stalled|http_5xx|http_4xx|http_other).
+func (m *Metrics) ObserveClientUploadFailure(reason string, durationMs uint64, timeToFirstProgressMs uint64) {
+	m.clientUploadOutcomes.WithLabelValues("failure", reason).Inc()
+	m.clientUploadDuration.WithLabelValues("failure").Observe(float64(durationMs) / 1000.0)
+	if timeToFirstProgressMs > 0 {
+		m.clientUploadTimeToFirstProgress.WithLabelValues("failure").Observe(float64(timeToFirstProgressMs) / 1000.0)
+	}
+}
+
+// ObserveClientUploadSuccess records a successful upload with throughput
+// and timing histograms.
+func (m *Metrics) ObserveClientUploadSuccess(durationMs, uploadingMs, processingMs, timeToFirstProgressMs, avgBytesPerSecond uint64) {
+	m.clientUploadOutcomes.WithLabelValues("success", "ok").Inc()
+	m.clientUploadDuration.WithLabelValues("success").Observe(float64(durationMs) / 1000.0)
+	if avgBytesPerSecond > 0 {
+		m.clientUploadThroughput.Observe(float64(avgBytesPerSecond))
+	}
+	if processingMs > 0 {
+		m.clientUploadProcessing.Observe(float64(processingMs) / 1000.0)
+	}
+	if timeToFirstProgressMs > 0 {
+		m.clientUploadTimeToFirstProgress.WithLabelValues("success").Observe(float64(timeToFirstProgressMs) / 1000.0)
+	}
 }
 
 // Database connection pool metrics

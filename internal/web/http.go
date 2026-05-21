@@ -66,9 +66,14 @@ type HTTP struct {
 	storageBytesCache uint64
 	storageBytesMutex sync.RWMutex
 
-	// Bounded in-memory ring buffer of recent client-reported upload errors
-	clientUploadErrors      []ds.ClientUploadError
-	clientUploadErrorsMutex sync.Mutex
+	// Bounded in-memory ring buffers of recent client-reported upload
+	// telemetry. Failures and successes are kept separately so failures
+	// can be retained longer while high-volume successes rotate out
+	// faster.
+	clientUploadFailures       []ds.ClientUploadFailure
+	clientUploadFailuresMutex  sync.Mutex
+	clientUploadSuccesses      []ds.ClientUploadSuccess
+	clientUploadSuccessesMutex sync.Mutex
 
 	// Stop channel for graceful shutdown of background goroutines
 	stopChan chan struct{}
@@ -124,33 +129,68 @@ func (h *HTTP) startStorageBytesUpdater() {
 	}()
 }
 
-// recordClientUploadError appends an event to the in-memory ring buffer,
-// evicting the oldest entry when the buffer is full. A non-positive
-// ClientUploadErrorsCap disables in-memory retention entirely.
-func (h *HTTP) recordClientUploadError(ev ds.ClientUploadError) {
-	cap := h.config.ClientUploadErrorsCap
+// recordClientUploadFailure appends a terminal failure event to the
+// in-memory ring buffer, evicting the oldest entry when the buffer is
+// full. A non-positive ClientUploadFailuresCap disables in-memory
+// retention entirely.
+func (h *HTTP) recordClientUploadFailure(ev ds.ClientUploadFailure) {
+	cap := h.config.ClientUploadFailuresCap
 	if cap <= 0 {
 		return
 	}
 
-	h.clientUploadErrorsMutex.Lock()
-	defer h.clientUploadErrorsMutex.Unlock()
+	h.clientUploadFailuresMutex.Lock()
+	defer h.clientUploadFailuresMutex.Unlock()
 
-	if len(h.clientUploadErrors) >= cap {
-		copy(h.clientUploadErrors, h.clientUploadErrors[1:])
-		h.clientUploadErrors = h.clientUploadErrors[:cap-1]
+	if len(h.clientUploadFailures) >= cap {
+		copy(h.clientUploadFailures, h.clientUploadFailures[1:])
+		h.clientUploadFailures = h.clientUploadFailures[:cap-1]
 	}
-	h.clientUploadErrors = append(h.clientUploadErrors, ev)
+	h.clientUploadFailures = append(h.clientUploadFailures, ev)
 }
 
-// recentClientUploadErrors returns a copy of the ring buffer in newest-first order.
-func (h *HTTP) recentClientUploadErrors() []ds.ClientUploadError {
-	h.clientUploadErrorsMutex.Lock()
-	defer h.clientUploadErrorsMutex.Unlock()
+// recentClientUploadFailures returns a copy of the failure ring buffer
+// in newest-first order.
+func (h *HTTP) recentClientUploadFailures() []ds.ClientUploadFailure {
+	h.clientUploadFailuresMutex.Lock()
+	defer h.clientUploadFailuresMutex.Unlock()
 
-	n := len(h.clientUploadErrors)
-	out := make([]ds.ClientUploadError, n)
-	for i, ev := range h.clientUploadErrors {
+	n := len(h.clientUploadFailures)
+	out := make([]ds.ClientUploadFailure, n)
+	for i, ev := range h.clientUploadFailures {
+		out[n-1-i] = ev
+	}
+	return out
+}
+
+// recordClientUploadSuccess appends a successful upload event to the
+// in-memory ring buffer. A non-positive ClientUploadSuccessesCap
+// disables in-memory retention entirely.
+func (h *HTTP) recordClientUploadSuccess(ev ds.ClientUploadSuccess) {
+	cap := h.config.ClientUploadSuccessesCap
+	if cap <= 0 {
+		return
+	}
+
+	h.clientUploadSuccessesMutex.Lock()
+	defer h.clientUploadSuccessesMutex.Unlock()
+
+	if len(h.clientUploadSuccesses) >= cap {
+		copy(h.clientUploadSuccesses, h.clientUploadSuccesses[1:])
+		h.clientUploadSuccesses = h.clientUploadSuccesses[:cap-1]
+	}
+	h.clientUploadSuccesses = append(h.clientUploadSuccesses, ev)
+}
+
+// recentClientUploadSuccesses returns a copy of the success ring buffer
+// in newest-first order.
+func (h *HTTP) recentClientUploadSuccesses() []ds.ClientUploadSuccess {
+	h.clientUploadSuccessesMutex.Lock()
+	defer h.clientUploadSuccessesMutex.Unlock()
+
+	n := len(h.clientUploadSuccesses)
+	out := make([]ds.ClientUploadSuccess, n)
+	for i, ev := range h.clientUploadSuccesses {
 		out[n-1-i] = ev
 	}
 	return out
@@ -186,7 +226,8 @@ func (h *HTTP) Init() error {
 	h.router.HandleFunc("/contact", h.contact).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/terms", h.terms).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/integration/slack", h.integrationSlack).Methods(http.MethodPost)
-	h.router.HandleFunc("/api/telemetry", h.telemetry).Methods(http.MethodPost)
+	h.router.HandleFunc("/api/telemetry/failure", h.telemetryFailure).Methods(http.MethodPost)
+	h.router.HandleFunc("/api/telemetry/success", h.telemetrySuccess).Methods(http.MethodPost)
 	h.router.HandleFunc("/admin/log/bin/{bin:[A-Za-z0-9_-]+}", h.auth(h.viewAdminLogBin)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/log/ip/{ip:[A-Za-z0-9.:_-]+}", h.auth(h.viewAdminLogIP)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/bins", h.auth(h.viewAdminBins)).Methods(http.MethodHead, http.MethodGet)
@@ -204,7 +245,8 @@ func (h *HTTP) Init() error {
 	h.router.HandleFunc("/admin/file/{sha256:[0-9a-z]+}/delete", h.log(h.auth(h.deleteFileContent))).Methods("POST")
 	h.router.HandleFunc("/admin/recent/uploads.txt", h.auth(h.viewAdminRecentUploadsText)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/recent/uploads", h.auth(h.viewAdminRecentUploads)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/admin/errors", h.auth(h.viewAdminClientErrors)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin/telemetry/upload-failures", h.auth(h.viewAdminClientUploadFailures)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin/telemetry/upload-successes", h.auth(h.viewAdminClientUploadSuccesses)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/message", h.auth(h.viewAdminSiteMessage)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/message", h.log(h.auth(h.updateSiteMessage))).Methods("POST")
 	h.router.HandleFunc("/admin", h.auth(h.viewAdminDashboard)).Methods(http.MethodHead, http.MethodGet)
