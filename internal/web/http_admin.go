@@ -157,7 +157,7 @@ func (h *HTTP) viewAdminClientUploadFailures(w http.ResponseWriter, r *http.Requ
 		out, err := json.MarshalIndent(data, "", "    ")
 		if err != nil {
 			slog.Error("failed to parse json", "error", err)
-			http.Error(w, "Errno 201", http.StatusInternalServerError)
+			http.Error(w, "Errno 220", http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(200)
@@ -216,7 +216,7 @@ func (h *HTTP) viewAdminClientUploadSuccesses(w http.ResponseWriter, r *http.Req
 		out, err := json.MarshalIndent(data, "", "    ")
 		if err != nil {
 			slog.Error("failed to parse json", "error", err)
-			http.Error(w, "Errno 201", http.StatusInternalServerError)
+			http.Error(w, "Errno 221", http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(200)
@@ -317,7 +317,7 @@ func (h *HTTP) viewAdminFiles(w http.ResponseWriter, r *http.Request) {
 		out, err := json.MarshalIndent(data, "", "    ")
 		if err != nil {
 			slog.Error("failed to parse json", "error", err)
-			http.Error(w, "Errno 201", http.StatusInternalServerError)
+			http.Error(w, "Errno 222", http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(200)
@@ -325,7 +325,7 @@ func (h *HTTP) viewAdminFiles(w http.ResponseWriter, r *http.Request) {
 	} else {
 		if err := h.renderTemplate(w, "admin_files", data); err != nil {
 			slog.Error("failed to execute template", "error", err)
-			http.Error(w, "Errno 203", http.StatusInternalServerError)
+			http.Error(w, "Errno 223", http.StatusInternalServerError)
 			return
 		}
 	}
@@ -371,7 +371,7 @@ func (h *HTTP) viewAdminFileContent(w http.ResponseWriter, r *http.Request) {
 	contentByBytesEach, err := h.dao.File().FilesByBytes(limit)
 	if err != nil {
 		slog.Error("unable to get files by bytes", "error", err)
-		http.Error(w, "Errno 494", http.StatusInternalServerError)
+		http.Error(w, "Errno 224", http.StatusInternalServerError)
 		return
 	}
 
@@ -379,7 +379,7 @@ func (h *HTTP) viewAdminFileContent(w http.ResponseWriter, r *http.Request) {
 	contentByBytesTotal, err := h.dao.File().FilesByBytesTotal(limit)
 	if err != nil {
 		slog.Error("unable to get files by bytes total", "error", err)
-		http.Error(w, "Errno 495", http.StatusInternalServerError)
+		http.Error(w, "Errno 225", http.StatusInternalServerError)
 		return
 	}
 
@@ -387,7 +387,7 @@ func (h *HTTP) viewAdminFileContent(w http.ResponseWriter, r *http.Request) {
 	contentByCreated, err := h.dao.FileContent().GetByCreated(limit)
 	if err != nil {
 		slog.Error("unable to get by created", "error", err)
-		http.Error(w, "Errno 495", http.StatusInternalServerError)
+		http.Error(w, "Errno 226", http.StatusInternalServerError)
 		return
 	}
 
@@ -395,7 +395,7 @@ func (h *HTTP) viewAdminFileContent(w http.ResponseWriter, r *http.Request) {
 	blockedContent, err := h.dao.FileContent().GetBlocked(limit)
 	if err != nil {
 		slog.Error("unable to get blocked", "error", err)
-		http.Error(w, "Errno 496", http.StatusInternalServerError)
+		http.Error(w, "Errno 227", http.StatusInternalServerError)
 		return
 	}
 
@@ -413,7 +413,7 @@ func (h *HTTP) viewAdminFileContent(w http.ResponseWriter, r *http.Request) {
 		out, err := json.MarshalIndent(data, "", "    ")
 		if err != nil {
 			slog.Error("failed to parse json", "error", err)
-			http.Error(w, "Errno 201", http.StatusInternalServerError)
+			http.Error(w, "Errno 228", http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(200)
@@ -421,7 +421,7 @@ func (h *HTTP) viewAdminFileContent(w http.ResponseWriter, r *http.Request) {
 	} else {
 		if err := h.renderTemplate(w, "admin_filecontent", data); err != nil {
 			slog.Error("failed to execute template", "error", err)
-			http.Error(w, "Errno 203", http.StatusInternalServerError)
+			http.Error(w, "Errno 229", http.StatusInternalServerError)
 			return
 		}
 	}
@@ -463,7 +463,7 @@ func (h *HTTP) viewAdminFile(w http.ResponseWriter, r *http.Request) {
 	fileByChecksum, err := h.dao.File().FileByChecksum(inputSHA256)
 	if err != nil {
 		slog.Error("unable to get file by checksum", "error", err)
-		http.Error(w, "Errno 494", http.StatusInternalServerError)
+		http.Error(w, "Errno 230", http.StatusInternalServerError)
 		return
 	}
 
@@ -474,7 +474,7 @@ func (h *HTTP) viewAdminFile(w http.ResponseWriter, r *http.Request) {
 		out, err := json.MarshalIndent(data, "", "    ")
 		if err != nil {
 			slog.Error("failed to parse json", "error", err)
-			http.Error(w, "Errno 201", http.StatusInternalServerError)
+			http.Error(w, "Errno 231", http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(200)
@@ -482,7 +482,7 @@ func (h *HTTP) viewAdminFile(w http.ResponseWriter, r *http.Request) {
 	} else {
 		if err := h.renderTemplate(w, "admin_file_by_checksum", data); err != nil {
 			slog.Error("failed to execute template", "error", err)
-			http.Error(w, "Errno 203", http.StatusInternalServerError)
+			http.Error(w, "Errno 232", http.StatusInternalServerError)
 			return
 		}
 	}
@@ -585,7 +585,7 @@ func (h *HTTP) viewAdminRecentUploads(w http.ResponseWriter, r *http.Request) {
 		out, err := json.MarshalIndent(data, "", "    ")
 		if err != nil {
 			slog.Error("failed to parse json", "error", err)
-			http.Error(w, "Errno 201", http.StatusInternalServerError)
+			http.Error(w, "Errno 233", http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(200)
@@ -593,7 +593,7 @@ func (h *HTTP) viewAdminRecentUploads(w http.ResponseWriter, r *http.Request) {
 	} else {
 		if err := h.renderTemplate(w, "admin_recent_uploads", data); err != nil {
 			slog.Error("failed to execute template", "error", err)
-			http.Error(w, "Errno 203", http.StatusInternalServerError)
+			http.Error(w, "Errno 234", http.StatusInternalServerError)
 			return
 		}
 	}
@@ -614,7 +614,7 @@ func (h *HTTP) viewAdminRecentUploadsText(w http.ResponseWriter, r *http.Request
 	files, err := h.dao.File().GetRecentUploads(mime, hours)
 	if err != nil {
 		slog.Error("unable to get recent uploads", "error", err)
-		http.Error(w, "Errno 501", http.StatusInternalServerError)
+		http.Error(w, "Errno 502", http.StatusInternalServerError)
 		return
 	}
 
@@ -656,7 +656,7 @@ func (h *HTTP) viewAdminBin(w http.ResponseWriter, r *http.Request) {
 	files, err := h.dao.File().GetByBinAll(inputBin)
 	if err != nil {
 		slog.Error("unable to get files by bin", "bin", inputBin, "error", err)
-		http.Error(w, "Errno 201", http.StatusInternalServerError)
+		http.Error(w, "Errno 235", http.StatusInternalServerError)
 		return
 	}
 	data.Files = files
@@ -674,7 +674,7 @@ func (h *HTTP) viewAdminBin(w http.ResponseWriter, r *http.Request) {
 	} else {
 		if err := h.renderTemplate(w, "admin_bin", data); err != nil {
 			slog.Error("failed to execute template", "error", err)
-			http.Error(w, "Errno 203", http.StatusInternalServerError)
+			http.Error(w, "Errno 236", http.StatusInternalServerError)
 			return
 		}
 	}
@@ -762,35 +762,35 @@ func (h *HTTP) viewAdminBins(w http.ResponseWriter, r *http.Request) {
 	binsByLastUpdated, err := h.dao.Bin().GetLastUpdated(limit)
 	if err != nil {
 		slog.Error("unable to get all", "error", err)
-		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		http.Error(w, "Errno 237", http.StatusInternalServerError)
 		return
 	}
 
 	binsByBytes, err := h.dao.Bin().GetByBytes(limit)
 	if err != nil {
 		slog.Error("unable to get by bytes", "error", err)
-		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		http.Error(w, "Errno 238", http.StatusInternalServerError)
 		return
 	}
 
 	binsByDownloads, err := h.dao.Bin().GetByDownloads(limit)
 	if err != nil {
 		slog.Error("unable to get by downloads", "error", err)
-		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		http.Error(w, "Errno 239", http.StatusInternalServerError)
 		return
 	}
 
 	binsByFiles, err := h.dao.Bin().GetByFiles(limit)
 	if err != nil {
 		slog.Error("unable to get by files", "error", err)
-		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		http.Error(w, "Errno 240", http.StatusInternalServerError)
 		return
 	}
 
 	binsByCreated, err := h.dao.Bin().GetByCreated(limit)
 	if err != nil {
 		slog.Error("unable to get by created", "error", err)
-		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		http.Error(w, "Errno 241", http.StatusInternalServerError)
 		return
 	}
 
@@ -808,7 +808,7 @@ func (h *HTTP) viewAdminBins(w http.ResponseWriter, r *http.Request) {
 		out, err := json.MarshalIndent(data, "", "    ")
 		if err != nil {
 			slog.Error("failed to parse json", "error", err)
-			http.Error(w, "Errno 201", http.StatusInternalServerError)
+			http.Error(w, "Errno 242", http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(200)
@@ -816,7 +816,7 @@ func (h *HTTP) viewAdminBins(w http.ResponseWriter, r *http.Request) {
 	} else {
 		if err := h.renderTemplate(w, "admin_bins", data); err != nil {
 			slog.Error("failed to execute template", "error", err)
-			http.Error(w, "Errno 203", http.StatusInternalServerError)
+			http.Error(w, "Errno 243", http.StatusInternalServerError)
 			return
 		}
 	}
@@ -838,7 +838,7 @@ func (h *HTTP) viewAdminBinsAll(w http.ResponseWriter, r *http.Request) {
 	binsAvailable, err := h.dao.Bin().GetAll()
 	if err != nil {
 		slog.Error("unable to get all", "error", err)
-		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		http.Error(w, "Errno 244", http.StatusInternalServerError)
 		return
 	}
 
@@ -852,7 +852,7 @@ func (h *HTTP) viewAdminBinsAll(w http.ResponseWriter, r *http.Request) {
 		out, err := json.MarshalIndent(data, "", "    ")
 		if err != nil {
 			slog.Error("failed to parse json", "error", err)
-			http.Error(w, "Errno 201", http.StatusInternalServerError)
+			http.Error(w, "Errno 245", http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(200)
@@ -860,7 +860,7 @@ func (h *HTTP) viewAdminBinsAll(w http.ResponseWriter, r *http.Request) {
 	} else {
 		if err := h.renderTemplate(w, "admin_bins_all", data); err != nil {
 			slog.Error("failed to execute template", "error", err)
-			http.Error(w, "Errno 203", http.StatusInternalServerError)
+			http.Error(w, "Errno 246", http.StatusInternalServerError)
 			return
 		}
 	}
@@ -886,7 +886,7 @@ func (h *HTTP) viewAdminLogBin(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.renderTemplate(w, "log_bin", data); err != nil {
 		slog.Error("failed to execute template", "error", err)
-		http.Error(w, "Errno 203", http.StatusInternalServerError)
+		http.Error(w, "Errno 247", http.StatusInternalServerError)
 		return
 	}
 }
@@ -904,14 +904,14 @@ func (h *HTTP) viewAdminLogIP(w http.ResponseWriter, r *http.Request) {
 
 	trs, err := h.dao.Transaction().GetByIP(ip)
 	if err != nil {
-		http.Error(w, "Errno 361", http.StatusInternalServerError)
+		http.Error(w, "Errno 362", http.StatusInternalServerError)
 		return
 	}
 	data.Transactions = trs
 
 	if err := h.renderTemplate(w, "log_ip", data); err != nil {
 		slog.Error("failed to execute template", "error", err)
-		http.Error(w, "Errno 203", http.StatusInternalServerError)
+		http.Error(w, "Errno 248", http.StatusInternalServerError)
 		return
 	}
 }
@@ -950,56 +950,56 @@ func (h *HTTP) viewAdminClients(w http.ResponseWriter, r *http.Request) {
 	clientsByLastActiveAt, err := h.dao.Client().GetByLastActiveAt(limit)
 	if err != nil {
 		slog.Error("unable to get last active", "error", err)
-		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		http.Error(w, "Errno 249", http.StatusInternalServerError)
 		return
 	}
 
 	clientsByRequests, err := h.dao.Client().GetByRequests(limit)
 	if err != nil {
 		slog.Error("unable to get by requests", "error", err)
-		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		http.Error(w, "Errno 250", http.StatusInternalServerError)
 		return
 	}
 
 	clientsByBannedAt, err := h.dao.Client().GetByBannedAt(limit)
 	if err != nil {
 		slog.Error("unable to get by banned at", "error", err)
-		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		http.Error(w, "Errno 251", http.StatusInternalServerError)
 		return
 	}
 
 	clientsByFilesUploaded, err := h.dao.Client().GetByFilesUploaded(limit)
 	if err != nil {
 		slog.Error("unable to get by files uploaded", "error", err)
-		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		http.Error(w, "Errno 252", http.StatusInternalServerError)
 		return
 	}
 
 	clientsByBytesUploaded, err := h.dao.Client().GetByBytesUploaded(limit)
 	if err != nil {
 		slog.Error("unable to get by bytes uploaded", "error", err)
-		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		http.Error(w, "Errno 253", http.StatusInternalServerError)
 		return
 	}
 
 	clientsByCountry, err := h.dao.Client().GetByCountry(limit)
 	if err != nil {
 		slog.Error("unable to get by country", "error", err)
-		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		http.Error(w, "Errno 254", http.StatusInternalServerError)
 		return
 	}
 
 	clientsByNetwork, err := h.dao.Client().GetByNetwork(limit)
 	if err != nil {
 		slog.Error("unable to get by network", "error", err)
-		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		http.Error(w, "Errno 255", http.StatusInternalServerError)
 		return
 	}
 
 	asnWithStats, err := h.dao.Client().GetASNWithStats(limit)
 	if err != nil {
 		slog.Error("unable to get ASN with stats", "error", err)
-		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		http.Error(w, "Errno 256", http.StatusInternalServerError)
 		return
 	}
 
@@ -1020,7 +1020,7 @@ func (h *HTTP) viewAdminClients(w http.ResponseWriter, r *http.Request) {
 		out, err := json.MarshalIndent(data, "", "    ")
 		if err != nil {
 			slog.Error("failed to parse json", "error", err)
-			http.Error(w, "Errno 201", http.StatusInternalServerError)
+			http.Error(w, "Errno 257", http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(200)
@@ -1028,7 +1028,7 @@ func (h *HTTP) viewAdminClients(w http.ResponseWriter, r *http.Request) {
 	} else {
 		if err := h.renderTemplate(w, "admin_clients", data); err != nil {
 			slog.Error("failed to execute template", "error", err)
-			http.Error(w, "Errno 203", http.StatusInternalServerError)
+			http.Error(w, "Errno 258", http.StatusInternalServerError)
 			return
 		}
 	}
@@ -1038,7 +1038,7 @@ func (h *HTTP) viewAdminClientsAll(w http.ResponseWriter, r *http.Request) {
 	clients, err := h.dao.Client().GetAll()
 	if err != nil {
 		slog.Error("unable to get all", "error", err)
-		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		http.Error(w, "Errno 259", http.StatusInternalServerError)
 		return
 	}
 	type Data struct {
@@ -1053,7 +1053,7 @@ func (h *HTTP) viewAdminClientsAll(w http.ResponseWriter, r *http.Request) {
 		out, err := json.MarshalIndent(data, "", "    ")
 		if err != nil {
 			slog.Error("failed to parse json", "error", err)
-			http.Error(w, "Errno 201", http.StatusInternalServerError)
+			http.Error(w, "Errno 260", http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(200)
@@ -1061,7 +1061,7 @@ func (h *HTTP) viewAdminClientsAll(w http.ResponseWriter, r *http.Request) {
 	} else {
 		if err := h.renderTemplate(w, "admin_clients_all", data); err != nil {
 			slog.Error("failed to execute template", "error", err)
-			http.Error(w, "Errno 203", http.StatusInternalServerError)
+			http.Error(w, "Errno 261", http.StatusInternalServerError)
 			return
 		}
 	}
@@ -1119,7 +1119,7 @@ func (h *HTTP) updateSiteMessage(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(content) > 5000 {
 		slog.Warn("unable to update site message: content must be 5000 characters or less")
-		http.Error(w, "Errno 803", http.StatusBadRequest)
+		http.Error(w, "Errno 804", http.StatusBadRequest)
 		return
 	}
 

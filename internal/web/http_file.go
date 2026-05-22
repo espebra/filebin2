@@ -115,7 +115,7 @@ func (h *HTTP) getFile(w http.ResponseWriter, r *http.Request) {
 			data.NextUrl = nextUrl.String()
 			if err := h.renderTemplate(w, "cookie", data); err != nil {
 				slog.Error("failed to execute template", "error", err)
-				http.Error(w, "Errno 302", http.StatusInternalServerError)
+				http.Error(w, "Errno 303", http.StatusInternalServerError)
 				return
 			}
 			return
@@ -200,7 +200,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	// Check if bin exists
 	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
-		h.Error(w, r, fmt.Sprintf("Failed to select bin by id %q: %s", inputBin, err.Error()), "Database error", 112, http.StatusInternalServerError)
+		h.Error(w, r, fmt.Sprintf("Failed to select bin by id %q: %s", inputBin, err.Error()), "Database error", 128, http.StatusInternalServerError)
 		return
 	}
 
@@ -229,7 +229,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 		}
 		bin, found, err = h.dao.Bin().GetByID(inputBin)
 		if err != nil || !found {
-			h.Error(w, r, fmt.Sprintf("Unable to fetch bin %q after insert: %s", inputBin, err), "Database error", 121, http.StatusInternalServerError)
+			h.Error(w, r, fmt.Sprintf("Unable to fetch bin %q after insert: %s", inputBin, err), "Database error", 137, http.StatusInternalServerError)
 			return
 		}
 		if inserted {
@@ -477,7 +477,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 			file, _, err = h.dao.File().GetByName(bin.Id, inputFilename)
 			if err != nil {
 				slog.Error("unable to load file after insert conflict", "filename", inputFilename, "bin", bin.Id, "error", err)
-				http.Error(w, "Errno 108", http.StatusInternalServerError)
+				http.Error(w, "Errno 138", http.StatusInternalServerError)
 				return
 			}
 			file.SHA256 = sha256ChecksumString
@@ -487,7 +487,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 			file.UploadDurationMs = time.Since(t0).Milliseconds()
 			if err := h.dao.File().Update(&file); err != nil {
 				slog.Error("unable to update file after insert conflict", "filename", file.Filename, "file_id", file.Id, "bin", bin.Id, "error", err)
-				http.Error(w, "Errno 108", http.StatusInternalServerError)
+				http.Error(w, "Errno 139", http.StatusInternalServerError)
 				return
 			}
 		}
@@ -542,7 +542,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	out, err := json.MarshalIndent(data, "", "    ")
 	if err != nil {
 		slog.Error("failed to parse json", "error", err)
-		http.Error(w, "Errno 201", http.StatusInternalServerError)
+		http.Error(w, "Errno 268", http.StatusInternalServerError)
 		return
 	}
 
@@ -573,7 +573,7 @@ func (h *HTTP) deleteFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !bin.IsReadable() {
-		h.Error(w, r, "", "The bin is no longer available", 122, http.StatusNotFound)
+		h.Error(w, r, "", "The bin is no longer available", 140, http.StatusNotFound)
 		return
 	}
 
