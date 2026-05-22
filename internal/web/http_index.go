@@ -54,7 +54,7 @@ func (h *HTTP) index(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.renderTemplate(w, "index", data); err != nil {
 		slog.Error("failed to execute template", "error", err)
-		http.Error(w, "Errno 302", http.StatusInternalServerError)
+		http.Error(w, "Errno 304", http.StatusInternalServerError)
 		return
 	}
 }
@@ -73,7 +73,7 @@ func (h *HTTP) about(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.renderTemplate(w, "about", data); err != nil {
 		slog.Error("failed to execute template", "error", err)
-		http.Error(w, "Errno 302", http.StatusInternalServerError)
+		http.Error(w, "Errno 305", http.StatusInternalServerError)
 		return
 	}
 }
@@ -97,7 +97,7 @@ func (h *HTTP) privacy(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.renderTemplate(w, "privacy", data); err != nil {
 		slog.Error("failed to execute template", "error", err)
-		http.Error(w, "Errno 302", http.StatusInternalServerError)
+		http.Error(w, "Errno 306", http.StatusInternalServerError)
 		return
 	}
 }
@@ -116,7 +116,7 @@ func (h *HTTP) terms(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.renderTemplate(w, "terms", data); err != nil {
 		slog.Error("failed to execute template", "error", err)
-		http.Error(w, "Errno 302", http.StatusInternalServerError)
+		http.Error(w, "Errno 307", http.StatusInternalServerError)
 		return
 	}
 }
@@ -135,7 +135,7 @@ func (h *HTTP) contact(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.renderTemplate(w, "contact", data); err != nil {
 		slog.Error("failed to execute template", "error", err)
-		http.Error(w, "Errno 302", http.StatusInternalServerError)
+		http.Error(w, "Errno 308", http.StatusInternalServerError)
 		return
 	}
 }
@@ -153,7 +153,7 @@ func (h *HTTP) api(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.renderTemplate(w, "api", data); err != nil {
 		slog.Error("failed to execute template", "error", err)
-		http.Error(w, "Errno 302", http.StatusInternalServerError)
+		http.Error(w, "Errno 309", http.StatusInternalServerError)
 		return
 	}
 }
@@ -173,7 +173,7 @@ func (h *HTTP) apiSpec(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	if err := h.renderTemplate(w, "apispec", data); err != nil {
 		slog.Error("failed to execute template", "error", err)
-		http.Error(w, "Errno 302", http.StatusInternalServerError)
+		http.Error(w, "Errno 310", http.StatusInternalServerError)
 		return
 	}
 }
@@ -211,7 +211,7 @@ func (h *HTTP) filebinStatus(w http.ResponseWriter, r *http.Request) {
 	out, err := json.MarshalIndent(data, "", "    ")
 	if err != nil {
 		slog.Error("failed to parse json", "error", err)
-		http.Error(w, "Errno 201", http.StatusInternalServerError)
+		http.Error(w, "Errno 269", http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(code)
@@ -250,7 +250,7 @@ func (h *HTTP) storageStatus(w http.ResponseWriter, r *http.Request) {
 	out, err := json.MarshalIndent(data, "", "    ")
 	if err != nil {
 		slog.Error("failed to parse json", "error", err)
-		http.Error(w, "Errno 201", http.StatusInternalServerError)
+		http.Error(w, "Errno 270", http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(code)
@@ -262,7 +262,7 @@ func (h *HTTP) robots(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.renderTemplate(w, "robots", nil); err != nil {
 		slog.Error("failed to execute template", "error", err)
-		http.Error(w, "Errno 302", http.StatusInternalServerError)
+		http.Error(w, "Errno 311", http.StatusInternalServerError)
 		return
 	}
 }

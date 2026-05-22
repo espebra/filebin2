@@ -73,7 +73,7 @@ func (h *HTTP) viewBin(w http.ResponseWriter, r *http.Request) {
 	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
 		slog.Error("unable to get bin by ID", "bin", inputBin, "error", err)
-		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		http.Error(w, "Errno 262", http.StatusInternalServerError)
 		return
 	}
 	if found {
@@ -111,7 +111,7 @@ func (h *HTTP) viewBin(w http.ResponseWriter, r *http.Request) {
 		out, err := json.MarshalIndent(data, "", "    ")
 		if err != nil {
 			slog.Error("failed to parse json", "error", err)
-			http.Error(w, "Errno 201", http.StatusInternalServerError)
+			http.Error(w, "Errno 263", http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(code)
@@ -143,7 +143,7 @@ func (h *HTTP) viewBinPlainText(w http.ResponseWriter, r *http.Request) {
 	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
 		slog.Error("unable to get bin by ID", "bin", inputBin, "error", err)
-		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		http.Error(w, "Errno 264", http.StatusInternalServerError)
 		return
 	}
 	if found {
@@ -324,16 +324,16 @@ func (h *HTTP) archive(w http.ResponseWriter, r *http.Request) {
 	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
 		slog.Error("unable to get bin by ID", "bin", inputBin, "error", err)
-		http.Error(w, "Errno 200", http.StatusInternalServerError)
+		http.Error(w, "Errno 265", http.StatusInternalServerError)
 		return
 	}
 	if !found {
-		h.Error(w, r, "", "The bin does not exist.", 201, http.StatusNotFound)
+		h.Error(w, r, "", "The bin does not exist.", 266, http.StatusNotFound)
 		return
 	}
 
 	if !bin.IsReadable() {
-		h.Error(w, r, "", "This bin is no longer available.", 202, http.StatusNotFound)
+		h.Error(w, r, "", "This bin is no longer available.", 267, http.StatusNotFound)
 		return
 	}
 
@@ -511,7 +511,7 @@ func (h *HTTP) approveBin(w http.ResponseWriter, r *http.Request) {
 	bin, found, err := h.dao.Bin().GetByID(inputBin)
 	if err != nil {
 		slog.Error("unable to get bin by ID", "bin", inputBin, "error", err)
-		http.Error(w, "Errno 205", http.StatusInternalServerError)
+		http.Error(w, "Errno 206", http.StatusInternalServerError)
 		return
 	}
 	if !found {
@@ -554,7 +554,7 @@ func (h *HTTP) banBin(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(3 * time.Second)
 
 		slog.Error("unable to get bin by ID", "bin", inputBin, "error", err)
-		http.Error(w, "Errno 205", http.StatusInternalServerError)
+		http.Error(w, "Errno 207", http.StatusInternalServerError)
 		return
 	}
 	if !found {

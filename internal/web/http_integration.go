@@ -61,13 +61,13 @@ func (h *HTTP) integrationSlack(w http.ResponseWriter, r *http.Request) {
 
 	domain := r.PostFormValue("team_domain")
 	if h.config.SlackDomain != domain {
-		h.Error(w, r, fmt.Sprintf("Slack domain not correct: Got %q, requires %q\n", domain, h.config.SlackDomain), "Unauthorized", 835, http.StatusUnauthorized)
+		h.Error(w, r, fmt.Sprintf("Slack domain not correct: Got %q, requires %q\n", domain, h.config.SlackDomain), "Unauthorized", 837, http.StatusUnauthorized)
 		return
 	}
 
 	channel := r.PostFormValue("channel_name")
 	if h.config.SlackChannel != channel {
-		h.Error(w, r, fmt.Sprintf("Slack channel not correct: Got %q, requires %q\n", channel, h.config.SlackChannel), "Unauthorized", 835, http.StatusUnauthorized)
+		h.Error(w, r, fmt.Sprintf("Slack channel not correct: Got %q, requires %q\n", channel, h.config.SlackChannel), "Unauthorized", 838, http.StatusUnauthorized)
 		return
 	}
 
@@ -89,7 +89,7 @@ func (h *HTTP) integrationSlack(w http.ResponseWriter, r *http.Request) {
 				bin, found, err := h.dao.Bin().GetByID(inputBin)
 				if err != nil {
 					slog.Error("unable to get bin by ID", "bin", bin.Id, "error", err)
-					http.Error(w, "Errno 205", http.StatusInternalServerError)
+					http.Error(w, "Errno 208", http.StatusInternalServerError)
 					return
 				}
 				if !found {
