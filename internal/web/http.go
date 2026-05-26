@@ -254,6 +254,7 @@ func (h *HTTP) Init() error {
 	h.router.Handle("/static/{path:.*}", CacheControl(http.FileServer(http.FS(h.staticBox)))).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/archive/{bin:[A-Za-z0-9_-]+}/{format:[a-z]+}", h.log(h.clientLookup(h.archive))).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}.txt", h.viewBinPlainText).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/sha256/{bin:[A-Za-z0-9_-]+}", h.viewBinSha256).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/qr/{bin:[A-Za-z0-9_-]+}", h.binQR).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/", h.viewBinRedirect).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.viewBin).Methods(http.MethodHead, http.MethodGet)
