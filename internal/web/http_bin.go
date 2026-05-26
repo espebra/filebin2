@@ -183,6 +183,57 @@ func (h *HTTP) viewBinPlainText(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// viewBinSha256 lists the files in a bin along with their SHA256
+// checksums in plain text, formatted like the output of sha256sum(1):
+// the checksum, two spaces, then the filename, one file per line.
+func (h *HTTP) viewBinSha256(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "max-age=0")
+	w.Header().Set("X-Robots-Tag", "noindex")
+
+	params := mux.Vars(r)
+	inputBin := params["bin"]
+
+	var files []ds.File
+
+	bin, found, err := h.dao.Bin().GetByID(inputBin)
+	if err != nil {
+		slog.Error("unable to get bin by ID", "bin", inputBin, "error", err)
+		http.Error(w, "Errno 271", http.StatusInternalServerError)
+		return
+	}
+	if found {
+		fs, err := h.dao.File().GetByBin(inputBin, true)
+		if err != nil {
+			slog.Error("unable to get files by bin", "bin", inputBin, "error", err)
+			http.Error(w, "Not found", http.StatusNotFound)
+			return
+		}
+		if bin.IsReadable() {
+			files = fs
+		}
+	} else {
+		// Synthesize a bin without creating it. It will be created when a file is uploaded.
+		bin = ds.Bin{}
+		bin.Id = inputBin
+		bin.ExpiredAt = time.Now().UTC().Add(h.config.ExpirationDuration)
+		bin.ExpiredAtRelative = humanize.Time(bin.ExpiredAt)
+
+		// Intentional slowdown to make crawling less efficient
+		time.Sleep(1 * time.Second)
+	}
+
+	code := 200
+	if !bin.IsReadable() {
+		code = 404
+	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(code)
+	for _, file := range files {
+		_, _ = fmt.Fprintf(w, "%s  %s\n", file.SHA256, file.Filename)
+	}
+}
+
 func (h *HTTP) binQR(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=31536000")
 	w.Header().Set("X-Robots-Tag", "noindex")

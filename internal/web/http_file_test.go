@@ -556,6 +556,48 @@ func TestBinText(t *testing.T) {
 	runTests(tcs, t)
 }
 
+func TestBinSha256(t *testing.T) {
+	tcs := []TestCase{
+		{
+			Description:   "Create new bin",
+			Method:        "POST",
+			Bin:           "mytestbin7",
+			Filename:      "a",
+			UploadContent: "content a",
+			StatusCode:    201,
+		}, {
+			Description:   "Upload second file",
+			Method:        "POST",
+			Bin:           "mytestbin7",
+			Filename:      "b",
+			UploadContent: "content b",
+			StatusCode:    201,
+		}, {
+			Description:     "Get bin sha256 checksums",
+			Method:          "GET",
+			Bin:             "sha256/mytestbin7",
+			DownloadContent: "0069ffe8481777aa403982d9e9b3fa48957015a07cfa0f66dae32050b95bda54  a\nc4363f384691f55ee5a5c315e1f7c37366ae232933665a93fe3bcc0d90bc937b  b\n",
+			StatusCode:      200,
+		}, {
+			Description: "Get sha256 checksums for non-existing bin",
+			Method:      "GET",
+			Bin:         "sha256/nosuchbin7",
+			StatusCode:  200,
+		}, {
+			Description: "Delete the bin",
+			Method:      "DELETE",
+			Bin:         "mytestbin7",
+			StatusCode:  200,
+		}, {
+			Description: "Get sha256 checksums for deleted bin",
+			Method:      "GET",
+			Bin:         "sha256/mytestbin7",
+			StatusCode:  404,
+		},
+	}
+	runTests(tcs, t)
+}
+
 func httpAdminRequest(method, path string) (statuscode int, body string, err error) {
 	u, err := url.Parse("http://localhost:8080")
 	if err != nil {
