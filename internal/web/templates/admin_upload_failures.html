@@ -50,6 +50,12 @@
                             {{ else }}
                                 <span class="text-muted">—</span>
                             {{ end }}
+                            {{ if .Event.ScriptHost }}
+                                {{ if ne .Event.ScriptHost .Event.UploadHost }}
+                                    <div><small class="text-warning">script {{ if .Event.ScriptProtocol }}{{ .Event.ScriptProtocol }}://{{ end }}{{ .Event.ScriptHost }}</small></div>
+                                {{ end }}
+                            {{ end }}
+                            {{ if not .Event.TopFrame }}<div><span class="badge bg-secondary">iframe</span></div>{{ end }}
                         </td>
                         <td>
                             {{ if .Event.Bin }}
