@@ -25,6 +25,7 @@
                 <tr>
                     <th>When</th>
                     <th>IP</th>
+                    <th>Upload target</th>
                     <th>Bin</th>
                     <th>Filename</th>
                     <th>Reason</th>
@@ -43,6 +44,13 @@
                     <tr>
                         <td sorttable_customkey="{{ .Event.Timestamp.Unix }}">{{ .TimestampReadable }}</td>
                         <td><a href="/admin/log/ip/{{ .Event.IP }}">{{ .Event.IP }}</a></td>
+                        <td>
+                            {{ if .Event.UploadHost }}
+                                {{ if .Event.UploadProtocol }}<small class="text-muted">{{ .Event.UploadProtocol }}://</small>{{ end }}{{ .Event.UploadHost }}
+                            {{ else }}
+                                <span class="text-muted">—</span>
+                            {{ end }}
+                        </td>
                         <td>
                             {{ if .Event.Bin }}
                                 <a href="/admin/bin/{{ .Event.Bin }}">{{ .Event.Bin }}</a>

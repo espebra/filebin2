@@ -13,6 +13,8 @@ type ClientUploadSuccess struct {
 	UserAgent             string    `json:"user_agent"`
 	Bin                   string    `json:"bin"`
 	Filename              string    `json:"filename"`
+	UploadHost            string    `json:"upload_host"`
+	UploadProtocol        string    `json:"upload_protocol"`
 	FileSize              uint64    `json:"file_size"`
 	DurationMs            uint64    `json:"duration_ms"`
 	UploadingMs           uint64    `json:"uploading_ms"`

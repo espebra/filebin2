@@ -11,6 +11,8 @@ type ClientUploadFailure struct {
 	UserAgent               string    `json:"user_agent"`
 	Bin                     string    `json:"bin"`
 	Filename                string    `json:"filename"`
+	UploadHost              string    `json:"upload_host"`
+	UploadProtocol          string    `json:"upload_protocol"`
 	Reason                  string    `json:"reason"`
 	HTTPStatus              int       `json:"http_status"`
 	FileSize                uint64    `json:"file_size"`

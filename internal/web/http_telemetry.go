@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/espebra/filebin2/internal/ds"
@@ -18,11 +19,17 @@ const (
 	telemetryMaxFilenameChrs     = 256
 	telemetryMaxStatusTextChrs   = 128
 	telemetryMaxHeaderChrs       = 128
+	telemetryMaxUploadHostChrs   = 253
 )
 
 var (
-	binIDPattern         = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
-	connectionPattern    = regexp.MustCompile(`^[a-z0-9-]{1,16}$`)
+	binIDPattern      = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
+	connectionPattern = regexp.MustCompile(`^[a-z0-9-]{1,16}$`)
+	uploadHostPattern = regexp.MustCompile(`^[A-Za-z0-9._:\[\]-]{1,253}$`)
+	uploadProtocols   = map[string]bool{
+		"http":  true,
+		"https": true,
+	}
 	telemetryFailureRaws = map[string]bool{
 		"network":     true,
 		"stalled":     true,
@@ -49,6 +56,8 @@ var (
 type failurePayload struct {
 	Bin                     string  `json:"bin"`
 	Filename                string  `json:"filename"`
+	UploadHost              string  `json:"upload_host"`
+	UploadProtocol          string  `json:"upload_protocol"`
 	Reason                  string  `json:"reason"`
 	HTTPStatus              int     `json:"http_status"`
 	FileSize                uint64  `json:"file_size"`
@@ -80,6 +89,8 @@ type failurePayload struct {
 type successPayload struct {
 	Bin                   string  `json:"bin"`
 	Filename              string  `json:"filename"`
+	UploadHost            string  `json:"upload_host"`
+	UploadProtocol        string  `json:"upload_protocol"`
 	FileSize              uint64  `json:"file_size"`
 	DurationMs            uint64  `json:"duration_ms"`
 	UploadingMs           uint64  `json:"uploading_ms"`
@@ -140,6 +151,9 @@ func (h *HTTP) telemetryFailure(w http.ResponseWriter, r *http.Request) {
 	truncate(&p.ResponseContentType, telemetryMaxHeaderChrs)
 	truncate(&p.RequestID, telemetryMaxHeaderChrs)
 
+	uploadHost := normalizeUploadHost(p.UploadHost)
+	uploadProtocol := normalizeUploadProtocol(p.UploadProtocol)
+
 	bucket := failureBucket(p.Reason, p.HTTPStatus)
 	h.metrics.ObserveClientUploadFailure(bucket, p.DurationMs, p.TimeToFirstProgressMs)
 
@@ -149,6 +163,8 @@ func (h *HTTP) telemetryFailure(w http.ResponseWriter, r *http.Request) {
 		UserAgent:               truncatedUserAgent(r),
 		Bin:                     p.Bin,
 		Filename:                p.Filename,
+		UploadHost:              uploadHost,
+		UploadProtocol:          uploadProtocol,
 		Reason:                  bucket,
 		HTTPStatus:              p.HTTPStatus,
 		FileSize:                p.FileSize,
@@ -183,6 +199,8 @@ func (h *HTTP) telemetryFailure(w http.ResponseWriter, r *http.Request) {
 		"bin", ev.Bin,
 		"filename", ev.Filename,
 		"ip", ev.IP,
+		"upload_host", ev.UploadHost,
+		"upload_protocol", ev.UploadProtocol,
 		"file_size", ev.FileSize,
 		"bytes_uploaded", ev.BytesUploaded,
 		"duration_ms", ev.DurationMs,
@@ -234,6 +252,9 @@ func (h *HTTP) telemetrySuccess(w http.ResponseWriter, r *http.Request) {
 	}
 	truncate(&p.Filename, telemetryMaxFilenameChrs)
 
+	uploadHost := normalizeUploadHost(p.UploadHost)
+	uploadProtocol := normalizeUploadProtocol(p.UploadProtocol)
+
 	h.metrics.ObserveClientUploadSuccess(p.DurationMs, p.UploadingMs, p.ProcessingMs, p.TimeToFirstProgressMs, p.AverageBytesPerSecond)
 
 	ev := ds.ClientUploadSuccess{
@@ -242,6 +263,8 @@ func (h *HTTP) telemetrySuccess(w http.ResponseWriter, r *http.Request) {
 		UserAgent:             truncatedUserAgent(r),
 		Bin:                   p.Bin,
 		Filename:              p.Filename,
+		UploadHost:            uploadHost,
+		UploadProtocol:        uploadProtocol,
 		FileSize:              p.FileSize,
 		DurationMs:            p.DurationMs,
 		UploadingMs:           p.UploadingMs,
@@ -261,6 +284,8 @@ func (h *HTTP) telemetrySuccess(w http.ResponseWriter, r *http.Request) {
 		"bin", ev.Bin,
 		"filename", ev.Filename,
 		"ip", ev.IP,
+		"upload_host", ev.UploadHost,
+		"upload_protocol", ev.UploadProtocol,
 		"file_size", ev.FileSize,
 		"duration_ms", ev.DurationMs,
 		"uploading_ms", ev.UploadingMs,
@@ -344,4 +369,31 @@ func truncate(s *string, max int) {
 	if len(*s) > max {
 		*s = (*s)[:max]
 	}
+}
+
+// normalizeUploadProtocol accepts the value of window.location.protocol
+// ("http:" or "https:") with or without the trailing colon and returns
+// the bare scheme. Unknown values become empty.
+func normalizeUploadProtocol(raw string) string {
+	p := strings.ToLower(strings.TrimSuffix(raw, ":"))
+	if uploadProtocols[p] {
+		return p
+	}
+	return ""
+}
+
+// normalizeUploadHost validates and lowercases the client-reported
+// upload host. Invalid values become empty so downstream code never has
+// to deal with junk hostnames.
+func normalizeUploadHost(raw string) string {
+	if len(raw) > telemetryMaxUploadHostChrs {
+		return ""
+	}
+	if raw == "" {
+		return ""
+	}
+	if !uploadHostPattern.MatchString(raw) {
+		return ""
+	}
+	return strings.ToLower(raw)
 }

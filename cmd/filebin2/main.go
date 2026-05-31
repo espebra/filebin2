@@ -33,25 +33,25 @@ var (
 
 var (
 	// Various
-	contactFlag             = flag.String("contact", "", "The contact information, such as an email address, that will be shown on the website for people that want to get in touch with the service owner.")
-	expirationFlag          = flag.Int("expiration", 604800, "Bin expiration time in seconds since the last bin update")
-	tmpdirFlag              = flag.String("tmpdir", os.TempDir(), "Comma-separated list of directories for temporary files. Multiple directories will be benchmarked at startup, and the fastest one with sufficient free space will be used for each upload.")
-	tmpdirThresholdFlag     = flag.Float64("tmpdir-capacity-threshold", 4.0, "Workspace capacity threshold multiplier. A workspace must have at least this multiplier times the file size available to be selected (e.g., 4.0 requires 4x the file size available).")
-	baseURLFlag             = flag.String("baseurl", "https://filebin.net", "The base URL to use. Required for self-hosted instances.")
-	requireApprovalFlag     = flag.Bool("manual-approval", false, "Require manual admin approval of new bins before files can be downloaded.")
-	requireCookieFlag       = flag.Bool("require-verification-cookie", false, "Require cookie before allowing a download to happen.")
-	cookieLifetimeFlag      = flag.Int("verification-cookie-lifetime", 365, "Number of days before cookie expiration.")
-	expectedCookieValueFlag = flag.String("expected-cookie-value", "2024-05-24", "Which cookie value to expect to avoid showing a warning message.")
-	mmdbCityPathFlag        = flag.String("mmdb-city", "", "The path to an mmdb formatted geoip database like GeoLite2-City.mmdb.")
-	mmdbASNPathFlag         = flag.String("mmdb-asn", "", "The path to an mmdb formatted geoip database like GeoLite2-ASN.mmdb.")
-	allowRobotsFlag         = flag.Bool("allow-robots", false, "Allow robots to crawl and index the site (using X-Robots-Tag response header).")
+	contactFlag               = flag.String("contact", "", "The contact information, such as an email address, that will be shown on the website for people that want to get in touch with the service owner.")
+	expirationFlag            = flag.Int("expiration", 604800, "Bin expiration time in seconds since the last bin update")
+	tmpdirFlag                = flag.String("tmpdir", os.TempDir(), "Comma-separated list of directories for temporary files. Multiple directories will be benchmarked at startup, and the fastest one with sufficient free space will be used for each upload.")
+	tmpdirThresholdFlag       = flag.Float64("tmpdir-capacity-threshold", 4.0, "Workspace capacity threshold multiplier. A workspace must have at least this multiplier times the file size available to be selected (e.g., 4.0 requires 4x the file size available).")
+	baseURLFlag               = flag.String("baseurl", "https://filebin.net", "The base URL to use. Required for self-hosted instances.")
+	requireApprovalFlag       = flag.Bool("manual-approval", false, "Require manual admin approval of new bins before files can be downloaded.")
+	requireCookieFlag         = flag.Bool("require-verification-cookie", false, "Require cookie before allowing a download to happen.")
+	cookieLifetimeFlag        = flag.Int("verification-cookie-lifetime", 365, "Number of days before cookie expiration.")
+	expectedCookieValueFlag   = flag.String("expected-cookie-value", "2024-05-24", "Which cookie value to expect to avoid showing a warning message.")
+	mmdbCityPathFlag          = flag.String("mmdb-city", "", "The path to an mmdb formatted geoip database like GeoLite2-City.mmdb.")
+	mmdbASNPathFlag           = flag.String("mmdb-asn", "", "The path to an mmdb formatted geoip database like GeoLite2-ASN.mmdb.")
+	allowRobotsFlag           = flag.Bool("allow-robots", false, "Allow robots to crawl and index the site (using X-Robots-Tag response header).")
 	postUploadHookFlag        = flag.String("post-upload-hook", "", "Command to execute after every successful file upload, after the file has been stored in S3 and its metadata persisted. Invoked with the named arguments --bin-id, --filename, --content-type, --size, and --sha256. Exit code and output are logged but do not affect the response to the client.")
 	postUploadHookTimeoutFlag = flag.Duration("post-upload-hook-timeout", 10*time.Second, "Timeout for the post-upload hook command execution")
 
 	// Limits
-	limitFileDownloadsFlag    = flag.Uint64("limit-file-downloads", 0, "Limit the number of downloads per file. 0 disables this limit.")
-	limitStorageFlag          = flag.String("limit-storage", "0", "Limit the storage capacity to use (examples: 100MB, 20GB, 2TB). 0 disables this limit.")
-	rejectFileExtensions      = flag.String("reject-file-extensions", "", "A whitespace separated list of file extensions that will be rejected")
+	limitFileDownloadsFlag       = flag.Uint64("limit-file-downloads", 0, "Limit the number of downloads per file. 0 disables this limit.")
+	limitStorageFlag             = flag.String("limit-storage", "0", "Limit the storage capacity to use (examples: 100MB, 20GB, 2TB). 0 disables this limit.")
+	rejectFileExtensions         = flag.String("reject-file-extensions", "", "A whitespace separated list of file extensions that will be rejected")
 	clientUploadFailuresCapFlag  = flag.Int("client-upload-failures-cap", 500, "Maximum number of recent client-reported upload failures retained in memory for /admin/telemetry/upload-failures. 0 disables in-memory retention; Prometheus metrics are unaffected.")
 	clientUploadSuccessesCapFlag = flag.Int("client-upload-successes-cap", 200, "Maximum number of recent client-reported upload successes retained in memory for /admin/telemetry/upload-successes. 0 disables in-memory retention; Prometheus metrics are unaffected.")
 
@@ -498,40 +498,40 @@ func main() {
 	}
 
 	config := &ds.Config{
-		Version:              version,
-		AdminPassword:        *adminPasswordFlag,
-		AdminUsername:        *adminUsernameFlag,
-		Contact:              *contactFlag,
-		MetricsPassword:      *metricsPasswordFlag,
-		MetricsUsername:      *metricsUsernameFlag,
-		Metrics:              *metricsFlag,
-		MetricsAuth:          *metricsAuthFlag,
-		MetricsProxyURL:      *metricsProxyURLFlag,
-		AllowRobots:          *allowRobotsFlag,
-		BaseUrl:              *u,
-		Expiration:           *expirationFlag,
-		HttpHost:             *listenHostFlag,
-		HttpAccessLog:        *accessLogFlag,
-		HttpPort:             *listenPortFlag,
-		HttpProxyHeaders:     *proxyHeadersFlag,
-		IdleTimeout:          *idleTimeoutFlag,
-		LimitFileDownloads:    *limitFileDownloadsFlag,
+		Version:                  version,
+		AdminPassword:            *adminPasswordFlag,
+		AdminUsername:            *adminUsernameFlag,
+		Contact:                  *contactFlag,
+		MetricsPassword:          *metricsPasswordFlag,
+		MetricsUsername:          *metricsUsernameFlag,
+		Metrics:                  *metricsFlag,
+		MetricsAuth:              *metricsAuthFlag,
+		MetricsProxyURL:          *metricsProxyURLFlag,
+		AllowRobots:              *allowRobotsFlag,
+		BaseUrl:                  *u,
+		Expiration:               *expirationFlag,
+		HttpHost:                 *listenHostFlag,
+		HttpAccessLog:            *accessLogFlag,
+		HttpPort:                 *listenPortFlag,
+		HttpProxyHeaders:         *proxyHeadersFlag,
+		IdleTimeout:              *idleTimeoutFlag,
+		LimitFileDownloads:       *limitFileDownloadsFlag,
 		ClientUploadFailuresCap:  *clientUploadFailuresCapFlag,
 		ClientUploadSuccessesCap: *clientUploadSuccessesCapFlag,
-		ReadHeaderTimeout:    *readHeaderTimeoutFlag,
-		ReadTimeout:          *readTimeoutFlag,
-		RequireApproval:      *requireApprovalFlag,
-		RequireCookie:        *requireCookieFlag,
-		CookieLifetime:       *cookieLifetimeFlag,
-		ExpectedCookieValue:  *expectedCookieValueFlag,
-		RejectFileExtensions: strings.Fields(*rejectFileExtensions),
-		PostUploadHook:        *postUploadHookFlag,
-		PostUploadHookTimeout: *postUploadHookTimeoutFlag,
-		SlackSecret:          *slackSecretFlag,
-		SlackDomain:          *slackDomainFlag,
-		SlackChannel:         *slackChannelFlag,
-		Tmpdir:               *tmpdirFlag,
-		WriteTimeout:         *writeTimeoutFlag,
+		ReadHeaderTimeout:        *readHeaderTimeoutFlag,
+		ReadTimeout:              *readTimeoutFlag,
+		RequireApproval:          *requireApprovalFlag,
+		RequireCookie:            *requireCookieFlag,
+		CookieLifetime:           *cookieLifetimeFlag,
+		ExpectedCookieValue:      *expectedCookieValueFlag,
+		RejectFileExtensions:     strings.Fields(*rejectFileExtensions),
+		PostUploadHook:           *postUploadHookFlag,
+		PostUploadHookTimeout:    *postUploadHookTimeoutFlag,
+		SlackSecret:              *slackSecretFlag,
+		SlackDomain:              *slackDomainFlag,
+		SlackChannel:             *slackChannelFlag,
+		Tmpdir:                   *tmpdirFlag,
+		WriteTimeout:             *writeTimeoutFlag,
 	}
 
 	config.LimitStorageBytes, err = humanize.ParseBytes(*limitStorageFlag)

@@ -353,6 +353,8 @@ function FileAPI (c, t, d, f, bin, binURL) {
                 postTelemetry("/api/telemetry/failure", {
                     bin: bin,
                     filename: file.name,
+                    upload_host: window.location.host,
+                    upload_protocol: window.location.protocol,
                     reason: reason,
                     http_status: httpStatus || 0,
                     file_size: file.size,
@@ -403,6 +405,8 @@ function FileAPI (c, t, d, f, bin, binURL) {
                 postTelemetry("/api/telemetry/success", {
                     bin: bin,
                     filename: file.name,
+                    upload_host: window.location.host,
+                    upload_protocol: window.location.protocol,
                     file_size: file.size,
                     duration_ms: now - startTime,
                     uploading_ms: uploadingMs,
