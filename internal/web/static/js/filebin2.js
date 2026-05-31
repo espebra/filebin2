@@ -1,3 +1,17 @@
+// Captured at script-load time. document.currentScript is only readable
+// during initial parsing of an external script, so we stash the URL
+// here for telemetry to include later. If the script came from a
+// different origin than the page (e.g. injected by a proxy that
+// rewrote the HTML), the script_host telemetry field will show it.
+var filebinScriptURL = (function () {
+    try {
+        if (document.currentScript && document.currentScript.src) {
+            return new URL(document.currentScript.src);
+        }
+    } catch (e) {}
+    return null;
+})();
+
 function FileAPI (c, t, d, f, bin, binURL) {
 
     var fileCount = c,
@@ -355,6 +369,9 @@ function FileAPI (c, t, d, f, bin, binURL) {
                     filename: file.name,
                     upload_host: window.location.host,
                     upload_protocol: window.location.protocol,
+                    script_host: filebinScriptURL ? filebinScriptURL.host : "",
+                    script_protocol: filebinScriptURL ? filebinScriptURL.protocol : "",
+                    top_frame: window.top === window.self,
                     reason: reason,
                     http_status: httpStatus || 0,
                     file_size: file.size,
@@ -407,6 +424,9 @@ function FileAPI (c, t, d, f, bin, binURL) {
                     filename: file.name,
                     upload_host: window.location.host,
                     upload_protocol: window.location.protocol,
+                    script_host: filebinScriptURL ? filebinScriptURL.host : "",
+                    script_protocol: filebinScriptURL ? filebinScriptURL.protocol : "",
+                    top_frame: window.top === window.self,
                     file_size: file.size,
                     duration_ms: now - startTime,
                     uploading_ms: uploadingMs,
