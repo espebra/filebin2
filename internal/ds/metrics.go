@@ -55,10 +55,10 @@ type Metrics struct {
 	DBQueryErrors   *prometheus.CounterVec
 
 	// Client-reported upload telemetry
-	clientUploadOutcomes       *prometheus.CounterVec
-	clientUploadDuration       *prometheus.HistogramVec
-	clientUploadThroughput     prometheus.Histogram
-	clientUploadProcessing     prometheus.Histogram
+	clientUploadOutcomes            *prometheus.CounterVec
+	clientUploadDuration            *prometheus.HistogramVec
+	clientUploadThroughput          prometheus.Histogram
+	clientUploadProcessing          prometheus.Histogram
 	clientUploadTimeToFirstProgress *prometheus.HistogramVec
 
 	// Database connection pool metrics
