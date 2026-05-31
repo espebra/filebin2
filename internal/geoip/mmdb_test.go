@@ -1,7 +1,7 @@
 package geoip
 
 import (
-	"net"
+	"net/netip"
 	"testing"
 
 	"github.com/espebra/filebin2/internal/ds"
@@ -52,8 +52,8 @@ func TestLookupASN(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ip := net.ParseIP(tt.ip)
-			if ip == nil {
+			ip, parseErr := netip.ParseAddr(tt.ip)
+			if parseErr != nil {
 				t.Fatalf("Failed to parse IP: %s", tt.ip)
 			}
 
@@ -122,8 +122,8 @@ func TestLookupCity(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ip := net.ParseIP(tt.ip)
-			if ip == nil {
+			ip, parseErr := netip.ParseAddr(tt.ip)
+			if parseErr != nil {
 				t.Fatalf("Failed to parse IP: %s", tt.ip)
 			}
 
