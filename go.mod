@@ -15,7 +15,7 @@ require (
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/lib/pq v1.12.3
-	github.com/oschwald/maxminddb-golang v1.13.1
+	github.com/oschwald/maxminddb-golang/v2 v2.3.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	golang.org/x/image v0.41.0

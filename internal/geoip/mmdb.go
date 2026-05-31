@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"net/netip"
 
 	"github.com/espebra/filebin2/internal/ds"
 
-	"github.com/oschwald/maxminddb-golang"
+	"github.com/oschwald/maxminddb-golang/v2"
 )
 
 type DAO struct {
@@ -80,33 +81,32 @@ func (dao DAO) Enabled() bool {
 	return dao.as != nil && dao.city != nil
 }
 
-func (dao DAO) LookupASN(ip net.IP, client *ds.Client) error {
+func (dao DAO) LookupASN(ip netip.Addr, client *ds.Client) error {
 	var r asnRecord
-	_, found, err := dao.as.LookupNetwork(ip, &r)
-	if err != nil {
+	result := dao.as.Lookup(ip)
+	if err := result.Decode(&r); err != nil {
 		return err
 	}
-	if found {
+	if result.Found() {
 		client.ASN = int(r.AutonomousSystemNumber)
 		client.ASNOrganization = r.AutonomousSystemOrganization
 	}
 	return nil
 }
 
-func (dao DAO) LookupCity(ip net.IP, client *ds.Client) error {
+func (dao DAO) LookupCity(ip netip.Addr, client *ds.Client) error {
 	var r record
-	network, found, err := dao.city.LookupNetwork(ip, &r)
-	if err != nil {
+	result := dao.city.Lookup(ip)
+	if err := result.Decode(&r); err != nil {
 		return err
 	}
 
 	// Parsed IP/network only
 	client.IP = ip.String()
-	n := *network
-	client.Network = n.String()
+	client.Network = result.Prefix().String()
 
 	// MMDB lookup result, if any
-	if found {
+	if result.Found() {
 		client.City = r.City.Names["en"]
 		client.Country = r.Country.Names["en"]
 		client.Continent = r.Continent.Names["en"]
@@ -122,14 +122,12 @@ func (dao DAO) Lookup(remoteAddr string, client *ds.Client) (err error) {
 	}
 
 	// Parse the client IP address
-	host, _, err := net.SplitHostPort(remoteAddr)
-	var ip net.IP
-	if err == nil {
-		ip = net.ParseIP(host)
-	} else {
-		ip = net.ParseIP(remoteAddr)
+	addr := remoteAddr
+	if host, _, splitErr := net.SplitHostPort(remoteAddr); splitErr == nil {
+		addr = host
 	}
-	if ip == nil {
+	ip, err := netip.ParseAddr(addr)
+	if err != nil {
 		return fmt.Errorf("unable to parse remote addr %s", remoteAddr)
 	}
 
