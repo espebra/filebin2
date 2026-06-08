@@ -395,6 +395,75 @@ paths:
           content:
             text/plain:
               example: Bin does not exist
+  '/{bin}.txt':
+    get:
+      tags:
+        - bin
+      summary: List the file URLs in a bin as plain text
+      description: |-
+        This will return the absolute download URL of each file in the bin in plain text, one URL per line. This is convenient for piping the list to other tools.
+
+        **Example using curl:**
+        ```
+        curl https://filebin.net/mybin.txt
+        ```
+      parameters:
+        - name: bin
+          in: path
+          description: The bin to list.
+          required: true
+          schema:
+            type: string
+          example: mybin
+      responses:
+        '200':
+          description: Successful operation. One absolute file URL per line.
+          content:
+            text/plain:
+              example: |
+                https://filebin.net/mybin/photo.jpg
+                https://filebin.net/mybin/document.pdf
+        '404':
+          description: The bin does not exist or is not available. The response body is empty.
+          content:
+            text/plain: {}
+  '/sha256/{bin}':
+    get:
+      tags:
+        - bin
+      summary: List the SHA256 checksums of the files in a bin as plain text
+      description: |-
+        This will return the SHA256 checksum and filename of each file in the bin in plain text, one file per line. The output is formatted like the output of `sha256sum(1)`: the checksum, two spaces, then the filename. This makes it convenient to verify file integrity.
+
+        **Example using curl:**
+        ```
+        curl https://filebin.net/sha256/mybin
+        ```
+
+        **Example verifying downloaded files:**
+        ```
+        curl https://filebin.net/sha256/mybin | sha256sum -c
+        ```
+      parameters:
+        - name: bin
+          in: path
+          description: The bin to list checksums for.
+          required: true
+          schema:
+            type: string
+          example: mybin
+      responses:
+        '200':
+          description: Successful operation. One checksum and filename per line.
+          content:
+            text/plain:
+              example: |
+                2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae  photo.jpg
+                9b71d224bd62f3785d96d46ad3ea3d73319bfbc2890caadae2dff72519673ca7  document.pdf
+        '404':
+          description: The bin does not exist or is not available. The response body is empty.
+          content:
+            text/plain: {}
   '/qr/{bin}':
     get:
       tags:
