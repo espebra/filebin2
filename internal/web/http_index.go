@@ -165,10 +165,12 @@ func (h *HTTP) apiSpec(w http.ResponseWriter, r *http.Request) {
 
 	type Data struct {
 		ds.Common
-		Bin ds.Bin `json:"bin"`
+		Bin           ds.Bin `json:"bin"`
+		RequireCookie bool   `json:"-"`
 	}
 	var data Data
 	data.Page = "api"
+	data.RequireCookie = h.config.RequireCookie
 
 	w.Header().Set("Content-Type", "text/plain")
 	if err := h.renderTemplate(w, "apispec", data); err != nil {
