@@ -35,7 +35,12 @@ paths:
             type: string
           example: photo.jpg
       responses:
-        '302':
+{{ if .RequireCookie }}        '200':
+          description: |-
+            A HTML verification page is returned and a verification cookie is set. This response is returned when the request did not include a valid verification cookie. Repeat the request with the cookie set to receive the file.
+          content:
+            text/html: {}
+{{ end }}        '302':
           description: Temporary redirect to a presigned URL pointing to the object in S3 for direct download.
           headers:
             Location:
@@ -52,6 +57,11 @@ paths:
           content:
             text/plain:
               example: Not found
+        '500':
+          description: An unexpected server error occurred, such as a database or storage backend error.
+          content:
+            text/plain:
+              example: Database error
     delete:
       tags:
         - file
@@ -89,6 +99,11 @@ paths:
           content:
             text/plain:
               example: The file does not exist
+        '500':
+          description: An unexpected server error occurred, such as a database error.
+          content:
+            text/plain:
+              example: Internal Server Error
     post:
       tags:
         - file
@@ -186,7 +201,7 @@ paths:
             text/plain:
               example: Checksum did not match the uploaded content
         '403':
-          description: The file extension is not allowed.
+          description: The file extension is not allowed, or the content has been blocked and can not be uploaded.
           content:
             text/plain:
               example: Forbidden
@@ -200,6 +215,11 @@ paths:
           content:
             text/plain:
               example: Length Required
+        '500':
+          description: An unexpected server error occurred, such as a database or storage backend error.
+          content:
+            text/plain:
+              example: Storage error
         '507':
           description: The storage limitation was reached. Please retry later.
           content:
@@ -255,11 +275,60 @@ paths:
                     $ref: '#/components/schemas/Bin'
                   file:
                     $ref: '#/components/schemas/File'
+              example:
+                bin:
+                  id: mybin
+                  readonly: false
+                  bytes: 482100
+                  bytes_readable: 482 kB
+                  files: 1
+                  updated_at: '2024-06-15T14:30:00Z'
+                  updated_at_relative: just now
+                  created_at: '2024-06-15T14:30:00Z'
+                  created_at_relative: just now
+                  expired_at: '2024-06-22T14:30:00Z'
+                  expired_at_relative: 1 week from now
+                file:
+                  filename: photo.jpg
+                  content-type: image/jpeg
+                  bytes: 482100
+                  bytes_readable: 482 kB
+                  md5: 5d41402abc4b2a76b9719d911017c592
+                  sha256: 2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae
+                  updated_at: '2024-06-15T14:30:00Z'
+                  updated_at_relative: just now
+                  created_at: '2024-06-15T14:30:00Z'
+                  created_at_relative: just now
         '400':
           description: Missing filename header or invalid input.
           content:
             text/plain:
               example: Missing filename header
+        '403':
+          description: The file extension is not allowed, or the content has been blocked and can not be uploaded.
+          content:
+            text/plain:
+              example: Forbidden
+        '405':
+          description: The bin is locked, expired, or deleted and can not be written to.
+          content:
+            text/plain:
+              example: This bin is locked and can not be written to
+        '411':
+          description: Missing or invalid content-length header.
+          content:
+            text/plain:
+              example: Length Required
+        '500':
+          description: An unexpected server error occurred, such as a database or storage backend error.
+          content:
+            text/plain:
+              example: Storage error
+        '507':
+          description: The storage limitation was reached. Please retry later.
+          content:
+            text/plain:
+              example: Storage limit reached. Please retry later.
   '/{bin}':
     get:
       tags:
@@ -335,6 +404,11 @@ paths:
           content:
             text/plain:
               example: Not found
+        '500':
+          description: An unexpected server error occurred, such as a database error.
+          content:
+            text/plain:
+              example: Errno 262
     put:
       tags:
         - bin
@@ -365,6 +439,11 @@ paths:
           content:
             text/plain:
               example: Bin does not exist
+        '500':
+          description: An unexpected server error occurred, such as a database error.
+          content:
+            text/plain:
+              example: Internal Server Error
     delete:
       tags:
         - bin
@@ -395,6 +474,11 @@ paths:
           content:
             text/plain:
               example: Bin does not exist
+        '500':
+          description: An unexpected server error occurred, such as a database error.
+          content:
+            text/plain:
+              example: Internal Server Error
   '/{bin}.txt':
     get:
       tags:
@@ -427,6 +511,11 @@ paths:
           description: The bin does not exist or is not available. The response body is empty.
           content:
             text/plain: {}
+        '500':
+          description: An unexpected server error occurred, such as a database error.
+          content:
+            text/plain:
+              example: Errno 264
   '/sha256/{bin}':
     get:
       tags:
@@ -464,6 +553,11 @@ paths:
           description: The bin does not exist or is not available. The response body is empty.
           content:
             text/plain: {}
+        '500':
+          description: An unexpected server error occurred, such as a database error.
+          content:
+            text/plain:
+              example: Errno 271
   '/qr/{bin}':
     get:
       tags:
@@ -489,6 +583,11 @@ paths:
           description: Successful operation
           content:
             image/png: {}
+        '500':
+          description: An unexpected server error occurred while generating the QR code.
+          content:
+            text/plain:
+              example: Unable to generate QR code
   '/archive/{bin}/tar':
     get:
       tags:
@@ -511,10 +610,12 @@ paths:
           example: mybin
       responses:
         '200':
-          description: Successful operation
+          description: |-
+            Successful operation. The tar archive is streamed in the response body.{{ if .RequireCookie }} If the request did not include a valid verification cookie, a HTML verification page is returned instead and a verification cookie is set. Repeat the request with the cookie set to receive the archive.{{ end }}
           content:
             application/x-tar: {}
-        '403':
+{{ if .RequireCookie }}            text/html: {}
+{{ end }}        '403':
           description: The bin is not approved or all files have exceeded the download limit.
           content:
             text/plain:
@@ -524,6 +625,11 @@ paths:
           content:
             text/plain:
               example: Not found
+        '500':
+          description: An unexpected server error occurred, such as a database or storage backend error.
+          content:
+            text/plain:
+              example: Archive error
   '/archive/{bin}/zip':
     get:
       tags:
@@ -546,10 +652,12 @@ paths:
           example: mybin
       responses:
         '200':
-          description: Successful operation
+          description: |-
+            Successful operation. The zip archive is streamed in the response body.{{ if .RequireCookie }} If the request did not include a valid verification cookie, a HTML verification page is returned instead and a verification cookie is set. Repeat the request with the cookie set to receive the archive.{{ end }}
           content:
             application/zip: {}
-        '403':
+{{ if .RequireCookie }}            text/html: {}
+{{ end }}        '403':
           description: The bin is not approved or all files have exceeded the download limit.
           content:
             text/plain:
@@ -559,6 +667,11 @@ paths:
           content:
             text/plain:
               example: Not found
+        '500':
+          description: An unexpected server error occurred, such as a database or storage backend error.
+          content:
+            text/plain:
+              example: Archive error
 components:
   schemas:
     Bin:
