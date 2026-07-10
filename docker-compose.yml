@@ -19,6 +19,7 @@ services:
     hostname: "db"
     restart: "no"
     environment:
+      - POSTGRES_PORT=5432
       - POSTGRES_DB=db
       - POSTGRES_USER=username
       - POSTGRES_PASSWORD=changeme
