@@ -153,6 +153,13 @@ func (ws *Workspace) GetAvailableBytes() uint64 {
 	return ws.AvailableBytes
 }
 
+// GetLastChecked returns when the capacity was last updated (thread-safe)
+func (ws *Workspace) GetLastChecked() time.Time {
+	ws.mutex.RLock()
+	defer ws.mutex.RUnlock()
+	return ws.LastChecked
+}
+
 // SelectWorkspace selects the best workspace for a file of the given size
 // Strategy: Use the fastest workspace that has at least capacityThreshold x file size available
 func (m *Manager) SelectWorkspace(fileSize uint64) (*Workspace, error) {
@@ -169,7 +176,7 @@ func (m *Manager) SelectWorkspace(fileSize uint64) (*Workspace, error) {
 	// Try to find a workspace with sufficient space, preferring faster ones
 	for _, ws := range m.workspaces {
 		// Update capacity if it hasn't been checked recently (within last 10 seconds)
-		if time.Since(ws.LastChecked) > 10*time.Second {
+		if time.Since(ws.GetLastChecked()) > 10*time.Second {
 			if err := ws.UpdateCapacity(); err != nil {
 				slog.Warn("failed to update capacity for workspace", "path", ws.Path, "error", err)
 				continue

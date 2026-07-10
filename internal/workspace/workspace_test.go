@@ -676,3 +676,39 @@ func TestManager_CreateTempFile_FallbackBehavior(t *testing.T) {
 		t.Logf("CreateTempFile succeeded with warning (will fail on actual write)")
 	}
 }
+
+// TestSelectWorkspaceConcurrentWithUpdateCapacity exercises concurrent
+// workspace selection and capacity refreshing. SelectWorkspace reads
+// LastChecked while UpdateCapacity writes it, so this test fails under the
+// race detector if either side bypasses the workspace mutex.
+func TestSelectWorkspaceConcurrentWithUpdateCapacity(t *testing.T) {
+	m, err := NewManager(os.TempDir(), 4.0)
+	if err != nil {
+		t.Fatalf("Failed to create workspace manager: %s", err)
+	}
+
+	// Make the staleness check trigger UpdateCapacity from SelectWorkspace
+	ws := m.workspaces[0]
+	ws.mutex.Lock()
+	ws.LastChecked = time.Now().Add(-time.Minute)
+	ws.mutex.Unlock()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for i := 0; i < 100; i++ {
+			if err := ws.UpdateCapacity(); err != nil {
+				t.Errorf("UpdateCapacity failed: %s", err)
+				return
+			}
+		}
+	}()
+
+	for i := 0; i < 100; i++ {
+		if _, err := m.SelectWorkspace(1024); err != nil {
+			t.Errorf("SelectWorkspace failed: %s", err)
+			break
+		}
+	}
+	<-done
+}
