@@ -1,5 +1,6 @@
-artifacts/
-tests/
-rice-box.go
-filebin2
+/artifacts/
+/tests/
+/filebin2
 *.out
+*.log
+.DS_Store
