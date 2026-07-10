@@ -1,6 +1,7 @@
 package web
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -12,6 +13,10 @@ import (
 	"path"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/espebra/filebin2/internal/dbl"
+	"github.com/espebra/filebin2/internal/s3"
 )
 
 type TestCase struct {
@@ -761,6 +766,126 @@ func TestUnblockContent(t *testing.T) {
 		},
 	}
 	runTests(tcs3, t)
+}
+
+// TestUploadDedupAfterObjectLoss verifies that an upload detects and repairs
+// a missing S3 object even when file_content claims the content is in
+// storage, e.g. after a lurker deletion raced the deduplication check or a
+// deletion claim was rolled back after the S3 delete went through.
+func TestUploadDedupAfterObjectLoss(t *testing.T) {
+	// Dedicated dao/s3 handles for out-of-band manipulation and assertions.
+	// No ResetDB here: the shared test server and the other tests in this
+	// package rely on accumulated state.
+	dao, err := dbl.Init(dbl.DBConfig{
+		Host:            testDbHost,
+		Port:            testDbPort,
+		Name:            testDbName,
+		Username:        testDbUser,
+		Password:        testDbPassword,
+		MaxOpenConns:    25,
+		MaxIdleConns:    25,
+		ConnMaxLifetime: 5 * time.Minute,
+		ConnMaxIdleTime: 1 * time.Minute,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = dao.Close() }()
+	s3ao, err := s3.Init(s3.Config{
+		Endpoint:             testS3Endpoint,
+		Bucket:               testS3Bucket,
+		Region:               testS3Region,
+		AccessKey:            testS3AccessKey,
+		SecretKey:            testS3SecretKey,
+		Secure:               false,
+		PresignExpiry:        time.Second * 10,
+		Timeout:              time.Second * 30,
+		TransferTimeout:      time.Minute * 10,
+		MultipartPartSize:    64 * 1024 * 1024,
+		MultipartConcurrency: 3,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	content := "dedup content that will vanish from storage"
+	shaBytes := sha256.Sum256([]byte(content))
+	sha := hex.EncodeToString(shaBytes[:])
+
+	// Initial upload.
+	runTests([]TestCase{{
+		Description:   "Initial upload",
+		Method:        "POST",
+		Bin:           "dedupobjectloss",
+		Filename:      "a",
+		UploadContent: content,
+		StatusCode:    201,
+	}}, t)
+	if _, err := s3ao.StatObject(sha); err != nil {
+		t.Fatalf("Object should exist in S3 after the initial upload: %s", err)
+	}
+
+	// Simulate a lurker deletion that completed while in_storage still says
+	// true (the interleaving behind the data-loss race).
+	if err := s3ao.RemoveObjectByHash(sha); err != nil {
+		t.Fatalf("Failed to remove object from S3: %s", err)
+	}
+
+	// A deduplicated re-upload must detect the missing object under the
+	// content lock and upload it again.
+	runTests([]TestCase{{
+		Description:   "Deduplicated upload with missing object",
+		Method:        "POST",
+		Bin:           "dedupobjectloss",
+		Filename:      "b",
+		UploadContent: content,
+		StatusCode:    201,
+	}, {
+		Description:     "Download after repair",
+		Method:          "GET",
+		Bin:             "dedupobjectloss",
+		Filename:        "a",
+		DownloadContent: content,
+		StatusCode:      200,
+	}}, t)
+	if _, err := s3ao.StatObject(sha); err != nil {
+		t.Errorf("Object should have been re-uploaded to S3: %s", err)
+	}
+	dbContent, err := dao.FileContent().GetBySHA256(sha)
+	if err != nil {
+		t.Fatalf("Failed to get file_content: %s", err)
+	}
+	if !dbContent.InStorage {
+		t.Error("in_storage should be true after the repair")
+	}
+
+	// Fresh-path variant: the content row exists with in_storage=false and
+	// the object is gone (a completed lurker deletion). The upload must go
+	// through the regular S3 upload path and restore both.
+	if err := s3ao.RemoveObjectByHash(sha); err != nil {
+		t.Fatalf("Failed to remove object from S3: %s", err)
+	}
+	if err := dao.FileContent().SetInStorage(sha, false); err != nil {
+		t.Fatalf("Failed to set in_storage=false: %s", err)
+	}
+	runTests([]TestCase{{
+		Description:   "Upload after completed deletion",
+		Method:        "POST",
+		Bin:           "dedupobjectloss",
+		Filename:      "c",
+		UploadContent: content,
+		StatusCode:    201,
+	}}, t)
+	if _, err := s3ao.StatObject(sha); err != nil {
+		t.Errorf("Object should exist in S3 after re-upload: %s", err)
+	}
+	dbContent, err = dao.FileContent().GetBySHA256(sha)
+	if err != nil {
+		t.Fatalf("Failed to get file_content: %s", err)
+	}
+	if !dbContent.InStorage {
+		t.Error("in_storage should be true after re-upload")
+	}
 }
 
 func TestBinBan(t *testing.T) {

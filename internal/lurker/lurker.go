@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/espebra/filebin2/internal/dbl"
+	"github.com/espebra/filebin2/internal/ds"
 	"github.com/espebra/filebin2/internal/s3"
 	"github.com/espebra/filebin2/internal/workspace"
 )
@@ -103,41 +104,65 @@ func (l *Lurker) DeletePendingContent() {
 	if len(contents) > 0 {
 		slog.Info("found content objects pending removal", "count", len(contents))
 		for _, content := range contents {
-			// Atomically claim the content for deletion: this sets
-			// in_storage=false only if there are still zero active file
-			// references. Committing this before the S3 delete ensures a
-			// concurrent deduplicated upload observes in_storage=false and
-			// re-uploads the object rather than skipping the upload and
-			// leaving a reference to a deleted object (data loss).
-			claimed, err := l.dao.FileContent().ClaimForDeletion(content.SHA256)
-			if err != nil {
-				slog.Error("unable to claim content for deletion", "sha256", content.SHA256, "error", err)
-				continue
-			}
-			if !claimed {
-				// The content gained an active reference (a new upload) or was
-				// already claimed since GetPendingDelete ran. Leave it alone.
-				slog.Debug("skipping content that is referenced or already claimed", "sha256", content.SHA256)
-				continue
-			}
-
-			// Delete from S3 now that the claim is committed.
-			if err := l.s3.RemoveObjectByHash(content.SHA256); err != nil {
-				slog.Error("failed to remove object from S3", "sha256", content.SHA256, "error", err)
-				// Roll back the claim so the still-present object is retried on
-				// a later run rather than being leaked with in_storage=false.
-				if rbErr := l.dao.FileContent().SetInStorage(content.SHA256, true); rbErr != nil {
-					slog.Error("unable to roll back deletion claim", "sha256", content.SHA256, "error", rbErr)
-				}
-				continue
-			}
+			deleted := l.deleteContent(content)
 
 			// Throttle to reduce load during bulk deletions
-			if l.throttle > 0 {
+			if deleted && l.throttle > 0 {
 				time.Sleep(l.throttle)
 			}
 		}
 	}
+}
+
+// deleteContent claims and removes a single content object from S3. It
+// returns true if the object was deleted. The per-content lock serializes
+// the claim and the S3 delete against uploads of the same content, so an
+// upload can never observe in_storage=true while a delete of the object is
+// in flight.
+func (l *Lurker) deleteContent(content ds.FileContent) bool {
+	unlock, acquired, err := l.dao.FileContent().TryLockContent(content.SHA256)
+	if err != nil {
+		slog.Error("unable to lock content for deletion", "sha256", content.SHA256, "error", err)
+		return false
+	}
+	if !acquired {
+		// An upload of this content is in flight and will create an active
+		// reference. Leave the content alone; if it really is orphaned, it is
+		// picked up again on the next run.
+		slog.Debug("skipping content locked by a concurrent upload", "sha256", content.SHA256)
+		return false
+	}
+	defer unlock()
+
+	// Atomically claim the content for deletion: this sets in_storage=false
+	// only if there are still zero active file references. The claim is
+	// committed before the S3 delete so that once the lock is released, a
+	// deduplicated upload observes in_storage=false and re-uploads the object
+	// rather than referencing a deleted one.
+	claimed, err := l.dao.FileContent().ClaimForDeletion(content.SHA256)
+	if err != nil {
+		slog.Error("unable to claim content for deletion", "sha256", content.SHA256, "error", err)
+		return false
+	}
+	if !claimed {
+		// The content gained an active reference (a new upload) or was
+		// already claimed since GetPendingDelete ran. Leave it alone.
+		slog.Debug("skipping content that is referenced or already claimed", "sha256", content.SHA256)
+		return false
+	}
+
+	// Delete from S3 now that the claim is committed.
+	if err := l.s3.RemoveObjectByHash(content.SHA256); err != nil {
+		slog.Error("failed to remove object from S3", "sha256", content.SHA256, "error", err)
+		// Roll back the claim so the still-present object is retried on
+		// a later run rather than being leaked with in_storage=false.
+		if rbErr := l.dao.FileContent().SetInStorage(content.SHA256, true); rbErr != nil {
+			slog.Error("unable to roll back deletion claim", "sha256", content.SHA256, "error", rbErr)
+		}
+		return false
+	}
+
+	return true
 }
 
 func (l *Lurker) CleanTransactions() {

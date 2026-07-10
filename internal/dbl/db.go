@@ -32,6 +32,7 @@ var schemaSQL string
 
 type DAO struct {
 	db             *sql.DB
+	lockDB         *sql.DB
 	metrics        DBMetricsObserver
 	binDao         *BinDao
 	fileDao        *FileDao
@@ -103,10 +104,26 @@ func Init(cfg DBConfig) (DAO, error) {
 	db.SetConnMaxLifetime(cfg.ConnMaxLifetime)
 	db.SetConnMaxIdleTime(cfg.ConnMaxIdleTime)
 
-	dao = DAO{db: db}
+	// Dedicated pool for session-scoped advisory locks. Lock connections are
+	// pinned for the duration of a lock, and a lock holder issues regular
+	// queries while holding it. If lock connections came from the main pool,
+	// enough concurrent lock holders would pin every slot and their own
+	// queries would wait forever for a free connection, deadlocking the
+	// process. Keeping the pools separate makes that impossible.
+	lockDB, err := sql.Open("postgres", connStr)
+	if err != nil {
+		_ = db.Close()
+		return dao, fmt.Errorf("unable to open lock connection pool: %w", err)
+	}
+	lockDB.SetMaxOpenConns(cfg.MaxOpenConns)
+	lockDB.SetMaxIdleConns(2)
+	lockDB.SetConnMaxLifetime(cfg.ConnMaxLifetime)
+	lockDB.SetConnMaxIdleTime(cfg.ConnMaxIdleTime)
+
+	dao = DAO{db: db, lockDB: lockDB}
 	dao.binDao = &BinDao{db: db}
 	dao.fileDao = &FileDao{db: db}
-	dao.fileContentDao = &FileContentDao{db: db}
+	dao.fileContentDao = &FileContentDao{db: db, lockDB: lockDB}
 	dao.metricsDao = &MetricsDao{db: db}
 	dao.transactionDao = &TransactionDao{db: db}
 	dao.clientDao = &ClientDao{db: db}
@@ -120,7 +137,14 @@ func Init(cfg DBConfig) (DAO, error) {
 }
 
 func (dao DAO) Close() error {
-	return dao.db.Close()
+	var lockErr error
+	if dao.lockDB != nil {
+		lockErr = dao.lockDB.Close()
+	}
+	if err := dao.db.Close(); err != nil {
+		return err
+	}
+	return lockErr
 }
 
 func (dao DAO) CreateSchema() error {

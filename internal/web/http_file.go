@@ -440,7 +440,44 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 	t4 := time.Now()
 
-	// Update or insert file_content record
+	// Serialize against the lurker's content deletion (and other uploads of
+	// the same content) while recording that the content is in storage and
+	// creating the file reference. The lurker claims and deletes content only
+	// while holding this lock, so while it is held no S3 delete of this
+	// object can be in flight and the StatObject check below is
+	// authoritative. The file reference is created before the lock is
+	// released, which prevents the lurker from claiming the content
+	// afterwards.
+	unlockContent, err := h.dao.FileContent().LockContent(file.SHA256)
+	if err != nil {
+		slog.Error("unable to lock content", "sha256", file.SHA256, "error", err)
+		http.Error(w, "Failed to store the object, please try again later", http.StatusServiceUnavailable)
+		return
+	}
+	// unlockContent is idempotent. It is called explicitly once the file
+	// reference is persisted; the defer is a safety net for error returns.
+	defer unlockContent()
+
+	// Verify that the object actually is in S3. It can be missing if the
+	// lurker deleted it between the deduplication check and this point, or,
+	// when we uploaded it above, if a previous deletion claim failed after
+	// the S3 delete went through and rolled the in_storage flag back.
+	if _, statErr := h.s3.StatObject(file.SHA256); statErr != nil {
+		slog.Warn("object missing from storage, uploading", "sha256", file.SHA256, "error", statErr)
+		_, _ = fp.Seek(0, 0)
+		if err := h.s3.PutObjectByHash(file.SHA256, fp, nBytes); err != nil {
+			slog.Error("unable to upload missing object to S3", "sha256", file.SHA256, "error", err)
+			http.Error(w, "Failed to store the object in S3, please try again later", http.StatusInternalServerError)
+			return
+		}
+		if skipS3Upload {
+			// The bytes were not counted by the regular upload path above.
+			h.metrics.IncrBytesFilebinToStorage(file.Bytes)
+		}
+	}
+
+	// Update or insert file_content record. The content lock is held and the
+	// object is verified present, so setting in_storage=true is safe.
 	fileContent := ds.FileContent{
 		SHA256:    file.SHA256,
 		Bytes:     file.Bytes,
@@ -494,32 +531,10 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 		// TODO: Execute new file created trigger
 	}
 
-	// Guard against a race with the lurker's content deletion. If we skipped
-	// the S3 upload during deduplication because the content appeared to
-	// already be in storage, the lurker may have removed that object between
-	// our deduplication check and the creation of the file reference above.
-	// Now that an active file reference exists (which prevents the lurker from
-	// claiming and deleting the object going forward), verify the object is
-	// actually present and re-upload it if it is missing.
-	if skipS3Upload {
-		if _, statErr := h.s3.StatObject(file.SHA256); statErr != nil {
-			slog.Warn("deduplicated object missing from storage, re-uploading", "sha256", file.SHA256, "error", statErr)
-			_, _ = fp.Seek(0, 0)
-			if err := h.s3.PutObjectByHash(file.SHA256, fp, nBytes); err != nil {
-				slog.Error("unable to re-upload missing object to S3", "sha256", file.SHA256, "error", err)
-				http.Error(w, "Failed to store the object in S3, please try again later", http.StatusInternalServerError)
-				return
-			}
-			// Re-assert that the content is in storage after the re-upload, in
-			// case the lurker had set in_storage=false.
-			if err := h.dao.FileContent().InsertOrIncrement(&fileContent); err != nil {
-				slog.Error("unable to update file_content after re-upload", "sha256", file.SHA256, "error", err)
-				http.Error(w, "Failed to update content tracking", http.StatusInternalServerError)
-				return
-			}
-			h.metrics.IncrBytesFilebinToStorage(file.Bytes)
-		}
-	}
+	// The content record and the file reference are persisted, so the
+	// lurker's ClaimForDeletion guard now protects the content. Release the
+	// lock before the slower bin update, post-upload hook and response.
+	unlockContent()
 
 	// Update bin to set the correct updated timestamp. Use Touch (a targeted
 	// update of only updated_at/expired_at, guarded by the bin still being
