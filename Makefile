@@ -41,4 +41,5 @@ fmt:
 	gofmt -w -s internal/s3/*.go
 	gofmt -w -s internal/dbl/*.go
 	gofmt -w -s internal/geoip/*.go
+	gofmt -w -s internal/phash/*.go
 	gofmt -w -s internal/workspace/*.go
