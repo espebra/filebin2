@@ -167,6 +167,55 @@ WHERE sha256 = $1`
 	return nil
 }
 
+// ClaimForDeletion atomically marks content as no longer in storage, but only
+// if it still has zero active file references (active = file not deleted AND
+// bin not deleted AND bin not expired). It returns true if the claim succeeded,
+// meaning the caller now owns deleting the corresponding S3 object.
+//
+// This must be called before the S3 object is removed: by committing
+// in_storage=false first, a concurrent deduplicated upload that reads this row
+// observes in_storage=false and re-uploads the content instead of incorrectly
+// skipping the upload and leaving a dangling reference to a deleted object.
+// The NOT EXISTS guard also makes the claim fail if an upload created an active
+// reference in the meantime, so referenced content is never deleted.
+func (d *FileContentDao) ClaimForDeletion(sha256 string) (bool, error) {
+	sqlStatement := `UPDATE file_content fc
+SET in_storage = false
+WHERE fc.sha256 = $1
+  AND fc.in_storage = true
+  AND NOT EXISTS (
+    SELECT 1 FROM file f
+    JOIN bin b ON f.bin_id = b.id
+    WHERE f.sha256 = fc.sha256
+      AND f.deleted_at IS NULL
+      AND b.deleted_at IS NULL
+      AND b.expired_at > NOW()
+  )`
+	t0 := time.Now()
+	res, err := d.db.Exec(sqlStatement, sha256)
+	observeQuery(d.metrics, "file_content_claim_for_deletion", t0, err)
+	if err != nil {
+		return false, err
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+// SetInStorage updates only the in_storage flag for a content record. It is
+// used to roll back a deletion claim if the subsequent S3 delete fails, so the
+// object (which is still present in S3) is retried on a later run rather than
+// being leaked as an orphan.
+func (d *FileContentDao) SetInStorage(sha256 string, inStorage bool) error {
+	sqlStatement := `UPDATE file_content SET in_storage = $2 WHERE sha256 = $1`
+	t0 := time.Now()
+	_, err := d.db.Exec(sqlStatement, sha256, inStorage)
+	observeQuery(d.metrics, "file_content_set_in_storage", t0, err)
+	return err
+}
+
 // Delete removes a file content record from the database
 func (d *FileContentDao) Delete(sha256 string) error {
 	sqlStatement := "DELETE FROM file_content WHERE sha256 = $1"

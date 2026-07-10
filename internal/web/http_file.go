@@ -494,11 +494,52 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 		// TODO: Execute new file created trigger
 	}
 
-	// Update bin to set the correct updated timestamp
+	// Guard against a race with the lurker's content deletion. If we skipped
+	// the S3 upload during deduplication because the content appeared to
+	// already be in storage, the lurker may have removed that object between
+	// our deduplication check and the creation of the file reference above.
+	// Now that an active file reference exists (which prevents the lurker from
+	// claiming and deleting the object going forward), verify the object is
+	// actually present and re-upload it if it is missing.
+	if skipS3Upload {
+		if _, statErr := h.s3.StatObject(file.SHA256); statErr != nil {
+			slog.Warn("deduplicated object missing from storage, re-uploading", "sha256", file.SHA256, "error", statErr)
+			_, _ = fp.Seek(0, 0)
+			if err := h.s3.PutObjectByHash(file.SHA256, fp, nBytes); err != nil {
+				slog.Error("unable to re-upload missing object to S3", "sha256", file.SHA256, "error", err)
+				http.Error(w, "Failed to store the object in S3, please try again later", http.StatusInternalServerError)
+				return
+			}
+			// Re-assert that the content is in storage after the re-upload, in
+			// case the lurker had set in_storage=false.
+			if err := h.dao.FileContent().InsertOrIncrement(&fileContent); err != nil {
+				slog.Error("unable to update file_content after re-upload", "sha256", file.SHA256, "error", err)
+				http.Error(w, "Failed to update content tracking", http.StatusInternalServerError)
+				return
+			}
+			h.metrics.IncrBytesFilebinToStorage(file.Bytes)
+		}
+	}
+
+	// Update bin to set the correct updated timestamp. Use Touch (a targeted
+	// update of only updated_at/expired_at, guarded by the bin still being
+	// writable) rather than a full Update so that this potentially slow,
+	// client-controlled upload cannot revert moderation changes (delete, lock,
+	// or approval revocation) that an admin or the lurker applied to the bin
+	// while the upload was in flight.
 	bin.ExpiredAt = time.Now().UTC().Add(h.config.ExpirationDuration)
-	if err := h.dao.Bin().Update(&bin); err != nil {
+	updated, err := h.dao.Bin().Touch(&bin)
+	if err != nil {
 		slog.Error("unable to update bin", "bin", bin.Id, "error", err)
 		http.Error(w, "Errno 109", http.StatusInternalServerError)
+		return
+	}
+	if !updated {
+		// The bin was deleted or locked concurrently during the upload. The
+		// file reference created above will be cleaned up by the lurker (for
+		// deleted bins) or is inaccessible; do not resurrect the bin.
+		slog.Warn("bin became unavailable during upload", "bin", bin.Id, "filename", inputFilename)
+		h.Error(w, r, fmt.Sprintf("Bin %q became unavailable during upload of file %q", bin.Id, inputFilename), "The bin is no longer available", 140, http.StatusMethodNotAllowed)
 		return
 	}
 

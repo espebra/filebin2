@@ -118,6 +118,7 @@ func (d *FileDao) GetByName(bin string, filename string) (file ds.File, found bo
 // - The bin is not deleted
 // - The bin has not expired
 // - The file content exists in storage
+// - The file content is not blocked
 func (d *FileDao) IsAvailableForDownload(fileId int) (bool, error) {
 	var available bool
 	sqlStatement := `
@@ -131,6 +132,7 @@ func (d *FileDao) IsAvailableForDownload(fileId int) (bool, error) {
 				AND b.deleted_at IS NULL
 				AND b.expired_at > NOW()
 				AND fc.in_storage = true
+				AND fc.blocked = false
 		)`
 
 	t0 := time.Now()

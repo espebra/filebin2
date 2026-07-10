@@ -103,28 +103,33 @@ func (l *Lurker) DeletePendingContent() {
 	if len(contents) > 0 {
 		slog.Info("found content objects pending removal", "count", len(contents))
 		for _, content := range contents {
-			// Safety check: verify no files reference this content
-			count, err := l.dao.File().CountBySHA256(content.SHA256)
+			// Atomically claim the content for deletion: this sets
+			// in_storage=false only if there are still zero active file
+			// references. Committing this before the S3 delete ensures a
+			// concurrent deduplicated upload observes in_storage=false and
+			// re-uploads the object rather than skipping the upload and
+			// leaving a reference to a deleted object (data loss).
+			claimed, err := l.dao.FileContent().ClaimForDeletion(content.SHA256)
 			if err != nil {
-				slog.Error("unable to count files for SHA256", "sha256", content.SHA256, "error", err)
+				slog.Error("unable to claim content for deletion", "sha256", content.SHA256, "error", err)
 				continue
 			}
-			if count > 0 {
-				slog.Debug("skipping content with active file references", "sha256", content.SHA256, "references", count)
+			if !claimed {
+				// The content gained an active reference (a new upload) or was
+				// already claimed since GetPendingDelete ran. Leave it alone.
+				slog.Debug("skipping content that is referenced or already claimed", "sha256", content.SHA256)
 				continue
 			}
 
-			// Delete from S3
+			// Delete from S3 now that the claim is committed.
 			if err := l.s3.RemoveObjectByHash(content.SHA256); err != nil {
 				slog.Error("failed to remove object from S3", "sha256", content.SHA256, "error", err)
-				return
-			}
-
-			// Mark as not in storage (or delete the record)
-			content.InStorage = false
-			if err := l.dao.FileContent().Update(&content); err != nil {
-				slog.Error("unable to update file_content", "sha256", content.SHA256, "error", err)
-				return
+				// Roll back the claim so the still-present object is retried on
+				// a later run rather than being leaked with in_storage=false.
+				if rbErr := l.dao.FileContent().SetInStorage(content.SHA256, true); rbErr != nil {
+					slog.Error("unable to roll back deletion claim", "sha256", content.SHA256, "error", rbErr)
+				}
+				continue
 			}
 
 			// Throttle to reduce load during bulk deletions
