@@ -643,11 +643,8 @@ func TestReuploadAfterDeletion(t *testing.T) {
 		_, _ = dao.File().Insert(file5)
 
 		// Delete both bins (soft delete)
-		_ = bin4.DeletedAt.Scan(time.Now().UTC())
-		_ = dao.Bin().Update(bin4)
-
-		_ = bin5.DeletedAt.Scan(time.Now().UTC())
-		_ = dao.Bin().Update(bin5)
+		_, _ = dao.Bin().MarkDeleted(bin4)
+		_, _ = dao.Bin().MarkDeleted(bin5)
 
 		// Simulate lurker: check for pending deletes
 		// Content should be pending because all files belong to deleted bins

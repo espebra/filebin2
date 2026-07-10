@@ -136,30 +136,109 @@ func (d *BinDao) Insert(bin *ds.Bin) (inserted bool, err error) {
 	return true, nil
 }
 
-func (d *BinDao) Update(bin *ds.Bin) (err error) {
-	var id string
+// markDeleted soft-deletes the bin with a targeted, guarded update. The extra
+// guard (e.g. an expiry re-check) is appended to the WHERE clause. Returns
+// false if no matching row was found, meaning the bin was already deleted or
+// the extra guard no longer holds.
+func (d *BinDao) markDeleted(bin *ds.Bin, extraGuard string, operation string) (deleted bool, err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	bin.ExpiredAt = bin.ExpiredAt.UTC().Truncate(time.Microsecond)
-	if err := d.ValidateInput(bin); err != nil {
-		return err
-	}
-	sqlStatement := "UPDATE bin SET readonly = $1, updated_at = $2, approved_at = $3, expired_at = $4, deleted_at = $5, updates = $6 WHERE id = $7 RETURNING id"
+	sqlStatement := "UPDATE bin SET deleted_at = $1, updated_at = $1 WHERE id = $2 AND deleted_at IS NULL" + extraGuard + " RETURNING id"
+	var id string
 	t0 := time.Now()
-	err = d.db.QueryRow(sqlStatement, bin.Readonly, now, bin.ApprovedAt, bin.ExpiredAt, bin.DeletedAt, bin.Updates, bin.Id).Scan(&id)
-	observeQuery(d.metrics, "bin_update", t0, err)
+	err = d.db.QueryRow(sqlStatement, now, bin.Id).Scan(&id)
+	observeQuery(d.metrics, operation, t0, err)
 	if err != nil {
-		return err
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		return false, err
+	}
+	_ = bin.DeletedAt.Scan(now)
+	bin.DeletedAtRelative = humanize.Time(bin.DeletedAt.Time)
+	bin.UpdatedAt = now
+	bin.UpdatedAtRelative = humanize.Time(bin.UpdatedAt)
+	return true, nil
+}
+
+// MarkDeleted soft-deletes the bin unless it is already deleted. Targeted and
+// guarded so it cannot revert concurrent changes to other moderation fields.
+// Returns false if the bin does not exist or is already deleted.
+func (d *BinDao) MarkDeleted(bin *ds.Bin) (deleted bool, err error) {
+	return d.markDeleted(bin, "", "bin_mark_deleted")
+}
+
+// MarkDeletedIfExpired soft-deletes the bin only if it is still expired. The
+// expiry re-check makes sure a bin that a concurrent upload just revived (by
+// extending expired_at through Touch) is left alone. Returns false if the bin
+// does not exist, is already deleted, or is no longer expired.
+func (d *BinDao) MarkDeletedIfExpired(bin *ds.Bin) (deleted bool, err error) {
+	return d.markDeleted(bin, " AND expired_at < NOW()", "bin_mark_deleted_if_expired")
+}
+
+// Lock makes the bin read only unless it has been deleted. Targeted and
+// guarded so it cannot resurrect a bin that was deleted concurrently. Returns
+// false if the bin does not exist or is deleted.
+func (d *BinDao) Lock(bin *ds.Bin) (locked bool, err error) {
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	sqlStatement := "UPDATE bin SET readonly = true, updated_at = $1 WHERE id = $2 AND deleted_at IS NULL RETURNING id"
+	var id string
+	t0 := time.Now()
+	err = d.db.QueryRow(sqlStatement, now, bin.Id).Scan(&id)
+	observeQuery(d.metrics, "bin_lock", t0, err)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		return false, err
+	}
+	bin.Readonly = true
+	bin.UpdatedAt = now
+	bin.UpdatedAtRelative = humanize.Time(bin.UpdatedAt)
+	return true, nil
+}
+
+// Approve sets the approval timestamp unless the bin has been deleted.
+// Targeted and guarded so it cannot revert concurrent changes to other
+// moderation fields. Returns false if the bin does not exist or is deleted.
+func (d *BinDao) Approve(bin *ds.Bin) (approved bool, err error) {
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	sqlStatement := "UPDATE bin SET approved_at = $1, updated_at = $1 WHERE id = $2 AND deleted_at IS NULL RETURNING id"
+	var id string
+	t0 := time.Now()
+	err = d.db.QueryRow(sqlStatement, now, bin.Id).Scan(&id)
+	observeQuery(d.metrics, "bin_approve", t0, err)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		return false, err
+	}
+	_ = bin.ApprovedAt.Scan(now)
+	bin.ApprovedAtRelative = humanize.Time(bin.ApprovedAt.Time)
+	bin.UpdatedAt = now
+	bin.UpdatedAtRelative = humanize.Time(bin.UpdatedAt)
+	return true, nil
+}
+
+// TouchUpdatedAt refreshes the bin's updated_at timestamp without touching
+// expiration or any moderation field. Returns false if the bin does not exist
+// or is deleted.
+func (d *BinDao) TouchUpdatedAt(bin *ds.Bin) (updated bool, err error) {
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	sqlStatement := "UPDATE bin SET updated_at = $1 WHERE id = $2 AND deleted_at IS NULL RETURNING id"
+	var id string
+	t0 := time.Now()
+	err = d.db.QueryRow(sqlStatement, now, bin.Id).Scan(&id)
+	observeQuery(d.metrics, "bin_touch_updated_at", t0, err)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		return false, err
 	}
 	bin.UpdatedAt = now
 	bin.UpdatedAtRelative = humanize.Time(bin.UpdatedAt)
-	if bin.IsApproved() {
-		bin.ApprovedAt.Time = bin.ApprovedAt.Time.UTC()
-		bin.ApprovedAtRelative = humanize.Time(bin.ApprovedAt.Time)
-	}
-	if bin.IsDeleted() {
-		bin.DeletedAtRelative = humanize.Time(bin.DeletedAt.Time)
-	}
-	return nil
+	return true, nil
 }
 
 // Touch refreshes the bin's updated_at and expired_at timestamps without

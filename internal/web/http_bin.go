@@ -501,12 +501,17 @@ func (h *HTTP) deleteBin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set to deleted
-	now := time.Now().UTC().Truncate(time.Microsecond)
-	_ = bin.DeletedAt.Scan(now)
-
-	if err := h.dao.Bin().Update(&bin); err != nil {
+	// Set to deleted with a guarded update that cannot revert concurrent
+	// changes to the other moderation fields.
+	deleted, err := h.dao.Bin().MarkDeleted(&bin)
+	if err != nil {
+		slog.Error("unable to mark bin as deleted", "bin", bin.Id, "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	if !deleted {
+		// The bin was deleted concurrently by another request.
+		http.Error(w, "This bin is no longer available", http.StatusNotFound)
 		return
 	}
 
@@ -542,10 +547,17 @@ func (h *HTTP) lockBin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set to read only
-	bin.Readonly = true
-	if err := h.dao.Bin().Update(&bin); err != nil {
+	// Set to read only with a guarded update that cannot resurrect a bin
+	// that was deleted concurrently.
+	locked, err := h.dao.Bin().Lock(&bin)
+	if err != nil {
+		slog.Error("unable to lock bin", "bin", bin.Id, "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	if !locked {
+		// The bin was deleted concurrently by another request.
+		http.Error(w, "This bin is no longer available", http.StatusNotFound)
 		return
 	}
 
@@ -581,11 +593,17 @@ func (h *HTTP) approveBin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set bin as approved with the current timestamp
-	now := time.Now().UTC().Truncate(time.Microsecond)
-	_ = bin.ApprovedAt.Scan(now)
-	if err := h.dao.Bin().Update(&bin); err != nil {
+	// Set bin as approved with a guarded update that cannot revert
+	// concurrent changes to the other moderation fields.
+	approved, err := h.dao.Bin().Approve(&bin)
+	if err != nil {
+		slog.Error("unable to approve bin", "bin", bin.Id, "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	if !approved {
+		// The bin was deleted concurrently.
+		http.Error(w, "This bin is no longer available", http.StatusNotFound)
 		return
 	}
 
@@ -640,12 +658,18 @@ func (h *HTTP) banBin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set to deleted
-	now := time.Now().UTC().Truncate(time.Microsecond)
-	_ = bin.DeletedAt.Scan(now)
-	if err := h.dao.Bin().Update(&bin); err != nil {
+	// Set to deleted with a guarded update that cannot revert concurrent
+	// changes to the other moderation fields. The clients are already
+	// banned at this point, so a bin that was deleted concurrently is
+	// still a success.
+	deleted, err := h.dao.Bin().MarkDeleted(&bin)
+	if err != nil {
+		slog.Error("unable to mark banned bin as deleted", "bin", bin.Id, "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
+	}
+	if !deleted {
+		slog.Debug("banned bin was already deleted", "bin", bin.Id)
 	}
 
 	h.metrics.IncrBinBanCount()

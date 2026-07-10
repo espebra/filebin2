@@ -397,9 +397,7 @@ func TestFileCountBySHA256(t *testing.T) {
 	}
 
 	// Mark the bin as deleted
-	_ = bin.DeletedAt.Scan(time.Now().UTC())
-	err = dao.Bin().Update(bin)
-	if err != nil {
+	if _, err := dao.Bin().MarkDeleted(bin); err != nil {
 		t.Error(err)
 	}
 

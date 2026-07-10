@@ -662,10 +662,18 @@ func (h *HTTP) deleteFile(w http.ResponseWriter, r *http.Request) {
 
 	// Note: File content cleanup is handled by lurker using COUNT(*) to find orphaned content
 
-	// Update the updated timestamp of the bin
-	if err := h.dao.Bin().Update(&bin); err != nil {
+	// Update the updated timestamp of the bin. The guarded update does not
+	// touch expiration or moderation fields, so it cannot revert concurrent
+	// changes. The file is already deleted at this point, so a bin that was
+	// deleted concurrently is still a success.
+	updated, err := h.dao.Bin().TouchUpdatedAt(&bin)
+	if err != nil {
+		slog.Error("unable to update bin timestamp after file deletion", "bin", bin.Id, "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
+	}
+	if !updated {
+		slog.Debug("bin was deleted during file deletion", "bin", bin.Id)
 	}
 
 	h.metrics.IncrFileDeleteCount()

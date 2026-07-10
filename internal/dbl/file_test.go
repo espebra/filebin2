@@ -685,10 +685,7 @@ func TestIsAvailableForDownload(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	bin4.DeletedAt.Time = time.Now().UTC()
-	bin4.DeletedAt.Valid = true
-	err = dao.Bin().Update(bin4)
-	if err != nil {
+	if _, err := dao.Bin().MarkDeleted(bin4); err != nil {
 		t.Error(err)
 	}
 	file4 := &ds.File{Filename: "test4.txt", Bin: bin4.Id, Bytes: 100, SHA256: sha256}

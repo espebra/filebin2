@@ -108,11 +108,17 @@ func (h *HTTP) integrationSlack(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 
-				// Set bin as approved with the current timestamp
-				now := time.Now().UTC().Truncate(time.Microsecond)
-				_ = bin.ApprovedAt.Scan(now)
-				if err := h.dao.Bin().Update(&bin); err != nil {
+				// Set bin as approved with a guarded update that cannot
+				// revert concurrent changes to the other moderation fields.
+				approved, err := h.dao.Bin().Approve(&bin)
+				if err != nil {
+					slog.Error("unable to approve bin", "bin", bin.Id, "error", err)
 					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return
+				}
+				if !approved {
+					// The bin was deleted concurrently.
+					http.Error(w, "This bin is no longer available", http.StatusNotFound)
 					return
 				}
 
