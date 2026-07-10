@@ -2,6 +2,8 @@ package phash
 
 import (
 	"bytes"
+	"encoding/binary"
+	"hash/crc32"
 	"image"
 	"image/color"
 	"image/gif"
@@ -13,6 +15,45 @@ import (
 	"golang.org/x/image/bmp"
 	"golang.org/x/image/tiff"
 )
+
+// pngWithDimensions builds a minimal but valid PNG byte stream whose IHDR
+// declares the given width and height, without any actual pixel data. This lets
+// us exercise the header-only size guard (image.DecodeConfig) without
+// allocating the pixel buffer the dimensions would otherwise require.
+func pngWithDimensions(width, height uint32) []byte {
+	var buf bytes.Buffer
+	buf.Write([]byte{0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a})
+
+	ihdr := make([]byte, 13)
+	binary.BigEndian.PutUint32(ihdr[0:4], width)
+	binary.BigEndian.PutUint32(ihdr[4:8], height)
+	ihdr[8] = 8 // bit depth
+	ihdr[9] = 2 // color type: truecolor
+	// remaining bytes (compression, filter, interlace) are 0
+
+	chunk := append([]byte("IHDR"), ihdr...)
+	var length [4]byte
+	binary.BigEndian.PutUint32(length[:], uint32(len(ihdr)))
+	buf.Write(length[:])
+	buf.Write(chunk)
+	var crc [4]byte
+	binary.BigEndian.PutUint32(crc[:], crc32.ChecksumIEEE(chunk))
+	buf.Write(crc[:])
+	return buf.Bytes()
+}
+
+func TestComputeRejectsOversizedImage(t *testing.T) {
+	// A header declaring ~3.6 gigapixels must be rejected before decoding,
+	// returning an empty hash and no error rather than allocating gigabytes.
+	data := pngWithDimensions(60000, 60000)
+	hash, err := Compute(bytes.NewReader(data))
+	if err != nil {
+		t.Fatalf("expected nil error for oversized image, got: %v", err)
+	}
+	if hash != "" {
+		t.Fatalf("expected empty hash for oversized image, got %q", hash)
+	}
+}
 
 // newTestImage creates a simple test image with a gradient pattern.
 func newTestImage(w, h int) *image.RGBA {
