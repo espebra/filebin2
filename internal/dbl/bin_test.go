@@ -155,7 +155,7 @@ func TestDeleteBin(t *testing.T) {
 	}
 }
 
-func TestUpdateBin(t *testing.T) {
+func TestMarkDeletedBin(t *testing.T) {
 	dao, err := tearUp()
 	if err != nil {
 		t.Error(err)
@@ -170,26 +170,45 @@ func TestUpdateBin(t *testing.T) {
 		t.Error(err)
 	}
 
+	deleted, err := dao.Bin().MarkDeleted(bin)
+	if err != nil {
+		t.Error(err)
+	}
+	if !deleted {
+		t.Errorf("Was expecting MarkDeleted to succeed on an existing bin")
+	}
+
 	dbBin, _, err := dao.Bin().GetByID(bin.Id)
 	if err != nil {
 		t.Error(err)
 	}
+	if !dbBin.IsDeleted() {
+		t.Errorf("Was expecting the bin to be deleted")
+	}
 
-	err = dao.Bin().Update(&dbBin)
+	// A second delete is a no-op
+	deleted, err = dao.Bin().MarkDeleted(bin)
 	if err != nil {
 		t.Error(err)
 	}
+	if deleted {
+		t.Errorf("Was expecting MarkDeleted to return false on an already deleted bin")
+	}
 
-	//updatedBin, err := dao.Bin().GetByID(bin.Id)
-	//if err != nil {
-	//	t.Error(err)
-	//}
-	//if updatedBin.Foo != "bar" {
-	//	t.Errorf("Was expecting the updated bin hostname %s, got %s instead.", "bar", updatedBin.Foo)
-	//}
+	// Non-existing bins are not an error, just not deleted
+	missing := &ds.Bin{Id: "does-not-exist"}
+	deleted, err = dao.Bin().MarkDeleted(missing)
+	if err != nil {
+		t.Error(err)
+	}
+	if deleted {
+		t.Errorf("Was expecting MarkDeleted to return false on a non-existing bin")
+	}
 }
 
-func TestUpdateNonExistingBin(t *testing.T) {
+// TestLockDoesNotResurrectDeletedBin pins the delete-vs-lock race: a lock that
+// loses the race against a concurrent delete must not resurrect the bin.
+func TestLockDoesNotResurrectDeletedBin(t *testing.T) {
 	dao, err := tearUp()
 	if err != nil {
 		t.Error(err)
@@ -198,9 +217,145 @@ func TestUpdateNonExistingBin(t *testing.T) {
 
 	bin := &ds.Bin{}
 	bin.Id = "1234567890"
-	err = dao.Bin().Update(bin)
-	if err == nil {
-		t.Errorf("Was expecting an error here, bin %v does not exist.", bin)
+	bin.ExpiredAt = time.Now().UTC().Add(time.Hour * 1)
+	_, err = dao.Bin().Insert(bin)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Lock works on a live bin
+	locked, err := dao.Bin().Lock(bin)
+	if err != nil {
+		t.Error(err)
+	}
+	if !locked {
+		t.Errorf("Was expecting Lock to succeed on an existing bin")
+	}
+
+	if _, err := dao.Bin().MarkDeleted(bin); err != nil {
+		t.Error(err)
+	}
+
+	// Lock and Approve on a deleted bin fail and leave deleted_at intact
+	locked, err = dao.Bin().Lock(bin)
+	if err != nil {
+		t.Error(err)
+	}
+	if locked {
+		t.Errorf("Was expecting Lock to return false on a deleted bin")
+	}
+	approved, err := dao.Bin().Approve(bin)
+	if err != nil {
+		t.Error(err)
+	}
+	if approved {
+		t.Errorf("Was expecting Approve to return false on a deleted bin")
+	}
+	updated, err := dao.Bin().TouchUpdatedAt(bin)
+	if err != nil {
+		t.Error(err)
+	}
+	if updated {
+		t.Errorf("Was expecting TouchUpdatedAt to return false on a deleted bin")
+	}
+
+	dbBin, _, err := dao.Bin().GetByID(bin.Id)
+	if err != nil {
+		t.Error(err)
+	}
+	if !dbBin.IsDeleted() {
+		t.Errorf("Was expecting the bin to still be deleted")
+	}
+}
+
+func TestApproveBin(t *testing.T) {
+	dao, err := tearUp()
+	if err != nil {
+		t.Error(err)
+	}
+	defer func() { _ = tearDown(dao) }()
+
+	bin := &ds.Bin{}
+	bin.Id = "1234567890"
+	bin.ExpiredAt = time.Now().UTC().Add(time.Hour * 1)
+	_, err = dao.Bin().Insert(bin)
+	if err != nil {
+		t.Error(err)
+	}
+
+	approved, err := dao.Bin().Approve(bin)
+	if err != nil {
+		t.Error(err)
+	}
+	if !approved {
+		t.Errorf("Was expecting Approve to succeed on an existing bin")
+	}
+
+	dbBin, _, err := dao.Bin().GetByID(bin.Id)
+	if err != nil {
+		t.Error(err)
+	}
+	if !dbBin.IsApproved() {
+		t.Errorf("Was expecting the bin to be approved")
+	}
+}
+
+// TestMarkDeletedIfExpiredRevival pins the lurker-vs-upload race: a bin that a
+// concurrent upload revived (by extending its expiration through Touch) must
+// not be deleted by the lurker's expiry cleanup.
+func TestMarkDeletedIfExpiredRevival(t *testing.T) {
+	dao, err := tearUp()
+	if err != nil {
+		t.Error(err)
+	}
+	defer func() { _ = tearDown(dao) }()
+
+	bin := &ds.Bin{}
+	bin.Id = "1234567890"
+	bin.ExpiredAt = time.Now().UTC().Add(-time.Hour)
+	_, err = dao.Bin().Insert(bin)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// An upload revives the expired bin by extending its expiration, as
+	// uploadFile does between the lurker's GetPendingDelete and its delete.
+	bin.ExpiredAt = time.Now().UTC().Add(time.Hour)
+	touched, err := dao.Bin().Touch(bin)
+	if err != nil {
+		t.Error(err)
+	}
+	if !touched {
+		t.Errorf("Was expecting Touch to succeed on a live bin")
+	}
+
+	// The lurker's guarded delete leaves the revived bin alone
+	deleted, err := dao.Bin().MarkDeletedIfExpired(bin)
+	if err != nil {
+		t.Error(err)
+	}
+	if deleted {
+		t.Errorf("Was expecting MarkDeletedIfExpired to return false on a revived bin")
+	}
+	dbBin, _, err := dao.Bin().GetByID(bin.Id)
+	if err != nil {
+		t.Error(err)
+	}
+	if dbBin.IsDeleted() {
+		t.Errorf("Was expecting the revived bin to not be deleted")
+	}
+
+	// Once actually expired, the guarded delete succeeds
+	bin.ExpiredAt = time.Now().UTC().Add(-time.Minute)
+	if _, err := dao.Bin().Touch(bin); err != nil {
+		t.Error(err)
+	}
+	deleted, err = dao.Bin().MarkDeletedIfExpired(bin)
+	if err != nil {
+		t.Error(err)
+	}
+	if !deleted {
+		t.Errorf("Was expecting MarkDeletedIfExpired to succeed on an expired bin")
 	}
 }
 

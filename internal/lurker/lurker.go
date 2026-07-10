@@ -82,13 +82,20 @@ func (l *Lurker) DeletePendingBins() {
 	if len(bins) > 0 {
 		slog.Info("found bins pending removal", "count", len(bins))
 		for _, bin := range bins {
-			// Mark bin as deleted
-			_ = bin.DeletedAt.Scan(time.Now().UTC())
-			// Bin deletion cascades to files (sets deleted_at)
-			// Orphaned content will be detected by DeletePendingContent using COUNT(*)
-			if err := l.dao.Bin().Update(&bin); err != nil {
-				slog.Error("unable to update bin", "bin", bin.Id, "error", err)
-				return
+			// Mark bin as deleted, but only if it is still expired: a
+			// concurrent upload may have revived the bin by extending its
+			// expiration since GetPendingDelete ran, and the guarded update
+			// leaves such bins alone instead of reverting the extension.
+			// Orphaned content will be detected by DeletePendingContent
+			// using COUNT(*).
+			deleted, err := l.dao.Bin().MarkDeletedIfExpired(&bin)
+			if err != nil {
+				slog.Error("unable to mark bin as deleted", "bin", bin.Id, "error", err)
+				continue
+			}
+			if !deleted {
+				slog.Debug("skipping bin that was revived or already deleted", "bin", bin.Id)
+				continue
 			}
 			slog.Info("marked bin as deleted", "bin", bin.Id)
 		}
