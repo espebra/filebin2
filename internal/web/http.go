@@ -77,6 +77,10 @@ type HTTP struct {
 
 	// Stop channel for graceful shutdown of background goroutines
 	stopChan chan struct{}
+
+	// The running HTTP server, used by Shutdown for graceful shutdown
+	httpServer      *http.Server
+	httpServerMutex sync.Mutex
 }
 
 // New creates a new HTTP server instance
@@ -440,13 +444,15 @@ func (h *HTTP) Run() {
 		}
 	})
 
-	// Add access logging
+	// Add access logging. The file is deliberately not closed when Run
+	// returns: during a graceful shutdown, Run returns as soon as the
+	// shutdown is initiated while draining request handlers still write to
+	// the access log. The file stays open for the lifetime of the process.
 	accessLog, err := os.OpenFile(h.config.HttpAccessLog, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		slog.Error("unable to open log file", "path", h.config.HttpAccessLog, "error", err)
 		os.Exit(2)
 	}
-	defer func() { _ = accessLog.Close() }()
 	handler = handlers.CombinedLoggingHandler(accessLog, handler)
 
 	// Add proxy header handling
@@ -477,12 +483,31 @@ func (h *HTTP) Run() {
 		IdleTimeout:       h.config.IdleTimeout,
 		ReadHeaderTimeout: h.config.ReadHeaderTimeout,
 	}
+	h.httpServerMutex.Lock()
+	h.httpServer = srv
+	h.httpServerMutex.Unlock()
 
-	// Start the server
-	if err := srv.ListenAndServe(); err != nil {
+	// Start the server. ListenAndServe blocks until Shutdown is called (in
+	// which case it returns ErrServerClosed) or the server fails.
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		slog.Error("failed to start HTTP server", "error", err)
 		os.Exit(2)
 	}
+}
+
+// Shutdown gracefully shuts down the HTTP server: it stops accepting new
+// connections and waits for in-flight requests to complete until the context
+// is cancelled, at which point the remaining connections are closed. Draining
+// in-flight uploads matters in particular, as killing an upload between its
+// S3 write and its database insert would leak the S3 object.
+func (h *HTTP) Shutdown(ctx context.Context) error {
+	h.httpServerMutex.Lock()
+	srv := h.httpServer
+	h.httpServerMutex.Unlock()
+	if srv == nil {
+		return nil
+	}
+	return srv.Shutdown(ctx)
 }
 
 func (h *HTTP) Error(w http.ResponseWriter, r *http.Request, internal string, external string, errno int, statusCode int) {
