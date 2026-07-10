@@ -1,15 +1,18 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log/slog"
 	_ "net/http/pprof"
 	"net/url"
 	"os"
+	"os/signal"
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/espebra/filebin2/internal/dbl"
@@ -66,6 +69,7 @@ var (
 	readHeaderTimeoutFlag = flag.Duration("read-header-timeout", 2*time.Second, "Read header timeout for the HTTP server")
 	writeTimeoutFlag      = flag.Duration("write-timeout", 1*time.Hour, "Write timeout for the HTTP server")
 	idleTimeoutFlag       = flag.Duration("idle-timeout", 30*time.Second, "Idle timeout for the HTTP server")
+	shutdownTimeoutFlag   = flag.Duration("shutdown-timeout", 30*time.Second, "Grace period to wait for in-flight requests to complete when shutting down")
 
 	// Database
 	dbHostFlag            = flag.String("db-host", "", "Database host")
@@ -244,6 +248,11 @@ func main() {
 	if v := os.Getenv("FILEBIN_IDLE_TIMEOUT"); v != "" {
 		if d, err := time.ParseDuration(v); err == nil {
 			*idleTimeoutFlag = d
+		}
+	}
+	if v := os.Getenv("FILEBIN_SHUTDOWN_TIMEOUT"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			*shutdownTimeoutFlag = d
 		}
 	}
 
@@ -566,8 +575,42 @@ func main() {
 	}
 	slog.Info("uploaded files expiration configured", "expiration_seconds", config.ExpirationDuration.Seconds())
 
-	// Start the http server
+	// Shut down gracefully on SIGINT and SIGTERM: stop accepting new
+	// connections and wait for in-flight requests to complete, so that an
+	// upload is not killed between its S3 write and its database insert,
+	// which would leak the S3 object. A second signal exits immediately.
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	shutdownDone := make(chan struct{})
+	go func() {
+		defer close(shutdownDone)
+		sig := <-sigChan
+		slog.Info("received signal, shutting down", "signal", sig.String(), "grace_period_seconds", shutdownTimeoutFlag.Seconds())
+		go func() {
+			sig := <-sigChan
+			slog.Warn("received second signal, exiting immediately", "signal", sig.String())
+			os.Exit(1)
+		}()
+		ctx, cancel := context.WithTimeout(context.Background(), *shutdownTimeoutFlag)
+		defer cancel()
+		if err := h.Shutdown(ctx); err != nil {
+			slog.Warn("shutdown grace period expired with requests still in flight", "error", err)
+		}
+	}()
+
+	// Start the http server. Returns as soon as a shutdown is initiated.
 	h.Run()
+
+	// Wait for the in-flight requests to drain (or the grace period to
+	// expire), then stop the background processes and close the database
+	// connections.
+	<-shutdownDone
+	l.Stop()
+	h.Stop()
+	if err := daoconn.Close(); err != nil {
+		slog.Warn("unable to close database connections", "error", err)
+	}
+	slog.Info("shutdown complete")
 }
 
 // configureLogger sets up the default slog logger based on format and level
