@@ -486,11 +486,6 @@ func main() {
 	// Clean up stale temporary files from previous runs
 	wm.CleanStaleFiles(24 * time.Hour)
 
-	// Create and start the lurker process
-	l := lurker.New(&daoconn, &s3conn, wm)
-	l.Init(*lurkerIntervalFlag, *lurkerThrottleFlag, *logRetentionFlag)
-	l.Run()
-
 	u, err := url.Parse(*baseURLFlag)
 	if err != nil {
 		slog.Error("unable to parse the baseurl parameter", "baseurl", *baseURLFlag, "error", err)
@@ -553,6 +548,14 @@ func main() {
 
 	// Wire database metrics
 	daoconn.SetMetrics(metrics)
+
+	// Create and start the lurker process. This must happen after the
+	// metrics are wired above: the lurker immediately starts querying the
+	// database and S3 on its own goroutine, and wiring the metrics
+	// observers concurrently with those reads would be a data race.
+	l := lurker.New(&daoconn, &s3conn, wm)
+	l.Init(*lurkerIntervalFlag, *lurkerThrottleFlag, *logRetentionFlag)
+	l.Run()
 
 	// Create and initialize HTTP server
 	h := web.New(&daoconn, &s3conn, &geodb, wm, config, metrics, metricsRegistry)
