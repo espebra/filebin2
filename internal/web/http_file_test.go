@@ -9,7 +9,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"path"
 	"strings"
 	"testing"
@@ -102,25 +101,18 @@ func httpRequest(tc TestCase) (statuscode int, body string, err error) {
 }
 
 func runTests(tcs []TestCase, t *testing.T) {
+	t.Helper()
 	for i, tc := range tcs {
 		statusCode, body, err := httpRequest(tc)
 		if err != nil {
-			t.Errorf("Test case %d: Did not expect http request to fail: %s\n", i, err.Error())
-			t.Errorf("%s\n", tc.String())
-			os.Exit(1)
+			t.Fatalf("Test case %d: Did not expect http request to fail: %s\n%s\n", i, err.Error(), tc.String())
 		}
 		if tc.StatusCode != statusCode {
-			t.Errorf("Test case %d\n", i)
-			t.Errorf("  Expected response code %d, got %d\n", tc.StatusCode, statusCode)
-			t.Errorf("  Response body: %s\n", body)
-			t.Errorf("  %s\n", tc.String())
-			os.Exit(1)
+			t.Fatalf("Test case %d\n  Expected response code %d, got %d\n  Response body: %s\n  %s\n", i, tc.StatusCode, statusCode, body, tc.String())
 		}
 		if tc.DownloadContent != "" {
 			if tc.DownloadContent != body {
-				t.Errorf("Test case %d: Expected body %s, got %s\n", i, tc.DownloadContent, body)
-				t.Errorf("%s\n", tc.String())
-				os.Exit(1)
+				t.Fatalf("Test case %d: Expected body %s, got %s\n%s\n", i, tc.DownloadContent, body, tc.String())
 			}
 		}
 	}
@@ -658,13 +650,10 @@ func TestBlockContent(t *testing.T) {
 	sha256 := "11758cbca80f40e79c605f12c9094c3b2ed9329f5e3ed41d920b11f941de995d"
 	statusCode, body, err := httpAdminRequest("POST", "/admin/file/"+sha256+"/block")
 	if err != nil {
-		t.Errorf("Failed to block content: %s\n", err.Error())
-		os.Exit(1)
+		t.Fatalf("Failed to block content: %s\n", err.Error())
 	}
 	if statusCode != 303 && statusCode != 200 {
-		t.Errorf("Expected status code 303 or 200 when blocking content, got %d\n", statusCode)
-		t.Errorf("Response body: %s\n", body)
-		os.Exit(1)
+		t.Fatalf("Expected status code 303 or 200 when blocking content, got %d\nResponse body: %s\n", statusCode, body)
 	}
 
 	// Try to upload the same content again - should be rejected
@@ -718,13 +707,10 @@ func TestUnblockContent(t *testing.T) {
 	sha256 := "54755318a367ec28f632443fa35dad11d3bdc626aa6cc7afa0b91fc4aaa8f034"
 	statusCode, body, err := httpAdminRequest("POST", "/admin/file/"+sha256+"/block")
 	if err != nil {
-		t.Errorf("Failed to block content: %s\n", err.Error())
-		os.Exit(1)
+		t.Fatalf("Failed to block content: %s\n", err.Error())
 	}
 	if statusCode != 303 && statusCode != 200 {
-		t.Errorf("Expected status code 303 or 200 when blocking content, got %d\n", statusCode)
-		t.Errorf("Response body: %s\n", body)
-		os.Exit(1)
+		t.Fatalf("Expected status code 303 or 200 when blocking content, got %d\nResponse body: %s\n", statusCode, body)
 	}
 
 	// Verify upload is rejected while blocked
@@ -744,13 +730,10 @@ func TestUnblockContent(t *testing.T) {
 	// Unblock the content
 	statusCode, body, err = httpAdminRequest("POST", "/admin/file/"+sha256+"/unblock")
 	if err != nil {
-		t.Errorf("Failed to unblock content: %s\n", err.Error())
-		os.Exit(1)
+		t.Fatalf("Failed to unblock content: %s\n", err.Error())
 	}
 	if statusCode != 303 && statusCode != 200 {
-		t.Errorf("Expected status code 303 or 200 when unblocking content, got %d\n", statusCode)
-		t.Errorf("Response body: %s\n", body)
-		os.Exit(1)
+		t.Fatalf("Expected status code 303 or 200 when unblocking content, got %d\nResponse body: %s\n", statusCode, body)
 	}
 
 	// Verify upload is now allowed after unblocking
