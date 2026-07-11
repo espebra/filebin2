@@ -900,3 +900,135 @@ func TestUpsertWiderCharacterSet(t *testing.T) {
 		}
 	}
 }
+
+func TestRegisterDownloadIfUnderLimit(t *testing.T) {
+	dao, err := tearUp()
+	if err != nil {
+		t.Error(err)
+	}
+	defer func() { _ = tearDown(dao) }()
+
+	bin := &ds.Bin{}
+	bin.Id = "1234567890"
+	_, err = dao.Bin().Insert(bin)
+	if err != nil {
+		t.Error(err)
+	}
+
+	file := &ds.File{}
+	file.Filename = "file1.txt"
+	file.Bin = bin.Id
+	file.Bytes = 1
+	file.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	if err := ensureFileContent(dao, file); err != nil {
+		t.Error(err)
+	}
+	_, err = dao.File().Insert(file)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// A limit of 0 disables the limit
+	allowed, err := dao.File().RegisterDownloadIfUnderLimit(file, 0)
+	if err != nil {
+		t.Error(err)
+	}
+	if !allowed {
+		t.Error("Was expecting the download to be allowed with the limit disabled")
+	}
+	if file.Downloads != 1 {
+		t.Errorf("Was expecting the number of downloads to be 1, not %d\n", file.Downloads)
+	}
+
+	// Increment up to the limit
+	allowed, err = dao.File().RegisterDownloadIfUnderLimit(file, 2)
+	if err != nil {
+		t.Error(err)
+	}
+	if !allowed {
+		t.Error("Was expecting the download to be allowed below the limit")
+	}
+	if file.Downloads != 2 {
+		t.Errorf("Was expecting the number of downloads to be 2, not %d\n", file.Downloads)
+	}
+
+	// Deny at the limit without incrementing the counter
+	allowed, err = dao.File().RegisterDownloadIfUnderLimit(file, 2)
+	if err != nil {
+		t.Error(err)
+	}
+	if allowed {
+		t.Error("Was expecting the download to be denied at the limit")
+	}
+	dbFile, _, err := dao.File().GetByName(bin.Id, file.Filename)
+	if err != nil {
+		t.Error(err)
+	}
+	if dbFile.Downloads != 2 {
+		t.Errorf("Was expecting the number of downloads to remain 2, not %d\n", dbFile.Downloads)
+	}
+}
+
+func TestRegisterDownloadIfUnderLimitConcurrency(t *testing.T) {
+	dao, err := tearUp()
+	if err != nil {
+		t.Error(err)
+	}
+	defer func() { _ = tearDown(dao) }()
+
+	bin := &ds.Bin{}
+	bin.Id = "1234567890"
+	_, err = dao.Bin().Insert(bin)
+	if err != nil {
+		t.Error(err)
+	}
+
+	file := &ds.File{}
+	file.Filename = "file1.txt"
+	file.Bin = bin.Id
+	file.Bytes = 1
+	file.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	if err := ensureFileContent(dao, file); err != nil {
+		t.Error(err)
+	}
+	_, err = dao.File().Insert(file)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Race 20 downloads against a limit of 5. The conditional update must
+	// allow exactly 5 of them and never push the counter past the limit.
+	var limit uint64 = 5
+	workers := 20
+	results := make(chan bool, workers)
+	errs := make(chan error, workers)
+	for i := 0; i < workers; i++ {
+		go func() {
+			f := &ds.File{Id: file.Id}
+			allowed, err := dao.File().RegisterDownloadIfUnderLimit(f, limit)
+			errs <- err
+			results <- allowed
+		}()
+	}
+
+	var allowedCount uint64
+	for i := 0; i < workers; i++ {
+		if err := <-errs; err != nil {
+			t.Error(err)
+		}
+		if <-results {
+			allowedCount++
+		}
+	}
+	if allowedCount != limit {
+		t.Errorf("Was expecting exactly %d downloads to be allowed, not %d\n", limit, allowedCount)
+	}
+
+	dbFile, _, err := dao.File().GetByName(bin.Id, file.Filename)
+	if err != nil {
+		t.Error(err)
+	}
+	if dbFile.Downloads != limit {
+		t.Errorf("Was expecting the number of downloads to be %d, not %d\n", limit, dbFile.Downloads)
+	}
+}

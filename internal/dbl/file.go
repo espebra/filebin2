@@ -234,6 +234,26 @@ func (d *FileDao) RegisterDownload(file *ds.File) (err error) {
 	return nil
 }
 
+// RegisterDownloadIfUnderLimit increments the download counter only if it is
+// below limit, in a single statement so that concurrent downloads cannot push
+// the counter past the limit. A limit of 0 disables the limit.
+func (d *FileDao) RegisterDownloadIfUnderLimit(file *ds.File, limit uint64) (allowed bool, err error) {
+	if limit == 0 {
+		return true, d.RegisterDownload(file)
+	}
+	sqlStatement := "UPDATE file SET downloads = downloads + 1 WHERE id = $1 AND downloads < $2 RETURNING downloads"
+	t0 := time.Now()
+	err = d.db.QueryRow(sqlStatement, file.Id, limit).Scan(&file.Downloads)
+	observeQuery(d.metrics, "file_register_download", t0, err)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func (d *FileDao) GetByBin(id string, inStorage bool) (files []ds.File, err error) {
 	// Join with file_content to check if content is actually in storage
 	sqlStatement := `SELECT f.id, f.bin_id, f.filename, fc.mime, fc.bytes, fc.md5, f.sha256, f.downloads, f.updates, fc.in_storage, f.ip, f.headers, f.updated_at, f.created_at, f.deleted_at, b.deleted_at, b.expired_at, f.upload_duration_ms

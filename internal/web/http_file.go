@@ -122,8 +122,17 @@ func (h *HTTP) getFile(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := h.dao.File().RegisterDownload(&file); err != nil {
-		slog.Error("unable to update file", "filename", inputFilename, "bin", inputBin, "error", err)
+	// The increment is the authoritative limit check: the read at the top of
+	// the handler races with concurrent downloads, this conditional update
+	// does not.
+	allowed, err := h.dao.File().RegisterDownloadIfUnderLimit(&file, h.config.LimitFileDownloads)
+	if err != nil {
+		h.Error(w, r, fmt.Sprintf("Failed to register download of filename %q in bin %q: %s", inputFilename, inputBin, err.Error()), "Database error", 141, http.StatusInternalServerError)
+		return
+	}
+	if !allowed {
+		h.Error(w, r, "", "The file has been requested too many times.", 421, http.StatusForbidden)
+		return
 	}
 
 	// Redirect the client to a presigned URL for this fetch, which is more efficient
