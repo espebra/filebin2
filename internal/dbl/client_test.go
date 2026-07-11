@@ -86,3 +86,49 @@ func TestClientsGetAll(t *testing.T) {
 		t.Errorf("Was expecting %d clients, got %d\n", len(ips), len(clients))
 	}
 }
+
+func TestClientBanUnban(t *testing.T) {
+	dao, err := tearUp()
+	if err != nil {
+		t.Error(err)
+	}
+	defer func() { _ = tearDown(dao) }()
+
+	ip := "5.6.7.8"
+	client := &ds.Client{}
+	client.IP = ip
+	err = dao.Client().Update(client)
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = dao.Client().Ban([]string{ip}, "admin")
+	if err != nil {
+		t.Error(err)
+	}
+	dbClient, _, err := dao.Client().GetByIP(net.ParseIP(ip))
+	if err != nil {
+		t.Error(err)
+	}
+	if !dbClient.IsBanned() {
+		t.Errorf("Was expecting client %s to be banned\n", ip)
+	}
+
+	err = dao.Client().Unban(ip)
+	if err != nil {
+		t.Error(err)
+	}
+	dbClient, _, err = dao.Client().GetByIP(net.ParseIP(ip))
+	if err != nil {
+		t.Error(err)
+	}
+	if dbClient.IsBanned() {
+		t.Errorf("Was expecting client %s to not be banned\n", ip)
+	}
+
+	// Unbanning an unknown IP is a no-op
+	err = dao.Client().Unban("9.9.9.9")
+	if err != nil {
+		t.Error(err)
+	}
+}

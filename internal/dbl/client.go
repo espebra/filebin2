@@ -141,6 +141,14 @@ func (c *ClientDao) Ban(IPsToBan []string, banByRemoteAddr string) (err error) {
 	return err
 }
 
+func (c *ClientDao) Unban(ip string) (err error) {
+	sqlStatement := "UPDATE client SET banned_at=NULL, banned_by='' WHERE ip=$1"
+	t0 := time.Now()
+	_, err = c.db.Exec(sqlStatement, ip)
+	observeQuery(c.metrics, "client_unban", t0, err)
+	return err
+}
+
 func (c *ClientDao) Cleanup(days uint64) (count int64, err error) {
 	sqlStatement := "DELETE FROM client WHERE last_active_at < CURRENT_DATE - ($1 || ' days')::interval AND banned_at IS NULL"
 	t0 := time.Now()
