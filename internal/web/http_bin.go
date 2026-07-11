@@ -324,32 +324,51 @@ func (t *tarArchiveWriter) close() error {
 	return t.writer.Close()
 }
 
-// addFilesToArchive adds files from S3 to an archive writer
+// addFilesToArchive adds files from S3 to an archive writer. Once archive
+// bytes have been written to the response, a failure can no longer be
+// communicated with an error response: the status code is already sent, and
+// writing an error page would corrupt the archive stream. Such failures
+// abort the handler with http.ErrAbortHandler instead, which resets the
+// connection so the client observes a failed transfer rather than a
+// seemingly complete but corrupt archive.
 func (h *HTTP) addFilesToArchive(w http.ResponseWriter, r *http.Request, bin ds.Bin, files []ds.File, archiver archiveWriter, format string) error {
+	started := false
 	for _, file := range files {
-		writer, err := archiver.addFile(file)
-		if err != nil {
-			return err
-		}
-
+		// Fetch the object before writing the archive entry header, so a
+		// failure on the first file is rejected with a proper error
+		// response before any archive bytes are written.
 		fp, err := h.s3.GetObject(file.SHA256, 0, 0)
 		if err != nil {
-			h.Error(w, r, fmt.Sprintf("Failed to archive object in bin %q: filename %q: %s", bin.Id, file.Filename, err.Error()), "Archive error", 300, http.StatusInternalServerError)
-			return err
+			if !started {
+				h.Error(w, r, fmt.Sprintf("Failed to archive object in bin %q: filename %q: %s", bin.Id, file.Filename, err.Error()), "Archive error", 300, http.StatusInternalServerError)
+				return err
+			}
+			slog.Error("aborting archive, unable to get object mid-stream", "filename", file.Filename, "bin", bin.Id, "format", format, "error", err)
+			panic(http.ErrAbortHandler)
 		}
 
-		// Increment download counter for the file (tracks downloads per file)
-		if err := h.dao.File().RegisterDownload(&file); err != nil {
-			slog.Error("unable to increment download counter", "filename", file.Filename, "bin", bin.Id, "error", err)
+		writer, err := archiver.addFile(file)
+		if err != nil {
+			_ = fp.Close()
+			slog.Error("aborting archive, unable to write entry header", "filename", file.Filename, "bin", bin.Id, "format", format, "error", err)
+			panic(http.ErrAbortHandler)
 		}
-
-		h.metrics.IncrBytesStorageToFilebin(file.Bytes)
+		started = true
 
 		bytes, err := io.Copy(writer, fp)
 		_ = fp.Close()
 		if err != nil {
-			return err
+			slog.Error("aborting archive, unable to stream object", "filename", file.Filename, "bin", bin.Id, "format", format, "error", err)
+			panic(http.ErrAbortHandler)
 		}
+
+		// Count the download and the transferred bytes only after the
+		// object was streamed completely, so failed transfers do not
+		// consume download credits.
+		if err := h.dao.File().RegisterDownload(&file); err != nil {
+			slog.Error("unable to increment download counter", "filename", file.Filename, "bin", bin.Id, "error", err)
+		}
+		h.metrics.IncrBytesStorageToFilebin(uint64(bytes))
 		h.metrics.IncrBytesFilebinToClient(uint64(bytes))
 		slog.Debug("added file to archive", "filename", file.Filename, "bytes", bytes, "format", format, "bin", bin.Id)
 	}

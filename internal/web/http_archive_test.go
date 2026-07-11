@@ -5,6 +5,8 @@ import (
 	"archive/zip"
 	"bytes"
 	"compress/gzip"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,6 +14,10 @@ import (
 	"path"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/espebra/filebin2/internal/dbl"
+	"github.com/espebra/filebin2/internal/s3"
 )
 
 func TestArchiveDownload(t *testing.T) {
@@ -482,4 +488,116 @@ func getArchiveContentType(binID, format string) (string, error) {
 	defer func() { _ = resp.Body.Close() }()
 
 	return resp.Header.Get("Content-Type"), nil
+}
+
+// TestArchiveAbortsOnMissingObject verifies the failure behavior when an
+// object is missing from S3 during an archive download. A failure on the
+// first file must produce a proper error response before any archive bytes
+// are written. A failure on a later file must abort the connection so the
+// client observes a failed transfer instead of a seemingly complete but
+// corrupt archive, and the failed file must not consume a download credit.
+func TestArchiveAbortsOnMissingObject(t *testing.T) {
+	// Dedicated dao/s3 handles for out-of-band manipulation and assertions.
+	// No ResetDB: the shared test server relies on accumulated state.
+	dao, err := dbl.Init(dbl.DBConfig{
+		Host:            testDbHost,
+		Port:            testDbPort,
+		Name:            testDbName,
+		Username:        testDbUser,
+		Password:        testDbPassword,
+		MaxOpenConns:    25,
+		MaxIdleConns:    25,
+		ConnMaxLifetime: 5 * time.Minute,
+		ConnMaxIdleTime: 1 * time.Minute,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = dao.Close() }()
+	s3ao, err := s3.Init(s3.Config{
+		Endpoint:             testS3Endpoint,
+		Bucket:               testS3Bucket,
+		Region:               testS3Region,
+		AccessKey:            testS3AccessKey,
+		SecretKey:            testS3SecretKey,
+		Secure:               false,
+		PresignExpiry:        time.Second * 10,
+		Timeout:              time.Second * 30,
+		TransferTimeout:      time.Minute * 10,
+		MultipartPartSize:    64 * 1024 * 1024,
+		MultipartConcurrency: 3,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	binID := "archiveabort01"
+	contentA := "archive abort content for the first file"
+	contentB := "archive abort content for the second file"
+
+	for filename, content := range map[string]string{"a.txt": contentA, "b.txt": contentB} {
+		tc := TestCase{
+			Method:        "POST",
+			Bin:           binID,
+			Filename:      filename,
+			UploadContent: content,
+			StatusCode:    201,
+		}
+		runTests([]TestCase{tc}, t)
+	}
+
+	// Remove the second file's object from S3 out-of-band, simulating a
+	// failure to fetch it during archiving. Files are archived in filename
+	// order, so a.txt streams successfully before b.txt fails.
+	shaB := sha256.Sum256([]byte(contentB))
+	if err := s3ao.RemoveObjectByHash(hex.EncodeToString(shaB[:])); err != nil {
+		t.Fatalf("Failed to remove object from S3: %s", err)
+	}
+
+	// The archive download must fail: either the connection is reset
+	// before the response is delivered, or the body read fails mid-stream.
+	resp, err := http.Get("http://localhost:8080/archive/" + binID + "/zip")
+	if err == nil {
+		defer func() { _ = resp.Body.Close() }()
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("Expected status 200 on a mid-stream abort, got %d", resp.StatusCode)
+		}
+		if _, err := io.ReadAll(resp.Body); err == nil {
+			t.Errorf("Expected the archive transfer to fail, but received a complete response body")
+		}
+	}
+
+	// The successfully streamed file consumed a download credit
+	fileA, found, err := dao.File().GetByName(binID, "a.txt")
+	if err != nil || !found {
+		t.Fatalf("Failed to get file a.txt: found=%v err=%v", found, err)
+	}
+	if fileA.Downloads != 1 {
+		t.Errorf("Expected a.txt to have 1 download, got %d", fileA.Downloads)
+	}
+
+	// The failed file did not consume a download credit
+	fileB, found, err := dao.File().GetByName(binID, "b.txt")
+	if err != nil || !found {
+		t.Fatalf("Failed to get file b.txt: found=%v err=%v", found, err)
+	}
+	if fileB.Downloads != 0 {
+		t.Errorf("Expected b.txt to have 0 downloads, got %d", fileB.Downloads)
+	}
+
+	// Remove the first file's object as well: now the failure happens on
+	// the first file, before any archive bytes are written, and the client
+	// gets a proper error response.
+	shaA := sha256.Sum256([]byte(contentA))
+	if err := s3ao.RemoveObjectByHash(hex.EncodeToString(shaA[:])); err != nil {
+		t.Fatalf("Failed to remove object from S3: %s", err)
+	}
+	resp, err = http.Get("http://localhost:8080/archive/" + binID + "/zip")
+	if err != nil {
+		t.Fatalf("Expected an error response on a first-file failure, got transport error: %s", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("Expected status %d on a first-file failure, got %d", http.StatusInternalServerError, resp.StatusCode)
+	}
 }
