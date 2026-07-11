@@ -434,7 +434,7 @@ func downloadArchive(binID, format string) (int, string, error) {
 
 // Helper function to download an archive with specific Accept-Encoding
 func downloadArchiveWithAcceptEncoding(binID, format, acceptEncoding string) (int, string, error) {
-	u, err := url.Parse("http://localhost:8080")
+	u, err := url.Parse(testServerURL)
 	if err != nil {
 		return -1, "", err
 	}
@@ -468,7 +468,7 @@ func downloadArchiveWithAcceptEncoding(binID, format, acceptEncoding string) (in
 
 // Helper function to get content type header
 func getArchiveContentType(binID, format string) (string, error) {
-	u, err := url.Parse("http://localhost:8080")
+	u, err := url.Parse(testServerURL)
 	if err != nil {
 		return "", err
 	}
@@ -556,7 +556,7 @@ func TestArchiveAbortsOnMissingObject(t *testing.T) {
 
 	// The archive download must fail: either the connection is reset
 	// before the response is delivered, or the body read fails mid-stream.
-	resp, err := http.Get("http://localhost:8080/archive/" + binID + "/zip")
+	resp, err := http.Get(testServerURL + "/archive/" + binID + "/zip")
 	if err == nil {
 		defer func() { _ = resp.Body.Close() }()
 		if resp.StatusCode != http.StatusOK {
@@ -592,7 +592,7 @@ func TestArchiveAbortsOnMissingObject(t *testing.T) {
 	if err := s3ao.RemoveObjectByHash(hex.EncodeToString(shaA[:])); err != nil {
 		t.Fatalf("Failed to remove object from S3: %s", err)
 	}
-	resp, err = http.Get("http://localhost:8080/archive/" + binID + "/zip")
+	resp, err = http.Get(testServerURL + "/archive/" + binID + "/zip")
 	if err != nil {
 		t.Fatalf("Expected an error response on a first-file failure, got transport error: %s", err)
 	}

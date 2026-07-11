@@ -35,7 +35,7 @@ func (tc TestCase) String() string {
 }
 
 func httpRequest(tc TestCase) (statuscode int, body string, err error) {
-	u, err := url.Parse("http://localhost:8080")
+	u, err := url.Parse(testServerURL)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -596,7 +596,7 @@ func TestBinSha256(t *testing.T) {
 }
 
 func httpAdminRequest(method, path string) (statuscode int, body string, err error) {
-	u, err := url.Parse("http://localhost:8080")
+	u, err := url.Parse(testServerURL)
 	if err != nil {
 		log.Fatal(err)
 	}
