@@ -192,18 +192,16 @@ func (s S3AO) Status() bool {
 }
 
 // upload is the internal method that uses the upload manager for all uploads.
-// For files smaller than or equal to the part size, it applies the transferTimeout context.
-// For larger files (multipart), it uses a background context to avoid premature cancellation.
+// The deadline scales with the number of multipart parts, so every part gets
+// the same time budget as a single small upload while large uploads are still
+// guaranteed to terminate.
 func (s S3AO) upload(key string, data io.Reader, size int64) error {
-	var ctx context.Context
-	var cancel context.CancelFunc
-
-	if size <= s.partSize {
-		ctx, cancel = context.WithTimeout(context.Background(), s.transferTimeout)
-		defer cancel()
-	} else {
-		ctx = context.Background()
+	parts := int64(1)
+	if s.partSize > 0 {
+		parts += size / s.partSize
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(parts)*s.transferTimeout)
+	defer cancel()
 
 	t0 := time.Now()
 	_, err := s.uploader.Upload(ctx, &s3.PutObjectInput{
