@@ -872,6 +872,26 @@ func TestUploadDedupAfterObjectLoss(t *testing.T) {
 }
 
 func TestBinBan(t *testing.T) {
+	// The ban below hits 127.0.0.1, the client IP of every request in this
+	// package. Undo it when the test finishes so the tests that follow do
+	// not depend on a later DB reset to get unbanned.
+	t.Cleanup(func() {
+		dao, err := dbl.Init(dbl.DBConfig{
+			Host:     testDbHost,
+			Port:     testDbPort,
+			Name:     testDbName,
+			Username: testDbUser,
+			Password: testDbPassword,
+		})
+		if err != nil {
+			t.Fatalf("Failed to connect to the database to unban 127.0.0.1: %s\n", err.Error())
+		}
+		defer func() { _ = dao.Close() }()
+		if err := dao.Client().Unban("127.0.0.1"); err != nil {
+			t.Fatalf("Failed to unban 127.0.0.1: %s\n", err.Error())
+		}
+	})
+
 	tcs := []TestCase{
 		{
 			Description:   "Create new bin",
