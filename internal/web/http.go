@@ -411,20 +411,34 @@ func (h *HTTP) trackAdminLogin(remoteAddr string) {
 		LastActive: now,
 	}
 
-	// Do reverse DNS lookup for new IP (with timeout)
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-	resolver := net.Resolver{}
-	names, err := resolver.LookupAddr(ctx, ip)
-	if err == nil && len(names) > 0 {
-		newLogin.Hostname = names[0]
-	}
-
 	h.adminLogins = append([]AdminLogin{newLogin}, h.adminLogins...)
 
 	// Keep only the last 10
 	if len(h.adminLogins) > 10 {
 		h.adminLogins = h.adminLogins[:10]
+	}
+
+	// Resolve the hostname asynchronously to avoid stalling admin requests
+	// behind the mutex while the reverse DNS lookup is in flight.
+	go h.resolveAdminLoginHostname(ip)
+}
+
+func (h *HTTP) resolveAdminLoginHostname(ip string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	resolver := net.Resolver{}
+	names, err := resolver.LookupAddr(ctx, ip)
+	if err != nil || len(names) == 0 {
+		return
+	}
+
+	h.adminLoginsMutex.Lock()
+	defer h.adminLoginsMutex.Unlock()
+	for i := range h.adminLogins {
+		if h.adminLogins[i].IP == ip {
+			h.adminLogins[i].Hostname = names[0]
+			return
+		}
 	}
 }
 
