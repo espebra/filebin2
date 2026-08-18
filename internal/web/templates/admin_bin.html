@@ -136,6 +136,7 @@
                         <th scope="col">Downloads</th>
                         <th scope="col">Updates</th>
                         <th scope="col">Deleted</th>
+                        <th scope="col">In storage</th>
                         <th scope="col">SHA256</th>
                     </tr>
                 </thead>
@@ -165,7 +166,20 @@
                             <td><a href="/admin/log/ip/{{ .IP }}">{{ .IP }}</a></td>
                             <td>{{ .Downloads }}</td>
                             <td>{{ .Updates }}</td>
-                            <td sorttable_customkey="{{ .DeletedAt }}">{{ .DeletedAtRelative }}</td>
+                            <td sorttable_customkey="{{ if .IsDeleted }}1 {{ .DeletedAt }}{{ else }}0{{ end }}">
+                                {{ if .IsDeleted }}
+                                    <span class="badge bg-danger">Deleted</span> {{ .DeletedAtRelative }}
+                                {{ else }}
+                                    No
+                                {{ end }}
+                            </td>
+                            <td sorttable_customkey="{{ if .InStorage }}1{{ else }}0{{ end }}">
+                                {{ if .InStorage }}
+                                    <i class="fas fa-fw fa-check-circle text-success"></i> Yes
+                                {{ else }}
+                                    <i class="fas fa-fw fa-times-circle text-danger"></i> No
+                                {{ end }}
+                            </td>
                             <td><a href="/admin/file/{{ .SHA256 }}"><code>{{ .SHA256 }}</code></a></td>
                         </tr>
                     {{ end }}
