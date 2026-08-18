@@ -1,0 +1,126 @@
+{{ define "admin_search" }}<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <link rel="icon" href="/static/img/favicon.png">
+        <link rel="stylesheet" href="/static/css/bootstrap.min.css"/>
+        <link rel="stylesheet" href="/static/css/fontawesome.all.min.css"/>
+        <link rel="stylesheet" href="/static/css/custom.css"/>
+        <script src="/static/js/sorttable.js"></script>
+        <title>Filebin | Admin | Search</title>
+    </head>
+    <body class="container-fluid">
+
+        {{template "admin_bar" .}}
+
+        <h1>Search</h1>
+
+        <form method="GET" action="/admin/search" class="row g-2 mb-4">
+            <div class="col-auto">
+                <input type="text" class="form-control" name="q" value="{{ .Query }}" placeholder="Bin ID or filename" autofocus>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-fw fa-search"></i> Search</button>
+            </div>
+        </form>
+
+        <p class="text-muted">Substring search across bin IDs and filenames. Deleted and expired bins and deleted files are included in the results.</p>
+
+        {{ if .Query }}
+            <h2 class="mt-4">Bins ({{ len .Bins }})</h2>
+
+            {{ if .Bins }}
+                {{ if eq (len .Bins) .Limit }}
+                    <p class="text-muted">Showing the first {{ .Limit }} matches. Narrow the search or increase the limit with <code>?limit=</code>.</p>
+                {{ end }}
+                <table class="table table-hover sortable">
+                    <thead>
+                        <tr>
+                            <th scope="col">Bin ID</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Files</th>
+                            <th scope="col">Total size</th>
+                            <th scope="col">Created</th>
+                            <th scope="col">Updated</th>
+                            <th scope="col">Expires</th>
+                            <th scope="col">Deleted</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{ range .Bins }}
+                            <tr{{ if .IsDeleted }} class="table-secondary"{{ end }}>
+                                <td sorttable_customkey="{{ .Id }}"><a href="/admin/bin/{{ .Id }}"><code>{{ .Id }}</code></a></td>
+                                <td>
+                                    {{ if .IsDeleted }}
+                                        <span class="badge bg-danger">Deleted</span>
+                                    {{ else if .IsExpired }}
+                                        <span class="badge bg-warning text-dark">Expired</span>
+                                    {{ else }}
+                                        <span class="badge bg-success">Active</span>
+                                    {{ end }}
+                                </td>
+                                <td>{{ .Files }}</td>
+                                <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
+                                <td sorttable_customkey="{{ .CreatedAt }}">{{ .CreatedAtRelative }}</td>
+                                <td sorttable_customkey="{{ .UpdatedAt }}">{{ .UpdatedAtRelative }}</td>
+                                <td sorttable_customkey="{{ .ExpiredAt }}">{{ .ExpiredAtRelative }}</td>
+                                <td sorttable_customkey="{{ .DeletedAt }}">{{ .DeletedAtRelative }}</td>
+                            </tr>
+                        {{ end }}
+                    </tbody>
+                </table>
+            {{ else }}
+                <p>No bins matched <code>{{ .Query }}</code>.</p>
+            {{ end }}
+
+            <h2 class="mt-4">Files ({{ len .Files }})</h2>
+
+            {{ if .Files }}
+                {{ if eq (len .Files) .Limit }}
+                    <p class="text-muted">Showing the first {{ .Limit }} matches. Narrow the search or increase the limit with <code>?limit=</code>.</p>
+                {{ end }}
+                <table class="table table-hover sortable">
+                    <thead>
+                        <tr>
+                            <th scope="col">Filename</th>
+                            <th scope="col">Bin</th>
+                            <th scope="col">Content type</th>
+                            <th scope="col">Size</th>
+                            <th scope="col">Uploaded</th>
+                            <th scope="col">Client IP</th>
+                            <th scope="col">Deleted</th>
+                            <th scope="col">SHA256</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{ range .Files }}
+                            <tr{{ if .IsDeleted }} class="table-secondary"{{ end }}>
+                                <td sorttable_customkey="{{ lowercase .Filename }}">
+                                    {{ if .AvailableForDownload }}
+                                        <a class="link-primary link-custom" href="{{ .URL }}">{{ .Filename }}</a>
+                                    {{ else }}
+                                        {{ .Filename }}
+                                    {{ end }}
+                                </td>
+                                <td sorttable_customkey="{{ .Bin }}"><a href="/admin/bin/{{ .Bin }}"><code>{{ .Bin }}</code></a></td>
+                                <td>{{ .Mime }}</td>
+                                <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
+                                <td sorttable_customkey="{{ .CreatedAt }}">{{ .CreatedAtRelative }}</td>
+                                <td><a href="/admin/log/ip/{{ .IP }}">{{ .IP }}</a></td>
+                                <td sorttable_customkey="{{ .DeletedAt }}">{{ .DeletedAtRelative }}</td>
+                                <td><a href="/admin/file/{{ .SHA256 }}"><code>{{ .SHA256 }}</code></a></td>
+                            </tr>
+                        {{ end }}
+                    </tbody>
+                </table>
+            {{ else }}
+                <p>No files matched <code>{{ .Query }}</code>.</p>
+            {{ end }}
+        {{ end }}
+
+        <script src="/static/js/popper.min.js"></script>
+        <script src="/static/js/bootstrap.min.js"></script>
+    </body>
+</html>
+{{ end }}
