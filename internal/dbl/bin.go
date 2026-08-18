@@ -268,6 +268,34 @@ func (d *BinDao) Touch(bin *ds.Bin) (updated bool, err error) {
 	return true, nil
 }
 
+// Revive clears the deletion marker and pushes the expiration into the
+// future, making a deleted or expired bin available again. It does not touch
+// readonly or approved_at, and it cannot restore file content that has
+// already been removed from storage. Returns false if the bin does not
+// exist.
+func (d *BinDao) Revive(bin *ds.Bin, expiredAt time.Time) (revived bool, err error) {
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	expiredAt = expiredAt.UTC().Truncate(time.Microsecond)
+	sqlStatement := "UPDATE bin SET deleted_at = NULL, expired_at = $1, updated_at = $2 WHERE id = $3 RETURNING id"
+	var id string
+	t0 := time.Now()
+	err = d.db.QueryRow(sqlStatement, expiredAt, now, bin.Id).Scan(&id)
+	observeQuery(d.metrics, "bin_revive", t0, err)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		return false, err
+	}
+	bin.DeletedAt = sql.NullTime{}
+	bin.DeletedAtRelative = ""
+	bin.ExpiredAt = expiredAt
+	bin.ExpiredAtRelative = humanize.Time(bin.ExpiredAt)
+	bin.UpdatedAt = now
+	bin.UpdatedAtRelative = humanize.Time(bin.UpdatedAt)
+	return true, nil
+}
+
 func (d *BinDao) Delete(bin *ds.Bin) (err error) {
 	sqlStatement := "DELETE FROM bin WHERE id = $1"
 	t0 := time.Now()

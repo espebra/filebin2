@@ -511,3 +511,88 @@ func TestFileCount(t *testing.T) {
 		}
 	}
 }
+
+func TestReviveBin(t *testing.T) {
+	dao, err := tearUp()
+	if err != nil {
+		t.Error(err)
+	}
+	defer func() { _ = tearDown(dao) }()
+
+	// Revive a deleted bin
+	bin := &ds.Bin{}
+	bin.Id = "revivedeleted"
+	_, err = dao.Bin().Insert(bin)
+	if err != nil {
+		t.Error(err)
+	}
+	deleted, err := dao.Bin().MarkDeleted(bin)
+	if err != nil {
+		t.Error(err)
+	}
+	if !deleted {
+		t.Errorf("Was expecting MarkDeleted to succeed")
+	}
+
+	expiredAt := time.Now().UTC().Add(time.Hour)
+	revived, err := dao.Bin().Revive(bin, expiredAt)
+	if err != nil {
+		t.Error(err)
+	}
+	if !revived {
+		t.Errorf("Was expecting Revive to succeed on a deleted bin")
+	}
+
+	dbBin, found, err := dao.Bin().GetByID(bin.Id)
+	if err != nil {
+		t.Error(err)
+	}
+	if !found {
+		t.Errorf("Expected found to be true as the bin exists.")
+	}
+	if dbBin.IsDeleted() {
+		t.Errorf("Was expecting the revived bin to not be deleted")
+	}
+	if dbBin.IsExpired() {
+		t.Errorf("Was expecting the revived bin to not be expired")
+	}
+	if !dbBin.IsReadable() {
+		t.Errorf("Was expecting the revived bin to be readable")
+	}
+
+	// Revive an expired bin
+	expiredBin := &ds.Bin{}
+	expiredBin.Id = "reviveexpired"
+	expiredBin.ExpiredAt = time.Now().UTC().Add(-time.Hour)
+	_, err = dao.Bin().Insert(expiredBin)
+	if err != nil {
+		t.Error(err)
+	}
+
+	revived, err = dao.Bin().Revive(expiredBin, time.Now().UTC().Add(time.Hour))
+	if err != nil {
+		t.Error(err)
+	}
+	if !revived {
+		t.Errorf("Was expecting Revive to succeed on an expired bin")
+	}
+
+	dbBin, _, err = dao.Bin().GetByID(expiredBin.Id)
+	if err != nil {
+		t.Error(err)
+	}
+	if dbBin.IsExpired() {
+		t.Errorf("Was expecting the revived bin to not be expired")
+	}
+
+	// Revive a bin that does not exist
+	missingBin := &ds.Bin{}
+	missingBin.Id = "nosuchbin"
+	revived, err = dao.Bin().Revive(missingBin, time.Now().UTC().Add(time.Hour))
+	if err != nil {
+		t.Error(err)
+	}
+	if revived {
+		t.Errorf("Was expecting Revive to return false for a bin that does not exist")
+	}
+}
