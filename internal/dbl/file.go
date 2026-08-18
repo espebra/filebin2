@@ -296,6 +296,21 @@ func (d *FileDao) GetUploaderIPsByBin(id string) (ips []string, err error) {
 	return ips, nil
 }
 
+// SearchByFilename returns files whose filename contains the given substring,
+// case-insensitively. Deleted files and files in deleted or expired bins are
+// included so admins can find files that are no longer publicly available.
+func (d *FileDao) SearchByFilename(query string, limit int) (files []ds.File, err error) {
+	pattern := "%" + escapeLikePattern(query) + "%"
+	sqlStatement := `SELECT f.id, f.bin_id, f.filename, fc.mime, fc.bytes, fc.md5, f.sha256, f.downloads, f.updates, fc.in_storage, f.ip, f.headers, f.updated_at, f.created_at, f.deleted_at, b.deleted_at, b.expired_at, f.upload_duration_ms
+		FROM file f
+		JOIN file_content fc ON f.sha256 = fc.sha256
+		LEFT JOIN bin b ON f.bin_id = b.id
+		WHERE f.filename ILIKE $1
+		ORDER BY f.created_at DESC LIMIT $2`
+	files, err = d.fileQuery(sqlStatement, pattern, limit)
+	return files, err
+}
+
 func (d *FileDao) GetAll(available bool) (files []ds.File, err error) {
 	// Join with file_content to check if content is actually in storage
 	sqlStatement := `SELECT f.id, f.bin_id, f.filename, fc.mime, fc.bytes, fc.md5, f.sha256, f.downloads, f.updates, fc.in_storage, f.ip, f.headers, f.updated_at, f.created_at, f.deleted_at, b.deleted_at, b.expired_at, f.upload_duration_ms

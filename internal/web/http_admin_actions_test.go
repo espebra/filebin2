@@ -407,3 +407,85 @@ func TestAdminReviveBin(t *testing.T) {
 		t.Errorf("Expected revive of missing bin to give %d, got %d", http.StatusNotFound, rr.Code)
 	}
 }
+
+func TestAdminSearch(t *testing.T) {
+	h := setupActionsHandler(t, nil)
+
+	binID := "searchadminbin"
+	gatedUpload(t, h, binID, "needlefile.txt", "content to find via search")
+
+	// Searching requires admin credentials
+	req := httptest.NewRequest(http.MethodGet, "/admin/search?q=needle", nil)
+	rr := httptest.NewRecorder()
+	h.router.ServeHTTP(rr, req)
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("Expected unauthenticated search to give %d, got %d", http.StatusUnauthorized, rr.Code)
+	}
+
+	// Substring search by bin ID
+	req = httptest.NewRequest(http.MethodGet, "/admin/search?q=archadmin", nil)
+	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
+	rr = httptest.NewRecorder()
+	h.router.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("Expected search to give %d, got %d. Body: %s", http.StatusOK, rr.Code, rr.Body.String())
+	}
+	if !strings.Contains(rr.Body.String(), binID) {
+		t.Errorf("Expected search result to contain the bin ID %s", binID)
+	}
+
+	// Substring search by filename
+	req = httptest.NewRequest(http.MethodGet, "/admin/search?q=eedlefile", nil)
+	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
+	rr = httptest.NewRecorder()
+	h.router.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("Expected search to give %d, got %d. Body: %s", http.StatusOK, rr.Code, rr.Body.String())
+	}
+	if !strings.Contains(rr.Body.String(), "needlefile.txt") {
+		t.Errorf("Expected search result to contain the filename needlefile.txt")
+	}
+
+	// Delete the file and the bin: both must still be found by the search
+	req = httptest.NewRequest(http.MethodDelete, "/"+binID+"/needlefile.txt", nil)
+	rr = httptest.NewRecorder()
+	h.router.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("Expected file delete to give %d, got %d. Body: %s", http.StatusOK, rr.Code, rr.Body.String())
+	}
+	bin, found, err := h.dao.Bin().GetByID(binID)
+	if err != nil || !found {
+		t.Fatalf("Expected to find the bin: %v", err)
+	}
+	if _, err := h.dao.Bin().MarkDeleted(&bin); err != nil {
+		t.Fatalf("Expected to mark the bin as deleted: %v", err)
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/admin/search?q=searchadminbin", nil)
+	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
+	rr = httptest.NewRecorder()
+	h.router.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("Expected search to give %d, got %d. Body: %s", http.StatusOK, rr.Code, rr.Body.String())
+	}
+	if !strings.Contains(rr.Body.String(), binID) {
+		t.Errorf("Expected search result to contain the deleted bin ID %s", binID)
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/admin/search?q=needlefile", nil)
+	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
+	rr = httptest.NewRecorder()
+	h.router.ServeHTTP(rr, req)
+	if !strings.Contains(rr.Body.String(), "needlefile.txt") {
+		t.Errorf("Expected search result to contain the deleted filename needlefile.txt")
+	}
+
+	// The search page renders without a query
+	req = httptest.NewRequest(http.MethodGet, "/admin/search", nil)
+	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
+	rr = httptest.NewRecorder()
+	h.router.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected search page without query to give %d, got %d", http.StatusOK, rr.Code)
+	}
+}

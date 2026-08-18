@@ -1032,3 +1032,113 @@ func TestRegisterDownloadIfUnderLimitConcurrency(t *testing.T) {
 		t.Errorf("Was expecting the number of downloads to be %d, not %d\n", limit, dbFile.Downloads)
 	}
 }
+
+func TestSearchFilesByFilename(t *testing.T) {
+	dao, err := tearUp()
+	if err != nil {
+		t.Error(err)
+	}
+	defer func() { _ = tearDown(dao) }()
+
+	bin := &ds.Bin{}
+	bin.Id = "searchfilesbin"
+	if _, err := dao.Bin().Insert(bin); err != nil {
+		t.Error(err)
+	}
+
+	file := &ds.File{}
+	file.Bin = bin.Id
+	file.Filename = "searchable-report.txt"
+	file.Bytes = 1
+	file.SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	if err := ensureFileContent(dao, file); err != nil {
+		t.Error(err)
+	}
+	if _, err := dao.File().Insert(file); err != nil {
+		t.Error(err)
+	}
+
+	deletedFile := &ds.File{}
+	deletedFile.Bin = bin.Id
+	deletedFile.Filename = "searchable-deleted.txt"
+	deletedFile.Bytes = 1
+	deletedFile.SHA256 = file.SHA256
+	if _, err := dao.File().Insert(deletedFile); err != nil {
+		t.Error(err)
+	}
+	_ = deletedFile.DeletedAt.Scan(time.Now().UTC())
+	if err := dao.File().Update(deletedFile); err != nil {
+		t.Error(err)
+	}
+
+	otherFile := &ds.File{}
+	otherFile.Bin = bin.Id
+	otherFile.Filename = "unrelated.txt"
+	otherFile.Bytes = 1
+	otherFile.SHA256 = file.SHA256
+	if _, err := dao.File().Insert(otherFile); err != nil {
+		t.Error(err)
+	}
+
+	// Substring search includes deleted files
+	files, err := dao.File().SearchByFilename("earchable", 100)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(files) != 2 {
+		t.Errorf("Was expecting 2 files, got %d", len(files))
+	}
+	foundDeleted := false
+	for _, f := range files {
+		if f.Filename == "searchable-deleted.txt" && f.IsDeleted() {
+			foundDeleted = true
+		}
+	}
+	if !foundDeleted {
+		t.Errorf("Was expecting the deleted file to be included in the search results")
+	}
+
+	// Case insensitive search
+	files, err = dao.File().SearchByFilename("SEARCHABLE", 100)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(files) != 2 {
+		t.Errorf("Was expecting 2 files, got %d", len(files))
+	}
+
+	// The limit is respected
+	files, err = dao.File().SearchByFilename("earchable", 1)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(files) != 1 {
+		t.Errorf("Was expecting 1 file, got %d", len(files))
+	}
+
+	// Wildcard characters are matched literally, not as wildcards
+	files, err = dao.File().SearchByFilename("%", 100)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(files) != 0 {
+		t.Errorf("Was expecting 0 files when searching for a literal %%, got %d", len(files))
+	}
+
+	files, err = dao.File().SearchByFilename("searchable_", 100)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(files) != 0 {
+		t.Errorf("Was expecting 0 files when searching for a literal _, got %d", len(files))
+	}
+
+	// No match
+	files, err = dao.File().SearchByFilename("nosuchfile", 100)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(files) != 0 {
+		t.Errorf("Was expecting 0 files, got %d", len(files))
+	}
+}

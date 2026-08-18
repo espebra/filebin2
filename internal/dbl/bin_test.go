@@ -596,3 +596,92 @@ func TestReviveBin(t *testing.T) {
 		t.Errorf("Was expecting Revive to return false for a bin that does not exist")
 	}
 }
+
+func TestSearchBinsByID(t *testing.T) {
+	dao, err := tearUp()
+	if err != nil {
+		t.Error(err)
+	}
+	defer func() { _ = tearDown(dao) }()
+
+	activeBin := &ds.Bin{}
+	activeBin.Id = "searchbinactive"
+	if _, err := dao.Bin().Insert(activeBin); err != nil {
+		t.Error(err)
+	}
+
+	deletedBin := &ds.Bin{}
+	deletedBin.Id = "searchbindeleted"
+	if _, err := dao.Bin().Insert(deletedBin); err != nil {
+		t.Error(err)
+	}
+	if _, err := dao.Bin().MarkDeleted(deletedBin); err != nil {
+		t.Error(err)
+	}
+
+	expiredBin := &ds.Bin{}
+	expiredBin.Id = "searchbinexpired"
+	expiredBin.ExpiredAt = time.Now().UTC().Add(-time.Hour)
+	if _, err := dao.Bin().Insert(expiredBin); err != nil {
+		t.Error(err)
+	}
+
+	otherBin := &ds.Bin{}
+	otherBin.Id = "unrelated"
+	if _, err := dao.Bin().Insert(otherBin); err != nil {
+		t.Error(err)
+	}
+
+	// Substring search includes deleted and expired bins
+	bins, err := dao.Bin().SearchByID("earchbin", 100)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(bins) != 3 {
+		t.Errorf("Was expecting 3 bins, got %d", len(bins))
+	}
+
+	// Case insensitive search
+	bins, err = dao.Bin().SearchByID("SEARCHBIN", 100)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(bins) != 3 {
+		t.Errorf("Was expecting 3 bins, got %d", len(bins))
+	}
+
+	// The limit is respected
+	bins, err = dao.Bin().SearchByID("earchbin", 2)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(bins) != 2 {
+		t.Errorf("Was expecting 2 bins, got %d", len(bins))
+	}
+
+	// Wildcard characters are matched literally, not as wildcards
+	bins, err = dao.Bin().SearchByID("%", 100)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(bins) != 0 {
+		t.Errorf("Was expecting 0 bins when searching for a literal %%, got %d", len(bins))
+	}
+
+	bins, err = dao.Bin().SearchByID("searchbin_", 100)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(bins) != 0 {
+		t.Errorf("Was expecting 0 bins when searching for a literal _, got %d", len(bins))
+	}
+
+	// No match
+	bins, err = dao.Bin().SearchByID("nosuchbin", 100)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(bins) != 0 {
+		t.Errorf("Was expecting 0 bins, got %d", len(bins))
+	}
+}

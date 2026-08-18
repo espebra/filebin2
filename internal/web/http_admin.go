@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -710,6 +711,65 @@ func (h *HTTP) reviveBin(w http.ResponseWriter, r *http.Request) {
 	slog.Info("revived bin", "bin", binID, "expired_at", expiredAt.Format("2006-01-02 15:04:05 UTC"))
 
 	http.Redirect(w, r, "/admin/bin/"+binID, http.StatusSeeOther)
+}
+
+func (h *HTTP) viewAdminSearch(w http.ResponseWriter, r *http.Request) {
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+
+	// default
+	limit := 100
+
+	if i, err := strconv.Atoi(r.URL.Query().Get("limit")); err == nil {
+		if i >= 1 && i <= 5000 {
+			limit = i
+		}
+	}
+
+	type Data struct {
+		Query string    `json:"query"`
+		Limit int       `json:"limit"`
+		Bins  []ds.Bin  `json:"bins"`
+		Files []ds.File `json:"files"`
+	}
+	var data Data
+	data.Query = query
+	data.Limit = limit
+
+	if query != "" {
+		bins, err := h.dao.Bin().SearchByID(query, limit)
+		if err != nil {
+			slog.Error("unable to search bins", "query", query, "error", err)
+			http.Error(w, "Errno 273", http.StatusInternalServerError)
+			return
+		}
+		data.Bins = bins
+
+		files, err := h.dao.File().SearchByFilename(query, limit)
+		if err != nil {
+			slog.Error("unable to search files", "query", query, "error", err)
+			http.Error(w, "Errno 274", http.StatusInternalServerError)
+			return
+		}
+		data.Files = files
+	}
+
+	if r.Header.Get("accept") == "application/json" {
+		w.Header().Set("Content-Type", "application/json")
+		out, err := json.MarshalIndent(data, "", "    ")
+		if err != nil {
+			slog.Error("failed to parse json", "error", err)
+			http.Error(w, "Errno 275", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(200)
+		_, _ = w.Write(out)
+	} else {
+		if err := h.renderTemplate(w, "admin_search", data); err != nil {
+			slog.Error("failed to execute template", "error", err)
+			http.Error(w, "Errno 276", http.StatusInternalServerError)
+			return
+		}
+	}
 }
 
 func (h *HTTP) banBinUploaders(w http.ResponseWriter, r *http.Request) {

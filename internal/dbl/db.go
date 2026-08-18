@@ -5,10 +5,20 @@ import (
 	_ "embed"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	_ "github.com/lib/pq"
 )
+
+// escapeLikePattern escapes the LIKE/ILIKE wildcard characters in s so it
+// can be embedded in a pattern and matched literally.
+func escapeLikePattern(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `%`, `\%`)
+	s = strings.ReplaceAll(s, `_`, `\_`)
+	return s
+}
 
 // DBMetricsObserver allows DAO to report metrics without importing the ds package.
 type DBMetricsObserver interface {

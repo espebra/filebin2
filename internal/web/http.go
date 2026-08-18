@@ -252,6 +252,7 @@ func (h *HTTP) Init() error {
 	h.router.HandleFunc("/admin/recent/uploads", h.auth(h.viewAdminRecentUploads)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/telemetry/upload-failures", h.auth(h.viewAdminClientUploadFailures)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/telemetry/upload-successes", h.auth(h.viewAdminClientUploadSuccesses)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin/search", h.auth(h.viewAdminSearch)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/message", h.auth(h.viewAdminSiteMessage)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/message", h.log(h.auth(h.updateSiteMessage))).Methods("POST")
 	h.router.HandleFunc("/admin", h.auth(h.viewAdminDashboard)).Methods(http.MethodHead, http.MethodGet)
