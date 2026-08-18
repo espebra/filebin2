@@ -241,6 +241,7 @@ func (h *HTTP) Init() error {
 	h.router.HandleFunc("/admin/files", h.auth(h.viewAdminFiles)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/filecontent", h.auth(h.viewAdminFileContent)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/bin/{bin:[A-Za-z0-9_-]+}", h.auth(h.viewAdminBin)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin/bin/{bin:[A-Za-z0-9_-]+}/revive", h.log(h.auth(h.reviveBin))).Methods("POST")
 	h.router.HandleFunc("/admin/bin/{bin:[A-Za-z0-9_-]+}/ban-uploaders", h.log(h.auth(h.banBinUploaders))).Methods("POST")
 	h.router.HandleFunc("/admin/bin/{bin:[A-Za-z0-9_-]+}/ban-downloaders", h.log(h.auth(h.banBinDownloaders))).Methods("POST")
 	h.router.HandleFunc("/admin/file/{sha256:[0-9a-z]+}", h.auth(h.viewAdminFile)).Methods(http.MethodHead, http.MethodGet)

@@ -87,6 +87,12 @@
 
             <div class="col-md-6">
                 <h5>Actions</h5>
+                {{ if or .Bin.IsDeleted .Bin.IsExpired }}
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#confirmReviveBin"><i class="fas fa-fw fa-undo"></i> Revive bin</button>
+                        <small class="text-muted d-block mt-1">Clear the deletion marker and extend the expiration so the bin becomes available again.</small>
+                    </div>
+                {{ end }}
                 {{ if not (isApproved .Bin) }}
                     <div class="mb-3">
                         <button type="button" class="btn btn-success" onclick="approveBin('{{ .Bin.Id }}','adminBinApproveStatus')"><i class="fas fa-fw fa-thumbs-up"></i> Approve bin</button>
@@ -170,6 +176,26 @@
         {{ end }}
 
         <!-- Confirmation modals -->
+        <div class="modal fade" id="confirmReviveBin" tabindex="-1" aria-labelledby="confirmReviveBinLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="confirmReviveBinLabel">Revive bin</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        Are you sure you want to revive bin <code>{{ .Bin.Id }}</code>? The deletion marker will be cleared and the expiration extended, making the bin available again. File content that has already been removed from storage cannot be restored.
+                    </div>
+                    <div class="modal-footer">
+                        <form method="POST" action="/admin/bin/{{ .Bin.Id }}/revive">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-success"><i class="fas fa-fw fa-undo"></i> Revive bin</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="modal fade" id="confirmDeleteBin" tabindex="-1" aria-labelledby="confirmDeleteBinLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">

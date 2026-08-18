@@ -680,6 +680,38 @@ func (h *HTTP) viewAdminBin(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *HTTP) reviveBin(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	binID := params["bin"]
+
+	bin, found, err := h.dao.Bin().GetByID(binID)
+	if err != nil {
+		slog.Error("unable to get bin by ID", "bin", binID, "error", err)
+		http.Error(w, "Errno 272", http.StatusInternalServerError)
+		return
+	}
+	if !found {
+		http.NotFound(w, r)
+		return
+	}
+
+	expiredAt := time.Now().UTC().Add(h.config.ExpirationDuration)
+	revived, err := h.dao.Bin().Revive(&bin, expiredAt)
+	if err != nil {
+		slog.Error("unable to revive bin", "bin", binID, "error", err)
+		http.Error(w, "Failed to revive bin", http.StatusInternalServerError)
+		return
+	}
+	if !revived {
+		http.NotFound(w, r)
+		return
+	}
+
+	slog.Info("revived bin", "bin", binID, "expired_at", expiredAt.Format("2006-01-02 15:04:05 UTC"))
+
+	http.Redirect(w, r, "/admin/bin/"+binID, http.StatusSeeOther)
+}
+
 func (h *HTTP) banBinUploaders(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	binID := params["bin"]

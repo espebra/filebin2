@@ -340,3 +340,70 @@ func TestUploadStorageLimit(t *testing.T) {
 	h.storageBytesMutex.Unlock()
 	gatedUpload(t, h, "storagelimitbin", "third.txt", "small file after cleanup")
 }
+
+func TestAdminReviveBin(t *testing.T) {
+	h := setupActionsHandler(t, nil)
+
+	binID := "revivebin"
+	gatedUpload(t, h, binID, "file.txt", "content in a bin to revive")
+
+	// Delete the bin
+	bin, found, err := h.dao.Bin().GetByID(binID)
+	if err != nil || !found {
+		t.Fatalf("Expected to find the bin: %v", err)
+	}
+	deleted, err := h.dao.Bin().MarkDeleted(&bin)
+	if err != nil || !deleted {
+		t.Fatalf("Expected to mark the bin as deleted: %v", err)
+	}
+
+	// The bin is no longer available
+	req := httptest.NewRequest(http.MethodGet, "/"+binID, nil)
+	rr := httptest.NewRecorder()
+	h.router.ServeHTTP(rr, req)
+	if rr.Code != http.StatusNotFound {
+		t.Errorf("Expected view of deleted bin to give %d, got %d", http.StatusNotFound, rr.Code)
+	}
+
+	// Reviving requires admin credentials
+	req = httptest.NewRequest(http.MethodPost, "/admin/bin/"+binID+"/revive", nil)
+	rr = httptest.NewRecorder()
+	h.router.ServeHTTP(rr, req)
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("Expected unauthenticated revive to give %d, got %d", http.StatusUnauthorized, rr.Code)
+	}
+
+	// Revive the bin
+	req = httptest.NewRequest(http.MethodPost, "/admin/bin/"+binID+"/revive", nil)
+	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
+	rr = httptest.NewRecorder()
+	h.router.ServeHTTP(rr, req)
+	if rr.Code != http.StatusSeeOther {
+		t.Fatalf("Expected revive to give %d, got %d. Body: %s", http.StatusSeeOther, rr.Code, rr.Body.String())
+	}
+
+	// The bin is available again
+	req = httptest.NewRequest(http.MethodGet, "/"+binID, nil)
+	rr = httptest.NewRecorder()
+	h.router.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected view of revived bin to give %d, got %d", http.StatusOK, rr.Code)
+	}
+
+	// The file is downloadable again
+	req = httptest.NewRequest(http.MethodGet, "/"+binID+"/file.txt", nil)
+	rr = httptest.NewRecorder()
+	h.router.ServeHTTP(rr, req)
+	if rr.Code != http.StatusFound {
+		t.Errorf("Expected download from revived bin to give %d, got %d", http.StatusFound, rr.Code)
+	}
+
+	// Reviving a bin that does not exist gives 404
+	req = httptest.NewRequest(http.MethodPost, "/admin/bin/nosuchbin/revive", nil)
+	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
+	rr = httptest.NewRecorder()
+	h.router.ServeHTTP(rr, req)
+	if rr.Code != http.StatusNotFound {
+		t.Errorf("Expected revive of missing bin to give %d, got %d", http.StatusNotFound, rr.Code)
+	}
+}
