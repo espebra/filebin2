@@ -489,3 +489,51 @@ func TestAdminSearch(t *testing.T) {
 		t.Errorf("Expected search page without query to give %d, got %d", http.StatusOK, rr.Code)
 	}
 }
+
+func TestAdminViewBinFileIndicators(t *testing.T) {
+	h := setupActionsHandler(t, nil)
+
+	binID := "fileindicatorbin"
+	gatedUpload(t, h, binID, "live.txt", "content that stays available")
+	gatedUpload(t, h, binID, "gone.txt", "content that gets deleted and purged")
+
+	// Soft-delete one file and remove its content from storage, as the
+	// lurker would once the content is orphaned.
+	req := httptest.NewRequest(http.MethodDelete, "/"+binID+"/gone.txt", nil)
+	rr := httptest.NewRecorder()
+	h.router.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("Expected file delete to give %d, got %d. Body: %s", http.StatusOK, rr.Code, rr.Body.String())
+	}
+	shaBytes := sha256.Sum256([]byte("content that gets deleted and purged"))
+	sha := hex.EncodeToString(shaBytes[:])
+	claimed, err := h.dao.FileContent().ClaimForDeletion(sha)
+	if err != nil || !claimed {
+		t.Fatalf("Expected to claim the orphaned content for deletion: %v", err)
+	}
+
+	// The admin bin page shows both files with deletion and storage state
+	req = httptest.NewRequest(http.MethodGet, "/admin/bin/"+binID, nil)
+	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
+	rr = httptest.NewRecorder()
+	h.router.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("Expected admin bin page to give %d, got %d. Body: %s", http.StatusOK, rr.Code, rr.Body.String())
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, "live.txt") || !strings.Contains(body, "gone.txt") {
+		t.Errorf("Expected the admin bin page to list both files")
+	}
+	if !strings.Contains(body, "In storage") {
+		t.Errorf("Expected the admin bin page to have an In storage column")
+	}
+	if !strings.Contains(body, `<span class="badge bg-danger">Deleted</span>`) {
+		t.Errorf("Expected the admin bin page to flag the deleted file with a badge")
+	}
+	if !strings.Contains(body, "fa-check-circle text-success") {
+		t.Errorf("Expected the admin bin page to flag content that is in storage")
+	}
+	if !strings.Contains(body, "fa-times-circle text-danger") {
+		t.Errorf("Expected the admin bin page to flag content that is no longer in storage")
+	}
+}
