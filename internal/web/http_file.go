@@ -379,21 +379,23 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) error {
 
 	// Step 8: Finish up. Update the bin to set the correct updated timestamp
 	// and extend its expiration. Use Touch (a targeted update of only
-	// updated_at/expired_at, guarded by the bin still being writable) rather
+	// updated_at/expired_at, guarded by the bin not being deleted) rather
 	// than a full Update so that this potentially slow, client-controlled
 	// upload cannot revert moderation changes (delete, lock, or approval
 	// revocation) that an admin or the lurker applied to the bin while the
-	// upload was in flight.
+	// upload was in flight. A bin locked during the upload is touched and
+	// the upload succeeds, since the file was accepted before the lock and
+	// is in the bin.
 	bin.ExpiredAt = time.Now().UTC().Add(h.config.ExpirationDuration)
 	updated, err := h.dao.Bin().Touch(&bin)
 	if err != nil {
 		return fmt.Errorf("touch bin: %w", err)
 	}
 	if !updated {
-		// The bin was deleted or locked concurrently during the upload. The
-		// file reference created above will be cleaned up by the lurker (for
-		// deleted bins) or is inaccessible; do not resurrect the bin.
-		return &httpError{status: http.StatusMethodNotAllowed, message: "The bin is no longer available", err: errors.New("bin became unavailable during upload")}
+		// The bin was deleted concurrently during the upload. The file
+		// reference created above will be cleaned up by the lurker; do not
+		// resurrect the bin.
+		return &httpError{status: http.StatusMethodNotAllowed, message: "The bin is no longer available", err: errors.New("bin was deleted during upload")}
 	}
 
 	// Count the upload in the metrics.

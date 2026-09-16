@@ -230,6 +230,73 @@ func TestUploadToDeletedAtBin(t *testing.T) {
 	runTests(tcs, t)
 }
 
+// TestLockBinDuringUpload verifies that an upload accepted before the bin was
+// locked completes with 201 even though the lock lands while its body is
+// still being received. The file is stored in the bin either way, so
+// reporting a failure would be wrong. The lock stops the next upload.
+func TestLockBinDuringUpload(t *testing.T) {
+	bin := "lockduringupload"
+	if code, body, err := httpRequest(TestCase{Method: "POST", Bin: bin, Filename: "a", UploadContent: "content a"}); err != nil || code != http.StatusCreated {
+		t.Fatalf("setup upload failed: %d %s %v", code, body, err)
+	}
+
+	// Stream the second upload through a pipe so the body can be held
+	// open while the bin is locked.
+	content := []byte("content b")
+	pr, pw := io.Pipe()
+	req, err := http.NewRequest(http.MethodPost, testServerURL+"/"+bin+"/b", pr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.ContentLength = int64(len(content))
+
+	type result struct {
+		code int
+		body string
+		err  error
+	}
+	done := make(chan result, 1)
+	go func() {
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			done <- result{err: err}
+			return
+		}
+		defer func() { _ = resp.Body.Close() }()
+		body, _ := io.ReadAll(resp.Body)
+		done <- result{code: resp.StatusCode, body: string(body)}
+	}()
+
+	// Send the first byte, then give the handler time to pass its
+	// writability check and start reading the body before locking.
+	if _, err := pw.Write(content[:1]); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(500 * time.Millisecond)
+
+	if code, body, err := httpRequest(TestCase{Method: "PUT", Bin: bin}); err != nil || code != http.StatusOK {
+		t.Fatalf("lock failed: %d %s %v", code, body, err)
+	}
+
+	if _, err := pw.Write(content[1:]); err != nil {
+		t.Fatal(err)
+	}
+	_ = pw.Close()
+
+	res := <-done
+	if res.err != nil {
+		t.Fatal(res.err)
+	}
+	if res.code != http.StatusCreated {
+		t.Errorf("upload during lock: got %d, want %d, body %q", res.code, http.StatusCreated, res.body)
+	}
+
+	// The lock holds for the next upload.
+	if code, _, err := httpRequest(TestCase{Method: "POST", Bin: bin, Filename: "c", UploadContent: "content c"}); err != nil || code != http.StatusMethodNotAllowed {
+		t.Errorf("upload to locked bin: got %d, want %d, err %v", code, http.StatusMethodNotAllowed, err)
+	}
+}
+
 func TestDeleteFile(t *testing.T) {
 	tcs := []TestCase{
 		{
