@@ -444,11 +444,11 @@ func (h *HTTP) viewAdminFile(w http.ResponseWriter, r *http.Request) {
 	data.S3URL = h.s3.GetObjectURL(inputSHA256)
 
 	// Get file content metadata (common across all files with this SHA256)
-	fileContent, err := h.dao.FileContent().GetBySHA256(inputSHA256)
+	fileContent, found, err := h.dao.FileContent().GetBySHA256(inputSHA256)
 	if err != nil {
 		slog.Error("unable to get file content", "sha256", inputSHA256, "error", err)
 		// Don't fail completely, just log the error
-	} else {
+	} else if found {
 		data.FileContent = fileContent
 
 		// Generate presigned URL for direct S3 access

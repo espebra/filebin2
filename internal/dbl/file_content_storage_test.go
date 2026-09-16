@@ -84,8 +84,8 @@ func TestFileContentInStorageReflectsS3State(t *testing.T) {
 	}
 
 	// Verify in_storage is true in database
-	dbContent, err := dao.FileContent().GetBySHA256(sha256)
-	if err != nil {
+	dbContent, found, err := dao.FileContent().GetBySHA256(sha256)
+	if err != nil || !found {
 		t.Fatalf("Failed to get file_content: %s", err)
 	}
 
@@ -113,8 +113,8 @@ func TestFileContentInStorageReflectsS3State(t *testing.T) {
 	}
 
 	// Verify in_storage is false in database
-	updatedContent, err := dao.FileContent().GetBySHA256(sha256)
-	if err != nil {
+	updatedContent, found, err := dao.FileContent().GetBySHA256(sha256)
+	if err != nil || !found {
 		t.Fatalf("Failed to get updated file_content: %s", err)
 	}
 
@@ -209,8 +209,8 @@ func TestFileInStorageReflectsS3State(t *testing.T) {
 	}
 
 	// Update file_content to reflect S3 state (normally done by lurker)
-	dbContent, err := dao.FileContent().GetBySHA256(sha256)
-	if err != nil {
+	dbContent, found, err := dao.FileContent().GetBySHA256(sha256)
+	if err != nil || !found {
 		t.Fatalf("Failed to get file_content: %s", err)
 	}
 	dbContent.InStorage = false
@@ -285,8 +285,8 @@ func TestDeduplicationWithS3Storage(t *testing.T) {
 	}
 
 	// Verify content exists
-	dbContent, err := dao.FileContent().GetBySHA256(sha256)
-	if err != nil {
+	dbContent, found, err := dao.FileContent().GetBySHA256(sha256)
+	if err != nil || !found {
 		t.Fatalf("Failed to get file_content: %s", err)
 	}
 	if !dbContent.InStorage {
@@ -326,8 +326,8 @@ func TestDeduplicationWithS3Storage(t *testing.T) {
 	}
 
 	// Verify content still in S3
-	dbContent, err = dao.FileContent().GetBySHA256(sha256)
-	if err != nil {
+	dbContent, found, err = dao.FileContent().GetBySHA256(sha256)
+	if err != nil || !found {
 		t.Fatalf("Failed to get file_content: %s", err)
 	}
 	if !dbContent.InStorage {
@@ -349,8 +349,8 @@ func TestDeduplicationWithS3Storage(t *testing.T) {
 	}
 
 	// file_content should still have in_storage=true
-	dbContent, err = dao.FileContent().GetBySHA256(sha256)
-	if err != nil {
+	dbContent, found, err = dao.FileContent().GetBySHA256(sha256)
+	if err != nil || !found {
 		t.Fatalf("Failed to get file_content: %s", err)
 	}
 	if !dbContent.InStorage {
@@ -396,8 +396,8 @@ func TestDeduplicationWithS3Storage(t *testing.T) {
 	}
 
 	// Update file_content to reflect removal (fetch fresh data first)
-	dbContent, err = dao.FileContent().GetBySHA256(sha256)
-	if err != nil {
+	dbContent, found, err = dao.FileContent().GetBySHA256(sha256)
+	if err != nil || !found {
 		t.Fatalf("Failed to get file_content before update: %s", err)
 	}
 	dbContent.InStorage = false
@@ -407,8 +407,8 @@ func TestDeduplicationWithS3Storage(t *testing.T) {
 	}
 
 	// Verify file_content.in_storage is false
-	finalContent, err := dao.FileContent().GetBySHA256(sha256)
-	if err != nil {
+	finalContent, found, err := dao.FileContent().GetBySHA256(sha256)
+	if err != nil || !found {
 		t.Fatalf("Failed to get final file_content: %s", err)
 	}
 	if finalContent.InStorage {
@@ -506,8 +506,8 @@ func TestReuploadAfterDeletion(t *testing.T) {
 		}
 
 		// Simulate lurker: mark as not in storage
-		dbContent, err := dao.FileContent().GetBySHA256(sha256)
-		if err != nil {
+		dbContent, found, err := dao.FileContent().GetBySHA256(sha256)
+		if err != nil || !found {
 			t.Fatalf("Failed to get file_content: %s", err)
 		}
 		dbContent.InStorage = false
@@ -523,8 +523,8 @@ func TestReuploadAfterDeletion(t *testing.T) {
 		}
 
 		// Verify in_storage is false
-		dbContent, err = dao.FileContent().GetBySHA256(sha256)
-		if err != nil {
+		dbContent, found, err = dao.FileContent().GetBySHA256(sha256)
+		if err != nil || !found {
 			t.Fatalf("Failed to get file_content: %s", err)
 		}
 		if dbContent.InStorage {
@@ -567,8 +567,8 @@ func TestReuploadAfterDeletion(t *testing.T) {
 		_, _ = dao.File().Insert(file3)
 
 		// Verify in_storage is now true
-		finalContent, err := dao.FileContent().GetBySHA256(sha256)
-		if err != nil {
+		finalContent, found, err := dao.FileContent().GetBySHA256(sha256)
+		if err != nil || !found {
 			t.Fatalf("Failed to get file_content after re-upload: %s", err)
 		}
 		if !finalContent.InStorage {
@@ -663,8 +663,8 @@ func TestReuploadAfterDeletion(t *testing.T) {
 		}
 
 		// Simulate lurker: mark as not in storage
-		dbContent, err := dao.FileContent().GetBySHA256(sha256_v2)
-		if err != nil {
+		dbContent, found, err := dao.FileContent().GetBySHA256(sha256_v2)
+		if err != nil || !found {
 			t.Fatalf("Failed to get file_content: %s", err)
 		}
 		dbContent.InStorage = false
@@ -680,8 +680,8 @@ func TestReuploadAfterDeletion(t *testing.T) {
 		}
 
 		// Verify in_storage is false
-		dbContent, err = dao.FileContent().GetBySHA256(sha256_v2)
-		if err != nil {
+		dbContent, found, err = dao.FileContent().GetBySHA256(sha256_v2)
+		if err != nil || !found {
 			t.Fatalf("Failed to get file_content: %s", err)
 		}
 		if dbContent.InStorage {
@@ -724,8 +724,8 @@ func TestReuploadAfterDeletion(t *testing.T) {
 		_, _ = dao.File().Insert(file6)
 
 		// Verify in_storage is now true
-		finalContent, err := dao.FileContent().GetBySHA256(sha256_v2)
-		if err != nil {
+		finalContent, found, err := dao.FileContent().GetBySHA256(sha256_v2)
+		if err != nil || !found {
 			t.Fatalf("Failed to get file_content after re-upload: %s", err)
 		}
 		if !finalContent.InStorage {

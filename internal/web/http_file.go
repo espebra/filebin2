@@ -2,10 +2,8 @@ package web
 
 import (
 	"context"
-	"crypto/md5"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -154,206 +152,99 @@ func (h *HTTP) getFile(w http.ResponseWriter, r *http.Request) {
 	h.metrics.IncrFileDownloadCount()
 }
 
-func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
+// uploadFile handles POST and PUT of a file to a bin. The flow is:
+//
+//  1. Resolve the target bin and filename from the request.
+//  2. Validate the request before reading the body: content-length, file
+//     extension, bin state and storage limit. The bin is created here if it
+//     does not exist.
+//  3. Buffer the body to a temporary file while calculating checksums, then
+//     verify the checksums against the request headers.
+//  4. Inspect the content: mime type and, for images, perceptual hash.
+//  5. Build the file record and validate it.
+//  6. Deduplicate against existing content and upload to S3 if needed.
+//  7. Under the content lock, verify the object is in S3 and persist the
+//     content record and the file reference.
+//  8. Touch the bin, update metrics, run the post-upload hook and respond.
+func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) error {
 	w.Header().Set("Cache-Control", "max-age=0")
 
 	t0 := time.Now()
 
-	params := mux.Vars(r)
-	inputBin := params["bin"]
-	inputFilename := params["filename"]
-
 	h.metrics.IncrFileUploadInProgress()
 	defer h.metrics.DecrFileUploadInProgress()
 
-	// Deprecated: This block is here to be compatible with the clients that
-	// are written for https://github.com/espebra/filebin, meaning clients that
-	// upload files to / with the request headers bin and filename set instead
-	// of /{bin}/{filename}
-	if inputBin == "" || inputFilename == "" {
-		inputFilename = r.Header.Get("filename")
-		if inputFilename == "" {
-			h.Error(w, r, "Upload failed: missing filename request header", "Missing filename request header", 952, http.StatusBadRequest)
-			return
-		}
-
-		inputBin = r.Header.Get("bin")
-		if inputBin == "" {
-			inputBin = h.dao.Bin().GenerateId()
-			slog.Debug("auto generated bin", "bin", inputBin)
-		}
+	// Step 1: Resolve the bin and filename from the URL, or from the request
+	// headers for legacy clients.
+	inputBin, inputFilename, err := h.uploadTarget(r)
+	if err != nil {
+		return err
 	}
 
-	inputMD5 := r.Header.Get("Content-MD5")
-	inputSHA256 := r.Header.Get("Content-SHA256")
-
+	// Step 2: Validate the request before reading the body. The content
+	// length is required to size the temporary file and to detect truncated
+	// uploads.
 	inputBytes, err := strconv.ParseUint(r.Header.Get("content-length"), 10, 64)
 	if err != nil {
-		h.Error(w, r, "Upload failed: Invalid content-length header", "Missing or invalid content-length header", 120, http.StatusLengthRequired)
-		return
+		return &httpError{status: http.StatusLengthRequired, message: "Missing or invalid content-length header", err: err}
 	}
 	// TODO: Input validation on content-length. Between min:max.
 
-	// Reject file names with certain extensions
-	// Remove the . from the extension
-	thisExtension := path.Ext(inputFilename)
-	if len(thisExtension) > 0 {
-		for _, extension := range h.config.RejectFileExtensions {
-			if "."+extension == thisExtension {
-				h.Error(w, r, fmt.Sprintf("Rejecting file name %s with illegal extension: %s", inputFilename, extension), "Illegal file extension", 992, http.StatusForbidden)
-				return
-			}
-		}
+	// Reject file names with a blocked extension.
+	if err := h.checkFileExtension(inputFilename); err != nil {
+		return err
 	}
 
-	// Check if bin exists
-	bin, found, err := h.dao.Bin().GetByID(inputBin)
+	// Load the bin, or create it on the first upload.
+	bin, err := h.getOrCreateBin(inputBin)
 	if err != nil {
-		h.Error(w, r, fmt.Sprintf("Failed to select bin by id %q: %s", inputBin, err.Error()), "Database error", 128, http.StatusInternalServerError)
-		return
+		return err
 	}
 
-	if !found {
-		// Bin does not exist, so create it here
-		bin = ds.Bin{}
-		bin.Id = inputBin
-
-		// Since manual approval is not needed, then just set the approval time at the time of the upload
-		if !h.config.RequireApproval {
-			now := time.Now().UTC().Truncate(time.Microsecond)
-			_ = bin.ApprovedAt.Scan(now)
-		}
-
-		// Abort early if the bin is invalid
-		if err := h.dao.Bin().ValidateInput(&bin); err != nil {
-			h.Error(w, r, fmt.Sprintf("Input validation error on upload: %s", err.Error()), err.Error(), 623, http.StatusBadRequest)
-			return
-		}
-
-		bin.ExpiredAt = time.Now().UTC().Add(h.config.ExpirationDuration)
-		inserted, err := h.dao.Bin().Insert(&bin)
-		if err != nil {
-			h.Error(w, r, fmt.Sprintf("Unable to insert bin %q: %s", inputBin, err), "Database error", 121, http.StatusInternalServerError)
-			return
-		}
-		bin, found, err = h.dao.Bin().GetByID(inputBin)
-		if err != nil || !found {
-			h.Error(w, r, fmt.Sprintf("Unable to fetch bin %q after insert: %s", inputBin, err), "Database error", 137, http.StatusInternalServerError)
-			return
-		}
-		if inserted {
-			// TODO: Execute new bin created trigger
-			h.metrics.IncrNewBinCount()
-		}
+	// Reject uploads to expired, deleted or locked bins.
+	if err := checkBinWritable(bin); err != nil {
+		return err
 	}
 
-	if !bin.IsWritable() {
-		if bin.IsExpired() {
-			h.Error(w, r, fmt.Sprintf("Upload failed: Bin %q is expired", inputBin), "The bin is no longer available", 122, http.StatusMethodNotAllowed)
-			return
-		} else if bin.IsDeleted() {
-			// Reject uploads to deleted bins
-			h.Error(w, r, fmt.Sprintf("Upload failed: Bin %q is deleted", inputBin), "The bin is no longer available", 132, http.StatusMethodNotAllowed)
-			return
-		} else if bin.Readonly {
-			// Reject uploads to readonly bins
-			w.Header().Set("Allow", "GET, HEAD")
-			h.Error(w, r, fmt.Sprintf("Rejected upload of filename %q to readonly bin %q", inputFilename, inputBin), "Uploads to locked bins are not allowed", 123, http.StatusMethodNotAllowed)
-			return
-		} else {
-			h.Error(w, r, fmt.Sprintf("Rejected upload of filename %q to bin %q for unknown reason", inputFilename, inputBin), "Unexpected upload failure", 134, http.StatusInternalServerError)
-			return
-		}
+	// Reject the upload if the total storage limit is reached.
+	if err := h.checkStorageLimit(); err != nil {
+		return err
 	}
-
-	// Storage limit
-	// 0 disables the limit
-	// >= 1 enforces a limit, in number of gigabytes stored
-	if h.config.LimitStorageBytes > 0 {
-		totalBytesConsumed := h.getCachedStorageBytes()
-		if totalBytesConsumed >= h.config.LimitStorageBytes {
-			h.Error(w, r, fmt.Sprintf("Storage limit reached (currently consuming %s) when trying to upload file %q to bin %q", humanize.Bytes(totalBytesConsumed), inputFilename, inputBin), "Insufficient storage, please retry later", 633, http.StatusInsufficientStorage)
-			return
-		}
-	}
-
-	// Add timestamp to the temporary file to make it easy to see when
-	// an upload was started.
-	fp, err := h.workspace.CreateTempFile(inputBytes, fmt.Sprintf("filebin-%s-", t0.Format("20060102-150405")))
-	// Defer removal of the tempfile to clean up partially uploaded files.
-	if err != nil {
-		h.Error(w, r, fmt.Sprintf("Failed to create temporary upload file: %s", err.Error()), "Storage error", 124, http.StatusInternalServerError)
-		return
-	}
-	defer func() { _ = os.Remove(fp.Name()) }()
-	defer func() { _ = fp.Close() }()
 
 	t1 := time.Now()
 
-	// Compute MD5 and SHA256 checksums during the initial write to reduce disk IOPS
-	md5Checksum := md5.New()
-	sha256Checksum := sha256.New()
-	multiWriter := io.MultiWriter(fp, md5Checksum, sha256Checksum)
-
-	nBytes, err := io.Copy(multiWriter, r.Body)
+	// Step 3: Buffer the request body to a temporary file. The checksums are
+	// calculated during this write so the content is only read from the
+	// client once.
+	digest := newContentDigest()
+	fp, err := h.bufferUpload(r, digest, inputBytes, t0)
 	if err != nil {
-		h.Error(w, r, fmt.Sprintf("File upload of file %q bin %q aborted at %s of %s, upload started %s: %s (%s)", inputFilename, bin.Id, humanize.Bytes(uint64(nBytes)), humanize.Bytes(inputBytes), humanize.Time(t0), err.Error(), fp.Name()), "Storage error", 125, http.StatusInternalServerError)
-		return
+		return err
 	}
-	if uint64(nBytes) != inputBytes {
-		h.Error(w, r, fmt.Sprintf("Rejecting upload for file %q to bin %q since we got %d bytes and should have received %d bytes", inputFilename, bin.Id, nBytes, inputBytes), "Content-length did not match the request body length", 126, http.StatusBadRequest)
-		return
-	}
-	if nBytes == 0 {
-		h.Error(w, r, "", "Empty file uploads are not allowed", 127, http.StatusBadRequest)
-		return
-	}
+	// Remove the tempfile when done to clean up partially uploaded files.
+	defer func() { _ = os.Remove(fp.Name()) }()
+	defer func() { _ = fp.Close() }()
+	// bufferUpload has verified that the body length matches content-length.
+	nBytes := int64(inputBytes)
 
 	t2 := time.Now()
 
-	// Checksums are already calculated from the write above
-	md5ChecksumString := base64.StdEncoding.EncodeToString(md5Checksum.Sum(nil))
-	if inputMD5 != "" {
-		if md5ChecksumString != inputMD5 {
-			h.Error(w, r, fmt.Sprintf("Rejecting upload for file %q to bin %q due to wrong MD5 checksum (got %s and calculated %s)", inputFilename, bin.Id, inputMD5, md5ChecksumString), "MD5 checksum did not match", 129, http.StatusBadRequest)
-			return
-		}
+	// Verify the checksums against the ones the client provided, if any.
+	if err := verifyChecksums(r, digest); err != nil {
+		return err
 	}
 
-	sha256ChecksumString := fmt.Sprintf("%x", sha256Checksum.Sum(nil))
-	if inputSHA256 != "" {
-		if sha256ChecksumString != inputSHA256 {
-			h.Error(w, r, fmt.Sprintf("Rejecting upload for file %q to bin %q due to wrong SHA256 checksum (got %s and calculated %s)", inputFilename, bin.Id, inputSHA256, sha256ChecksumString), "SHA256 checksum did not match", 130, http.StatusBadRequest)
-			return
-		}
-	}
-	_, _ = fp.Seek(0, 0)
-
-	mime, err := mimetype.DetectReader(fp)
+	// Step 4: Detect the mime type and, for images, the perceptual hash.
+	mime, pHashValue, pHashDuration, err := inspectContent(fp, inputFilename)
 	if err != nil {
-		h.Error(w, r, fmt.Sprintf("Unable to detect mime type on filename %q in bin %q: %s", inputFilename, inputBin, err.Error()), "Processing error", 131, http.StatusInternalServerError)
-		return
-	}
-	_, _ = fp.Seek(0, 0)
-
-	var pHashValue string
-	var pHashDuration time.Duration
-	if strings.HasPrefix(mime.String(), "image/") {
-		tPhash := time.Now()
-		pHashValue, err = phash.Compute(fp)
-		pHashDuration = time.Since(tPhash)
-		if err != nil {
-			slog.Warn("failed to compute phash", "filename", inputFilename, "error", err)
-		}
-		_, _ = fp.Seek(0, 0)
+		return err
 	}
 
-	// Check if file exists
+	// Step 5: Build the file record. Start from the existing file if the
+	// filename is already in the bin, so that its id and counters carry over.
 	file, found, err := h.dao.File().GetByName(bin.Id, inputFilename)
 	if err != nil {
-		slog.Error("unable to load file", "filename", file.Filename, "bin", bin.Id, "error", err)
-		http.Error(w, "Errno 106", http.StatusInternalServerError)
-		return
+		return fmt.Errorf("select file: %w", err)
 	}
 
 	if found {
@@ -361,18 +252,17 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 		file.Updates = file.Updates + 1
 	}
 
+	// Keep the request headers for auditing.
 	dump, err := httputil.DumpRequest(r, false)
 	if err != nil {
-		h.Error(w, r, "Failed to dump request", "Parse error", 135, http.StatusInternalServerError)
-		return
+		return fmt.Errorf("dump request: %w", err)
 	}
 	file.Headers = string(dump)
 
 	// Extract client IP
 	ip, err := extractIP(r.RemoteAddr)
 	if err != nil {
-		h.Error(w, r, "Failed to dump request", "Parse error", 136, http.StatusInternalServerError)
-		return
+		return fmt.Errorf("extract client ip from %q: %w", r.RemoteAddr, err)
 	}
 	file.IP = ip
 
@@ -385,70 +275,47 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	_ = file.DeletedAt.Scan(nil)
 
 	file.Bytes = inputBytes
-	file.Mime = mime.String()
-	file.SHA256 = sha256ChecksumString
-	file.MD5 = md5ChecksumString
+	file.Mime = mime
+	file.SHA256 = digest.SHA256()
+	file.MD5 = digest.MD5()
+
+	// Validate the record before touching storage.
 	if err := h.dao.File().ValidateInput(&file); err != nil {
-		slog.Warn("rejected upload due to failed input validation", "filename", inputFilename, "bin", bin.Id, "error", err)
-		http.Error(w, "Input validation failed", http.StatusBadRequest)
-		return
+		return &httpError{status: http.StatusBadRequest, message: "Input validation failed", err: err}
 	}
 
-	// Check if content already exists in storage (deduplication)
-	existingContent, err := h.dao.FileContent().GetBySHA256(sha256ChecksumString)
+	// Step 6: Deduplicate. Content is stored once per SHA256, so an upload
+	// of content that is already in storage skips the S3 upload. Blocked
+	// content is rejected here.
+	existingContent, err := h.lookupExistingContent(file.SHA256)
+	if err != nil {
+		return err
+	}
 	skipS3Upload := false
-	if err == nil && existingContent != nil {
-		// Check if content is blocked
-		if existingContent.Blocked {
-			h.Error(w, r, fmt.Sprintf("Rejecting upload of file %q to bin %q: content with SHA256 %s is blocked", inputFilename, bin.Id, sha256ChecksumString), "This content has been blocked and cannot be uploaded", 993, http.StatusForbidden)
-			return
-		}
-		if existingContent.PHash != "" && pHashValue == "" {
+	if existingContent != nil {
+		if pHashValue == "" {
 			pHashValue = existingContent.PHash
 		}
 		if existingContent.InStorage {
 			// Content already in S3, skip upload
 			skipS3Upload = true
-			slog.Debug("content already exists in storage, skipping S3 upload", "sha256", sha256ChecksumString)
+			slog.Debug("content already exists in storage, skipping S3 upload", "sha256", file.SHA256)
 		}
 	}
 
 	t3 := time.Now()
 
-	// Upload to S3 only if content doesn't already exist
+	// Upload the content to S3 unless it is already there.
 	if !skipS3Upload {
-		// Retry if the S3 upload fails
-		retryLimit := 3
-		retryCounter := 1
-
-		h.metrics.IncrStorageUploadInProgress()
-		defer h.metrics.DecrStorageUploadInProgress()
-
-		for {
-			_, _ = fp.Seek(0, 0)
-			err := h.s3.PutObjectByHash(file.SHA256, fp, nBytes)
-			if err == nil {
-				// Completed successfully
-				break
-			} else {
-				// Completed with error
-				if retryCounter >= retryLimit {
-					// Give up after a few attempts
-					slog.Error("gave up uploading to S3", "attempt", retryCounter, "max_attempts", retryLimit, "error", err)
-					http.Error(w, "Failed to store the object in S3, please try again later", http.StatusInternalServerError)
-					return
-				}
-				slog.Warn("failed attempt to upload to S3, retrying", "attempt", retryCounter, "max_attempts", retryLimit, "error", err)
-
-				retryCounter = retryCounter + 1
-
-				// Sleep a little before retrying
-				time.Sleep(time.Duration(retryCounter) * time.Second)
-			}
+		if err := h.storeContent(file.SHA256, fp, nBytes, 3); err != nil {
+			return &httpError{status: http.StatusInternalServerError, message: "Failed to store the object in S3, please try again later", err: err}
 		}
 	}
 	t4 := time.Now()
 
+	// Step 7: Persist the content record and the file reference under the
+	// content lock.
+	//
 	// Serialize against the lurker's content deletion (and other uploads of
 	// the same content) while recording that the content is in storage and
 	// creating the file reference. The lurker claims and deletes content only
@@ -459,9 +326,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	// afterwards.
 	unlockContent, err := h.dao.FileContent().LockContent(file.SHA256)
 	if err != nil {
-		slog.Error("unable to lock content", "sha256", file.SHA256, "error", err)
-		http.Error(w, "Failed to store the object, please try again later", http.StatusServiceUnavailable)
-		return
+		return &httpError{status: http.StatusServiceUnavailable, message: "Failed to store the object, please try again later", err: err}
 	}
 	// unlockContent is idempotent. It is called explicitly once the file
 	// reference is persisted; the defer is a safety net for error returns.
@@ -473,11 +338,11 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	// the S3 delete went through and rolled the in_storage flag back.
 	if _, statErr := h.s3.StatObject(file.SHA256); statErr != nil {
 		slog.Warn("object missing from storage, uploading", "sha256", file.SHA256, "error", statErr)
-		_, _ = fp.Seek(0, 0)
-		if err := h.s3.PutObjectByHash(file.SHA256, fp, nBytes); err != nil {
-			slog.Error("unable to upload missing object to S3", "sha256", file.SHA256, "error", err)
-			http.Error(w, "Failed to store the object in S3, please try again later", http.StatusInternalServerError)
-			return
+		// A single attempt, since the content lock is held and sleeping
+		// between retries would block the lurker and other uploads of the
+		// same content.
+		if err := h.storeContent(file.SHA256, fp, nBytes, 1); err != nil {
+			return &httpError{status: http.StatusInternalServerError, message: "Failed to store the object in S3, please try again later", err: err}
 		}
 		if skipS3Upload {
 			// The bytes were not counted by the regular upload path above.
@@ -485,8 +350,8 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Update or insert file_content record. The content lock is held and the
-	// object is verified present, so setting in_storage=true is safe.
+	// Record the content as stored. The content lock is held and the object
+	// is verified present, so setting in_storage=true is safe.
 	fileContent := ds.FileContent{
 		SHA256:    file.SHA256,
 		Bytes:     file.Bytes,
@@ -496,48 +361,15 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 		InStorage: true,
 	}
 	if err := h.dao.FileContent().InsertOrIncrement(&fileContent); err != nil {
-		slog.Error("unable to update file_content", "sha256", file.SHA256, "error", err)
-		http.Error(w, "Failed to update content tracking", http.StatusInternalServerError)
-		return
+		return fmt.Errorf("upsert file_content %s: %w", file.SHA256, err)
 	}
 
 	// Record upload duration
 	file.UploadDurationMs = time.Since(t0).Milliseconds()
 
-	if found {
-		if err := h.dao.File().Update(&file); err != nil {
-			slog.Error("unable to update filename", "filename", file.Filename, "file_id", file.Id, "bin", bin.Id, "error", err)
-			http.Error(w, "Errno 107", http.StatusInternalServerError)
-			return
-		}
-	} else {
-		inserted, err := h.dao.File().Insert(&file)
-		if err != nil {
-			slog.Error("unable to insert file", "filename", file.Filename, "bin", bin.Id, "error", err)
-			http.Error(w, "Errno 108", http.StatusInternalServerError)
-			return
-		}
-		if !inserted {
-			// A concurrent upload of the same filename already inserted the row.
-			// Fetch the existing file and update it instead.
-			file, _, err = h.dao.File().GetByName(bin.Id, inputFilename)
-			if err != nil {
-				slog.Error("unable to load file after insert conflict", "filename", inputFilename, "bin", bin.Id, "error", err)
-				http.Error(w, "Errno 138", http.StatusInternalServerError)
-				return
-			}
-			file.SHA256 = sha256ChecksumString
-			file.Updates = file.Updates + 1
-			file.IP = ip
-			file.Headers = string(dump)
-			file.UploadDurationMs = time.Since(t0).Milliseconds()
-			if err := h.dao.File().Update(&file); err != nil {
-				slog.Error("unable to update file after insert conflict", "filename", file.Filename, "file_id", file.Id, "bin", bin.Id, "error", err)
-				http.Error(w, "Errno 139", http.StatusInternalServerError)
-				return
-			}
-		}
-		// TODO: Execute new file created trigger
+	// Insert or update the file reference in the bin.
+	if err := h.persistFile(&file, found); err != nil {
+		return err
 	}
 
 	// The content record and the file reference are persisted, so the
@@ -545,57 +377,36 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	// lock before the slower bin update, post-upload hook and response.
 	unlockContent()
 
-	// Update bin to set the correct updated timestamp. Use Touch (a targeted
-	// update of only updated_at/expired_at, guarded by the bin still being
-	// writable) rather than a full Update so that this potentially slow,
-	// client-controlled upload cannot revert moderation changes (delete, lock,
-	// or approval revocation) that an admin or the lurker applied to the bin
-	// while the upload was in flight.
+	// Step 8: Finish up. Update the bin to set the correct updated timestamp
+	// and extend its expiration. Use Touch (a targeted update of only
+	// updated_at/expired_at, guarded by the bin still being writable) rather
+	// than a full Update so that this potentially slow, client-controlled
+	// upload cannot revert moderation changes (delete, lock, or approval
+	// revocation) that an admin or the lurker applied to the bin while the
+	// upload was in flight.
 	bin.ExpiredAt = time.Now().UTC().Add(h.config.ExpirationDuration)
 	updated, err := h.dao.Bin().Touch(&bin)
 	if err != nil {
-		slog.Error("unable to update bin", "bin", bin.Id, "error", err)
-		http.Error(w, "Errno 109", http.StatusInternalServerError)
-		return
+		return fmt.Errorf("touch bin: %w", err)
 	}
 	if !updated {
 		// The bin was deleted or locked concurrently during the upload. The
 		// file reference created above will be cleaned up by the lurker (for
 		// deleted bins) or is inaccessible; do not resurrect the bin.
-		slog.Warn("bin became unavailable during upload", "bin", bin.Id, "filename", inputFilename)
-		h.Error(w, r, fmt.Sprintf("Bin %q became unavailable during upload of file %q", bin.Id, inputFilename), "The bin is no longer available", 140, http.StatusMethodNotAllowed)
-		return
+		return &httpError{status: http.StatusMethodNotAllowed, message: "The bin is no longer available", err: errors.New("bin became unavailable during upload")}
 	}
 
-	// Metrics
+	// Count the upload in the metrics.
 	h.metrics.IncrFileUploadCount()
 	h.metrics.IncrBytesClientToFilebin(file.Bytes)
 	if !skipS3Upload {
 		h.metrics.IncrBytesFilebinToStorage(file.Bytes)
 	}
 
-	// Execute post-upload hook if configured. The hook runs after the upload
-	// has been persisted and is treated as a notification: its exit code and
-	// output are logged but do not affect the response to the client.
-	var hookDuration time.Duration
-	if h.config.PostUploadHook != "" {
-		hookStart := time.Now()
-		hookCtx, hookCancel := context.WithTimeout(r.Context(), h.config.PostUploadHookTimeout)
-		hookCmd := exec.CommandContext(hookCtx, h.config.PostUploadHook,
-			"--bin-id", bin.Id,
-			"--filename", inputFilename,
-			"--content-type", mime.String(),
-			"--size", strconv.FormatInt(nBytes, 10),
-			"--sha256", sha256ChecksumString,
-		)
-		hookOutput, hookErr := hookCmd.CombinedOutput()
-		hookDuration = time.Since(hookStart)
-		hookCancel()
-		if hookErr != nil {
-			slog.Warn("post-upload hook returned an error", "filename", inputFilename, "bin", bin.Id, "error", hookErr, "output", strings.TrimRight(string(hookOutput), "\n"))
-		}
-	}
+	// Notify the post-upload hook, if one is configured.
+	hookDuration := h.runPostUploadHook(r.Context(), file)
 
+	// Respond with the bin and file as JSON.
 	type Data struct {
 		Bin  ds.Bin  `json:"bin"`
 		File ds.File `json:"file"`
@@ -606,9 +417,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 
 	out, err := json.MarshalIndent(data, "", "    ")
 	if err != nil {
-		slog.Error("failed to parse json", "error", err)
-		http.Error(w, "Errno 268", http.StatusInternalServerError)
-		return
+		return fmt.Errorf("marshal response: %w", err)
 	}
 
 	t5 := time.Now()
@@ -617,6 +426,333 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	_, _ = w.Write(out)
+	return nil
+}
+
+// uploadTarget returns the bin and filename the upload is addressed to.
+func (h *HTTP) uploadTarget(r *http.Request) (bin string, filename string, err error) {
+	params := mux.Vars(r)
+	bin = params["bin"]
+	filename = params["filename"]
+	if bin != "" && filename != "" {
+		return bin, filename, nil
+	}
+
+	// Deprecated: This block is here to be compatible with the clients that
+	// are written for https://github.com/espebra/filebin, meaning clients that
+	// upload files to / with the request headers bin and filename set instead
+	// of /{bin}/{filename}
+	filename = r.Header.Get("filename")
+	if filename == "" {
+		return "", "", &httpError{status: http.StatusBadRequest, message: "Missing filename request header"}
+	}
+
+	bin = r.Header.Get("bin")
+	if bin == "" {
+		bin = h.dao.Bin().GenerateId()
+		slog.Debug("auto generated bin", "bin", bin)
+	}
+	return bin, filename, nil
+}
+
+// checkFileExtension rejects file names with a configured illegal extension.
+func (h *HTTP) checkFileExtension(filename string) error {
+	thisExtension := path.Ext(filename)
+	if len(thisExtension) == 0 {
+		return nil
+	}
+	for _, extension := range h.config.RejectFileExtensions {
+		if "."+extension == thisExtension {
+			return &httpError{status: http.StatusForbidden, message: "Illegal file extension"}
+		}
+	}
+	return nil
+}
+
+// getOrCreateBin returns the bin with the given id, creating it if it does
+// not exist yet.
+func (h *HTTP) getOrCreateBin(id string) (ds.Bin, error) {
+	bin, found, err := h.dao.Bin().GetByID(id)
+	if err != nil {
+		return bin, fmt.Errorf("select bin %q: %w", id, err)
+	}
+	if found {
+		return bin, nil
+	}
+
+	// Bin does not exist, so create it here
+	bin = ds.Bin{}
+	bin.Id = id
+
+	// Since manual approval is not needed, then just set the approval time at the time of the upload
+	if !h.config.RequireApproval {
+		now := time.Now().UTC().Truncate(time.Microsecond)
+		_ = bin.ApprovedAt.Scan(now)
+	}
+
+	// Abort early if the bin is invalid
+	if err := h.dao.Bin().ValidateInput(&bin); err != nil {
+		return bin, &httpError{status: http.StatusBadRequest, message: err.Error()}
+	}
+
+	bin.ExpiredAt = time.Now().UTC().Add(h.config.ExpirationDuration)
+	inserted, err := h.dao.Bin().Insert(&bin)
+	if err != nil {
+		return bin, fmt.Errorf("insert bin %q: %w", id, err)
+	}
+	bin, found, err = h.dao.Bin().GetByID(id)
+	if err != nil {
+		return bin, fmt.Errorf("select bin %q after insert: %w", id, err)
+	}
+	if !found {
+		return bin, fmt.Errorf("bin %q not found after insert", id)
+	}
+	if inserted {
+		// TODO: Execute new bin created trigger
+		h.metrics.IncrNewBinCount()
+	}
+	return bin, nil
+}
+
+// checkBinWritable rejects uploads to bins that are expired, deleted or
+// locked.
+func checkBinWritable(bin ds.Bin) error {
+	if bin.IsExpired() || bin.IsDeleted() {
+		return &httpError{status: http.StatusMethodNotAllowed, message: "The bin is no longer available"}
+	}
+	if bin.Readonly {
+		return &httpError{
+			status:  http.StatusMethodNotAllowed,
+			message: "Uploads to locked bins are not allowed",
+			headers: map[string]string{"Allow": "GET, HEAD"},
+		}
+	}
+	return nil
+}
+
+// checkStorageLimit rejects the upload if the configured storage limit is
+// reached. A limit of 0 disables the check.
+func (h *HTTP) checkStorageLimit() error {
+	if h.config.LimitStorageBytes == 0 {
+		return nil
+	}
+	totalBytesConsumed := h.getCachedStorageBytes()
+	if totalBytesConsumed >= h.config.LimitStorageBytes {
+		return &httpError{
+			status:  http.StatusInsufficientStorage,
+			message: "Insufficient storage, please retry later",
+			err:     fmt.Errorf("currently consuming %s", humanize.Bytes(totalBytesConsumed)),
+		}
+	}
+	return nil
+}
+
+// bufferUpload writes the request body to a temporary file in the workspace
+// while feeding it through the digest, so the checksums are calculated
+// during the initial write to reduce disk IOPS. The body must be exactly
+// expectedBytes long and not empty. On success the caller owns the returned
+// file and must close and remove it. The file offset is at the end of the
+// content when returned.
+func (h *HTTP) bufferUpload(r *http.Request, digest *contentDigest, expectedBytes uint64, started time.Time) (*os.File, error) {
+	// Add timestamp to the temporary file to make it easy to see when
+	// an upload was started.
+	fp, err := h.workspace.CreateTempFile(expectedBytes, fmt.Sprintf("filebin-%s-", started.Format("20060102-150405")))
+	if err != nil {
+		return nil, fmt.Errorf("create temporary upload file: %w", err)
+	}
+	discard := func() {
+		_ = fp.Close()
+		_ = os.Remove(fp.Name())
+	}
+
+	nBytes, err := io.Copy(io.MultiWriter(fp, digest.Writer()), r.Body)
+	if err != nil {
+		discard()
+		err = fmt.Errorf("upload aborted at %s of %s, started %s: %w", humanize.Bytes(uint64(nBytes)), humanize.Bytes(expectedBytes), humanize.Time(started), err)
+		// A truncated body or a closed connection means the client went
+		// away. Report it as a client error so it is not logged as a
+		// server failure.
+		if r.Context().Err() != nil || errors.Is(err, io.ErrUnexpectedEOF) {
+			return nil, &httpError{status: http.StatusBadRequest, message: "Upload aborted", err: err}
+		}
+		return nil, err
+	}
+	if uint64(nBytes) != expectedBytes {
+		discard()
+		return nil, &httpError{
+			status:  http.StatusBadRequest,
+			message: "Content-length did not match the request body length",
+			err:     fmt.Errorf("got %d bytes, expected %d", nBytes, expectedBytes),
+		}
+	}
+	if nBytes == 0 {
+		discard()
+		return nil, &httpError{status: http.StatusBadRequest, message: "Empty file uploads are not allowed"}
+	}
+	return fp, nil
+}
+
+// verifyChecksums compares the calculated checksums with the ones the client
+// provided in the Content-MD5 and Content-SHA256 request headers, if any.
+func verifyChecksums(r *http.Request, digest *contentDigest) error {
+	if expected := r.Header.Get("Content-MD5"); expected != "" {
+		if got := digest.MD5(); got != expected {
+			return &httpError{
+				status:  http.StatusBadRequest,
+				message: "MD5 checksum did not match",
+				err:     fmt.Errorf("client sent %s, calculated %s", expected, got),
+			}
+		}
+	}
+	if expected := r.Header.Get("Content-SHA256"); expected != "" {
+		if got := digest.SHA256(); got != expected {
+			return &httpError{
+				status:  http.StatusBadRequest,
+				message: "SHA256 checksum did not match",
+				err:     fmt.Errorf("client sent %s, calculated %s", expected, got),
+			}
+		}
+	}
+	return nil
+}
+
+// inspectContent detects the mime type of the buffered content and, for
+// images, calculates the perceptual hash. A phash failure is logged and
+// leaves the phash empty. The file offset is at the start of the content
+// when returned.
+func inspectContent(fp *os.File, filename string) (mime string, pHash string, pHashDuration time.Duration, err error) {
+	_, _ = fp.Seek(0, 0)
+	detected, err := mimetype.DetectReader(fp)
+	if err != nil {
+		return "", "", 0, fmt.Errorf("detect mime type: %w", err)
+	}
+	mime = detected.String()
+	_, _ = fp.Seek(0, 0)
+
+	if strings.HasPrefix(mime, "image/") {
+		tPhash := time.Now()
+		pHash, err = phash.Compute(fp)
+		pHashDuration = time.Since(tPhash)
+		if err != nil {
+			slog.Warn("failed to compute phash", "filename", filename, "error", err)
+		}
+		_, _ = fp.Seek(0, 0)
+	}
+	return mime, pHash, pHashDuration, nil
+}
+
+// lookupExistingContent returns the file_content record for the checksum if
+// one exists, or nil if the content has not been seen before. Uploads of
+// blocked content are rejected. A database failure is returned as an error
+// rather than treated as not found, so that blocked content cannot slip
+// through while the database is unavailable.
+func (h *HTTP) lookupExistingContent(sha256 string) (*ds.FileContent, error) {
+	existing, found, err := h.dao.FileContent().GetBySHA256(sha256)
+	if err != nil {
+		return nil, fmt.Errorf("select file_content %s: %w", sha256, err)
+	}
+	if !found {
+		return nil, nil
+	}
+	if existing.Blocked {
+		return nil, &httpError{
+			status:  http.StatusForbidden,
+			message: "This content has been blocked and cannot be uploaded",
+			err:     fmt.Errorf("content %s is blocked", sha256),
+		}
+	}
+	return existing, nil
+}
+
+// storeContent uploads the buffered content to S3 under its SHA256 key,
+// making up to attempts tries before giving up.
+func (h *HTTP) storeContent(sha256 string, fp *os.File, size int64, attempts int) error {
+	h.metrics.IncrStorageUploadInProgress()
+	defer h.metrics.DecrStorageUploadInProgress()
+
+	for attempt := 1; ; attempt++ {
+		_, _ = fp.Seek(0, 0)
+		err := h.s3.PutObjectByHash(sha256, fp, size)
+		if err == nil {
+			return nil
+		}
+		if attempt >= attempts {
+			return fmt.Errorf("gave up uploading %s to S3 after %d attempts: %w", sha256, attempt, err)
+		}
+		slog.Warn("failed attempt to upload to S3, retrying", "attempt", attempt, "max_attempts", attempts, "error", err)
+
+		// Sleep a little before retrying
+		time.Sleep(time.Duration(attempt+1) * time.Second)
+	}
+}
+
+// persistFile inserts the file reference, or updates it if found is true.
+// If the insert loses a race against a concurrent upload of the same
+// filename, the existing row is updated instead and file is replaced with
+// it.
+func (h *HTTP) persistFile(file *ds.File, found bool) error {
+	if found {
+		if err := h.dao.File().Update(file); err != nil {
+			return fmt.Errorf("update file %d: %w", file.Id, err)
+		}
+		return nil
+	}
+
+	inserted, err := h.dao.File().Insert(file)
+	if err != nil {
+		return fmt.Errorf("insert file: %w", err)
+	}
+	if inserted {
+		// TODO: Execute new file created trigger
+		return nil
+	}
+
+	// A concurrent upload of the same filename already inserted the row.
+	// Fetch the existing file and update it instead.
+	existing, _, err := h.dao.File().GetByName(file.Bin, file.Filename)
+	if err != nil {
+		return fmt.Errorf("select file after insert conflict: %w", err)
+	}
+	existing.SHA256 = file.SHA256
+	existing.Bytes = file.Bytes
+	existing.Mime = file.Mime
+	existing.MD5 = file.MD5
+	existing.Updates = existing.Updates + 1
+	existing.IP = file.IP
+	existing.Headers = file.Headers
+	existing.UploadDurationMs = file.UploadDurationMs
+	_ = existing.DeletedAt.Scan(nil)
+	if err := h.dao.File().Update(&existing); err != nil {
+		return fmt.Errorf("update file %d after insert conflict: %w", existing.Id, err)
+	}
+	*file = existing
+	return nil
+}
+
+// runPostUploadHook executes the post-upload hook if one is configured and
+// returns how long it took. The hook runs after the upload has been
+// persisted and is treated as a notification: its exit code and output are
+// logged but do not affect the response to the client.
+func (h *HTTP) runPostUploadHook(ctx context.Context, file ds.File) time.Duration {
+	if h.config.PostUploadHook == "" {
+		return 0
+	}
+	hookStart := time.Now()
+	hookCtx, hookCancel := context.WithTimeout(ctx, h.config.PostUploadHookTimeout)
+	defer hookCancel()
+	hookCmd := exec.CommandContext(hookCtx, h.config.PostUploadHook,
+		"--bin-id", file.Bin,
+		"--filename", file.Filename,
+		"--content-type", file.Mime,
+		"--size", strconv.FormatUint(file.Bytes, 10),
+		"--sha256", file.SHA256,
+	)
+	hookOutput, hookErr := hookCmd.CombinedOutput()
+	hookDuration := time.Since(hookStart)
+	if hookErr != nil {
+		slog.Warn("post-upload hook returned an error", "filename", file.Filename, "bin", file.Bin, "error", hookErr, "output", strings.TrimRight(string(hookOutput), "\n"))
+	}
+	return hookDuration
 }
 
 func (h *HTTP) deleteFile(w http.ResponseWriter, r *http.Request) {

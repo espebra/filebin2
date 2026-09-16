@@ -834,8 +834,8 @@ func TestUploadDedupAfterObjectLoss(t *testing.T) {
 	if _, err := s3ao.StatObject(sha); err != nil {
 		t.Errorf("Object should have been re-uploaded to S3: %s", err)
 	}
-	dbContent, err := dao.FileContent().GetBySHA256(sha)
-	if err != nil {
+	dbContent, found, err := dao.FileContent().GetBySHA256(sha)
+	if err != nil || !found {
 		t.Fatalf("Failed to get file_content: %s", err)
 	}
 	if !dbContent.InStorage {
@@ -862,8 +862,8 @@ func TestUploadDedupAfterObjectLoss(t *testing.T) {
 	if _, err := s3ao.StatObject(sha); err != nil {
 		t.Errorf("Object should exist in S3 after re-upload: %s", err)
 	}
-	dbContent, err = dao.FileContent().GetBySHA256(sha)
-	if err != nil {
+	dbContent, found, err = dao.FileContent().GetBySHA256(sha)
+	if err != nil || !found {
 		t.Fatalf("Failed to get file_content: %s", err)
 	}
 	if !dbContent.InStorage {

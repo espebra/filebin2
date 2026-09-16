@@ -8,7 +8,6 @@ import (
 	"embed"
 	"fmt"
 	"html/template"
-	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -218,7 +217,7 @@ func (h *HTTP) Init() error {
 	h.router.PathPrefix("/debug/pprof/").HandlerFunc(h.auth(pprof.Index))
 
 	h.router.HandleFunc("/", h.index).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/", h.clientLookup(h.uploadFile)).Methods(http.MethodPost)
+	h.router.HandleFunc("/", h.clientLookup(h.handle(h.uploadFile))).Methods(http.MethodPost)
 	h.router.HandleFunc("/filebin-status", h.filebinStatus).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/storage-status", h.storageStatus).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/metrics", h.viewMetrics).Methods(http.MethodHead, http.MethodGet)
@@ -269,7 +268,7 @@ func (h *HTTP) Init() error {
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.log(h.clientLookup(h.banBin))).Methods("BAN")
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.log(h.clientLookup(h.getFile))).Methods(http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.log(h.clientLookup(h.deleteFile))).Methods(http.MethodDelete)
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.log(h.clientLookup(h.uploadFile))).Methods(http.MethodPost, http.MethodPut)
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.log(h.clientLookup(h.handle(h.uploadFile)))).Methods(http.MethodPost, http.MethodPut)
 
 	h.config.ExpirationDuration = time.Second * time.Duration(h.config.Expiration)
 
@@ -526,46 +525,16 @@ func (h *HTTP) Shutdown(ctx context.Context) error {
 	return srv.Shutdown(ctx)
 }
 
+// Error reports a request failure to the client. It is the pre-handlerFunc
+// way of reporting errors and renders through respondError, so both styles
+// produce the same response and log line. New code should return an
+// httpError instead. The internal message and errno only end up in the log.
 func (h *HTTP) Error(w http.ResponseWriter, r *http.Request, internal string, external string, errno int, statusCode int) {
-	w.Header().Set("Cache-Control", "max-age=1")
-	w.Header().Set("X-Robots-Tag", "noindex")
-
+	e := &httpError{status: statusCode, message: external}
 	if internal != "" {
-		slog.Warn("request error", "errno", errno, "message", internal)
+		e.err = fmt.Errorf("errno %d: %s", errno, internal)
 	}
-
-	// Disregard any request body there is
-	_, _ = io.Copy(io.Discard, r.Body)
-
-	type Data struct {
-		ds.Common
-		Text       string
-		ErrNo      int
-		StatusCode int
-	}
-
-	var data Data
-	data.Text = external
-	data.ErrNo = errno
-	data.StatusCode = statusCode
-
-	if strings.Contains(r.Header.Get("Accept"), "text/html") {
-		h.metrics.IncrErrorPageViewCount()
-
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.WriteHeader(statusCode)
-		var buf bytes.Buffer
-		if err := h.templates.ExecuteTemplate(&buf, "error_page", data); err != nil {
-			slog.Error("failed to execute template", "template", "error_page", "error", err)
-			// Don't call http.Error here since WriteHeader was already called
-			return
-		}
-		_, _ = buf.WriteTo(w)
-	} else {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.WriteHeader(statusCode)
-		_, _ = io.WriteString(w, external)
-	}
+	h.respondError(w, r, e)
 }
 
 // renderTemplate executes a template to a buffer first, then writes to the response.
