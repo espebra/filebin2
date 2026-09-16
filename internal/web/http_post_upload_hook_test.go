@@ -1,6 +1,8 @@
 package web
 
 import (
+	"crypto/md5"
+	"crypto/sha1"
 	"crypto/sha256"
 	"fmt"
 	"net/http"
@@ -183,12 +185,13 @@ exit 0
 		got[lines[i]] = lines[i+1]
 	}
 
-	expectedSHA256 := fmt.Sprintf("%x", sha256.Sum256([]byte(content)))
 	expected := map[string]string{
 		"--bin-id":   "hookargsbin",
 		"--filename": "myfile.txt",
 		"--size":     "17",
-		"--sha256":   expectedSHA256,
+		"--md5":      fmt.Sprintf("%x", md5.Sum([]byte(content))),
+		"--sha1":     fmt.Sprintf("%x", sha1.Sum([]byte(content))),
+		"--sha256":   fmt.Sprintf("%x", sha256.Sum256([]byte(content))),
 	}
 	for flag, want := range expected {
 		if got[flag] != want {

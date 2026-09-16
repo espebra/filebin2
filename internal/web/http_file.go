@@ -749,6 +749,8 @@ func (h *HTTP) runPostUploadHook(ctx context.Context, file ds.File) time.Duratio
 		"--filename", file.Filename,
 		"--content-type", file.Mime,
 		"--size", strconv.FormatUint(file.Bytes, 10),
+		"--md5", md5Hex(file.MD5),
+		"--sha1", file.SHA1,
 		"--sha256", file.SHA256,
 	)
 	hookOutput, hookErr := hookCmd.CombinedOutput()
