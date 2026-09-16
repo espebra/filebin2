@@ -277,6 +277,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) error {
 	file.Bytes = inputBytes
 	file.Mime = mime
 	file.SHA256 = digest.SHA256()
+	file.SHA1 = digest.SHA1()
 	file.MD5 = digest.MD5()
 
 	// Validate the record before touching storage.
@@ -356,6 +357,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) error {
 		SHA256:    file.SHA256,
 		Bytes:     file.Bytes,
 		MD5:       file.MD5,
+		SHA1:      file.SHA1,
 		Mime:      file.Mime,
 		PHash:     pHashValue,
 		InStorage: true,

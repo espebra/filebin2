@@ -216,6 +216,13 @@ func (h *HTTP) Init() error {
 	h.router.HandleFunc("/debug/pprof/trace", h.auth(pprof.Trace)).Methods(http.MethodGet)
 	h.router.PathPrefix("/debug/pprof/").HandlerFunc(h.auth(pprof.Index))
 
+	// Routes are matched in registration order and the first match wins, so
+	// the fixed paths must be registered before the /{bin} and
+	// /{bin}/{filename} catch-alls below. The fixed first path segments
+	// (admin, archive, md5, qr, sha1, sha256, static, and so on) can never
+	// clash with a bin name, since bin ids must be at least 8 characters
+	// long (see BinDao.ValidateInput) and every reserved segment is shorter.
+	// Keep it that way when adding routes or changing the minimum length.
 	h.router.HandleFunc("/", h.index).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/", h.clientLookup(h.handle(h.uploadFile))).Methods(http.MethodPost)
 	h.router.HandleFunc("/filebin-status", h.filebinStatus).Methods(http.MethodHead, http.MethodGet)
@@ -258,9 +265,11 @@ func (h *HTTP) Init() error {
 	h.router.HandleFunc("/admin/approve/{bin:[A-Za-z0-9_-]+}", h.log(h.auth(h.approveBin))).Methods("PUT")
 	h.router.Handle("/static/{path:.*}", CacheControl(http.FileServer(http.FS(h.staticBox)))).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/archive/{bin:[A-Za-z0-9_-]+}/{format:[a-z]+}", h.log(h.clientLookup(h.archive))).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}.txt", h.viewBinPlainText).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/sha256/{bin:[A-Za-z0-9_-]+}", h.viewBinSha256).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/sha256/{bin:[A-Za-z0-9_-]+}", h.handle(h.viewBinChecksums(func(f ds.File) string { return f.SHA256 }))).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/sha1/{bin:[A-Za-z0-9_-]+}", h.handle(h.viewBinChecksums(func(f ds.File) string { return f.SHA1 }))).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/md5/{bin:[A-Za-z0-9_-]+}", h.handle(h.viewBinChecksums(func(f ds.File) string { return md5Hex(f.MD5) }))).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/qr/{bin:[A-Za-z0-9_-]+}", h.binQR).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}.txt", h.viewBinPlainText).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/", h.viewBinRedirect).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.viewBin).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.log(h.clientLookup(h.deleteBin))).Methods(http.MethodDelete)

@@ -25,7 +25,10 @@ func (d *BinDao) ValidateInput(bin *ds.Bin) error {
 	if invalidBin.MatchString(bin.Id) {
 		return errors.New("the bin contains invalid characters")
 	}
-	// Ensure decent length
+	// Ensure decent length. The minimum also keeps bin ids from colliding
+	// with the fixed first path segments of the HTTP routes (admin, archive,
+	// md5, qr, sha1, sha256, static), which are all shorter than 8
+	// characters. See the route setup in the web package before lowering it.
 	if len(bin.Id) < 8 {
 		return errors.New("the bin is too short")
 	}
