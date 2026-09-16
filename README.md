@@ -213,7 +213,7 @@ If enabled, the `X-Robots-Tag` response header will allow search engines to inde
 - Command Line Argument: `--post-upload-hook`
 - Default: (not set)
 
-Command to execute after every successful file upload. The command runs after the file has been stored in S3 and its metadata persisted to the database, and is intended for notifications and post-processing (for example, triggering an indexing job or webhook). It is invoked with the following named arguments: `--bin-id`, `--filename`, `--content-type`, `--size`, and `--sha256`.
+Command to execute after every successful file upload. The command runs after the file has been stored in S3 and its metadata persisted to the database, and is intended for notifications and post-processing (for example, triggering an indexing job or webhook). It is invoked with the following named arguments: `--bin-id`, `--filename`, `--content-type`, `--size`, `--md5`, `--sha1`, and `--sha256`. The checksums are hex encoded.
 
 The hook does not affect the response to the client: any non-zero exit code or stdout/stderr is logged but the upload is always reported as successful. An example hook script is provided in [`misc/upload-hook-example`](misc/upload-hook-example).
 

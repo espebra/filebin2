@@ -48,7 +48,7 @@ var (
 	mmdbCityPathFlag          = flag.String("mmdb-city", "", "The path to an mmdb formatted geoip database like GeoLite2-City.mmdb.")
 	mmdbASNPathFlag           = flag.String("mmdb-asn", "", "The path to an mmdb formatted geoip database like GeoLite2-ASN.mmdb.")
 	allowRobotsFlag           = flag.Bool("allow-robots", false, "Allow robots to crawl and index the site (using X-Robots-Tag response header).")
-	postUploadHookFlag        = flag.String("post-upload-hook", "", "Command to execute after every successful file upload, after the file has been stored in S3 and its metadata persisted. Invoked with the named arguments --bin-id, --filename, --content-type, --size, and --sha256. Exit code and output are logged but do not affect the response to the client.")
+	postUploadHookFlag        = flag.String("post-upload-hook", "", "Command to execute after every successful file upload, after the file has been stored in S3 and its metadata persisted. Invoked with the named arguments --bin-id, --filename, --content-type, --size, --md5, --sha1, and --sha256 (checksums hex encoded). Exit code and output are logged but do not affect the response to the client.")
 	postUploadHookTimeoutFlag = flag.Duration("post-upload-hook-timeout", 10*time.Second, "Timeout for the post-upload hook command execution")
 
 	// Limits
