@@ -242,16 +242,17 @@ func (d *BinDao) TouchUpdatedAt(bin *ds.Bin) (updated bool, err error) {
 }
 
 // Touch refreshes the bin's updated_at and expired_at timestamps without
-// touching the moderation fields (readonly, approved_at, deleted_at). It only
-// affects bins that are still writable (not deleted and not readonly), so a
-// slow, in-flight upload cannot resurrect or un-moderate a bin that an admin or
-// the lurker changed concurrently while the upload was running. Returns false
-// if no matching writable row was found (i.e. the bin was deleted or locked
-// during the upload).
+// touching the moderation fields (readonly, approved_at, deleted_at). It does
+// not affect deleted bins, so a slow, in-flight upload cannot resurrect a bin
+// that an admin or the lurker deleted while the upload was running. A bin
+// that was locked in the meantime is still touched: the upload that is
+// finishing was accepted before the lock and its file is in the bin, and
+// the lock only stops later uploads. Returns false if the bin does not exist
+// or is deleted.
 func (d *BinDao) Touch(bin *ds.Bin) (updated bool, err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	expiredAt := bin.ExpiredAt.UTC().Truncate(time.Microsecond)
-	sqlStatement := "UPDATE bin SET updated_at = $1, expired_at = $2 WHERE id = $3 AND deleted_at IS NULL AND readonly = false RETURNING id"
+	sqlStatement := "UPDATE bin SET updated_at = $1, expired_at = $2 WHERE id = $3 AND deleted_at IS NULL RETURNING id"
 	var id string
 	t0 := time.Now()
 	err = d.db.QueryRow(sqlStatement, now, expiredAt, bin.Id).Scan(&id)
