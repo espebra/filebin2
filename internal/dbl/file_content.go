@@ -26,13 +26,14 @@ func nullString(s string) *string {
 	return &s
 }
 
-// GetBySHA256 retrieves a file content record by its SHA256 hash
-func (d *FileContentDao) GetBySHA256(sha256 string) (*ds.FileContent, error) {
-	var content ds.FileContent
+// GetBySHA256 retrieves a file content record by its SHA256 hash. found is
+// false if no record exists, which is not an error.
+func (d *FileContentDao) GetBySHA256(sha256 string) (content *ds.FileContent, found bool, err error) {
+	content = &ds.FileContent{}
 	var phash sql.NullString
 	sqlStatement := "SELECT sha256, bytes, md5, mime, phash, in_storage, blocked, created_at, last_referenced_at FROM file_content WHERE sha256 = $1"
 	t0 := time.Now()
-	err := d.db.QueryRow(sqlStatement, sha256).Scan(
+	err = d.db.QueryRow(sqlStatement, sha256).Scan(
 		&content.SHA256,
 		&content.Bytes,
 		&content.MD5,
@@ -44,15 +45,15 @@ func (d *FileContentDao) GetBySHA256(sha256 string) (*ds.FileContent, error) {
 		&content.LastReferencedAt,
 	)
 	observeQuery(d.metrics, "file_content_get_by_sha256", t0, err)
+	if err == sql.ErrNoRows {
+		return nil, false, nil
+	}
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, errors.New("File content not found")
-		}
-		return nil, err
+		return nil, false, err
 	}
 	content.PHash = phash.String
 	content.BytesReadable = humanize.Bytes(content.Bytes)
-	return &content, nil
+	return content, true, nil
 }
 
 // LockContent acquires a PostgreSQL advisory lock scoped to the given SHA256,

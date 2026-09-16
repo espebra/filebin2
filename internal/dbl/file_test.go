@@ -12,8 +12,11 @@ import (
 // This is required because of the foreign key constraint from file.sha256 to file_content.sha256
 func ensureFileContent(dao DAO, file *ds.File) error {
 	// Check if file_content already exists
-	_, err := dao.FileContent().GetBySHA256(file.SHA256)
-	if err == nil {
+	_, found, err := dao.FileContent().GetBySHA256(file.SHA256)
+	if err != nil {
+		return err
+	}
+	if found {
 		// Already exists, nothing to do
 		return nil
 	}

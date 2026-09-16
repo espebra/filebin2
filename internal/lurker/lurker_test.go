@@ -109,8 +109,8 @@ func TestDeletePendingContentDeletesOrphans(t *testing.T) {
 	if _, err := s3ao.StatObject(sha256); err == nil {
 		t.Error("Object should have been removed from S3")
 	}
-	dbContent, err := dao.FileContent().GetBySHA256(sha256)
-	if err != nil {
+	dbContent, found, err := dao.FileContent().GetBySHA256(sha256)
+	if err != nil || !found {
 		t.Fatalf("Failed to get file_content: %s", err)
 	}
 	if dbContent.InStorage {
@@ -154,8 +154,8 @@ func TestDeletePendingContentKeepsReferencedContent(t *testing.T) {
 	if _, err := s3ao.StatObject(sha256); err != nil {
 		t.Errorf("Object with an active reference should still exist in S3: %s", err)
 	}
-	dbContent, err := dao.FileContent().GetBySHA256(sha256)
-	if err != nil {
+	dbContent, found, err := dao.FileContent().GetBySHA256(sha256)
+	if err != nil || !found {
 		t.Fatalf("Failed to get file_content: %s", err)
 	}
 	if !dbContent.InStorage {
@@ -190,8 +190,8 @@ func TestDeletePendingContentSkipsLockedContent(t *testing.T) {
 	if _, err := s3ao.StatObject(sha256); err != nil {
 		t.Errorf("Object should still exist in S3 while the content lock is held: %s", err)
 	}
-	dbContent, err := dao.FileContent().GetBySHA256(sha256)
-	if err != nil {
+	dbContent, found, err := dao.FileContent().GetBySHA256(sha256)
+	if err != nil || !found {
 		t.Fatalf("Failed to get file_content: %s", err)
 	}
 	if !dbContent.InStorage {
@@ -207,8 +207,8 @@ func TestDeletePendingContentSkipsLockedContent(t *testing.T) {
 	if _, err := s3ao.StatObject(sha256); err == nil {
 		t.Error("Object should have been removed from S3 after the lock was released")
 	}
-	dbContent, err = dao.FileContent().GetBySHA256(sha256)
-	if err != nil {
+	dbContent, found, err = dao.FileContent().GetBySHA256(sha256)
+	if err != nil || !found {
 		t.Fatalf("Failed to get file_content: %s", err)
 	}
 	if dbContent.InStorage {
