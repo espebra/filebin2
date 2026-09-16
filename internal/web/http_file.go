@@ -183,8 +183,9 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) error {
 
 	// Step 2: Validate the request before reading the body. The content
 	// length is required to size the temporary file and to detect truncated
-	// uploads.
-	inputBytes, err := strconv.ParseUint(r.Header.Get("content-length"), 10, 64)
+	// uploads. The 63 bit limit matches net/http's own parsing of the header
+	// and keeps the value within int64 for the S3 client.
+	inputBytes, err := strconv.ParseUint(r.Header.Get("content-length"), 10, 63)
 	if err != nil {
 		return &httpError{status: http.StatusLengthRequired, message: "Missing or invalid content-length header", err: err}
 	}
