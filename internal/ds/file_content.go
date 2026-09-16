@@ -9,6 +9,7 @@ type FileContent struct {
 	Bytes                    uint64    `json:"bytes"`
 	BytesReadable            string    `json:"bytes_readable"`
 	MD5                      string    `json:"md5"`
+	SHA1                     string    `json:"sha1,omitempty"`
 	Mime                     string    `json:"mime"`
 	PHash                    string    `json:"phash,omitempty"`
 	InStorage                bool      `json:"in_storage"`

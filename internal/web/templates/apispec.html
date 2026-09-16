@@ -190,6 +190,7 @@ paths:
                   bytes: 482100
                   bytes_readable: 482 kB
                   md5: 5d41402abc4b2a76b9719d911017c592
+                  sha1: aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d
                   sha256: 2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae
                   updated_at: '2024-06-15T14:30:00Z'
                   updated_at_relative: just now
@@ -294,6 +295,7 @@ paths:
                   bytes: 482100
                   bytes_readable: 482 kB
                   md5: 5d41402abc4b2a76b9719d911017c592
+                  sha1: aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d
                   sha256: 2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae
                   updated_at: '2024-06-15T14:30:00Z'
                   updated_at_relative: just now
@@ -384,6 +386,7 @@ paths:
                     bytes: 482100
                     bytes_readable: 482 kB
                     md5: 5d41402abc4b2a76b9719d911017c592
+                    sha1: aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d
                     sha256: 2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae
                     updated_at: '2024-06-15T14:30:00Z'
                     updated_at_relative: 10 minutes ago
@@ -394,6 +397,7 @@ paths:
                     bytes: 1066176
                     bytes_readable: 1.1 MB
                     md5: 098f6bcd4621d373cade4e832627b4f6
+                    sha1: a94a8fe5ccb19ba61c4c0873d391e987982fbbd3
                     sha256: 9b71d224bd62f3785d96d46ad3ea3d73319bfbc2890caadae2dff72519673ca7
                     updated_at: '2024-06-15T14:35:00Z'
                     updated_at_relative: 5 minutes ago
@@ -557,7 +561,91 @@ paths:
           description: An unexpected server error occurred, such as a database error.
           content:
             text/plain:
-              example: Errno 271
+              example: Internal server error
+  '/sha1/{bin}':
+    get:
+      tags:
+        - bin
+      summary: List the SHA1 checksums of the files in a bin as plain text
+      description: |-
+        This will return the SHA1 checksum and filename of each file in the bin in plain text, one file per line. The output is formatted like the output of `sha1sum(1)`: the checksum, two spaces, then the filename. This makes it convenient to verify file integrity. Files whose content was uploaded before SHA1 checksums were calculated are left out.
+
+        **Example using curl:**
+        ```
+        curl https://filebin.net/sha1/mybin
+        ```
+
+        **Example verifying downloaded files:**
+        ```
+        curl https://filebin.net/sha1/mybin | sha1sum -c
+        ```
+      parameters:
+        - name: bin
+          in: path
+          description: The bin to list checksums for.
+          required: true
+          schema:
+            type: string
+          example: mybin
+      responses:
+        '200':
+          description: Successful operation. One checksum and filename per line.
+          content:
+            text/plain:
+              example: |
+                aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d  photo.jpg
+                a94a8fe5ccb19ba61c4c0873d391e987982fbbd3  document.pdf
+        '404':
+          description: The bin does not exist or is not available. The response body is empty.
+          content:
+            text/plain: {}
+        '500':
+          description: An unexpected server error occurred, such as a database error.
+          content:
+            text/plain:
+              example: Internal server error
+  '/md5/{bin}':
+    get:
+      tags:
+        - bin
+      summary: List the MD5 checksums of the files in a bin as plain text
+      description: |-
+        This will return the MD5 checksum and filename of each file in the bin in plain text, one file per line. The output is formatted like the output of `md5sum(1)`: the checksum, two spaces, then the filename. This makes it convenient to verify file integrity.
+
+        **Example using curl:**
+        ```
+        curl https://filebin.net/md5/mybin
+        ```
+
+        **Example verifying downloaded files:**
+        ```
+        curl https://filebin.net/md5/mybin | md5sum -c
+        ```
+      parameters:
+        - name: bin
+          in: path
+          description: The bin to list checksums for.
+          required: true
+          schema:
+            type: string
+          example: mybin
+      responses:
+        '200':
+          description: Successful operation. One checksum and filename per line.
+          content:
+            text/plain:
+              example: |
+                5d41402abc4b2a76b9719d911017c592  photo.jpg
+                098f6bcd4621d373cade4e832627b4f6  document.pdf
+        '404':
+          description: The bin does not exist or is not available. The response body is empty.
+          content:
+            text/plain: {}
+        '500':
+          description: An unexpected server error occurred, such as a database error.
+          content:
+            text/plain:
+              example: Internal server error
   '/qr/{bin}':
     get:
       tags:
@@ -747,6 +835,10 @@ components:
           type: string
           description: MD5 checksum of the file content (hex-encoded).
           example: 5d41402abc4b2a76b9719d911017c592
+        sha1:
+          type: string
+          description: SHA1 checksum of the file content (hex-encoded). Omitted for content uploaded before SHA1 checksums were calculated.
+          example: aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d
         sha256:
           type: string
           description: SHA256 checksum of the file content (hex-encoded).
