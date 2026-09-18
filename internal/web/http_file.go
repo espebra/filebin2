@@ -722,6 +722,7 @@ func (h *HTTP) persistFile(file *ds.File, found bool) error {
 	existing.Bytes = file.Bytes
 	existing.Mime = file.Mime
 	existing.MD5 = file.MD5
+	existing.SHA1 = file.SHA1
 	existing.Updates = existing.Updates + 1
 	existing.IP = file.IP
 	existing.Headers = file.Headers
