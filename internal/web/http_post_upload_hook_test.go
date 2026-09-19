@@ -20,6 +20,16 @@ import (
 
 func setupPostUploadHookHandler(t *testing.T, postUploadHook string, postUploadHookTimeout time.Duration) *HTTP {
 	t.Helper()
+	return setupUploadHookHandler(t, ds.Config{
+		PostUploadHook:        postUploadHook,
+		PostUploadHookTimeout: postUploadHookTimeout,
+	})
+}
+
+// setupUploadHookHandler returns an initialized handler with the given
+// config, which is used for its hook settings. The expiration is filled in.
+func setupUploadHookHandler(t *testing.T, c ds.Config) *HTTP {
+	t.Helper()
 
 	dao, s3ao, err := tearUp()
 	if err != nil {
@@ -37,11 +47,7 @@ func setupPostUploadHookHandler(t *testing.T, postUploadHook string, postUploadH
 		t.Fatalf("Unable to initialize workspace manager: %s", err)
 	}
 
-	c := ds.Config{
-		Expiration:            testExpiredAt,
-		PostUploadHook:        postUploadHook,
-		PostUploadHookTimeout: postUploadHookTimeout,
-	}
+	c.Expiration = testExpiredAt
 
 	metricsRegistry := prometheus.NewRegistry()
 	metrics := ds.NewMetrics("test", metricsRegistry)
