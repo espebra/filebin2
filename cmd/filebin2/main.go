@@ -48,6 +48,8 @@ var (
 	mmdbCityPathFlag          = flag.String("mmdb-city", "", "The path to an mmdb formatted geoip database like GeoLite2-City.mmdb.")
 	mmdbASNPathFlag           = flag.String("mmdb-asn", "", "The path to an mmdb formatted geoip database like GeoLite2-ASN.mmdb.")
 	allowRobotsFlag           = flag.Bool("allow-robots", false, "Allow robots to crawl and index the site (using X-Robots-Tag response header).")
+	preUploadHookFlag         = flag.String("pre-upload-hook", "", "Command to execute before every file upload is accepted, after the file has been received from the client but before it is stored in S3 and its metadata persisted. Invoked with the named arguments --bin-id, --filename, --content-type, --size, --md5, --sha1, and --sha256 (checksums hex encoded). Exit code 1 rejects the upload with HTTP 403 and the last line of stdout as the message. Any other outcome accepts the upload: exit code 0, any other exit code, a command that cannot be started, or a timeout.")
+	preUploadHookTimeoutFlag  = flag.Duration("pre-upload-hook-timeout", 5*time.Second, "Timeout for the pre-upload hook command execution. A hook that does not finish in time is killed and the upload is accepted.")
 	postUploadHookFlag        = flag.String("post-upload-hook", "", "Command to execute after every successful file upload, after the file has been stored in S3 and its metadata persisted. Invoked with the named arguments --bin-id, --filename, --content-type, --size, --md5, --sha1, and --sha256 (checksums hex encoded). Exit code and output are logged but do not affect the response to the client.")
 	postUploadHookTimeoutFlag = flag.Duration("post-upload-hook-timeout", 10*time.Second, "Timeout for the post-upload hook command execution")
 
@@ -190,6 +192,14 @@ func main() {
 	}
 	if v := os.Getenv("FILEBIN_ALLOW_ROBOTS"); v != "" {
 		*allowRobotsFlag = v == "true" || v == "1" || v == "yes"
+	}
+	if *preUploadHookFlag == "" {
+		*preUploadHookFlag = os.Getenv("FILEBIN_PRE_UPLOAD_HOOK")
+	}
+	if v := os.Getenv("FILEBIN_PRE_UPLOAD_HOOK_TIMEOUT"); v != "" && *preUploadHookTimeoutFlag == 5*time.Second {
+		if d, err := time.ParseDuration(v); err == nil {
+			*preUploadHookTimeoutFlag = d
+		}
 	}
 	if *postUploadHookFlag == "" {
 		*postUploadHookFlag = os.Getenv("FILEBIN_POST_UPLOAD_HOOK")
@@ -529,6 +539,8 @@ func main() {
 		CookieLifetime:           *cookieLifetimeFlag,
 		ExpectedCookieValue:      *expectedCookieValueFlag,
 		RejectFileExtensions:     strings.Fields(*rejectFileExtensions),
+		PreUploadHook:            *preUploadHookFlag,
+		PreUploadHookTimeout:     *preUploadHookTimeoutFlag,
 		PostUploadHook:           *postUploadHookFlag,
 		PostUploadHookTimeout:    *postUploadHookTimeoutFlag,
 		SlackSecret:              *slackSecretFlag,

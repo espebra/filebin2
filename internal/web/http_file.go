@@ -162,10 +162,11 @@ func (h *HTTP) getFile(w http.ResponseWriter, r *http.Request) {
 //     verify the checksums against the request headers.
 //  4. Inspect the content: mime type and, for images, perceptual hash.
 //  5. Build the file record and validate it.
-//  6. Deduplicate against existing content and upload to S3 if needed.
-//  7. Under the content lock, verify the object is in S3 and persist the
+//  6. Run the pre-upload hook, which can reject the upload.
+//  7. Deduplicate against existing content and upload to S3 if needed.
+//  8. Under the content lock, verify the object is in S3 and persist the
 //     content record and the file reference.
-//  8. Touch the bin, update metrics, run the post-upload hook and respond.
+//  9. Touch the bin, update metrics, run the post-upload hook and respond.
 func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) error {
 	w.Header().Set("Cache-Control", "max-age=0")
 
@@ -286,7 +287,15 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) error {
 		return &httpError{status: http.StatusBadRequest, message: "Input validation failed", err: err}
 	}
 
-	// Step 6: Deduplicate. Content is stored once per SHA256, so an upload
+	// Step 6: Ask the pre-upload hook, if one is configured, whether to
+	// accept the upload. Nothing has been stored yet, so a rejection leaves
+	// no trace apart from the bin itself.
+	preHookDuration, err := h.runPreUploadHook(r.Context(), file)
+	if err != nil {
+		return err
+	}
+
+	// Step 7: Deduplicate. Content is stored once per SHA256, so an upload
 	// of content that is already in storage skips the S3 upload. Blocked
 	// content is rejected here.
 	existingContent, err := h.lookupExistingContent(file.SHA256)
@@ -315,7 +324,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) error {
 	}
 	t4 := time.Now()
 
-	// Step 7: Persist the content record and the file reference under the
+	// Step 8: Persist the content record and the file reference under the
 	// content lock.
 	//
 	// Serialize against the lurker's content deletion (and other uploads of
@@ -380,7 +389,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) error {
 	// lock before the slower bin update, post-upload hook and response.
 	unlockContent()
 
-	// Step 8: Finish up. Update the bin to set the correct updated timestamp
+	// Step 9: Finish up. Update the bin to set the correct updated timestamp
 	// and extend its expiration. Use Touch (a targeted update of only
 	// updated_at/expired_at, guarded by the bin not being deleted) rather
 	// than a full Update so that this potentially slow, client-controlled
@@ -409,7 +418,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// Notify the post-upload hook, if one is configured.
-	hookDuration := h.runPostUploadHook(r.Context(), file)
+	postHookDuration := h.runPostUploadHook(r.Context(), file)
 
 	// Respond with the bin and file as JSON.
 	type Data struct {
@@ -426,7 +435,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	t5 := time.Now()
-	slog.Info("uploaded file", "filename", file.Filename, "bytes", file.Bytes, "sha256", file.SHA256, "bin", bin.Id, "db_seconds", t1.Sub(t0).Seconds(), "buffer_seconds", fmt.Sprintf("%f", t2.Sub(t1).Seconds()), "phash_seconds", pHashDuration.Seconds(), "hook_seconds", hookDuration.Seconds(), "store_seconds", t4.Sub(t3).Seconds(), "total_seconds", t5.Sub(t0).Seconds())
+	slog.Info("uploaded file", "filename", file.Filename, "bytes", file.Bytes, "sha256", file.SHA256, "bin", bin.Id, "db_seconds", t1.Sub(t0).Seconds(), "buffer_seconds", fmt.Sprintf("%f", t2.Sub(t1).Seconds()), "phash_seconds", pHashDuration.Seconds(), "pre_hook_seconds", preHookDuration.Seconds(), "post_hook_seconds", postHookDuration.Seconds(), "store_seconds", t4.Sub(t3).Seconds(), "total_seconds", t5.Sub(t0).Seconds())
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -735,6 +744,77 @@ func (h *HTTP) persistFile(file *ds.File, found bool) error {
 	return nil
 }
 
+// hookWaitDelay bounds how long a hook call waits for its output pipes to
+// close after the hook has been killed at its timeout. Without it, a child
+// process the hook left behind (a shell script's sleep, for example) would
+// keep the pipes open and the upload blocked until it exits on its own.
+const hookWaitDelay = time.Second
+
+// uploadHookArgs returns the named arguments the pre- and post-upload hooks
+// are invoked with. The checksums are hex encoded.
+func uploadHookArgs(file ds.File) []string {
+	return []string{
+		"--bin-id", file.Bin,
+		"--filename", file.Filename,
+		"--content-type", file.Mime,
+		"--size", strconv.FormatUint(file.Bytes, 10),
+		"--md5", md5Hex(file.MD5),
+		"--sha1", file.SHA1,
+		"--sha256", file.SHA256,
+	}
+}
+
+// runPreUploadHook executes the pre-upload hook if one is configured and
+// returns how long it took. The hook runs after the file has been received
+// and inspected but before anything is stored, and decides whether the
+// upload is accepted. Only exit code 1 rejects it, with 403 and the last
+// line of the hook's stdout as the message to the client. Any other outcome
+// accepts the upload: exit code 0, any other exit code, a hook that cannot
+// be started, or a hook that is killed at its timeout. Failures other than
+// a rejection are logged, so that a broken or hung hook cannot block
+// uploads.
+func (h *HTTP) runPreUploadHook(ctx context.Context, file ds.File) (time.Duration, error) {
+	if h.config.PreUploadHook == "" {
+		return 0, nil
+	}
+	hookStart := time.Now()
+	hookCtx, hookCancel := context.WithTimeout(ctx, h.config.PreUploadHookTimeout)
+	defer hookCancel()
+	hookCmd := exec.CommandContext(hookCtx, h.config.PreUploadHook, uploadHookArgs(file)...)
+	hookCmd.WaitDelay = hookWaitDelay
+	// Output captures stdout, and stderr ends up in the ExitError for the
+	// log. Only stdout is ever shown to the client.
+	hookOutput, hookErr := hookCmd.Output()
+	hookDuration := time.Since(hookStart)
+	if hookErr == nil {
+		return hookDuration, nil
+	}
+
+	stdout := strings.TrimRight(string(hookOutput), "\n")
+	stderr := ""
+	exitCode := -1
+	var exitErr *exec.ExitError
+	if errors.As(hookErr, &exitErr) {
+		exitCode = exitErr.ExitCode()
+		stderr = strings.TrimRight(string(exitErr.Stderr), "\n")
+	}
+	if hookCtx.Err() != nil {
+		slog.Warn("pre-upload hook timed out, accepting the upload", "filename", file.Filename, "bin", file.Bin, "timeout", h.config.PreUploadHookTimeout, "error", hookErr, "stdout", stdout, "stderr", stderr)
+		return hookDuration, nil
+	}
+	if exitCode != 1 {
+		slog.Warn("pre-upload hook failed, accepting the upload", "filename", file.Filename, "bin", file.Bin, "exit_code", exitCode, "error", hookErr, "stdout", stdout, "stderr", stderr)
+		return hookDuration, nil
+	}
+
+	message := stdout[strings.LastIndex(stdout, "\n")+1:]
+	if message == "" {
+		message = "The upload was rejected"
+	}
+	cause := fmt.Errorf("pre-upload hook rejected the upload (stdout %q, stderr %q)", stdout, stderr)
+	return hookDuration, &httpError{status: http.StatusForbidden, message: message, err: cause}
+}
+
 // runPostUploadHook executes the post-upload hook if one is configured and
 // returns how long it took. The hook runs after the upload has been
 // persisted and is treated as a notification: its exit code and output are
@@ -746,15 +826,8 @@ func (h *HTTP) runPostUploadHook(ctx context.Context, file ds.File) time.Duratio
 	hookStart := time.Now()
 	hookCtx, hookCancel := context.WithTimeout(ctx, h.config.PostUploadHookTimeout)
 	defer hookCancel()
-	hookCmd := exec.CommandContext(hookCtx, h.config.PostUploadHook,
-		"--bin-id", file.Bin,
-		"--filename", file.Filename,
-		"--content-type", file.Mime,
-		"--size", strconv.FormatUint(file.Bytes, 10),
-		"--md5", md5Hex(file.MD5),
-		"--sha1", file.SHA1,
-		"--sha256", file.SHA256,
-	)
+	hookCmd := exec.CommandContext(hookCtx, h.config.PostUploadHook, uploadHookArgs(file)...)
+	hookCmd.WaitDelay = hookWaitDelay
 	hookOutput, hookErr := hookCmd.CombinedOutput()
 	hookDuration := time.Since(hookStart)
 	if hookErr != nil {

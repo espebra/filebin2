@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Example upload hook for filebin2.
+# Example post-upload hook for filebin2.
 #
 # This script is called after a file has been successfully uploaded: both
 # the S3 object and its database metadata have already been persisted. It
@@ -16,7 +16,9 @@
 #   --filename      Filename
 #   --content-type  Content type (MIME type)
 #   --size          File size in bytes
-#   --sha256        SHA256 checksum of the file contents
+#   --md5           MD5 checksum of the file contents, hex encoded
+#   --sha1          SHA1 checksum of the file contents, hex encoded
+#   --sha256        SHA256 checksum of the file contents, hex encoded
 #
 # Usage:
 #   filebin2 --post-upload-hook /path/to/this/script
@@ -26,6 +28,8 @@ BIN=""
 FILENAME=""
 CONTENT_TYPE=""
 FILE_SIZE=""
+MD5=""
+SHA1=""
 SHA256=""
 
 while [ $# -gt 0 ]; do
@@ -34,6 +38,8 @@ while [ $# -gt 0 ]; do
         --filename) FILENAME="$2"; shift 2 ;;
         --content-type) CONTENT_TYPE="$2"; shift 2 ;;
         --size) FILE_SIZE="$2"; shift 2 ;;
+        --md5) MD5="$2"; shift 2 ;;
+        --sha1) SHA1="$2"; shift 2 ;;
         --sha256) SHA256="$2"; shift 2 ;;
         *) shift ;;
     esac

@@ -208,6 +208,31 @@ If enabled, the `X-Robots-Tag` response header will allow search engines to inde
 
 ---
 
+**Pre-Upload Hook**
+- Environment Variable: `FILEBIN_PRE_UPLOAD_HOOK`
+- Command Line Argument: `--pre-upload-hook`
+- Default: (not set)
+
+Command to execute before every file upload is accepted. The command runs after the file has been received from the client and its content type and checksums have been calculated, but before it is stored in S3 or its metadata persisted to the database. It is intended for validation, for example checking the checksums against a blocklist or a malware scanning service. It is invoked with the following named arguments: `--bin-id`, `--filename`, `--content-type`, `--size`, `--md5`, `--sha1`, and `--sha256`. The checksums are hex encoded.
+
+The exit code determines the outcome:
+- `1` — Reject the upload with HTTP 403 (Forbidden). The last line of stdout from the command is returned to the client as the response message.
+- `0` — Accept the upload.
+- Any other exit code — Accept the upload. The exit code and output are logged.
+
+Only exit code 1 rejects an upload. A command that cannot be started, or that does not finish within the timeout, is logged and the upload is accepted, so that a broken or hung hook cannot block uploads. An example hook script is provided in [`misc/pre-upload-hook-example`](misc/pre-upload-hook-example).
+
+---
+
+**Pre-Upload Hook Timeout**
+- Environment Variable: `FILEBIN_PRE_UPLOAD_HOOK_TIMEOUT`
+- Command Line Argument: `--pre-upload-hook-timeout`
+- Default: `5s`
+
+Timeout for the pre-upload hook command execution. If the command does not complete within this duration, it is killed and the timeout is logged, but the upload is accepted so that a slow or hung hook does not block uploads. The value is specified using Go duration format, examples: `5s`, `30s`, `1m`.
+
+---
+
 **Post-Upload Hook**
 - Environment Variable: `FILEBIN_POST_UPLOAD_HOOK`
 - Command Line Argument: `--post-upload-hook`
@@ -215,7 +240,7 @@ If enabled, the `X-Robots-Tag` response header will allow search engines to inde
 
 Command to execute after every successful file upload. The command runs after the file has been stored in S3 and its metadata persisted to the database, and is intended for notifications and post-processing (for example, triggering an indexing job or webhook). It is invoked with the following named arguments: `--bin-id`, `--filename`, `--content-type`, `--size`, `--md5`, `--sha1`, and `--sha256`. The checksums are hex encoded.
 
-The hook does not affect the response to the client: any non-zero exit code or stdout/stderr is logged but the upload is always reported as successful. An example hook script is provided in [`misc/upload-hook-example`](misc/upload-hook-example).
+The hook does not affect the response to the client: any non-zero exit code or stdout/stderr is logged but the upload is always reported as successful. An example hook script is provided in [`misc/post-upload-hook-example`](misc/post-upload-hook-example).
 
 ---
 
