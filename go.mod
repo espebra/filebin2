@@ -9,7 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.23.7
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.113.1
 	github.com/corona10/goimagehash v1.1.0
-	github.com/dustin/go-humanize v1.0.1
+	github.com/dustin/go-humanize v1.1.0
 	github.com/felixge/httpsnoop v1.1.0
 	github.com/gabriel-vasile/mimetype v1.4.15
 	github.com/gorilla/handlers v1.5.2

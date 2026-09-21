@@ -146,8 +146,8 @@ github.com/cespare/xxhash/v2
 github.com/corona10/goimagehash
 github.com/corona10/goimagehash/etcs
 github.com/corona10/goimagehash/transforms
-# github.com/dustin/go-humanize v1.0.1
-## explicit; go 1.16
+# github.com/dustin/go-humanize v1.1.0
+## explicit; go 1.21
 github.com/dustin/go-humanize
 # github.com/felixge/httpsnoop v1.1.0
 ## explicit; go 1.25
