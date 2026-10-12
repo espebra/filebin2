@@ -1,6 +1,8 @@
 package web
 
 import (
+	"crypto/md5"
+	"crypto/sha1"
 	"crypto/sha256"
 	"fmt"
 	"net/http"
@@ -17,6 +19,16 @@ import (
 )
 
 func setupPostUploadHookHandler(t *testing.T, postUploadHook string, postUploadHookTimeout time.Duration) *HTTP {
+	t.Helper()
+	return setupUploadHookHandler(t, ds.Config{
+		PostUploadHook:        postUploadHook,
+		PostUploadHookTimeout: postUploadHookTimeout,
+	})
+}
+
+// setupUploadHookHandler returns an initialized handler with the given
+// config, which is used for its hook settings. The expiration is filled in.
+func setupUploadHookHandler(t *testing.T, c ds.Config) *HTTP {
 	t.Helper()
 
 	dao, s3ao, err := tearUp()
@@ -35,11 +47,7 @@ func setupPostUploadHookHandler(t *testing.T, postUploadHook string, postUploadH
 		t.Fatalf("Unable to initialize workspace manager: %s", err)
 	}
 
-	c := ds.Config{
-		Expiration:            testExpiredAt,
-		PostUploadHook:        postUploadHook,
-		PostUploadHookTimeout: postUploadHookTimeout,
-	}
+	c.Expiration = testExpiredAt
 
 	metricsRegistry := prometheus.NewRegistry()
 	metrics := ds.NewMetrics("test", metricsRegistry)
@@ -183,12 +191,13 @@ exit 0
 		got[lines[i]] = lines[i+1]
 	}
 
-	expectedSHA256 := fmt.Sprintf("%x", sha256.Sum256([]byte(content)))
 	expected := map[string]string{
 		"--bin-id":   "hookargsbin",
 		"--filename": "myfile.txt",
 		"--size":     "17",
-		"--sha256":   expectedSHA256,
+		"--md5":      fmt.Sprintf("%x", md5.Sum([]byte(content))),
+		"--sha1":     fmt.Sprintf("%x", sha1.Sum([]byte(content))),
+		"--sha256":   fmt.Sprintf("%x", sha256.Sum256([]byte(content))),
 	}
 	for flag, want := range expected {
 		if got[flag] != want {

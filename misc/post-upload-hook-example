@@ -1,0 +1,52 @@
+#!/bin/sh
+#
+# Example post-upload hook for filebin2.
+#
+# This script is called after a file has been successfully uploaded: both
+# the S3 object and its database metadata have already been persisted. It
+# is intended for notifications and post-processing such as an indexing
+# job or a webhook.
+#
+# The hook does not affect the response to the client. Exit codes and
+# stdout/stderr are logged by filebin2 but the upload is always reported
+# as successful.
+#
+# Named arguments:
+#   --bin-id        Bin ID
+#   --filename      Filename
+#   --content-type  Content type (MIME type)
+#   --size          File size in bytes
+#   --md5           MD5 checksum of the file contents, hex encoded
+#   --sha1          SHA1 checksum of the file contents, hex encoded
+#   --sha256        SHA256 checksum of the file contents, hex encoded
+#
+# Usage:
+#   filebin2 --post-upload-hook /path/to/this/script
+#
+
+BIN=""
+FILENAME=""
+CONTENT_TYPE=""
+FILE_SIZE=""
+MD5=""
+SHA1=""
+SHA256=""
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --bin-id) BIN="$2"; shift 2 ;;
+        --filename) FILENAME="$2"; shift 2 ;;
+        --content-type) CONTENT_TYPE="$2"; shift 2 ;;
+        --size) FILE_SIZE="$2"; shift 2 ;;
+        --md5) MD5="$2"; shift 2 ;;
+        --sha1) SHA1="$2"; shift 2 ;;
+        --sha256) SHA256="$2"; shift 2 ;;
+        *) shift ;;
+    esac
+done
+
+# Example: notify an external service
+#curl -s -X POST -d "bin=$BIN&file=$FILENAME&size=$FILE_SIZE&sha256=$SHA256" \
+#    https://example.com/filebin-webhook
+
+exit 0

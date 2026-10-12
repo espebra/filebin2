@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -204,6 +205,49 @@ func TestUploadFile(t *testing.T) {
 	runTests(tcs, t)
 }
 
+// TestUploadStoresSHA1 verifies that the SHA1 checksum is reported in the
+// upload response and stored on the content record.
+func TestUploadStoresSHA1(t *testing.T) {
+	const (
+		content    = "content a"
+		wantSHA1   = "739afa0237fd8196c6b774a48676524bd95275b2"
+		wantSHA256 = "0069ffe8481777aa403982d9e9b3fa48957015a07cfa0f66dae32050b95bda54"
+	)
+	code, body, err := httpRequest(TestCase{Method: "POST", Bin: "sha1testbin", Filename: "a", UploadContent: content})
+	if err != nil || code != http.StatusCreated {
+		t.Fatalf("upload failed: %d %s %v", code, body, err)
+	}
+
+	var resp struct {
+		File struct {
+			SHA1   string `json:"sha1"`
+			SHA256 string `json:"sha256"`
+		} `json:"file"`
+	}
+	if err := json.Unmarshal([]byte(body), &resp); err != nil {
+		t.Fatalf("invalid response body %q: %s", body, err)
+	}
+	if resp.File.SHA1 != wantSHA1 {
+		t.Errorf("response sha1: got %q, want %q", resp.File.SHA1, wantSHA1)
+	}
+	if resp.File.SHA256 != wantSHA256 {
+		t.Errorf("response sha256: got %q, want %q", resp.File.SHA256, wantSHA256)
+	}
+
+	dao, err := dbl.Init(dbl.DBConfig{Host: testDbHost, Port: testDbPort, Name: testDbName, Username: testDbUser, Password: testDbPassword, MaxOpenConns: 2, MaxIdleConns: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = dao.Close() }()
+	stored, found, err := dao.FileContent().GetBySHA256(wantSHA256)
+	if err != nil || !found {
+		t.Fatalf("content record missing: found=%v err=%v", found, err)
+	}
+	if stored.SHA1 != wantSHA1 {
+		t.Errorf("stored sha1: got %q, want %q", stored.SHA1, wantSHA1)
+	}
+}
+
 func TestUploadToDeletedAtBin(t *testing.T) {
 	tcs := []TestCase{
 		{
@@ -228,6 +272,73 @@ func TestUploadToDeletedAtBin(t *testing.T) {
 		},
 	}
 	runTests(tcs, t)
+}
+
+// TestLockBinDuringUpload verifies that an upload accepted before the bin was
+// locked completes with 201 even though the lock lands while its body is
+// still being received. The file is stored in the bin either way, so
+// reporting a failure would be wrong. The lock stops the next upload.
+func TestLockBinDuringUpload(t *testing.T) {
+	bin := "lockduringupload"
+	if code, body, err := httpRequest(TestCase{Method: "POST", Bin: bin, Filename: "a", UploadContent: "content a"}); err != nil || code != http.StatusCreated {
+		t.Fatalf("setup upload failed: %d %s %v", code, body, err)
+	}
+
+	// Stream the second upload through a pipe so the body can be held
+	// open while the bin is locked.
+	content := []byte("content b")
+	pr, pw := io.Pipe()
+	req, err := http.NewRequest(http.MethodPost, testServerURL+"/"+bin+"/b", pr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.ContentLength = int64(len(content))
+
+	type result struct {
+		code int
+		body string
+		err  error
+	}
+	done := make(chan result, 1)
+	go func() {
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			done <- result{err: err}
+			return
+		}
+		defer func() { _ = resp.Body.Close() }()
+		body, _ := io.ReadAll(resp.Body)
+		done <- result{code: resp.StatusCode, body: string(body)}
+	}()
+
+	// Send the first byte, then give the handler time to pass its
+	// writability check and start reading the body before locking.
+	if _, err := pw.Write(content[:1]); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(500 * time.Millisecond)
+
+	if code, body, err := httpRequest(TestCase{Method: "PUT", Bin: bin}); err != nil || code != http.StatusOK {
+		t.Fatalf("lock failed: %d %s %v", code, body, err)
+	}
+
+	if _, err := pw.Write(content[1:]); err != nil {
+		t.Fatal(err)
+	}
+	_ = pw.Close()
+
+	res := <-done
+	if res.err != nil {
+		t.Fatal(res.err)
+	}
+	if res.code != http.StatusCreated {
+		t.Errorf("upload during lock: got %d, want %d, body %q", res.code, http.StatusCreated, res.body)
+	}
+
+	// The lock holds for the next upload.
+	if code, _, err := httpRequest(TestCase{Method: "POST", Bin: bin, Filename: "c", UploadContent: "content c"}); err != nil || code != http.StatusMethodNotAllowed {
+		t.Errorf("upload to locked bin: got %d, want %d, err %v", code, http.StatusMethodNotAllowed, err)
+	}
 }
 
 func TestDeleteFile(t *testing.T) {
@@ -576,6 +687,18 @@ func TestBinSha256(t *testing.T) {
 			DownloadContent: "0069ffe8481777aa403982d9e9b3fa48957015a07cfa0f66dae32050b95bda54  a\nc4363f384691f55ee5a5c315e1f7c37366ae232933665a93fe3bcc0d90bc937b  b\n",
 			StatusCode:      200,
 		}, {
+			Description:     "Get bin sha1 checksums",
+			Method:          "GET",
+			Bin:             "sha1/mytestbin7",
+			DownloadContent: "739afa0237fd8196c6b774a48676524bd95275b2  a\neae49f039c8416479f1c63b883f96fc39fe3d7c6  b\n",
+			StatusCode:      200,
+		}, {
+			Description:     "Get bin md5 checksums in hex like md5sum",
+			Method:          "GET",
+			Bin:             "md5/mytestbin7",
+			DownloadContent: "d8114b361885ee54897e52ce2308e274  a\ncd4e6ac0d4e24c702ab469a5b5ea7b2c  b\n",
+			StatusCode:      200,
+		}, {
 			Description: "Get sha256 checksums for non-existing bin",
 			Method:      "GET",
 			Bin:         "sha256/nosuchbin7",
@@ -589,6 +712,16 @@ func TestBinSha256(t *testing.T) {
 			Description: "Get sha256 checksums for deleted bin",
 			Method:      "GET",
 			Bin:         "sha256/mytestbin7",
+			StatusCode:  404,
+		}, {
+			Description: "Get sha1 checksums for deleted bin",
+			Method:      "GET",
+			Bin:         "sha1/mytestbin7",
+			StatusCode:  404,
+		}, {
+			Description: "Get md5 checksums for deleted bin",
+			Method:      "GET",
+			Bin:         "md5/mytestbin7",
 			StatusCode:  404,
 		},
 	}
@@ -834,8 +967,8 @@ func TestUploadDedupAfterObjectLoss(t *testing.T) {
 	if _, err := s3ao.StatObject(sha); err != nil {
 		t.Errorf("Object should have been re-uploaded to S3: %s", err)
 	}
-	dbContent, err := dao.FileContent().GetBySHA256(sha)
-	if err != nil {
+	dbContent, found, err := dao.FileContent().GetBySHA256(sha)
+	if err != nil || !found {
 		t.Fatalf("Failed to get file_content: %s", err)
 	}
 	if !dbContent.InStorage {
@@ -862,8 +995,8 @@ func TestUploadDedupAfterObjectLoss(t *testing.T) {
 	if _, err := s3ao.StatObject(sha); err != nil {
 		t.Errorf("Object should exist in S3 after re-upload: %s", err)
 	}
-	dbContent, err = dao.FileContent().GetBySHA256(sha)
-	if err != nil {
+	dbContent, found, err = dao.FileContent().GetBySHA256(sha)
+	if err != nil || !found {
 		t.Fatalf("Failed to get file_content: %s", err)
 	}
 	if !dbContent.InStorage {

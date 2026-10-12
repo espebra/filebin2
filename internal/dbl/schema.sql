@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS file_content (
 	sha256		VARCHAR(128) NOT NULL PRIMARY KEY,
 	bytes		BIGINT NOT NULL,
 	md5		VARCHAR(128) NOT NULL,
+	sha1		VARCHAR(128) NOT NULL DEFAULT '',
 	mime		VARCHAR(128) NOT NULL,
 	phash		VARCHAR(16),
 	in_storage	BOOLEAN NOT NULL DEFAULT false,
@@ -83,3 +84,6 @@ CREATE INDEX IF NOT EXISTS idx_file_sha256_deleted ON file(sha256, deleted_at);
 CREATE INDEX IF NOT EXISTS idx_file_active ON file(bin_id, sha256) WHERE deleted_at IS NULL;
 
 ALTER TABLE file_content ADD COLUMN IF NOT EXISTS phash VARCHAR(16);
+-- sha1 is empty for content uploaded before it was calculated. It is filled in
+-- the next time the same content is uploaded.
+ALTER TABLE file_content ADD COLUMN IF NOT EXISTS sha1 VARCHAR(128) NOT NULL DEFAULT '';

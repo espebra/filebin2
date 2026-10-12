@@ -1,0 +1,70 @@
+#!/bin/sh
+#
+# Example pre-upload hook for filebin2.
+#
+# This script is called after a file has been received from the client and
+# its content type and checksums have been calculated, but before the file
+# is stored in S3 and its metadata persisted. It decides whether the upload
+# is accepted, and is intended for validation such as checking the
+# checksums against a blocklist or a malware scanning service.
+#
+# The exit code determines the outcome:
+#   1     Reject the upload with HTTP 403. The last line of stdout is
+#         returned to the client as the response message.
+#   0     Accept the upload.
+#   other Accept the upload. The exit code and output are logged.
+#
+# Only exit code 1 rejects. If the script cannot be started, or does not
+# finish within --pre-upload-hook-timeout and is killed, the failure is
+# logged and the upload is accepted.
+#
+# Named arguments:
+#   --bin-id        Bin ID
+#   --filename      Filename
+#   --content-type  Content type (MIME type)
+#   --size          File size in bytes
+#   --md5           MD5 checksum of the file contents, hex encoded
+#   --sha1          SHA1 checksum of the file contents, hex encoded
+#   --sha256        SHA256 checksum of the file contents, hex encoded
+#
+# Usage:
+#   filebin2 --pre-upload-hook /path/to/this/script
+#
+
+BIN=""
+FILENAME=""
+CONTENT_TYPE=""
+FILE_SIZE=""
+MD5=""
+SHA1=""
+SHA256=""
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --bin-id) BIN="$2"; shift 2 ;;
+        --filename) FILENAME="$2"; shift 2 ;;
+        --content-type) CONTENT_TYPE="$2"; shift 2 ;;
+        --size) FILE_SIZE="$2"; shift 2 ;;
+        --md5) MD5="$2"; shift 2 ;;
+        --sha1) SHA1="$2"; shift 2 ;;
+        --sha256) SHA256="$2"; shift 2 ;;
+        *) shift ;;
+    esac
+done
+
+# Example: reject content on a local SHA256 blocklist, one checksum per line
+#if grep -qix "$SHA256" /etc/filebin2/blocklist.txt; then
+#    echo "This content is not allowed"
+#    exit 1
+#fi
+
+# Example: ask an external service. Exit 1 only on an explicit rejection,
+# so that an unreachable service does not block uploads.
+#VERDICT=$(curl -sf -X POST -d "sha256=$SHA256&md5=$MD5&sha1=$SHA1&size=$FILE_SIZE" \
+#    https://example.com/filebin-scan) || exit 2
+#if [ "$VERDICT" = "reject" ]; then
+#    echo "This content was rejected by the scanner"
+#    exit 1
+#fi
+
+exit 0

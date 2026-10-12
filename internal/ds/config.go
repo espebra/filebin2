@@ -37,6 +37,8 @@ type Config struct {
 	AllowRobots              bool
 	BaseUrl                  url.URL
 	RejectFileExtensions     []string
+	PreUploadHook            string
+	PreUploadHookTimeout     time.Duration
 	PostUploadHook           string
 	PostUploadHookTimeout    time.Duration
 

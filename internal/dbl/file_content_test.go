@@ -29,8 +29,8 @@ func TestFileContentInsertOrIncrement(t *testing.T) {
 	}
 
 	// Verify the record exists
-	dbContent, err := dao.FileContent().GetBySHA256(content.SHA256)
-	if err != nil {
+	dbContent, found, err := dao.FileContent().GetBySHA256(content.SHA256)
+	if err != nil || !found {
 		t.Errorf("Failed to get file content after insert: %s", err)
 	}
 
@@ -50,8 +50,8 @@ func TestFileContentInsertOrIncrement(t *testing.T) {
 	}
 
 	// Verify the record still exists
-	dbContent, err = dao.FileContent().GetBySHA256(content.SHA256)
-	if err != nil {
+	dbContent, found, err = dao.FileContent().GetBySHA256(content.SHA256)
+	if err != nil || !found {
 		t.Errorf("Failed to get file content: %s", err)
 	}
 
@@ -288,8 +288,8 @@ func TestFileContentUpdate(t *testing.T) {
 	_ = dao.FileContent().InsertOrIncrement(content)
 
 	// Get and modify
-	dbContent, err := dao.FileContent().GetBySHA256(content.SHA256)
-	if err != nil {
+	dbContent, found, err := dao.FileContent().GetBySHA256(content.SHA256)
+	if err != nil || !found {
 		t.Errorf("Failed to get file content: %s", err)
 	}
 
@@ -300,8 +300,8 @@ func TestFileContentUpdate(t *testing.T) {
 	}
 
 	// Verify update
-	updatedContent, err := dao.FileContent().GetBySHA256(content.SHA256)
-	if err != nil {
+	updatedContent, found, err := dao.FileContent().GetBySHA256(content.SHA256)
+	if err != nil || !found {
 		t.Errorf("Failed to get updated file content: %s", err)
 	}
 
@@ -558,8 +558,8 @@ func TestDeduplicationFlow(t *testing.T) {
 	}
 
 	// Verify content exists
-	content, err := dao.FileContent().GetBySHA256(sha256)
-	if err != nil {
+	content, found, err := dao.FileContent().GetBySHA256(sha256)
+	if err != nil || !found {
 		t.Errorf("Failed to get file content: %s", err)
 	}
 
