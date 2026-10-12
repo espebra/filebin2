@@ -23,6 +23,18 @@
             <div class="col-auto">
                 <button type="submit" class="btn btn-primary"><i class="fas fa-fw fa-search"></i> Search</button>
             </div>
+            <div class="col-auto d-flex align-items-center">
+                <label for="limitSelect" class="form-label me-2 mb-0">Limit:</label>
+                <select id="limitSelect" name="limit" class="form-select form-select-sm d-inline-block w-auto" onchange="this.form.submit()">
+                    <option value="25" {{ if eq .Limit 25 }}selected{{ end }}>25</option>
+                    <option value="50" {{ if eq .Limit 50 }}selected{{ end }}>50</option>
+                    <option value="100" {{ if eq .Limit 100 }}selected{{ end }}>100</option>
+                    <option value="200" {{ if eq .Limit 200 }}selected{{ end }}>200</option>
+                    <option value="500" {{ if eq .Limit 500 }}selected{{ end }}>500</option>
+                    <option value="1000" {{ if eq .Limit 1000 }}selected{{ end }}>1000</option>
+                    <option value="5000" {{ if eq .Limit 5000 }}selected{{ end }}>5000</option>
+                </select>
+            </div>
         </form>
 
         <p class="text-muted">Substring search across bin IDs and filenames. Deleted and expired bins and deleted files are included in the results.</p>
@@ -32,7 +44,7 @@
 
             {{ if .Bins }}
                 {{ if eq (len .Bins) .Limit }}
-                    <p class="text-muted">Showing the first {{ .Limit }} matches. Narrow the search or increase the limit with <code>?limit=</code>.</p>
+                    <p class="text-muted">Showing the first {{ .Limit }} matches. Narrow the search or increase the limit.</p>
                 {{ end }}
                 <table class="table table-hover sortable">
                     <thead>
@@ -78,7 +90,7 @@
 
             {{ if .Files }}
                 {{ if eq (len .Files) .Limit }}
-                    <p class="text-muted">Showing the first {{ .Limit }} matches. Narrow the search or increase the limit with <code>?limit=</code>.</p>
+                    <p class="text-muted">Showing the first {{ .Limit }} matches. Narrow the search or increase the limit.</p>
                 {{ end }}
                 <table class="table table-hover sortable">
                     <thead>
