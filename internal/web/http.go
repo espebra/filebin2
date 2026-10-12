@@ -39,6 +39,8 @@ var staticBox embed.FS
 type AdminLogin struct {
 	IP                 string
 	Hostname           string
+	UserAgent          string
+	Requests           uint64
 	LastActive         time.Time
 	LastActiveReadable string
 }
@@ -383,12 +385,12 @@ func (h *HTTP) auth(fn func(http.ResponseWriter, *http.Request)) http.HandlerFun
 			return
 		}
 
-		h.trackAdminLogin(r.RemoteAddr)
+		h.trackAdminLogin(r.RemoteAddr, r.UserAgent())
 		fn(w, r)
 	}
 }
 
-func (h *HTTP) trackAdminLogin(remoteAddr string) {
+func (h *HTTP) trackAdminLogin(remoteAddr string, userAgent string) {
 	// Extract IP from remoteAddr (format: "IP:port")
 	host, _, err := net.SplitHostPort(remoteAddr)
 	var ip string
@@ -407,6 +409,8 @@ func (h *HTTP) trackAdminLogin(remoteAddr string) {
 	for i := range h.adminLogins {
 		if h.adminLogins[i].IP == ip {
 			h.adminLogins[i].LastActive = now
+			h.adminLogins[i].UserAgent = userAgent
+			h.adminLogins[i].Requests++
 			// Move to front (most recent)
 			login := h.adminLogins[i]
 			copy(h.adminLogins[1:i+1], h.adminLogins[0:i])
@@ -418,6 +422,8 @@ func (h *HTTP) trackAdminLogin(remoteAddr string) {
 	// Add new IP at the front
 	newLogin := AdminLogin{
 		IP:         ip,
+		UserAgent:  userAgent,
+		Requests:   1,
 		LastActive: now,
 	}
 

@@ -42,6 +42,8 @@
                 <tr>
                     <th>IP</th>
                     <th>Hostname</th>
+                    <th>User-Agent</th>
+                    <th>Requests</th>
                     <th>Last active</th>
                     <th>Last active (readable)</th>
                 </tr>
@@ -51,6 +53,8 @@
                 <tr>
                     <td>{{ .IP }}</td>
                     <td>{{ if .Hostname }}{{ .Hostname }}{{ else }}-{{ end }}</td>
+                    <td>{{ if .UserAgent }}{{ .UserAgent }}{{ else }}-{{ end }}</td>
+                    <td>{{ .Requests }}</td>
                     <td sorttable_customkey="{{ .LastActive }}">{{ .LastActive.Format "2006-01-02 15:04:05 UTC" }}</td>
                     <td>{{ .LastActiveReadable }}</td>
                 </tr>
