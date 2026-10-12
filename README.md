@@ -703,6 +703,45 @@ make build-all
 
 The output will be the Filebin program as binaries in the `artifacts/` folder called `filebin2-linux-amd64` (depending on the platform). The filebin binary take the following environment variables and command line parameters.
 
+### Releasing
+
+Releases are built and published by the [release workflow](.github/workflows/release.yaml), which runs when a tag matching `v*` is pushed. There is no version number to bump in the source; the version is taken from the tag.
+
+1. Make sure `master` is up to date and that the [CI workflow](https://github.com/espebra/filebin2/actions/workflows/ci.yaml) passes on the commit to release.
+2. Pick the next version following [semantic versioning](https://semver.org/), based on the changes since the previous release:
+
+   ```bash
+   git fetch --tags
+   git describe --tags --abbrev=0                 # Previous release, e.g. v1.3.0
+   git log --oneline $(git describe --tags --abbrev=0)..master
+   ```
+
+3. Tag the commit and push the tag:
+
+   ```bash
+   git tag v1.4.0 master
+   git push origin v1.4.0
+   ```
+
+4. Follow the run on the [release workflow page](https://github.com/espebra/filebin2/actions/workflows/release.yaml). When it completes, it has:
+   * Built the binaries for Linux and macOS (amd64 and arm64).
+   * Built `.deb` and `.rpm` packages for Linux (amd64 and arm64).
+   * Built multi-arch container images and pushed them to `ghcr.io/espebra/filebin2`, tagged with the full version (`1.4.0`), the minor version (`1.4`), the major version (`1`), and `latest`.
+   * Created a [GitHub release](https://github.com/espebra/filebin2/releases) for the tag with the binaries, the packages, a `checksums.txt` file, and release notes generated from the commits and pull requests since the previous release.
+
+The tag and commit are compiled into the binaries and container images. They are logged at startup and printed by `filebin2 --version`.
+
+If the workflow fails, fix the problem on `master`, then delete the tag and create it again on the fixed commit:
+
+```bash
+git push --delete origin v1.4.0
+git tag -d v1.4.0
+git tag v1.4.0 master
+git push origin v1.4.0
+```
+
+If the GitHub release was already created before the failure, delete it on the [releases page](https://github.com/espebra/filebin2/releases) before pushing the tag again.
+
 ## Integrations
 
 ### Grafana and Prometheus
