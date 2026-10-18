@@ -223,6 +223,46 @@ func (d *FileDao) Delete(file *ds.File) (err error) {
 	return nil
 }
 
+// HasActiveInDeletedBins reports whether any file that is not deleted belongs
+// to a deleted bin. Such files are left over from before files were
+// soft-deleted together with their bin.
+func (d *FileDao) HasActiveInDeletedBins() (found bool, err error) {
+	sqlStatement := "SELECT EXISTS (SELECT 1 FROM file f JOIN bin b ON b.id = f.bin_id WHERE f.deleted_at IS NULL AND b.deleted_at IS NOT NULL)"
+	t0 := time.Now()
+	err = d.db.QueryRow(sqlStatement).Scan(&found)
+	observeQuery(d.metrics, "file_has_active_in_deleted_bins", t0, err)
+	return found, err
+}
+
+// MaxID returns the highest file id, or 0 if there are no files.
+func (d *FileDao) MaxID() (id int64, err error) {
+	sqlStatement := "SELECT COALESCE(MAX(id), 0) FROM file"
+	t0 := time.Now()
+	err = d.db.QueryRow(sqlStatement).Scan(&id)
+	observeQuery(d.metrics, "file_max_id", t0, err)
+	return id, err
+}
+
+// MarkDeletedInDeletedBins soft-deletes the files with fromID <= id < toID
+// that are not deleted but belong to a deleted bin, using the deletion time
+// of the bin. Working in id ranges keeps each batch small and lets it use the
+// primary key. Returns the number of files that were soft-deleted.
+func (d *FileDao) MarkDeletedInDeletedBins(fromID int64, toID int64) (count int64, err error) {
+	sqlStatement := `UPDATE file f SET deleted_at = b.deleted_at
+		FROM bin b
+		WHERE b.id = f.bin_id
+		  AND b.deleted_at IS NOT NULL
+		  AND f.deleted_at IS NULL
+		  AND f.id >= $1 AND f.id < $2`
+	t0 := time.Now()
+	res, err := d.db.Exec(sqlStatement, fromID, toID)
+	observeQuery(d.metrics, "file_mark_deleted_in_deleted_bins", t0, err)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
 func (d *FileDao) RegisterDownload(file *ds.File) (err error) {
 	sqlStatement := "UPDATE file SET downloads = downloads + 1 WHERE id = $1 RETURNING downloads"
 	t0 := time.Now()

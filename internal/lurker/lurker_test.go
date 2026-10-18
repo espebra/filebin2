@@ -1,6 +1,7 @@
 package lurker
 
 import (
+	"database/sql"
 	"strings"
 	"testing"
 	"time"
@@ -69,6 +70,7 @@ func tearDown(dao dbl.DAO, s3ao s3.S3AO) {
 func newTestLurker(dao *dbl.DAO, s3ao *s3.S3AO) *Lurker {
 	l := New(dao, s3ao, nil)
 	l.Init(60, 0, 86400)
+	l.backfillPause = 0
 	return l
 }
 
@@ -213,5 +215,85 @@ func TestDeletePendingContentSkipsLockedContent(t *testing.T) {
 	}
 	if dbContent.InStorage {
 		t.Error("in_storage should be false after deletion")
+	}
+}
+
+// TestBackfillDeletedFiles verifies that files left active in bins that were
+// deleted before files were deleted together with their bin are soft-deleted
+// with the deletion time of the bin, and that files in active bins are left
+// alone.
+func TestBackfillDeletedFiles(t *testing.T) {
+	dao, s3ao, err := tearUp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tearDown(dao, s3ao)
+
+	sha256 := "4444444444444444444444444444444444444444444444444444444444444444"
+	seedContent(t, dao, s3ao, sha256, "backfill content")
+
+	insertFile := func(binID string) *ds.File {
+		t.Helper()
+		bin := &ds.Bin{Id: binID, ExpiredAt: time.Now().UTC().Add(time.Hour)}
+		if _, err := dao.Bin().Insert(bin); err != nil {
+			t.Fatalf("Failed to insert bin: %s", err)
+		}
+		file := &ds.File{Filename: "file.txt", Bin: bin.Id, Bytes: 1, SHA256: sha256}
+		if _, err := dao.File().Insert(file); err != nil {
+			t.Fatalf("Failed to insert file: %s", err)
+		}
+		return file
+	}
+
+	// Simulate a bin deleted before files were deleted together with it:
+	// delete the bin, then make its file active again.
+	legacyFile := insertFile("backfilllegacy")
+	legacyBin, _, err := dao.Bin().GetByID("backfilllegacy")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := dao.Bin().MarkDeleted(&legacyBin); err != nil {
+		t.Fatal(err)
+	}
+	dbLegacyFile, _, err := dao.File().GetByID(legacyFile.Id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dbLegacyFile.DeletedAt = sql.NullTime{}
+	if err := dao.File().Update(&dbLegacyFile); err != nil {
+		t.Fatal(err)
+	}
+
+	activeFile := insertFile("backfillactive")
+
+	l := newTestLurker(&dao, &s3ao)
+	l.BackfillDeletedFiles()
+
+	if !l.backfillDone {
+		t.Error("Was expecting the backfill to be done")
+	}
+	dbLegacyFile, _, err = dao.File().GetByID(legacyFile.Id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !dbLegacyFile.IsDeleted() {
+		t.Error("Was expecting the file in the deleted bin to be soft-deleted")
+	}
+	if !dbLegacyFile.DeletedAt.Time.Equal(legacyBin.DeletedAt.Time) {
+		t.Errorf("Was expecting file deleted_at %s to match bin deleted_at %s", dbLegacyFile.DeletedAt.Time, legacyBin.DeletedAt.Time)
+	}
+	dbActiveFile, _, err := dao.File().GetByID(activeFile.Id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dbActiveFile.IsDeleted() {
+		t.Error("Was expecting the file in the active bin to stay active")
+	}
+
+	// A new lurker finds nothing to do and does not start a pass.
+	l = newTestLurker(&dao, &s3ao)
+	l.BackfillDeletedFiles()
+	if !l.backfillDone || l.backfillStarted {
+		t.Errorf("Was expecting the backfill to be done without starting a pass, got done=%t started=%t", l.backfillDone, l.backfillStarted)
 	}
 }

@@ -198,7 +198,7 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        Are you sure you want to revive bin <code>{{ .Bin.Id }}</code>? The deletion marker will be cleared and the expiration extended, making the bin available again. File content that has already been removed from storage cannot be restored.
+                        Are you sure you want to revive bin <code>{{ .Bin.Id }}</code>? The deletion marker will be cleared and the expiration extended, making the bin available again. Files that were deleted together with the bin are not restored.
                     </div>
                     <div class="modal-footer">
                         <form method="POST" action="/admin/bin/{{ .Bin.Id }}/revive">

@@ -597,6 +597,116 @@ func TestReviveBin(t *testing.T) {
 	}
 }
 
+func TestMarkDeletedAndReviveFiles(t *testing.T) {
+	dao, err := tearUp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tearDown(dao) }()
+
+	sha256 := "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	earlier := time.Now().UTC().Add(-time.Hour).Truncate(time.Microsecond)
+
+	// insertFiles creates a bin with one active file and one file that
+	// was deleted before the bin.
+	insertFiles := func(bin *ds.Bin) (active *ds.File, deleted *ds.File) {
+		if _, err := dao.Bin().Insert(bin); err != nil {
+			t.Fatal(err)
+		}
+		active = &ds.File{Bin: bin.Id, Filename: "active.txt", SHA256: sha256, Bytes: 1}
+		if err := ensureFileContent(dao, active); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := dao.File().Insert(active); err != nil {
+			t.Fatal(err)
+		}
+		deleted = &ds.File{Bin: bin.Id, Filename: "deleted.txt", SHA256: sha256, Bytes: 1}
+		_ = deleted.DeletedAt.Scan(earlier)
+		if _, err := dao.File().Insert(deleted); err != nil {
+			t.Fatal(err)
+		}
+		return active, deleted
+	}
+
+	// Deleting a bin soft-deletes its active files and keeps the deletion
+	// time of files that were already deleted.
+	bin := &ds.Bin{Id: "markdeletedfiles"}
+	active, deleted := insertFiles(bin)
+	ok, err := dao.Bin().MarkDeleted(bin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Fatalf("Was expecting MarkDeleted to succeed")
+	}
+	dbActive, _, err := dao.File().GetByID(active.Id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !dbActive.IsDeleted() {
+		t.Errorf("Was expecting the file to be deleted together with the bin")
+	}
+	if !dbActive.DeletedAt.Time.Equal(bin.DeletedAt.Time) {
+		t.Errorf("Was expecting file deleted_at %s to match bin deleted_at %s", dbActive.DeletedAt.Time, bin.DeletedAt.Time)
+	}
+	dbDeleted, _, err := dao.File().GetByID(deleted.Id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !dbDeleted.DeletedAt.Time.Equal(earlier) {
+		t.Errorf("Was expecting the earlier deletion time %s to be kept, got %s", earlier, dbDeleted.DeletedAt.Time)
+	}
+
+	// Reviving the bin does not restore the files.
+	if _, err := dao.Bin().Revive(bin, time.Now().UTC().Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	dbActive, _, err = dao.File().GetByID(active.Id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !dbActive.IsDeleted() {
+		t.Errorf("Was expecting the file to stay deleted after reviving the bin")
+	}
+
+	// The lurker's guarded delete leaves a bin that is not expired, and
+	// its files, alone.
+	liveBin := &ds.Bin{Id: "markdeletedlive", ExpiredAt: time.Now().UTC().Add(time.Hour)}
+	liveActive, _ := insertFiles(liveBin)
+	ok, err = dao.Bin().MarkDeletedIfExpired(liveBin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ok {
+		t.Errorf("Was expecting MarkDeletedIfExpired to skip a bin that is not expired")
+	}
+	dbLiveActive, _, err := dao.File().GetByID(liveActive.Id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dbLiveActive.IsDeleted() {
+		t.Errorf("Was expecting the file in a bin that is not expired to stay active")
+	}
+
+	// The lurker's guarded delete of an expired bin soft-deletes its files.
+	expiredBin := &ds.Bin{Id: "markdeletedexpired", ExpiredAt: time.Now().UTC().Add(-time.Hour)}
+	expiredActive, _ := insertFiles(expiredBin)
+	ok, err = dao.Bin().MarkDeletedIfExpired(expiredBin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Fatalf("Was expecting MarkDeletedIfExpired to delete an expired bin")
+	}
+	dbExpiredActive, _, err := dao.File().GetByID(expiredActive.Id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !dbExpiredActive.IsDeleted() {
+		t.Errorf("Was expecting the file in an expired bin to be deleted together with the bin")
+	}
+}
+
 func TestSearchBinsByID(t *testing.T) {
 	dao, err := tearUp()
 	if err != nil {
