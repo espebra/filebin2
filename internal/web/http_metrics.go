@@ -2,7 +2,6 @@ package web
 
 import (
 	"crypto/subtle"
-	"log/slog"
 	"net/http"
 	"time"
 
@@ -37,14 +36,8 @@ func (h *HTTP) viewMetrics(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Get metrics from the database and update gauges
-	err := h.dao.Metrics().UpdateMetrics(h.metrics)
-	if err != nil {
-		slog.Error("unable to update metrics", "error", err)
-		http.Error(w, "Errno 328", http.StatusInternalServerError)
-		return
-	}
-	h.metrics.UpdateGauges()
+	// The database-sourced gauges are refreshed in the background by
+	// startMetricsUpdater, so only the connection pool stats are updated here.
 	h.metrics.UpdateDBStats(h.dao.Stats())
 
 	// Serve Prometheus metrics

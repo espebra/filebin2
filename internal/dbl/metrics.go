@@ -108,8 +108,10 @@ func (d *MetricsDao) UpdateMetrics(metrics *ds.Metrics) (retErr error) {
 
 	var currentLogEntries, currentFiles, currentBins int64
 
-	// Number of log entries
-	sqlStatement := "SELECT COUNT(*) FROM transaction"
+	// Estimated number of log entries. COUNT(*) would scan the whole table,
+	// so use the planner's estimate, which autovacuum and analyze keep up to
+	// date. reltuples is -1 until the table has been vacuumed or analyzed.
+	sqlStatement := "SELECT GREATEST(reltuples, 0)::bigint FROM pg_class WHERE oid = 'transaction'::regclass"
 	if err := d.db.QueryRow(sqlStatement).Scan(&currentLogEntries); err != nil {
 		return err
 	}
