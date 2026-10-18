@@ -18,14 +18,33 @@ type Lurker struct {
 	throttle  time.Duration
 	retention uint64
 	stopChan  chan struct{}
+
+	// Progress of the backfill of files in bins that were soft-deleted
+	// before files were soft-deleted together with their bin
+	backfillPause   time.Duration
+	backfillStarted bool
+	backfillDone    bool
+	backfillNext    int64
+	backfillMax     int64
+	backfillCount   int64
 }
+
+const (
+	// Number of file ids to process per backfill batch
+	backfillBatchSize = 10000
+
+	// Maximum time to spend on the backfill per lurker run, so that the
+	// other lurker tasks are not delayed for long
+	backfillRunBudget = time.Minute
+)
 
 // New creates a new Lurker instance
 func New(dao *dbl.DAO, s3ao *s3.S3AO, wm *workspace.Manager) *Lurker {
 	return &Lurker{
-		dao:       dao,
-		s3:        s3ao,
-		workspace: wm,
+		dao:           dao,
+		s3:            s3ao,
+		workspace:     wm,
+		backfillPause: 500 * time.Millisecond,
 	}
 }
 
@@ -64,6 +83,7 @@ func (l *Lurker) runOnce() {
 	l.CleanTransactions()
 	l.CleanClients()
 	l.CleanWorkspaceFiles()
+	l.BackfillDeletedFiles()
 	slog.Debug("lurker completed run", "duration_seconds", time.Since(t0).Seconds())
 }
 
@@ -170,6 +190,59 @@ func (l *Lurker) deleteContent(content ds.FileContent) bool {
 	}
 
 	return true
+}
+
+// BackfillDeletedFiles soft-deletes files that belong to bins that were
+// soft-deleted before files were soft-deleted together with their bin. It
+// walks the file table in id ranges with a pause between batches, and spends
+// at most backfillRunBudget per lurker run. Once a pass is complete, or the
+// initial check finds nothing to do, it does nothing for the rest of the
+// process lifetime.
+func (l *Lurker) BackfillDeletedFiles() {
+	if l.backfillDone {
+		return
+	}
+
+	if !l.backfillStarted {
+		pending, err := l.dao.File().HasActiveInDeletedBins()
+		if err != nil {
+			slog.Error("unable to check for files in deleted bins", "error", err)
+			return
+		}
+		if !pending {
+			l.backfillDone = true
+			return
+		}
+		maxID, err := l.dao.File().MaxID()
+		if err != nil {
+			slog.Error("unable to get the highest file id", "error", err)
+			return
+		}
+		l.backfillMax = maxID
+		l.backfillStarted = true
+		slog.Info("starting backfill of files in deleted bins", "max_file_id", maxID)
+	}
+
+	t0 := time.Now()
+	for l.backfillNext <= l.backfillMax && time.Since(t0) < backfillRunBudget {
+		from := l.backfillNext
+		to := from + backfillBatchSize
+		count, err := l.dao.File().MarkDeletedInDeletedBins(from, to)
+		if err != nil {
+			slog.Error("unable to backfill files in deleted bins", "from_id", from, "to_id", to, "error", err)
+			return
+		}
+		l.backfillCount += count
+		l.backfillNext = to
+		time.Sleep(l.backfillPause)
+	}
+
+	if l.backfillNext > l.backfillMax {
+		l.backfillDone = true
+		slog.Info("completed backfill of files in deleted bins", "count", l.backfillCount)
+	} else {
+		slog.Info("backfill of files in deleted bins in progress", "next_file_id", l.backfillNext, "max_file_id", l.backfillMax, "count", l.backfillCount)
+	}
 }
 
 func (l *Lurker) CleanTransactions() {

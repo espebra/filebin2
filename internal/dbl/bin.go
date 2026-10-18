@@ -143,17 +143,38 @@ func (d *BinDao) Insert(bin *ds.Bin) (inserted bool, err error) {
 // guard (e.g. an expiry re-check) is appended to the WHERE clause. Returns
 // false if no matching row was found, meaning the bin was already deleted or
 // the extra guard no longer holds.
+//
+// The files in the bin that are not already deleted are soft-deleted in the
+// same transaction, so that file.deleted_at IS NULL means the file is active
+// and the indexes on it stay selective. Files that were deleted earlier keep
+// their original deletion time. Reviving the bin does not restore the files.
 func (d *BinDao) markDeleted(bin *ds.Bin, extraGuard string, operation string) (deleted bool, err error) {
+	t0 := time.Now()
+	defer func() { observeQuery(d.metrics, operation, t0, err) }()
+
+	tx, err := d.db.Begin()
+	if err != nil {
+		return false, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	sqlStatement := "UPDATE bin SET deleted_at = $1, updated_at = $1 WHERE id = $2 AND deleted_at IS NULL" + extraGuard + " RETURNING id"
 	var id string
-	t0 := time.Now()
-	err = d.db.QueryRow(sqlStatement, now, bin.Id).Scan(&id)
-	observeQuery(d.metrics, operation, t0, err)
+	err = tx.QueryRow(sqlStatement, now, bin.Id).Scan(&id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false, nil
 		}
+		return false, err
+	}
+
+	sqlDeleteFiles := "UPDATE file SET deleted_at = $1 WHERE bin_id = $2 AND deleted_at IS NULL"
+	if _, err = tx.Exec(sqlDeleteFiles, now, bin.Id); err != nil {
+		return false, err
+	}
+
+	if err = tx.Commit(); err != nil {
 		return false, err
 	}
 	_ = bin.DeletedAt.Scan(now)
@@ -274,8 +295,8 @@ func (d *BinDao) Touch(bin *ds.Bin) (updated bool, err error) {
 
 // Revive clears the deletion marker and pushes the expiration into the
 // future, making a deleted or expired bin available again. It does not touch
-// readonly or approved_at, and it cannot restore file content that has
-// already been removed from storage. Returns false if the bin does not
+// readonly or approved_at, and it does not restore the files, which were
+// soft-deleted together with the bin. Returns false if the bin does not
 // exist.
 func (d *BinDao) Revive(bin *ds.Bin, expiredAt time.Time) (revived bool, err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)

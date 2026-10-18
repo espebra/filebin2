@@ -390,12 +390,12 @@ func TestAdminReviveBin(t *testing.T) {
 		t.Errorf("Expected view of revived bin to give %d, got %d", http.StatusOK, rr.Code)
 	}
 
-	// The file is downloadable again
+	// The files were deleted together with the bin and are not restored
 	req = httptest.NewRequest(http.MethodGet, "/"+binID+"/file.txt", nil)
 	rr = httptest.NewRecorder()
 	h.router.ServeHTTP(rr, req)
-	if rr.Code != http.StatusFound {
-		t.Errorf("Expected download from revived bin to give %d, got %d", http.StatusFound, rr.Code)
+	if rr.Code != http.StatusNotFound {
+		t.Errorf("Expected download from revived bin to give %d, got %d", http.StatusNotFound, rr.Code)
 	}
 
 	// Reviving a bin that does not exist gives 404
