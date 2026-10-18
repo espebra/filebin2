@@ -78,7 +78,11 @@ CREATE INDEX IF NOT EXISTS idx_file_deleted_at ON file(deleted_at);
 CREATE INDEX IF NOT EXISTS idx_bin_deleted_at_expired_at ON bin(expired_at, deleted_at);
 CREATE INDEX IF NOT EXISTS idx_sha256 ON file(sha256);
 CREATE INDEX IF NOT EXISTS idx_client_banned_at ON client(banned_at, last_active_at);
-CREATE INDEX IF NOT EXISTS idx_file_content_in_storage ON file_content(in_storage);
+-- Partial index covering only content that is currently in storage, so it
+-- stays small as history grows. Serves the lurker's pending delete scan in
+-- last_referenced_at order. It replaces the plain boolean index on in_storage.
+CREATE INDEX IF NOT EXISTS idx_file_content_in_storage_last_referenced ON file_content(last_referenced_at) WHERE in_storage;
+DROP INDEX IF EXISTS idx_file_content_in_storage;
 CREATE INDEX IF NOT EXISTS idx_file_content_blocked ON file_content(blocked) WHERE blocked = true;
 CREATE INDEX IF NOT EXISTS idx_file_sha256_deleted ON file(sha256, deleted_at);
 CREATE INDEX IF NOT EXISTS idx_file_active ON file(bin_id, sha256) WHERE deleted_at IS NULL;
