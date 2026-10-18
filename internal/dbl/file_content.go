@@ -176,15 +176,24 @@ ON CONFLICT (sha256) DO UPDATE SET
 }
 
 // GetPendingDelete returns file content records that have zero active references
-// (active = file exists AND file not deleted AND bin not deleted AND bin not expired) and still in storage
+// (active = file exists AND file not deleted AND bin not deleted AND bin not expired) and still in storage.
+//
+// The NOT EXISTS guard matches the one in ClaimForDeletion. It lets the
+// planner stop at the first active reference instead of joining and
+// aggregating every historical file row, and the outer scan is served in
+// order by idx_file_content_in_storage_last_referenced.
 func (d *FileContentDao) GetPendingDelete() ([]ds.FileContent, error) {
 	sqlStatement := `SELECT fc.sha256, fc.bytes, fc.md5, fc.sha1, fc.mime, fc.phash, fc.in_storage, fc.blocked, fc.created_at, fc.last_referenced_at
 FROM file_content fc
-LEFT JOIN file f ON fc.sha256 = f.sha256
-LEFT JOIN bin b ON f.bin_id = b.id
 WHERE fc.in_storage = true
-GROUP BY fc.sha256, fc.bytes, fc.md5, fc.sha1, fc.mime, fc.phash, fc.in_storage, fc.blocked, fc.created_at, fc.last_referenced_at
-HAVING COUNT(CASE WHEN f.id IS NOT NULL AND f.deleted_at IS NULL AND b.deleted_at IS NULL AND b.expired_at > NOW() THEN 1 END) = 0
+  AND NOT EXISTS (
+    SELECT 1 FROM file f
+    JOIN bin b ON f.bin_id = b.id
+    WHERE f.sha256 = fc.sha256
+      AND f.deleted_at IS NULL
+      AND b.deleted_at IS NULL
+      AND b.expired_at > NOW()
+  )
 ORDER BY fc.last_referenced_at ASC`
 
 	t0 := time.Now()
