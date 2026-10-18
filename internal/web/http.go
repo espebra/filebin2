@@ -107,15 +107,29 @@ func (h *HTTP) getCachedStorageBytes() uint64 {
 	return h.storageBytesCache
 }
 
-// startStorageBytesUpdater starts a background goroutine that updates the storage bytes cache every minute
-func (h *HTTP) startStorageBytesUpdater() {
+// refreshDatabaseMetrics queries the database-sourced metrics, then updates
+// the storage bytes cache and the Prometheus gauges. The queries scan large
+// tables, so they run on an interval in the background instead of on every
+// /metrics scrape.
+func (h *HTTP) refreshDatabaseMetrics() {
+	if err := h.dao.Metrics().UpdateMetrics(h.metrics); err != nil {
+		slog.Error("unable to update metrics", "error", err)
+		return
+	}
+	h.storageBytesMutex.Lock()
+	h.storageBytesCache = uint64(h.metrics.CurrentBytes)
+	h.storageBytesMutex.Unlock()
+	h.metrics.UpdateGauges()
+}
+
+// startMetricsUpdater starts a background goroutine that refreshes the
+// database-sourced metrics every minute
+func (h *HTTP) startMetricsUpdater() {
 	// Initialize stop channel
 	h.stopChan = make(chan struct{})
 
 	// Initial update
-	h.storageBytesMutex.Lock()
-	h.storageBytesCache = h.dao.Metrics().StorageBytesAllocated()
-	h.storageBytesMutex.Unlock()
+	h.refreshDatabaseMetrics()
 
 	go func() {
 		ticker := time.NewTicker(1 * time.Minute)
@@ -123,10 +137,7 @@ func (h *HTTP) startStorageBytesUpdater() {
 		for {
 			select {
 			case <-ticker.C:
-				bytes := h.dao.Metrics().StorageBytesAllocated()
-				h.storageBytesMutex.Lock()
-				h.storageBytesCache = bytes
-				h.storageBytesMutex.Unlock()
+				h.refreshDatabaseMetrics()
 			case <-h.stopChan:
 				return
 			}
@@ -283,8 +294,8 @@ func (h *HTTP) Init() error {
 
 	h.config.ExpirationDuration = time.Second * time.Duration(h.config.Expiration)
 
-	// Start background updater for storage bytes cache
-	h.startStorageBytesUpdater()
+	// Start background updater for the database-sourced metrics
+	h.startMetricsUpdater()
 
 	return nil
 }
