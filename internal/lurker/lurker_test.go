@@ -1,11 +1,16 @@
 package lurker
 
 import (
+	"bufio"
 	"database/sql"
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/espebra/filebin2/internal/audit"
 	"github.com/espebra/filebin2/internal/dbl"
 	"github.com/espebra/filebin2/internal/ds"
 	"github.com/espebra/filebin2/internal/s3"
@@ -117,6 +122,62 @@ func TestDeletePendingContentDeletesOrphans(t *testing.T) {
 	}
 	if dbContent.InStorage {
 		t.Error("in_storage should be false after deletion")
+	}
+}
+
+// TestAuditEvents verifies that expired bins and deleted content are
+// written to the audit log.
+func TestAuditEvents(t *testing.T) {
+	dao, s3ao, err := tearUp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tearDown(dao, s3ao)
+
+	bin := &ds.Bin{Id: "expiredauditbin", ExpiredAt: time.Now().Add(-time.Hour)}
+	if _, err := dao.Bin().Insert(bin); err != nil {
+		t.Fatalf("Failed to insert bin: %s", err)
+	}
+	sha256 := "2222222222222222222222222222222222222222222222222222222222222222"
+	seedContent(t, dao, s3ao, sha256, "orphaned audit content")
+
+	dir := t.TempDir()
+	auditLog, err := audit.New(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	l := newTestLurker(&dao, &s3ao)
+	l.SetAuditLogger(auditLog, 0)
+	l.DeletePendingBins()
+	l.DeletePendingContent()
+	auditLog.Close()
+
+	paths, err := filepath.Glob(filepath.Join(dir, "audit-*.jsonl"))
+	if err != nil || len(paths) != 1 {
+		t.Fatalf("Expected one audit log file, got %v (%v)", paths, err)
+	}
+	f, err := os.Open(paths[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = f.Close() }()
+	var events []audit.Event
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		var e audit.Event
+		if err := json.Unmarshal(scanner.Bytes(), &e); err != nil {
+			t.Fatalf("Invalid audit log line: %s", err)
+		}
+		events = append(events, e)
+	}
+	if len(events) != 2 {
+		t.Fatalf("Expected 2 events, got %+v", events)
+	}
+	if events[0].Event != "bin_expired" || events[0].Bin != bin.Id || events[0].Actor != audit.ActorLurker {
+		t.Errorf("Unexpected bin event: %+v", events[0])
+	}
+	if events[1].Event != "content_deleted" || events[1].SHA256 != sha256 || events[1].Actor != audit.ActorLurker {
+		t.Errorf("Unexpected content event: %+v", events[1])
 	}
 }
 

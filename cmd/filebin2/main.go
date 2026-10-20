@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/espebra/filebin2/internal/audit"
 	"github.com/espebra/filebin2/internal/dbl"
 	"github.com/espebra/filebin2/internal/ds"
 	"github.com/espebra/filebin2/internal/geoip"
@@ -61,10 +62,12 @@ var (
 	clientUploadSuccessesCapFlag = flag.Int("client-upload-successes-cap", 200, "Maximum number of recent client-reported upload successes retained in memory for /admin/telemetry/upload-successes. 0 disables in-memory retention; Prometheus metrics are unaffected.")
 
 	// HTTP
-	listenHostFlag   = flag.String("listen-host", "127.0.0.1", "Listen host")
-	listenPortFlag   = flag.Int("listen-port", 8080, "Listen port")
-	accessLogFlag    = flag.String("access-log", "/var/log/filebin/access.log", "Path for access.log output")
-	proxyHeadersFlag = flag.Bool("proxy-headers", false, "Read client request information from proxy headers")
+	listenHostFlag     = flag.String("listen-host", "127.0.0.1", "Listen host")
+	listenPortFlag     = flag.Int("listen-port", 8080, "Listen port")
+	accessLogFlag      = flag.String("access-log", "/var/log/filebin/access.log", "Path for access.log output")
+	auditRetentionFlag = flag.Uint64("audit-retention", 14, "The number of days to keep audit log files before they are removed by the lurker. 0 keeps them forever.")
+	auditLogDirFlag    = flag.String("audit-log-dir", "", "Directory for the audit log of transfers and lifecycle events of bins and files, written as one JSON lines file per day. The audit log is disabled if not set.")
+	proxyHeadersFlag   = flag.Bool("proxy-headers", false, "Read client request information from proxy headers")
 
 	// Timeouts
 	readTimeoutFlag       = flag.Duration("read-timeout", 1*time.Hour, "Read timeout for the HTTP server")
@@ -234,6 +237,14 @@ func main() {
 	}
 	if v := os.Getenv("FILEBIN_ACCESS_LOG"); v != "" && *accessLogFlag == "/var/log/filebin/access.log" {
 		*accessLogFlag = v
+	}
+	if v := os.Getenv("FILEBIN_AUDIT_LOG_DIR"); v != "" && *auditLogDirFlag == "" {
+		*auditLogDirFlag = v
+	}
+	if v := os.Getenv("FILEBIN_AUDIT_RETENTION"); v != "" && *auditRetentionFlag == 14 {
+		if i, err := strconv.ParseUint(v, 10, 64); err == nil {
+			*auditRetentionFlag = i
+		}
 	}
 	if v := os.Getenv("FILEBIN_PROXY_HEADERS"); v != "" {
 		*proxyHeadersFlag = v == "true" || v == "1" || v == "yes"
@@ -574,12 +585,26 @@ func main() {
 	// metrics are wired above: the lurker immediately starts querying the
 	// database and S3 on its own goroutine, and wiring the metrics
 	// observers concurrently with those reads would be a data race.
+	var auditLog *audit.Logger
+	if *auditLogDirFlag != "" {
+		auditLog, err = audit.New(*auditLogDirFlag)
+		if err != nil {
+			slog.Error("unable to initialize the audit log", "error", err)
+			os.Exit(2)
+		}
+		slog.Info("audit log enabled", "directory", *auditLogDirFlag, "retention_days", *auditRetentionFlag)
+	} else {
+		slog.Warn("audit log disabled")
+	}
+
 	l := lurker.New(&daoconn, &s3conn, wm)
+	l.SetAuditLogger(auditLog, *auditRetentionFlag)
 	l.Init(*lurkerIntervalFlag, *lurkerThrottleFlag, *logRetentionFlag)
 	l.Run()
 
 	// Create and initialize HTTP server
 	h := web.New(&daoconn, &s3conn, &geodb, wm, config, metrics, metricsRegistry)
+	h.SetAuditLogger(auditLog)
 
 	if err := h.Init(); err != nil {
 		slog.Error("unable to start the HTTP server", "error", err)
@@ -619,6 +644,7 @@ func main() {
 	<-shutdownDone
 	l.Stop()
 	h.Stop()
+	auditLog.Close()
 	if err := daoconn.Close(); err != nil {
 		slog.Warn("unable to close database connections", "error", err)
 	}

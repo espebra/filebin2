@@ -19,6 +19,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 
+	"github.com/aws/smithy-go/middleware"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/dustin/go-humanize"
 )
 
@@ -339,8 +341,15 @@ func (s S3AO) GetObject(contentSHA256 string, start int64, end int64) (io.ReadCl
 	return result.Body, nil
 }
 
-// PresignedGetObject generates a presigned URL for downloading an object.
-func (s S3AO) PresignedGetObject(contentSHA256 string, filename string, mime string) (presignedURL *url.URL, err error) {
+// RequestIDQueryParam is the query parameter that carries the filebin request
+// id in presigned URLs. S3 ignores it, but it is part of the request URI
+// recorded in S3 access logs, which makes it possible to match a download
+// from S3 with the transaction that handed out the URL.
+const RequestIDQueryParam = "request-id"
+
+// PresignedGetObject generates a presigned URL for downloading an object. The
+// request id is included in the URL if it is not empty.
+func (s S3AO) PresignedGetObject(contentSHA256 string, filename string, mime string, requestID string) (presignedURL *url.URL, err error) {
 	// Use content SHA256 as the object key for content-addressable storage
 	objectKey := contentSHA256
 
@@ -366,6 +375,11 @@ func (s S3AO) PresignedGetObject(contentSHA256 string, filename string, mime str
 		ResponseCacheControl:       aws.String(cacheControl),
 	}, func(opts *s3.PresignOptions) {
 		opts.Expires = s.expiry
+		if requestID != "" {
+			opts.ClientOptions = append(opts.ClientOptions, func(o *s3.Options) {
+				o.APIOptions = append(o.APIOptions, addQueryParam(RequestIDQueryParam, requestID))
+			})
+		}
 	})
 	if s.metrics != nil {
 		s.metrics.ObserveS3Operation("presign", time.Since(t0))
@@ -383,6 +397,21 @@ func (s S3AO) PresignedGetObject(contentSHA256 string, filename string, mime str
 	}
 
 	return presignedURL, nil
+}
+
+// addQueryParam adds a query parameter to the request before it is signed, so
+// that the parameter is covered by the signature of a presigned URL.
+func addQueryParam(key string, value string) func(*middleware.Stack) error {
+	return func(stack *middleware.Stack) error {
+		return stack.Build.Add(middleware.BuildMiddlewareFunc("AddQueryParam", func(ctx context.Context, in middleware.BuildInput, next middleware.BuildHandler) (middleware.BuildOutput, middleware.Metadata, error) {
+			if req, ok := in.Request.(*smithyhttp.Request); ok {
+				q := req.URL.Query()
+				q.Set(key, value)
+				req.URL.RawQuery = q.Encode()
+			}
+			return next.HandleBuild(ctx, in)
+		}), middleware.After)
+	}
 }
 
 func (s S3AO) GetBucketMetrics() (metrics BucketMetrics) {

@@ -135,11 +135,12 @@ func (h *HTTP) getFile(w http.ResponseWriter, r *http.Request) {
 
 	// Redirect the client to a presigned URL for this fetch, which is more efficient
 	// than proxying the request through filebin.
-	presignedURL, err := h.s3.PresignedGetObject(file.SHA256, file.Filename, file.Mime)
+	presignedURL, err := h.s3.PresignedGetObject(file.SHA256, file.Filename, file.Mime, requestID(r))
 	if err != nil {
 		h.Error(w, r, fmt.Sprintf("Unable to generate presigned URL for bin %q and filename %q: %s", inputBin, inputFilename, err.Error()), "Unable to presign URL for object", 1351, http.StatusInternalServerError)
 		return
 	}
+	setTransactionChecksums(r, file.MD5, file.SHA1, file.SHA256, file.PHash)
 	w.Header().Set("Location", presignedURL.String())
 	w.WriteHeader(http.StatusFound)
 
@@ -437,6 +438,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) error {
 	t5 := time.Now()
 	slog.Info("uploaded file", "filename", file.Filename, "bytes", file.Bytes, "sha256", file.SHA256, "bin", bin.Id, "db_seconds", t1.Sub(t0).Seconds(), "buffer_seconds", fmt.Sprintf("%f", t2.Sub(t1).Seconds()), "phash_seconds", pHashDuration.Seconds(), "pre_hook_seconds", preHookDuration.Seconds(), "post_hook_seconds", postHookDuration.Seconds(), "store_seconds", t4.Sub(t3).Seconds(), "total_seconds", t5.Sub(t0).Seconds())
 
+	setTransactionChecksums(r, file.MD5, file.SHA1, file.SHA256, pHashValue)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	_, _ = w.Write(out)

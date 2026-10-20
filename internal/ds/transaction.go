@@ -23,3 +23,13 @@ type Transaction struct {
 	CompletedAt       time.Time     `json:"completed"`
 	Duration          time.Duration `json:"duration"`
 }
+
+// TransactionChecksums are the checksums of the file content transferred in
+// a request, for the audit log. MD5 is base64 encoded, as in FileContent.
+// PHash is the perceptual hash of images.
+type TransactionChecksums struct {
+	MD5    string
+	SHA1   string
+	SHA256 string
+	PHash  string
+}

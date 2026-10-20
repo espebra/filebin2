@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/espebra/filebin2/internal/audit"
 	"github.com/espebra/filebin2/internal/dbl"
 	"github.com/espebra/filebin2/internal/ds"
 	"github.com/espebra/filebin2/internal/s3"
@@ -11,13 +12,16 @@ import (
 )
 
 type Lurker struct {
-	dao       *dbl.DAO
-	s3        *s3.S3AO
-	workspace *workspace.Manager
-	interval  time.Duration
-	throttle  time.Duration
-	retention uint64
-	stopChan  chan struct{}
+	dao   *dbl.DAO
+	s3    *s3.S3AO
+	audit *audit.Logger
+	// Number of days to keep audit log files. 0 keeps them forever.
+	auditRetention uint64
+	workspace      *workspace.Manager
+	interval       time.Duration
+	throttle       time.Duration
+	retention      uint64
+	stopChan       chan struct{}
 
 	// Progress of the backfill of files in bins that were soft-deleted
 	// before files were soft-deleted together with their bin
@@ -46,6 +50,14 @@ func New(dao *dbl.DAO, s3ao *s3.S3AO, wm *workspace.Manager) *Lurker {
 		workspace:     wm,
 		backfillPause: 500 * time.Millisecond,
 	}
+}
+
+// SetAuditLogger sets the audit log to write expired bins and deleted
+// content to, and the number of days to keep its files. Events are not
+// written if it is not set. A retention of 0 keeps the files forever.
+func (l *Lurker) SetAuditLogger(a *audit.Logger, retentionDays uint64) {
+	l.audit = a
+	l.auditRetention = retentionDays
 }
 
 func (l *Lurker) Init(interval int, throttle int, retention uint64) {
@@ -81,6 +93,7 @@ func (l *Lurker) runOnce() {
 	l.DeletePendingBins()
 	l.DeletePendingContent()
 	l.CleanTransactions()
+	l.CleanAuditLog()
 	l.CleanClients()
 	l.CleanWorkspaceFiles()
 	l.BackfillDeletedFiles()
@@ -118,6 +131,7 @@ func (l *Lurker) DeletePendingBins() {
 				continue
 			}
 			slog.Info("marked bin as deleted", "bin", bin.Id)
+			l.audit.Log(audit.Event{Event: "bin_expired", Actor: audit.ActorLurker, Bin: bin.Id})
 		}
 	}
 }
@@ -189,6 +203,7 @@ func (l *Lurker) deleteContent(content ds.FileContent) bool {
 		return false
 	}
 
+	l.audit.Log(audit.Event{Event: "content_deleted", Actor: audit.ActorLurker, SHA256: content.SHA256})
 	return true
 }
 
@@ -253,6 +268,19 @@ func (l *Lurker) CleanTransactions() {
 	}
 	if count > 0 {
 		slog.Info("removed log transactions", "count", count)
+	}
+}
+
+// CleanAuditLog removes audit log files that are older than the audit log
+// retention.
+func (l *Lurker) CleanAuditLog() {
+	count, err := l.audit.RemoveExpired(l.auditRetention)
+	if err != nil {
+		slog.Error("unable to clean up the audit log", "error", err)
+		return
+	}
+	if count > 0 {
+		slog.Info("removed expired audit log files", "count", count)
 	}
 }
 
