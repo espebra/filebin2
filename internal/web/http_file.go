@@ -287,6 +287,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) error {
 	if err := h.dao.File().ValidateInput(&file); err != nil {
 		return &httpError{status: http.StatusBadRequest, message: "Input validation failed", err: err}
 	}
+	setTransactionFilename(r, file.Filename)
 
 	// Step 6: Ask the pre-upload hook, if one is configured, whether to
 	// accept the upload. Nothing has been stored yet, so a rejection leaves

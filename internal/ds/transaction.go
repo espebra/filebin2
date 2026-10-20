@@ -26,10 +26,12 @@ type Transaction struct {
 
 // TransactionChecksums are the checksums of the file content transferred in
 // a request, for the audit log. MD5 is base64 encoded, as in FileContent.
-// PHash is the perceptual hash of images.
+// PHash is the perceptual hash of images. Filename is the name the file is
+// stored as, which can differ from the name in the request.
 type TransactionChecksums struct {
-	MD5    string
-	SHA1   string
-	SHA256 string
-	PHash  string
+	MD5      string
+	SHA1     string
+	SHA256   string
+	PHash    string
+	Filename string
 }
