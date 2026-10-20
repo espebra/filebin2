@@ -140,7 +140,7 @@ func TestAuditLog(t *testing.T) {
 	if upload.MD5 != hex.EncodeToString(md5Sum[:]) || upload.SHA256 != hex.EncodeToString(sha256Sum[:]) || upload.SHA1 == "" {
 		t.Errorf("Unexpected checksums in upload event: %+v", upload)
 	}
-	if upload.DurationSeconds <= 0 || !upload.Completed.After(upload.Time) {
+	if upload.DurationSeconds <= 0 {
 		t.Errorf("Expected a positive duration in seconds for the upload, got %f", upload.DurationSeconds)
 	}
 	if upload.ReqBytes != int64(len(content)) {
@@ -223,7 +223,7 @@ func TestAuditLog(t *testing.T) {
 	if included.Bin != bin {
 		t.Errorf("Expected bin %q in archive_file_included event, got %q", bin, included.Bin)
 	}
-	if included.Outcome != "" || included.Actor != "" || included.IP != "" || included.Method != "" || included.UserAgent != "" || included.ASN != 0 || !included.Completed.IsZero() {
+	if included.Outcome != "" || included.Actor != "" || included.IP != "" || included.Method != "" || included.UserAgent != "" || included.ASN != 0 {
 		t.Errorf("Expected no fields duplicated from archive_download: %+v", included)
 	}
 

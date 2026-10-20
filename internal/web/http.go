@@ -486,7 +486,6 @@ func (h *HTTP) logAuditEvent(r *http.Request, routeTemplate string, t0 time.Time
 	params := mux.Vars(r)
 	e := audit.Event{
 		Time:            t0,
-		Completed:       completed,
 		DurationSeconds: completed.Sub(t0).Seconds(),
 		Event:           auditEventName(r.Method, routeTemplate),
 		Actor:           audit.ActorClient,
