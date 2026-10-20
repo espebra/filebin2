@@ -399,6 +399,16 @@ func setTransactionChecksums(r *http.Request, md5, sha1, sha256, phash string) {
 	}
 }
 
+// setTransactionFilename records the name the file is stored as, to be
+// written to the audit log by log() in place of the name in the request,
+// which may have been sanitized. It is a no-op for requests that are not
+// wrapped by log().
+func setTransactionFilename(r *http.Request, filename string) {
+	if c, ok := r.Context().Value(transactionChecksumsKey{}).(*ds.TransactionChecksums); ok {
+		c.Filename = filename
+	}
+}
+
 func (h *HTTP) log(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t0 := time.Now()
@@ -508,6 +518,9 @@ func (h *HTTP) logAuditEvent(r *http.Request, routeTemplate string, t0 time.Time
 	}
 	if strings.HasPrefix(r.URL.Path, "/admin/") {
 		e.Actor = audit.ActorAdmin
+	}
+	if checksums.Filename != "" {
+		e.Filename = checksums.Filename
 	}
 	if e.SHA256 == "" {
 		// Admin actions on content are addressed by checksum

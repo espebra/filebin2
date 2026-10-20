@@ -362,6 +362,33 @@ func TestAuditLogPHash(t *testing.T) {
 	}
 }
 
+func TestAuditLogStoredFilename(t *testing.T) {
+	h := setupActionsHandler(t, nil)
+	dir := t.TempDir()
+	auditLog, err := audit.New(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.SetAuditLogger(auditLog)
+
+	// The filename is sanitized to its base name before it is stored
+	bin := "auditfilenamebin"
+	gatedUpload(t, h, bin, "upload/report.txt", "stored filename content")
+
+	auditLog.Close()
+	events := readAuditEvents(t, dir)
+	if len(events) != 1 {
+		t.Fatalf("Expected 1 event, got %+v", events)
+	}
+	e := events[0]
+	if e.Filename != "report.txt" {
+		t.Errorf("Expected the stored filename %q, got %q", "report.txt", e.Filename)
+	}
+	if e.Path != "/"+bin+"/upload/report.txt" {
+		t.Errorf("Expected the request path to be kept, got %q", e.Path)
+	}
+}
+
 func TestAuditHeaderTruncates(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	// A multibyte character straddles the limit
