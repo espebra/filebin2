@@ -44,7 +44,6 @@ const (
 // the database is updated or removed.
 type Event struct {
 	Time            time.Time `json:"time"`
-	Completed       time.Time `json:"completed,omitempty"`
 	DurationSeconds float64   `json:"duration_seconds,omitempty"`
 	Event           string    `json:"event"`
 	Actor           string    `json:"actor,omitempty"`
@@ -170,9 +169,6 @@ func (l *Logger) Log(e Event) {
 		e.Time = l.now()
 	}
 	e.Time = e.Time.UTC()
-	if !e.Completed.IsZero() {
-		e.Completed = e.Completed.UTC()
-	}
 
 	l.closeMu.RLock()
 	defer l.closeMu.RUnlock()
