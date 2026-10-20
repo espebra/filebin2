@@ -427,3 +427,25 @@ func TestAuditEventName(t *testing.T) {
 		}
 	}
 }
+
+func TestUploadSanitizedFilenameUpdatesExistingFile(t *testing.T) {
+	h := setupActionsHandler(t, nil)
+
+	// A name that sanitizes to the name of an existing file updates that file
+	bin := "sanitizedupdatebin"
+	gatedUpload(t, h, bin, "report.txt", "first content")
+	gatedUpload(t, h, bin, "upload/report.txt", "second content")
+
+	files, err := h.dao.File().GetByBinAll(bin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) != 1 {
+		t.Fatalf("Expected 1 file in the bin, got %d: %+v", len(files), files)
+	}
+	f := files[0]
+	sum := sha256.Sum256([]byte("second content"))
+	if f.Filename != "report.txt" || f.Updates != 1 || f.SHA256 != hex.EncodeToString(sum[:]) {
+		t.Errorf("Expected report.txt updated once with the second content, got %q with %d updates and sha256 %s", f.Filename, f.Updates, f.SHA256)
+	}
+}
