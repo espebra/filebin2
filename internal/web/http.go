@@ -3,9 +3,11 @@ package web
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"crypto/subtle"
 	"database/sql"
 	"embed"
+	"encoding/hex"
 	"fmt"
 	"html/template"
 	"log/slog"
@@ -18,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/espebra/filebin2/internal/audit"
 	"github.com/espebra/filebin2/internal/dbl"
 	"github.com/espebra/filebin2/internal/ds"
 	"github.com/espebra/filebin2/internal/geoip"
@@ -53,6 +56,7 @@ type HTTP struct {
 	dao              *dbl.DAO
 	s3               *s3.S3AO
 	geodb            *geoip.DAO
+	audit            *audit.Logger
 	workspace        *workspace.Manager
 	config           *ds.Config
 	metrics          *ds.Metrics
@@ -98,6 +102,12 @@ func New(dao *dbl.DAO, s3ao *s3.S3AO, geodb *geoip.DAO, wm *workspace.Manager, c
 		metricsRegistry: metricsRegistry,
 		startedAt:       time.Now(),
 	}
+}
+
+// SetAuditLogger sets the audit log to write transfers and other events of
+// bins and files to. Events are not written if it is not set.
+func (h *HTTP) SetAuditLogger(a *audit.Logger) {
+	h.audit = a
 }
 
 // getCachedStorageBytes returns the cached storage bytes value
@@ -332,6 +342,63 @@ func (h *HTTP) clientLookup(fn func(http.ResponseWriter, *http.Request)) http.Ha
 	})
 }
 
+type transactionChecksumsKey struct{}
+
+type requestIDKey struct{}
+
+// requestIDHeader carries the request id. Varnish sets it on requests to the
+// backend and the upload client reads it from the response.
+const requestIDHeader = "X-Request-Id"
+
+// newRequestID returns the id of the request. The id set by the proxy is
+// used if proxy headers are trusted and the id is well formed, so that the
+// proxy and filebin log the same id. Otherwise a random id is generated.
+func (h *HTTP) newRequestID(r *http.Request) string {
+	if h.config.HttpProxyHeaders {
+		if id := r.Header.Get(requestIDHeader); validRequestID(id) {
+			return id
+		}
+	}
+	b := make([]byte, 16)
+	_, _ = rand.Read(b)
+	return hex.EncodeToString(b)
+}
+
+// validRequestID accepts ids of up to 128 characters from a limited
+// character set, so that they are safe to log and to put in URLs.
+func validRequestID(id string) bool {
+	if id == "" || len(id) > 128 {
+		return false
+	}
+	for _, c := range id {
+		switch {
+		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c >= '0' && c <= '9', c == '-', c == '_', c == '.', c == ':':
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+// requestID returns the id of the request as set by log(), or an empty
+// string for requests that are not wrapped by log().
+func requestID(r *http.Request) string {
+	id, _ := r.Context().Value(requestIDKey{}).(string)
+	return id
+}
+
+// setTransactionChecksums records the checksums of the file content
+// transferred by the request, to be written to the audit log by log().
+// It is a no-op for requests that are not wrapped by log().
+func setTransactionChecksums(r *http.Request, md5, sha1, sha256, phash string) {
+	if c, ok := r.Context().Value(transactionChecksumsKey{}).(*ds.TransactionChecksums); ok {
+		c.MD5 = md5
+		c.SHA1 = sha1
+		c.SHA256 = sha256
+		c.PHash = phash
+	}
+}
+
 func (h *HTTP) log(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t0 := time.Now()
@@ -340,11 +407,16 @@ func (h *HTTP) log(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc
 		bin := params["bin"]
 		filename := params["filename"]
 
-		metrics := httpsnoop.CaptureMetricsFn(w, func(w http.ResponseWriter) {
-			fn(w, r)
-		})
+		// Handlers that transfer a file record its checksums here to have
+		// them included in the audit log.
+		checksums := &ds.TransactionChecksums{}
+		ctx := context.WithValue(r.Context(), transactionChecksumsKey{}, checksums)
 
-		completed := t0.Add(metrics.Duration)
+		reqID := h.newRequestID(r)
+		ctx = context.WithValue(ctx, requestIDKey{}, reqID)
+		w.Header().Set(requestIDHeader, reqID)
+
+		r = r.WithContext(ctx)
 
 		// Derive a handler name from the matched route template
 		handler := "unknown"
@@ -353,7 +425,32 @@ func (h *HTTP) log(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc
 				handler = tmpl
 			}
 		}
-		h.metrics.ObserveHTTPRequest(r.Method, handler, metrics.Duration, metrics.Code)
+
+		// The metrics are updated as the response is written, so they are
+		// available if the handler aborts the response by panicking.
+		metrics := httpsnoop.Metrics{Code: http.StatusOK}
+
+		// A handler aborts a response it can no longer complete, such as an
+		// archive download that fails midway, with a panic. Write it to the
+		// audit log as aborted and continue the panic, so that the server
+		// still resets the connection. The transaction table has no way to
+		// mark a request as aborted, so it is left out of it as before.
+		defer func() {
+			if rec := recover(); rec != nil {
+				h.logAuditEvent(r, handler, t0, time.Now(), metrics.Code, metrics.Written, reqID, *checksums, audit.OutcomeAborted)
+				panic(rec)
+			}
+		}()
+
+		metrics.CaptureMetrics(w, func(w http.ResponseWriter) {
+			fn(w, r)
+		})
+
+		completed := time.Now()
+		duration := completed.Sub(t0)
+		h.metrics.ObserveHTTPRequest(r.Method, handler, duration, metrics.Code)
+
+		h.logAuditEvent(r, handler, t0, completed, metrics.Code, metrics.Written, reqID, *checksums, audit.OutcomeComplete)
 
 		// Only register transactions with a response status lower than 400, which
 		// includes file uploads, archive downloads and presigned downloads from S3.
@@ -366,6 +463,130 @@ func (h *HTTP) log(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc
 			}
 		}
 	})
+}
+
+// logAuditEvent writes the request to the audit log. Requests for bins and
+// files that do not exist are left out, as they are mostly scanners and
+// stale links. Other client errors are kept, as attempts that were rejected,
+// for instance by a ban or a block, can be relevant.
+func (h *HTTP) logAuditEvent(r *http.Request, routeTemplate string, t0 time.Time, completed time.Time, status int, written int64, reqID string, checksums ds.TransactionChecksums, outcome string) {
+	if h.audit == nil || status == http.StatusNotFound {
+		return
+	}
+	params := mux.Vars(r)
+	e := audit.Event{
+		Time:            t0,
+		Completed:       completed,
+		DurationSeconds: completed.Sub(t0).Seconds(),
+		Event:           auditEventName(r.Method, routeTemplate),
+		Actor:           audit.ActorClient,
+		RequestID:       reqID,
+		Method:          r.Method,
+		Path:            r.URL.Path,
+		Status:          status,
+		Outcome:         outcome,
+		RespBytes:       written,
+		Bin:             params["bin"],
+		Filename:        params["filename"],
+		MD5:             md5Hex(checksums.MD5),
+		SHA1:            checksums.SHA1,
+		SHA256:          checksums.SHA256,
+		PHash:           checksums.PHash,
+		IP:              r.RemoteAddr,
+		UserAgent:       auditHeader(r, "User-Agent"),
+		Referer:         auditHeader(r, "Referer"),
+		XForwardedFor:   auditHeader(r, "X-Forwarded-For"),
+		Forwarded:       auditHeader(r, "Forwarded"),
+		Via:             auditHeader(r, "Via"),
+		AcceptLanguage:  auditHeader(r, "Accept-Language"),
+		SecCHUA:         auditHeader(r, "Sec-CH-UA"),
+		SecCHUAPlatform: auditHeader(r, "Sec-CH-UA-Platform"),
+		SecCHUAMobile:   auditHeader(r, "Sec-CH-UA-Mobile"),
+		Origin:          auditHeader(r, "Origin"),
+		SecFetchSite:    auditHeader(r, "Sec-Fetch-Site"),
+		ContentType:     auditHeader(r, "Content-Type"),
+	}
+	if strings.HasPrefix(r.URL.Path, "/admin/") {
+		e.Actor = audit.ActorAdmin
+	}
+	if e.SHA256 == "" {
+		// Admin actions on content are addressed by checksum
+		e.SHA256 = params["sha256"]
+	}
+	if r.ContentLength > 0 {
+		e.ReqBytes = r.ContentLength
+	}
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		e.IP = host
+	}
+	if h.geodb != nil {
+		var client ds.Client
+		if err := h.geodb.Lookup(e.IP, &client); err == nil {
+			e.ASN = client.ASN
+			e.ASNOrganization = client.ASNOrganization
+			e.Network = client.Network
+			e.Country = client.Country
+			e.City = client.City
+			e.Continent = client.Continent
+		}
+	}
+	h.audit.Log(e)
+}
+
+// auditHeaderMaxBytes limits the size of each header value in the audit log,
+// as clients can send arbitrarily large headers.
+const auditHeaderMaxBytes = 512
+
+// auditHeader returns the values of a request header for the audit log,
+// joined if the header is repeated and truncated to auditHeaderMaxBytes.
+func auditHeader(r *http.Request, name string) string {
+	v := strings.Join(r.Header.Values(name), ", ")
+	if len(v) > auditHeaderMaxBytes {
+		v = strings.ToValidUTF8(v[:auditHeaderMaxBytes], "")
+	}
+	return v
+}
+
+// auditEventName names the event of a request in the audit log by the route
+// it matched.
+func auditEventName(method string, routeTemplate string) string {
+	switch {
+	case strings.HasPrefix(routeTemplate, "/archive/"):
+		return "archive_download"
+	case strings.HasPrefix(routeTemplate, "/admin/"):
+		// Name admin actions by the fixed segments of the route, for
+		// instance admin_bin_revive for /admin/bin/{bin}/revive
+		var parts []string
+		for _, segment := range strings.Split(routeTemplate, "/") {
+			if segment == "" || strings.HasPrefix(segment, "{") {
+				continue
+			}
+			parts = append(parts, strings.ReplaceAll(segment, "-", "_"))
+		}
+		return strings.Join(parts, "_")
+	case strings.HasPrefix(routeTemplate, "/{bin") && strings.Contains(routeTemplate, "{filename"):
+		switch method {
+		case http.MethodGet, http.MethodHead:
+			// The client is redirected to a presigned URL and fetches
+			// the file from S3, so filebin only sees the request to
+			// download, not the transfer itself.
+			return "file_download_requested"
+		case http.MethodPost, http.MethodPut:
+			return "file_upload"
+		case http.MethodDelete:
+			return "file_delete"
+		}
+	case strings.HasPrefix(routeTemplate, "/{bin"):
+		switch method {
+		case http.MethodDelete:
+			return "bin_delete"
+		case http.MethodPut:
+			return "bin_lock"
+		case "BAN":
+			return "bin_ban"
+		}
+	}
+	return "http_request"
 }
 
 func (h *HTTP) auth(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {

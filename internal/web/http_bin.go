@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
+	"github.com/espebra/filebin2/internal/audit"
 	"github.com/espebra/filebin2/internal/ds"
 	"github.com/gorilla/mux"
 
@@ -374,6 +375,24 @@ func (h *HTTP) addFilesToArchive(w http.ResponseWriter, r *http.Request, bin ds.
 		}
 		h.metrics.IncrBytesStorageToFilebin(uint64(bytes))
 		h.metrics.IncrBytesFilebinToClient(uint64(bytes))
+
+		// Record each file once it has been written to the archive. The
+		// client and request details are in the archive_download event with
+		// the same request id, and the bin is included so that searching for
+		// a bin finds its files. The archive and the response are buffered,
+		// so if the archive_download event has the outcome aborted, the
+		// last files listed may not have reached the client.
+		h.audit.Log(audit.Event{
+			Event:     "archive_file_included",
+			RequestID: requestID(r),
+			Bin:       bin.Id,
+			Filename:  file.Filename,
+			RespBytes: bytes,
+			MD5:       md5Hex(file.MD5),
+			SHA1:      file.SHA1,
+			SHA256:    file.SHA256,
+			PHash:     file.PHash,
+		})
 		slog.Debug("added file to archive", "filename", file.Filename, "bytes", bytes, "format", format, "bin", bin.Id)
 	}
 	return archiver.close()

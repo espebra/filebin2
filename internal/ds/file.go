@@ -15,6 +15,7 @@ type File struct {
 	BytesReadable          string        `json:"bytes_readable"`
 	MD5                    string        `json:"md5"`
 	SHA1                   string        `json:"sha1,omitempty"`
+	PHash                  string        `json:"-"`
 	SHA256                 string        `json:"sha256"`
 	Downloads              uint64        `json:"-"`
 	Updates                uint64        `json:"-"`

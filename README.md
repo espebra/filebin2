@@ -311,6 +311,24 @@ Path to a filename for the access log output.
 
 ---
 
+**Audit Log Directory**
+- Environment Variable: `FILEBIN_AUDIT_LOG_DIR`
+- Command Line Argument: `--audit-log-dir`
+- Default: not set
+
+Directory for the audit log, which records uploads, downloads, archive downloads, deletions, admin actions and bin expiry with timestamps, request ids, client IP addresses, network and location details, and the checksums of the files transferred. It is written as one JSON lines file per day (UTC), named `audit-YYYY-MM-DD.jsonl`. The file of the current day is plain text, and the files of previous days are gzip compressed. The audit log is written outside of the database, and is intended to be kept long after the files themselves have been deleted. The audit log is disabled if this is not set. A typical value is `/var/log/filebin/audit`.
+
+---
+
+**Audit Log Retention**
+- Environment Variable: `FILEBIN_AUDIT_RETENTION`
+- Command Line Argument: `--audit-retention`
+- Default: `14`
+
+The number of days to keep audit log files. The lurker removes the files of days that are older than this, regardless of whether the bins and files they refer to still exist. Set to `0` to keep the files forever.
+
+---
+
 **Proxy Headers**
 - Environment Variable: `FILEBIN_PROXY_HEADERS`
 - Command Line Argument: `--proxy-headers`

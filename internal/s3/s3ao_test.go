@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -134,6 +135,59 @@ func TestGetObject(t *testing.T) {
 	s := buf.String()
 	if content != s {
 		t.Errorf("Invalid content from get object. Expected %s, got %s\n", content, s)
+	}
+}
+
+func TestPresignedGetObjectWithRequestID(t *testing.T) {
+	s3ao, err := tearUp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tearDown(s3ao) }()
+
+	content := "presigned content"
+	h := sha256.New()
+	h.Write([]byte(content))
+	contentSHA256 := fmt.Sprintf("%x", h.Sum(nil))
+
+	if err := s3ao.PutObjectByHash(contentSHA256, strings.NewReader(content), int64(len(content))); err != nil {
+		t.Fatalf("Unable to put object: %s\n", err.Error())
+	}
+
+	presignedURL, err := s3ao.PresignedGetObject(contentSHA256, "file.txt", "text/plain", "test-request-id")
+	if err != nil {
+		t.Fatalf("Unable to presign: %s\n", err.Error())
+	}
+	if got := presignedURL.Query().Get(RequestIDQueryParam); got != "test-request-id" {
+		t.Errorf("Expected the request id in the presigned URL, got %q", got)
+	}
+
+	// The request id is covered by the signature, so the URL is accepted
+	// as is
+	resp, err := http.Get(presignedURL.String())
+	if err != nil {
+		t.Fatalf("Unable to fetch presigned URL: %s\n", err.Error())
+	}
+	defer func() { _ = resp.Body.Close() }()
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected status %d, got %d: %s", http.StatusOK, resp.StatusCode, body)
+	}
+	if string(body) != content {
+		t.Errorf("Unexpected content: %q", body)
+	}
+
+	// Tampering with the request id invalidates the signature
+	q := presignedURL.Query()
+	q.Set(RequestIDQueryParam, "other-request-id")
+	presignedURL.RawQuery = q.Encode()
+	resp2, err := http.Get(presignedURL.String())
+	if err != nil {
+		t.Fatalf("Unable to fetch presigned URL: %s\n", err.Error())
+	}
+	defer func() { _ = resp2.Body.Close() }()
+	if resp2.StatusCode == http.StatusOK {
+		t.Errorf("Expected a modified request id to be rejected")
 	}
 }
 

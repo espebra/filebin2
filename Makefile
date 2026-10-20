@@ -27,7 +27,7 @@ darwin-arm64: prepare
 build-all: linux linux-arm64 darwin darwin-arm64
 
 run: linux
-	artifacts/filebin2-linux-amd64 --listen-host 0.0.0.0 --lurker-interval 10 --expiration 3600 --access-log=access.log --s3-secure=false --db-host=db --limit-storage 1G --admin-username admin --admin-password changeme --metrics --metrics-username metrics --metrics-password changeme --mmdb-city mmdb/GeoLite2-City.mmdb --mmdb-asn mmdb/GeoLite2-ASN.mmdb --require-verification-cookie --contact "changeme@filebin.net"
+	artifacts/filebin2-linux-amd64 --listen-host 0.0.0.0 --lurker-interval 10 --expiration 3600 --access-log=access.log --audit-log-dir=audit --s3-secure=false --db-host=db --limit-storage 1G --admin-username admin --admin-password changeme --metrics --metrics-username metrics --metrics-password changeme --mmdb-city mmdb/GeoLite2-City.mmdb --mmdb-asn mmdb/GeoLite2-ASN.mmdb --require-verification-cookie --contact "changeme@filebin.net"
 
 fuzz:
 	go test -run='^$$' -fuzz=FuzzFileValidateInput -fuzztime=30s ./internal/dbl/
@@ -43,3 +43,4 @@ fmt:
 	gofmt -w -s internal/geoip/*.go
 	gofmt -w -s internal/phash/*.go
 	gofmt -w -s internal/workspace/*.go
+	gofmt -w -s internal/audit/*.go
