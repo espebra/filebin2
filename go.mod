@@ -11,7 +11,7 @@ require (
 	github.com/corona10/goimagehash v1.1.0
 	github.com/dustin/go-humanize v1.1.0
 	github.com/felixge/httpsnoop v1.1.0
-	github.com/gabriel-vasile/mimetype v1.4.15
+	github.com/gabriel-vasile/mimetype v1.4.16
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/lib/pq v1.12.3
