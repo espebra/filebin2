@@ -50,6 +50,7 @@ type Event struct {
 	RequestID       string    `json:"request_id,omitempty"`
 
 	Method string `json:"method,omitempty"`
+	Host   string `json:"host,omitempty"`
 	Path   string `json:"path,omitempty"`
 	Status int    `json:"status,omitempty"`
 	// Outcome of the request: OutcomeComplete or OutcomeAborted. Set for

@@ -134,7 +134,7 @@ func TestAuditLog(t *testing.T) {
 	if !ok {
 		t.Fatalf("Expected a file_upload event, got %+v", events)
 	}
-	if upload.Method != http.MethodPost || upload.Status != http.StatusCreated || upload.Filename != "file.txt" || upload.Actor != audit.ActorClient {
+	if upload.Method != http.MethodPost || upload.Host != "example.com" || upload.Status != http.StatusCreated || upload.Filename != "file.txt" || upload.Actor != audit.ActorClient {
 		t.Errorf("Unexpected upload event: %+v", upload)
 	}
 	if upload.MD5 != hex.EncodeToString(md5Sum[:]) || upload.SHA256 != hex.EncodeToString(sha256Sum[:]) || upload.SHA1 == "" {

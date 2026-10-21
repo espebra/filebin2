@@ -491,6 +491,7 @@ func (h *HTTP) logAuditEvent(r *http.Request, routeTemplate string, t0 time.Time
 		Actor:           audit.ActorClient,
 		RequestID:       reqID,
 		Method:          r.Method,
+		Host:            auditValue(r.Host),
 		Path:            r.URL.Path,
 		Status:          status,
 		Outcome:         outcome,
@@ -552,7 +553,11 @@ const auditHeaderMaxBytes = 512
 // auditHeader returns the values of a request header for the audit log,
 // joined if the header is repeated and truncated to auditHeaderMaxBytes.
 func auditHeader(r *http.Request, name string) string {
-	v := strings.Join(r.Header.Values(name), ", ")
+	return auditValue(strings.Join(r.Header.Values(name), ", "))
+}
+
+// auditValue truncates a client supplied value to auditHeaderMaxBytes.
+func auditValue(v string) string {
 	if len(v) > auditHeaderMaxBytes {
 		v = strings.ToValidUTF8(v[:auditHeaderMaxBytes], "")
 	}
