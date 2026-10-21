@@ -305,9 +305,9 @@ Which port Filebin will listen to. The default of 8080 does not require privileg
 **Access Log**
 - Environment Variable: `FILEBIN_ACCESS_LOG`
 - Command Line Argument: `--access-log`
-- Default: `/var/log/filebin/access.log`
+- Default: not set
 
-Path to a filename for the access log output.
+Path to a filename for the access log output, in the combined log format. The access log is disabled if this is not set. A typical value is `/var/log/filebin/access.log`.
 
 ---
 

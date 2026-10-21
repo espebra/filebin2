@@ -718,16 +718,21 @@ func (h *HTTP) Run() {
 		}
 	})
 
-	// Add access logging. The file is deliberately not closed when Run
-	// returns: during a graceful shutdown, Run returns as soon as the
-	// shutdown is initiated while draining request handlers still write to
-	// the access log. The file stays open for the lifetime of the process.
-	accessLog, err := os.OpenFile(h.config.HttpAccessLog, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		slog.Error("unable to open log file", "path", h.config.HttpAccessLog, "error", err)
-		os.Exit(2)
+	// Add access logging if enabled. The file is deliberately not closed
+	// when Run returns: during a graceful shutdown, Run returns as soon as
+	// the shutdown is initiated while draining request handlers still write
+	// to the access log. The file stays open for the lifetime of the process.
+	if h.config.HttpAccessLog != "" {
+		accessLog, err := os.OpenFile(h.config.HttpAccessLog, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			slog.Error("unable to open log file", "path", h.config.HttpAccessLog, "error", err)
+			os.Exit(2)
+		}
+		handler = handlers.CombinedLoggingHandler(accessLog, handler)
+		slog.Info("access log enabled", "path", h.config.HttpAccessLog)
+	} else {
+		slog.Info("access log disabled")
 	}
-	handler = handlers.CombinedLoggingHandler(accessLog, handler)
 
 	// Add proxy header handling
 	if h.config.HttpProxyHeaders {

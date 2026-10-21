@@ -64,7 +64,7 @@ var (
 	// HTTP
 	listenHostFlag     = flag.String("listen-host", "127.0.0.1", "Listen host")
 	listenPortFlag     = flag.Int("listen-port", 8080, "Listen port")
-	accessLogFlag      = flag.String("access-log", "/var/log/filebin/access.log", "Path for access.log output")
+	accessLogFlag      = flag.String("access-log", "", "Path for access.log output. The access log is disabled if not set.")
 	auditRetentionFlag = flag.Uint64("audit-retention", 14, "The number of days to keep audit log files before they are removed by the lurker. 0 keeps them forever.")
 	auditLogDirFlag    = flag.String("audit-log-dir", "", "Directory for the audit log of transfers and lifecycle events of bins and files, written as one JSON lines file per day. The audit log is disabled if not set.")
 	proxyHeadersFlag   = flag.Bool("proxy-headers", false, "Read client request information from proxy headers")
@@ -235,7 +235,7 @@ func main() {
 			*listenPortFlag = i
 		}
 	}
-	if v := os.Getenv("FILEBIN_ACCESS_LOG"); v != "" && *accessLogFlag == "/var/log/filebin/access.log" {
+	if v := os.Getenv("FILEBIN_ACCESS_LOG"); v != "" && *accessLogFlag == "" {
 		*accessLogFlag = v
 	}
 	if v := os.Getenv("FILEBIN_AUDIT_LOG_DIR"); v != "" && *auditLogDirFlag == "" {
