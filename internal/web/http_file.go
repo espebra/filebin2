@@ -182,6 +182,8 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	setTransactionBin(r, inputBin)
+	setTransactionFilename(r, inputFilename)
 
 	// Step 2: Validate the request before reading the body. The content
 	// length is required to size the temporary file and to detect truncated

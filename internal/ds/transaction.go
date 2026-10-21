@@ -26,7 +26,8 @@ type Transaction struct {
 
 // TransactionChecksums are the checksums of the file content transferred in
 // a request, for the audit log. MD5 is base64 encoded, as in FileContent.
-// PHash is the perceptual hash of images. Filename is the name the file is
+// PHash is the perceptual hash of images. Bin is the bin of an upload, which
+// is not in the URL for legacy uploads to /. Filename is the name the file is
 // stored as, which can differ from the name in the request. ContentType is
 // the content type detected from an uploaded file, which can differ from
 // the one sent by the client.
@@ -35,6 +36,7 @@ type TransactionChecksums struct {
 	SHA1        string
 	SHA256      string
 	PHash       string
+	Bin         string
 	Filename    string
 	ContentType string
 }

@@ -391,6 +391,52 @@ func TestAuditLogStoredFilename(t *testing.T) {
 	}
 }
 
+func TestAuditLogLegacyUpload(t *testing.T) {
+	h := setupActionsHandler(t, nil)
+	dir := t.TempDir()
+	auditLog, err := audit.New(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.SetAuditLogger(auditLog)
+
+	// Legacy clients upload to / with the bin and filename in headers
+	bin := "auditlegacybin"
+	req := uploadRequest("/", "legacy upload content")
+	req.Header.Set("bin", bin)
+	req.Header.Set("filename", "legacy.txt")
+	rr := httptest.NewRecorder()
+	h.router.ServeHTTP(rr, req)
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("Expected upload status %d, got %d. Body: %s", http.StatusCreated, rr.Code, rr.Body.String())
+	}
+
+	auditLog.Close()
+	events := readAuditEvents(t, dir)
+	if len(events) != 1 {
+		t.Fatalf("Expected 1 event, got %+v", events)
+	}
+	e := events[0]
+	if e.Event != "file_upload" {
+		t.Errorf("Expected event %q, got %q", "file_upload", e.Event)
+	}
+	if e.Bin != bin || e.Filename != "legacy.txt" || e.Path != "/" {
+		t.Errorf("Expected bin %q, filename %q and path /, got %q, %q and %q", bin, "legacy.txt", e.Bin, e.Filename, e.Path)
+	}
+	if e.SHA256 == "" || e.RequestID == "" {
+		t.Errorf("Expected checksums and a request id, got %+v", e)
+	}
+
+	// The transaction is registered with the bin from the header
+	transactions, err := h.dao.Transaction().GetByBin(bin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(transactions) != 1 || transactions[0].Filename != "legacy.txt" {
+		t.Errorf("Expected 1 transaction for legacy.txt in the bin, got %+v", transactions)
+	}
+}
+
 func TestAuditHeaderTruncates(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	// A multibyte character straddles the limit
@@ -421,6 +467,7 @@ func TestAuditEventName(t *testing.T) {
 		{http.MethodPost, "/admin/bin/{bin:[A-Za-z0-9_-]+}/ban-uploaders", "admin_bin_ban_uploaders"},
 		{http.MethodPost, "/admin/file/{sha256:[0-9a-z]+}/block", "admin_file_block"},
 		{http.MethodPut, "/admin/approve/{bin:[A-Za-z0-9_-]+}", "admin_approve"},
+		{http.MethodPost, "/", "file_upload"},
 		{http.MethodGet, "unknown", "http_request"},
 	}
 	for _, tt := range tests {

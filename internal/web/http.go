@@ -247,7 +247,7 @@ func (h *HTTP) Init() error {
 	// long (see BinDao.ValidateInput) and every reserved segment is shorter.
 	// Keep it that way when adding routes or changing the minimum length.
 	h.router.HandleFunc("/", h.index).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/", h.clientLookup(h.handle(h.uploadFile))).Methods(http.MethodPost)
+	h.router.HandleFunc("/", h.log(h.clientLookup(h.handle(h.uploadFile)))).Methods(http.MethodPost)
 	h.router.HandleFunc("/filebin-status", h.filebinStatus).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/storage-status", h.storageStatus).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/metrics", h.viewMetrics).Methods(http.MethodHead, http.MethodGet)
@@ -399,6 +399,16 @@ func setTransactionChecksums(r *http.Request, md5, sha1, sha256, phash string) {
 	}
 }
 
+// setTransactionBin records the bin of an upload, to be written to the
+// audit log and the transaction table by log() when the URL has no bin, as
+// for legacy uploads to /. It is a no-op for requests that are not wrapped
+// by log().
+func setTransactionBin(r *http.Request, bin string) {
+	if c, ok := r.Context().Value(transactionChecksumsKey{}).(*ds.TransactionChecksums); ok {
+		c.Bin = bin
+	}
+}
+
 // setTransactionFilename records the name the file is stored as, to be
 // written to the audit log by log() in place of the name in the request,
 // which may have been sanitized. It is a no-op for requests that are not
@@ -477,6 +487,14 @@ func (h *HTTP) log(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc
 		// However, any client or server side errors are skipped to reduce the database
 		// volume needed.
 		if metrics.Code < 400 {
+			// Legacy uploads to / have the bin and filename in request
+			// headers instead of the URL.
+			if bin == "" {
+				bin = checksums.Bin
+			}
+			if filename == "" {
+				filename = checksums.Filename
+			}
 			_, err := h.dao.Transaction().Register(r, bin, filename, t0, completed, metrics.Code, metrics.Written)
 			if err != nil {
 				slog.Error("unable to register transaction", "error", err)
@@ -528,6 +546,9 @@ func (h *HTTP) logAuditEvent(r *http.Request, routeTemplate string, t0 time.Time
 	}
 	if strings.HasPrefix(r.URL.Path, "/admin/") {
 		e.Actor = audit.ActorAdmin
+	}
+	if checksums.Bin != "" {
+		e.Bin = checksums.Bin
 	}
 	if checksums.Filename != "" {
 		e.Filename = checksums.Filename
@@ -581,6 +602,9 @@ func auditValue(v string) string {
 // it matched.
 func auditEventName(method string, routeTemplate string) string {
 	switch {
+	case routeTemplate == "/" && method == http.MethodPost:
+		// Legacy upload with the bin and filename in request headers
+		return "file_upload"
 	case strings.HasPrefix(routeTemplate, "/archive/"):
 		return "archive_download"
 	case strings.HasPrefix(routeTemplate, "/admin/"):
