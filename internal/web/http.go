@@ -409,6 +409,16 @@ func setTransactionFilename(r *http.Request, filename string) {
 	}
 }
 
+// setTransactionContentType records the content type detected from an
+// uploaded file, to be written to the audit log by log() in place of the
+// content type sent by the client. It is a no-op for requests that are not
+// wrapped by log().
+func setTransactionContentType(r *http.Request, contentType string) {
+	if c, ok := r.Context().Value(transactionChecksumsKey{}).(*ds.TransactionChecksums); ok {
+		c.ContentType = contentType
+	}
+}
+
 func (h *HTTP) log(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t0 := time.Now()
@@ -521,6 +531,9 @@ func (h *HTTP) logAuditEvent(r *http.Request, routeTemplate string, t0 time.Time
 	}
 	if checksums.Filename != "" {
 		e.Filename = checksums.Filename
+	}
+	if checksums.ContentType != "" {
+		e.ContentType = checksums.ContentType
 	}
 	if e.SHA256 == "" {
 		// Admin actions on content are addressed by checksum

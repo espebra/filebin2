@@ -58,7 +58,7 @@ func TestAuditLog(t *testing.T) {
 	bin := "auditlogbin"
 	content := "content for the audit log"
 	uploadReq := uploadRequest("/"+bin+"/file.txt", content)
-	uploadReq.Header.Set("Content-Type", "text/plain")
+	uploadReq.Header.Set("Content-Type", "application/octet-stream")
 	uploadRR := httptest.NewRecorder()
 	h.router.ServeHTTP(uploadRR, uploadReq)
 	if uploadRR.Code != http.StatusCreated {
@@ -166,8 +166,10 @@ func TestAuditLog(t *testing.T) {
 	if dl.Origin != "https://example.com" || dl.SecFetchSite != "cross-site" {
 		t.Errorf("Unexpected origin headers in download event: %+v", dl)
 	}
-	if upload.ContentType != "text/plain" {
-		t.Errorf("Expected the content type of the upload to be logged: %+v", upload)
+	// The content type detected from the file is logged in place of the
+	// one sent by the client
+	if upload.ContentType != "text/plain; charset=utf-8" {
+		t.Errorf("Expected the detected content type of the upload to be logged, got %q", upload.ContentType)
 	}
 	if dl.RequestID != download.Header().Get("X-Request-Id") {
 		t.Errorf("Expected request id %q in download event, got %q", download.Header().Get("X-Request-Id"), dl.RequestID)

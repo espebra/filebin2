@@ -288,6 +288,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) error {
 		return &httpError{status: http.StatusBadRequest, message: "Input validation failed", err: err}
 	}
 	setTransactionFilename(r, file.Filename)
+	setTransactionContentType(r, file.Mime)
 
 	// Step 6: Ask the pre-upload hook, if one is configured, whether to
 	// accept the upload. Nothing has been stored yet, so a rejection leaves

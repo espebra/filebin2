@@ -84,7 +84,9 @@ type Event struct {
 	SecCHUAMobile   string `json:"sec_ch_ua_mobile,omitempty"`
 	Origin          string `json:"origin,omitempty"`
 	SecFetchSite    string `json:"sec_fetch_site,omitempty"`
-	ContentType     string `json:"content_type,omitempty"`
+	// For file uploads, the content type detected from the file content
+	// instead of the header sent by the client.
+	ContentType string `json:"content_type,omitempty"`
 
 	ASN             int    `json:"asn,omitempty"`
 	ASNOrganization string `json:"asn_organization,omitempty"`
