@@ -251,7 +251,7 @@ func (h *HTTP) binQR(w http.ResponseWriter, r *http.Request) {
 
 	size := 256
 	if thumbnail {
-		size = 80
+		size = 100
 	}
 
 	var binURL url.URL
@@ -265,8 +265,6 @@ func (h *HTTP) binQR(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unable to generate QR code", http.StatusInternalServerError)
 		return
 	}
-
-	q.DisableBorder = true
 
 	img := q.Image(size)
 
