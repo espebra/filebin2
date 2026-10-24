@@ -213,7 +213,7 @@ If enabled, the `X-Robots-Tag` response header will allow search engines to inde
 - Command Line Argument: `--pre-upload-hook`
 - Default: (not set)
 
-Command to execute before every file upload is accepted. The command runs after the file has been received from the client and its content type and checksums have been calculated, but before it is stored in S3 or its metadata persisted to the database. It is intended for validation, for example checking the checksums against a blocklist or a malware scanning service. It is invoked with the following named arguments: `--bin-id`, `--filename`, `--content-type`, `--size`, `--md5`, `--sha1`, and `--sha256`. The checksums are hex encoded.
+Command to execute before every file upload is accepted. The command runs after the file has been received from the client and its content type and checksums have been calculated, but before it is stored in S3 or its metadata persisted to the database. It is intended for validation, for example checking the checksums against a blocklist or a malware scanning service. It is invoked with the following named arguments: `--request-id`, `--bin-id`, `--filename`, `--content-type`, `--size`, `--md5`, `--sha1`, and `--sha256`. The checksums are hex encoded.
 
 The exit code determines the outcome:
 - `1` — Reject the upload with HTTP 403 (Forbidden). The last line of stdout from the command is returned to the client as the response message.
@@ -238,7 +238,7 @@ Timeout for the pre-upload hook command execution. If the command does not compl
 - Command Line Argument: `--post-upload-hook`
 - Default: (not set)
 
-Command to execute after every successful file upload. The command runs after the file has been stored in S3 and its metadata persisted to the database, and is intended for notifications and post-processing (for example, triggering an indexing job or webhook). It is invoked with the following named arguments: `--bin-id`, `--filename`, `--content-type`, `--size`, `--md5`, `--sha1`, and `--sha256`. The checksums are hex encoded.
+Command to execute after every successful file upload. The command runs after the file has been stored in S3 and its metadata persisted to the database, and is intended for notifications and post-processing (for example, triggering an indexing job or webhook). It is invoked with the following named arguments: `--request-id`, `--bin-id`, `--filename`, `--content-type`, `--size`, `--md5`, `--sha1`, and `--sha256`. The checksums are hex encoded.
 
 The hook does not affect the response to the client: any non-zero exit code or stdout/stderr is logged but the upload is always reported as successful. An example hook script is provided in [`misc/post-upload-hook-example`](misc/post-upload-hook-example).
 

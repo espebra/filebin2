@@ -295,7 +295,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) error {
 	// Step 6: Ask the pre-upload hook, if one is configured, whether to
 	// accept the upload. Nothing has been stored yet, so a rejection leaves
 	// no trace apart from the bin itself.
-	preHookDuration, err := h.runPreUploadHook(r.Context(), file)
+	preHookDuration, err := h.runPreUploadHook(r.Context(), file, requestID(r))
 	if err != nil {
 		return err
 	}
@@ -423,7 +423,7 @@ func (h *HTTP) uploadFile(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// Notify the post-upload hook, if one is configured.
-	postHookDuration := h.runPostUploadHook(r.Context(), file)
+	postHookDuration := h.runPostUploadHook(r.Context(), file, requestID(r))
 
 	// Respond with the bin and file as JSON.
 	type Data struct {
@@ -758,8 +758,9 @@ const hookWaitDelay = time.Second
 
 // uploadHookArgs returns the named arguments the pre- and post-upload hooks
 // are invoked with. The checksums are hex encoded.
-func uploadHookArgs(file ds.File) []string {
+func uploadHookArgs(file ds.File, requestID string) []string {
 	return []string{
+		"--request-id", requestID,
 		"--bin-id", file.Bin,
 		"--filename", file.Filename,
 		"--content-type", file.Mime,
@@ -779,14 +780,14 @@ func uploadHookArgs(file ds.File) []string {
 // be started, or a hook that is killed at its timeout. Failures other than
 // a rejection are logged, so that a broken or hung hook cannot block
 // uploads.
-func (h *HTTP) runPreUploadHook(ctx context.Context, file ds.File) (time.Duration, error) {
+func (h *HTTP) runPreUploadHook(ctx context.Context, file ds.File, requestID string) (time.Duration, error) {
 	if h.config.PreUploadHook == "" {
 		return 0, nil
 	}
 	hookStart := time.Now()
 	hookCtx, hookCancel := context.WithTimeout(ctx, h.config.PreUploadHookTimeout)
 	defer hookCancel()
-	hookCmd := exec.CommandContext(hookCtx, h.config.PreUploadHook, uploadHookArgs(file)...)
+	hookCmd := exec.CommandContext(hookCtx, h.config.PreUploadHook, uploadHookArgs(file, requestID)...)
 	hookCmd.WaitDelay = hookWaitDelay
 	// Output captures stdout, and stderr ends up in the ExitError for the
 	// log. Only stdout is ever shown to the client.
@@ -825,14 +826,14 @@ func (h *HTTP) runPreUploadHook(ctx context.Context, file ds.File) (time.Duratio
 // returns how long it took. The hook runs after the upload has been
 // persisted and is treated as a notification: its exit code and output are
 // logged but do not affect the response to the client.
-func (h *HTTP) runPostUploadHook(ctx context.Context, file ds.File) time.Duration {
+func (h *HTTP) runPostUploadHook(ctx context.Context, file ds.File, requestID string) time.Duration {
 	if h.config.PostUploadHook == "" {
 		return 0
 	}
 	hookStart := time.Now()
 	hookCtx, hookCancel := context.WithTimeout(ctx, h.config.PostUploadHookTimeout)
 	defer hookCancel()
-	hookCmd := exec.CommandContext(hookCtx, h.config.PostUploadHook, uploadHookArgs(file)...)
+	hookCmd := exec.CommandContext(hookCtx, h.config.PostUploadHook, uploadHookArgs(file, requestID)...)
 	hookCmd.WaitDelay = hookWaitDelay
 	hookOutput, hookErr := hookCmd.CombinedOutput()
 	hookDuration := time.Since(hookStart)
