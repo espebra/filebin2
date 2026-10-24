@@ -761,7 +761,7 @@ const hookWaitDelay = time.Second
 func uploadHookArgs(file ds.File, requestID string) []string {
 	return []string{
 		"--request-id", requestID,
-		"--bin-id", file.Bin,
+		"--bin", file.Bin,
 		"--filename", file.Filename,
 		"--content-type", file.Mime,
 		"--size", strconv.FormatUint(file.Bytes, 10),

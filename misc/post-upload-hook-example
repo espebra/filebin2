@@ -13,7 +13,7 @@
 #
 # Named arguments:
 #   --request-id    Request ID, as returned to the client in X-Request-Id
-#   --bin-id        Bin ID
+#   --bin           Bin ID
 #   --filename      Filename
 #   --content-type  Content type (MIME type)
 #   --size          File size in bytes
@@ -37,7 +37,7 @@ SHA256=""
 while [ $# -gt 0 ]; do
     case "$1" in
         --request-id) REQUEST_ID="$2"; shift 2 ;;
-        --bin-id) BIN="$2"; shift 2 ;;
+        --bin) BIN="$2"; shift 2 ;;
         --filename) FILENAME="$2"; shift 2 ;;
         --content-type) CONTENT_TYPE="$2"; shift 2 ;;
         --size) FILE_SIZE="$2"; shift 2 ;;
