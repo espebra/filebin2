@@ -204,6 +204,9 @@ exit 0
 			t.Errorf("Expected %s=%q, got %q", flag, want, got[flag])
 		}
 	}
+	if got["--request-id"] == "" || got["--request-id"] != rr.Header().Get("X-Request-Id") {
+		t.Errorf("Expected --request-id=%q, got %q", rr.Header().Get("X-Request-Id"), got["--request-id"])
+	}
 	if !strings.Contains(got["--content-type"], "text/plain") {
 		t.Errorf("Expected --content-type containing %q, got %q", "text/plain", got["--content-type"])
 	}
