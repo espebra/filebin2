@@ -192,7 +192,7 @@ exit 0
 	}
 
 	expected := map[string]string{
-		"--bin-id":   "hookargsbin",
+		"--bin":      "hookargsbin",
 		"--filename": "myfile.txt",
 		"--size":     "17",
 		"--md5":      fmt.Sprintf("%x", md5.Sum([]byte(content))),
@@ -210,8 +210,8 @@ exit 0
 	if !strings.Contains(got["--content-type"], "text/plain") {
 		t.Errorf("Expected --content-type containing %q, got %q", "text/plain", got["--content-type"])
 	}
-	if _, ok := got["--bin-id"]; !ok {
-		t.Errorf("Expected --bin-id flag to be present: %q", string(argsContent))
+	if _, ok := got["--bin"]; !ok {
+		t.Errorf("Expected --bin flag to be present: %q", string(argsContent))
 	}
 }
 

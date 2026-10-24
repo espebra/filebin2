@@ -217,7 +217,7 @@ exit 0
 	}
 
 	expected := map[string]string{
-		"--bin-id":   "prehookargsbin",
+		"--bin":      "prehookargsbin",
 		"--filename": "myfile.txt",
 		"--size":     "17",
 		"--md5":      fmt.Sprintf("%x", md5.Sum([]byte(content))),
