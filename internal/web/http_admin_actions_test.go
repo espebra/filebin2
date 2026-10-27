@@ -159,6 +159,33 @@ func TestAdminBanBinUploaders(t *testing.T) {
 	if rr.Code != http.StatusForbidden {
 		t.Errorf("Expected upload from banned client to give %d, got %d. Body: %s", http.StatusForbidden, rr.Code, rr.Body.String())
 	}
+
+	// The ban records the IP address of the admin without the port
+	client, _, err := h.dao.Client().GetByRemoteAddr(req.RemoteAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "192.0.2.1"; client.BannedBy != want {
+		t.Errorf("Expected the client to be banned by %q, got %q", want, client.BannedBy)
+	}
+}
+
+func TestBannedClientWithoutPreviousRequests(t *testing.T) {
+	h := setupActionsHandler(t, nil)
+
+	// Ban an IP address that has not made any requests yet
+	ip := "198.51.100.7"
+	if err := h.dao.Client().Ban([]string{ip}, "192.0.2.1"); err != nil {
+		t.Fatalf("Expected the ban to succeed, got %s", err)
+	}
+
+	req := uploadRequest("/unseenclientbin/file.txt", "upload from banned client")
+	req.RemoteAddr = ip + ":1234"
+	rr := httptest.NewRecorder()
+	h.router.ServeHTTP(rr, req)
+	if rr.Code != http.StatusForbidden {
+		t.Errorf("Expected upload from banned client to give %d, got %d. Body: %s", http.StatusForbidden, rr.Code, rr.Body.String())
+	}
 }
 
 func TestAdminBanBinDownloaders(t *testing.T) {

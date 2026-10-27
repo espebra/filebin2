@@ -125,20 +125,30 @@ func (c *ClientDao) clientQuery(sqlStatement string, params ...interface{}) (cli
 	return clients, nil
 }
 
-func (c *ClientDao) Ban(IPsToBan []string, banByRemoteAddr string) (err error) {
-	// Loop over the IP addresses that will be banned
+// Ban bans the IP addresses. An IP address without a client record, for
+// instance because the lurker removed it after a period of inactivity, gets
+// a new record so that it can be banned as well. Either all or none of the
+// IP addresses are banned.
+func (c *ClientDao) Ban(IPsToBan []string, bannedBy string) (err error) {
+	t0 := time.Now()
+	defer func() { observeQuery(c.metrics, "client_ban", t0, err) }()
+
+	tx, err := c.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	// The geolocation of a new record is left empty, since requests from
+	// banned clients are rejected before the client record is updated.
 	now := time.Now().UTC()
-	sqlStatement := "UPDATE client SET banned_at=$1, banned_by=$2 WHERE ip=$3 RETURNING ip"
-	var ret string
+	sqlStatement := "INSERT INTO client (ip, asn, network, city, country, continent, proxy, requests, first_active_at, last_active_at, banned_at, banned_by) VALUES ($1, 0, '', '', '', '', false, 0, $2, $2, $2, $3) ON CONFLICT(ip) DO UPDATE SET banned_at=$2, banned_by=$3"
 	for _, ipToBan := range IPsToBan {
-		t0 := time.Now()
-		err = c.db.QueryRow(sqlStatement, now, banByRemoteAddr, ipToBan).Scan(&ret)
-		observeQuery(c.metrics, "client_ban", t0, err)
-		if err != nil {
+		if _, err = tx.Exec(sqlStatement, ipToBan, now, bannedBy); err != nil {
 			return err
 		}
 	}
-	return err
+	return tx.Commit()
 }
 
 func (c *ClientDao) Unban(ip string) (err error) {
