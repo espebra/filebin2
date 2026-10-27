@@ -616,7 +616,7 @@ func (h *HTTP) banBinUploaders(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(ips) > 0 {
-		err = h.dao.Client().Ban(ips, r.RemoteAddr)
+		err = h.dao.Client().Ban(ips, remoteIP(r))
 		if err != nil {
 			slog.Error("unable to ban uploaders", "bin", binID, "error", err)
 			http.Error(w, "Failed to ban uploaders", http.StatusInternalServerError)
@@ -640,7 +640,7 @@ func (h *HTTP) banBinDownloaders(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(ips) > 0 {
-		err = h.dao.Client().Ban(ips, r.RemoteAddr)
+		err = h.dao.Client().Ban(ips, remoteIP(r))
 		if err != nil {
 			slog.Error("unable to ban downloaders", "bin", binID, "error", err)
 			http.Error(w, "Failed to ban downloaders", http.StatusInternalServerError)

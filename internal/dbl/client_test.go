@@ -132,3 +132,68 @@ func TestClientBanUnban(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func TestClientBanWithoutRecord(t *testing.T) {
+	dao, err := tearUp()
+	if err != nil {
+		t.Error(err)
+	}
+	defer func() { _ = tearDown(dao) }()
+
+	// An existing client keeps its details when banned
+	known := &ds.Client{IP: "10.0.0.1", ASN: 64500, Country: "Norway", City: "Oslo"}
+	if err := dao.Client().Update(known); err != nil {
+		t.Fatal(err)
+	}
+
+	// Ban the known client together with clients that have no record
+	ips := []string{"10.0.0.1", "10.0.0.2", "2001:db8::1"}
+	if err := dao.Client().Ban(ips, "192.0.2.1"); err != nil {
+		t.Fatalf("Was expecting the ban to succeed, got %s", err)
+	}
+
+	for _, ip := range ips {
+		client, found, err := dao.Client().GetByIP(net.ParseIP(ip))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !found {
+			t.Errorf("Was expecting a client record for %s", ip)
+		}
+		if !client.IsBanned() {
+			t.Errorf("Was expecting client %s to be banned", ip)
+		}
+		if client.BannedBy != "192.0.2.1" {
+			t.Errorf("Was expecting client %s to be banned by 192.0.2.1, got %q", ip, client.BannedBy)
+		}
+	}
+
+	client, _, err := dao.Client().GetByIP(net.ParseIP("10.0.0.1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if client.ASN != 64500 || client.Country != "Norway" || client.City != "Oslo" || client.Requests != 1 {
+		t.Errorf("Was expecting the details of the known client to be kept, got %+v", client)
+	}
+
+	client, _, err = dao.Client().GetByIP(net.ParseIP("10.0.0.2"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if client.Requests != 0 {
+		t.Errorf("Was expecting a new client record to have 0 requests, got %d", client.Requests)
+	}
+
+	// The lurker keeps banned clients without recent activity
+	if _, err := dao.Client().Cleanup(0); err != nil {
+		t.Fatal(err)
+	}
+	if _, found, _ := dao.Client().GetByIP(net.ParseIP("10.0.0.2")); !found {
+		t.Errorf("Was expecting the banned client to be kept by the cleanup")
+	}
+
+	// Banning the same IP address twice in one call works
+	if err := dao.Client().Ban([]string{"10.0.0.3", "10.0.0.3"}, "192.0.2.1"); err != nil {
+		t.Errorf("Was expecting a ban with duplicate IP addresses to succeed, got %s", err)
+	}
+}

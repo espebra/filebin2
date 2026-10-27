@@ -692,7 +692,7 @@ func (h *HTTP) banBin(w http.ResponseWriter, r *http.Request) {
 	for _, file := range files {
 		IPs = append(IPs, file.IP)
 	}
-	if err := h.dao.Client().Ban(IPs, r.RemoteAddr); err != nil {
+	if err := h.dao.Client().Ban(IPs, remoteIP(r)); err != nil {
 		slog.Error("unable to ban client IPs", "ips", IPs, "error", err)
 		http.Error(w, "Unable to ban clients", http.StatusInternalServerError)
 		return
