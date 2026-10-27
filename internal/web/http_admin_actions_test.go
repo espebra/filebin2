@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -415,7 +416,7 @@ func TestAdminSearch(t *testing.T) {
 	gatedUpload(t, h, binID, "needlefile.txt", "content to find via search")
 
 	// Searching requires admin credentials
-	req := httptest.NewRequest(http.MethodGet, "/admin/search?q=needle", nil)
+	req := httptest.NewRequest(http.MethodGet, "/admin/search/bins?q=needle", nil)
 	rr := httptest.NewRecorder()
 	h.router.ServeHTTP(rr, req)
 	if rr.Code != http.StatusUnauthorized {
@@ -423,7 +424,7 @@ func TestAdminSearch(t *testing.T) {
 	}
 
 	// Substring search by bin ID
-	req = httptest.NewRequest(http.MethodGet, "/admin/search?q=archadmin", nil)
+	req = httptest.NewRequest(http.MethodGet, "/admin/search/bins?q=archadmin", nil)
 	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
 	rr = httptest.NewRecorder()
 	h.router.ServeHTTP(rr, req)
@@ -433,9 +434,12 @@ func TestAdminSearch(t *testing.T) {
 	if !strings.Contains(rr.Body.String(), binID) {
 		t.Errorf("Expected search result to contain the bin ID %s", binID)
 	}
+	if strings.Contains(rr.Body.String(), "needlefile.txt") {
+		t.Errorf("Expected the bin search to not list files")
+	}
 
 	// Substring search by filename
-	req = httptest.NewRequest(http.MethodGet, "/admin/search?q=eedlefile", nil)
+	req = httptest.NewRequest(http.MethodGet, "/admin/search/files?q=eedlefile", nil)
 	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
 	rr = httptest.NewRecorder()
 	h.router.ServeHTTP(rr, req)
@@ -461,7 +465,7 @@ func TestAdminSearch(t *testing.T) {
 		t.Fatalf("Expected to mark the bin as deleted: %v", err)
 	}
 
-	req = httptest.NewRequest(http.MethodGet, "/admin/search?q=searchadminbin", nil)
+	req = httptest.NewRequest(http.MethodGet, "/admin/search/bins?q=searchadminbin", nil)
 	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
 	rr = httptest.NewRecorder()
 	h.router.ServeHTTP(rr, req)
@@ -472,7 +476,7 @@ func TestAdminSearch(t *testing.T) {
 		t.Errorf("Expected search result to contain the deleted bin ID %s", binID)
 	}
 
-	req = httptest.NewRequest(http.MethodGet, "/admin/search?q=needlefile", nil)
+	req = httptest.NewRequest(http.MethodGet, "/admin/search/files?q=needlefile", nil)
 	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
 	rr = httptest.NewRecorder()
 	h.router.ServeHTTP(rr, req)
@@ -480,13 +484,44 @@ func TestAdminSearch(t *testing.T) {
 		t.Errorf("Expected search result to contain the deleted filename needlefile.txt")
 	}
 
-	// The search page renders without a query
-	req = httptest.NewRequest(http.MethodGet, "/admin/search", nil)
+	// The search pages render without a query
+	for _, path := range []string{"/admin/search/bins", "/admin/search/files"} {
+		req = httptest.NewRequest(http.MethodGet, path, nil)
+		req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
+		rr = httptest.NewRecorder()
+		h.router.ServeHTTP(rr, req)
+		if rr.Code != http.StatusOK {
+			t.Errorf("Expected %s without query to give %d, got %d", path, http.StatusOK, rr.Code)
+		}
+	}
+
+	// The JSON output contains the results of the selected search only
+	req = httptest.NewRequest(http.MethodGet, "/admin/search/files?q=needlefile", nil)
+	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
+	req.Header.Set("Accept", "application/json")
+	rr = httptest.NewRecorder()
+	h.router.ServeHTTP(rr, req)
+	var out map[string]any
+	if err := json.Unmarshal(rr.Body.Bytes(), &out); err != nil {
+		t.Fatalf("Expected valid JSON from the filename search: %v", err)
+	}
+	if _, found := out["files"]; !found {
+		t.Errorf("Expected the JSON from the filename search to contain files")
+	}
+	if _, found := out["bins"]; found {
+		t.Errorf("Expected the JSON from the filename search to not contain bins")
+	}
+
+	// The old search path redirects to the bin search
+	req = httptest.NewRequest(http.MethodGet, "/admin/search?q=needle&limit=50", nil)
 	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
 	rr = httptest.NewRecorder()
 	h.router.ServeHTTP(rr, req)
-	if rr.Code != http.StatusOK {
-		t.Errorf("Expected search page without query to give %d, got %d", http.StatusOK, rr.Code)
+	if rr.Code != http.StatusFound {
+		t.Errorf("Expected /admin/search to give %d, got %d", http.StatusFound, rr.Code)
+	}
+	if got, want := rr.Header().Get("Location"), "/admin/search/bins?q=needle&limit=50"; got != want {
+		t.Errorf("Expected /admin/search to redirect to %s, got %s", want, got)
 	}
 }
 

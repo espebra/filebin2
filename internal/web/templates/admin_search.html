@@ -16,9 +16,18 @@
 
         <h1>Search</h1>
 
-        <form method="GET" action="/admin/search" class="row g-2 mb-4">
+        <nav class="navbar navbar-expand-lg bg-light mb-3">
+          <div class="container-fluid">
+            <div class="navbar-nav">
+              <a class="nav-link" href="/admin/search/bins?q={{ .Query }}&limit={{ .Limit }}"><span class="btn {{ if eq .Kind "bins" }}btn-primary{{ else }}btn-outline-primary{{ end }}">Bin IDs</span></a>
+              <a class="nav-link" href="/admin/search/files?q={{ .Query }}&limit={{ .Limit }}"><span class="btn {{ if eq .Kind "files" }}btn-primary{{ else }}btn-outline-primary{{ end }}">Filenames</span></a>
+            </div>
+          </div>
+        </nav>
+
+        <form method="GET" action="/admin/search/{{ .Kind }}" class="row g-2 mb-4">
             <div class="col-auto">
-                <input type="text" class="form-control" name="q" value="{{ .Query }}" placeholder="Bin ID or filename" autofocus>
+                <input type="text" class="form-control" name="q" value="{{ .Query }}" placeholder="{{ if eq .Kind "bins" }}Bin ID{{ else }}Filename{{ end }}" autofocus>
             </div>
             <div class="col-auto">
                 <button type="submit" class="btn btn-primary"><i class="fas fa-fw fa-search"></i> Search</button>
@@ -37,9 +46,13 @@
             </div>
         </form>
 
-        <p class="text-muted">Substring search across bin IDs and filenames. Deleted and expired bins and deleted files are included in the results.</p>
+        {{ if eq .Kind "bins" }}
+            <p class="text-muted">Substring search in bin IDs. Deleted and expired bins are included in the results.</p>
+        {{ else }}
+            <p class="text-muted">Substring search in filenames. Deleted files and files in deleted and expired bins are included in the results.</p>
+        {{ end }}
 
-        {{ if .Query }}
+        {{ if and .Query (eq .Kind "bins") }}
             <h2 class="mt-4">Bins ({{ len .Bins }})</h2>
 
             {{ if .Bins }}
@@ -85,7 +98,9 @@
             {{ else }}
                 <p>No bins matched <code>{{ .Query }}</code>.</p>
             {{ end }}
+        {{ end }}
 
+        {{ if and .Query (eq .Kind "files") }}
             <h2 class="mt-4">Files ({{ len .Files }})</h2>
 
             {{ if .Files }}

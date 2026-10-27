@@ -526,49 +526,68 @@ func (h *HTTP) reviveBin(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/admin/bin/"+binID, http.StatusSeeOther)
 }
 
-func (h *HTTP) viewAdminSearch(w http.ResponseWriter, r *http.Request) {
-	query := strings.TrimSpace(r.URL.Query().Get("q"))
-
-	// default
-	limit := 100
-
-	if i, err := strconv.Atoi(r.URL.Query().Get("limit")); err == nil {
-		if i >= 1 && i <= 5000 {
-			limit = i
-		}
+// redirectAdminSearch redirects to the bin search, keeping the query string,
+// so that old links keep working.
+func (h *HTTP) redirectAdminSearch(w http.ResponseWriter, r *http.Request) {
+	target := "/admin/search/bins"
+	if r.URL.RawQuery != "" {
+		target += "?" + r.URL.RawQuery
 	}
+	http.Redirect(w, r, target, http.StatusFound)
+}
+
+// viewAdminSearch searches bin IDs (/admin/search/bins) or filenames
+// (/admin/search/files). The searches are on separate pages so that a bin
+// lookup does not wait for the slower filename search.
+func (h *HTTP) viewAdminSearch(w http.ResponseWriter, r *http.Request) {
+	kind := mux.Vars(r)["kind"]
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	limit := parseLimit(r, 100)
 
 	type Data struct {
-		Query string    `json:"query"`
-		Limit int       `json:"limit"`
-		Bins  []ds.Bin  `json:"bins"`
-		Files []ds.File `json:"files"`
+		Kind  string
+		Query string
+		Limit int
+		Bins  []ds.Bin
+		Files []ds.File
 	}
 	var data Data
+	data.Kind = kind
 	data.Query = query
 	data.Limit = limit
 
 	if query != "" {
-		bins, err := h.dao.Bin().SearchByID(query, limit)
-		if err != nil {
-			slog.Error("unable to search bins", "query", query, "error", err)
-			http.Error(w, "Errno 273", http.StatusInternalServerError)
-			return
+		switch kind {
+		case "bins":
+			bins, err := h.dao.Bin().SearchByID(query, limit)
+			if err != nil {
+				slog.Error("unable to search bins", "query", query, "error", err)
+				http.Error(w, "Errno 273", http.StatusInternalServerError)
+				return
+			}
+			data.Bins = bins
+		case "files":
+			files, err := h.dao.File().SearchByFilename(query, limit)
+			if err != nil {
+				slog.Error("unable to search files", "query", query, "error", err)
+				http.Error(w, "Errno 274", http.StatusInternalServerError)
+				return
+			}
+			data.Files = files
 		}
-		data.Bins = bins
-
-		files, err := h.dao.File().SearchByFilename(query, limit)
-		if err != nil {
-			slog.Error("unable to search files", "query", query, "error", err)
-			http.Error(w, "Errno 274", http.StatusInternalServerError)
-			return
-		}
-		data.Files = files
 	}
 
 	if r.Header.Get("accept") == "application/json" {
+		var results any = data.Bins
+		if kind == "files" {
+			results = data.Files
+		}
 		w.Header().Set("Content-Type", "application/json")
-		out, err := json.MarshalIndent(data, "", "    ")
+		out, err := json.MarshalIndent(map[string]any{
+			"query": data.Query,
+			"limit": data.Limit,
+			kind:    results,
+		}, "", "    ")
 		if err != nil {
 			slog.Error("failed to parse json", "error", err)
 			http.Error(w, "Errno 275", http.StatusInternalServerError)
