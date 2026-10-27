@@ -12,304 +12,13 @@
         <title>Filebin | Clients</title>
     </head>
     <body class="container-fluid">
-        <a id="top"></a>
-
         {{template "admin_bar" .}}
 
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h1>Top {{ .Limit }} clients</h1>
-            <div>
-                <label for="limitSelect" class="form-label me-2">Limit:</label>
-                <select id="limitSelect" class="form-select form-select-sm d-inline-block w-auto" onchange="window.location.href='/admin/clients?limit=' + encodeURIComponent(this.value)">
-                    <option value="25" {{ if eq .Limit 25 }}selected{{ end }}>25</option>
-                    <option value="50" {{ if eq .Limit 50 }}selected{{ end }}>50</option>
-                    <option value="100" {{ if eq .Limit 100 }}selected{{ end }}>100</option>
-                    <option value="200" {{ if eq .Limit 200 }}selected{{ end }}>200</option>
-                    <option value="500" {{ if eq .Limit 500 }}selected{{ end }}>500</option>
-                    <option value="1000" {{ if eq .Limit 1000 }}selected{{ end }}>1000</option>
-                    <option value="5000" {{ if eq .Limit 5000 }}selected{{ end }}>5000</option>
-                </select>
-            </div>
-        </div>
+        {{template "admin_top_list_nav" .}}
 
-        <nav class="navbar navbar-expand-lg bg-light">
-          <div class="container-fluid">
-            <div class="navbar-nav">
-              <a class="nav-link" href="#lastactive"><span class="btn btn-primary">By last active at</span></a>
-              <a class="nav-link" href="#requests"><span class="btn btn-primary">By number of requests</span></a>
-              <a class="nav-link" href="#banned"><span class="btn btn-primary">By banned at</span></a>
-              <a class="nav-link" href="#filesuploaded"><span class="btn btn-primary">By files uploaded</span></a>
-              <a class="nav-link" href="#bytesuploaded"><span class="btn btn-primary">By bytes uploaded</span></a>
-              <a class="nav-link" href="#country"><span class="btn btn-primary">By country</span></a>
-              <a class="nav-link" href="#network"><span class="btn btn-primary">By network</span></a>
-              <a class="nav-link" href="#asn"><span class="btn btn-primary">By ASN</span></a>
-            </div>
-          </div>
-        </nav>
-
-        <a id="lastactive"></a>
-        <div class="text-end"><small><a href="#top">Top</a></small></div>
-        <h2>By last active at</h2>
-
-        {{ $numLastActiveAt := .Clients.ByLastActiveAt | len }}
-        {{ if eq $numLastActiveAt 0 }}
-            <p>No clients have been recorded yet.</p>
-        {{ else }}
-            <table class="table sortable">
-                <tr>
-                    <th>IP</th>
-                    <th>Network</th>
-                    <th>ASN</th>
-                    <th>City</th>
-                    <th>Country</th>
-                    <th>Continent</th>
-                    <th>Proxy</th>
-                    <th>Files uploaded</th>
-                    <th>Bytes uploaded</th>
-                    <th>Requests</th>
-                    <th>Last active</th>
-                    <th>First active</th>
-                    <th>Banned</th>
-                </tr>
-                {{ range $index, $value := .Clients.ByLastActiveAt }}
-                    <tr>
-                        <td><a href="/admin/log/ip/{{ .IP }}">{{ .IP }}</a></td>
-                        <td>{{ .Network }}</td>
-                        <td>{{ if ne .ASN 0 }}{{ .ASN }}{{ end }}</td>
-                        <td>{{ .City }}</td>
-                        <td>{{ .Country }}</td>
-                        <td>{{ .Continent }}</td>
-                        <td>{{ .Proxy }}</td>
-                        <td>{{ .FilesUploaded }}</td>
-                        <td>{{ .BytesUploadedReadable }}</td>
-                        <td>{{ .Requests }}</td>
-                        <td sorttable_customkey="{{ .LastActiveAt }}" class="table-light">{{ .LastActiveAtRelative }} <!-- {{ .LastActiveAt.Format "2006-01-02 15:04:05 UTC" }} --></td>
-                        <td sorttable_customkey="{{ .FirstActiveAt }}">{{ .FirstActiveAtRelative }} <!-- {{ .FirstActiveAt.Format "2006-01-02 15:04:05 UTC" }} --></td>
-                        <td sorttable_customkey="{{ .BannedAt }}">
-                            {{ if isBanned . }}
-                                {{ .BannedAtRelative }} <!-- {{ .BannedAt.Time.Format "2006-01-02 15:04:05 UTC" }} -->
-                                by <a href="/admin/log/ip/{{ .BannedBy }}">{{ .BannedBy }}</a>
-                            {{ else }}
-                                No
-                            {{ end }}
-                        </td>
-                    </tr>
-                {{ end }}
-            </table>
-        {{ end }}
-
-        <a id="requests"></a>
-        <div class="text-end"><small><a href="#top">Top</a></small></div>
-        <h2>By number of requests</h2>
-
-        {{ $numRequests := .Clients.ByRequests | len }}
-        {{ if eq $numRequests 0 }}
-            <p>No clients have been recorded yet.</p>
-        {{ else }}
-            <table class="table sortable">
-                <tr>
-                    <th>IP</th>
-                    <th>Network</th>
-                    <th>ASN</th>
-                    <th>City</th>
-                    <th>Country</th>
-                    <th>Continent</th>
-                    <th>Proxy</th>
-                    <th>Files uploaded</th>
-                    <th>Bytes uploaded</th>
-                    <th>Requests</th>
-                    <th>Last active</th>
-                    <th>First active</th>
-                    <th>Banned</th>
-                </tr>
-                {{ range $index, $value := .Clients.ByRequests }}
-                    <tr>
-                        <td><a href="/admin/log/ip/{{ .IP }}">{{ .IP }}</a></td>
-                        <td>{{ .Network }}</td>
-                        <td>{{ if ne .ASN 0 }}{{ .ASN }}{{ end }}</td>
-                        <td>{{ .City }}</td>
-                        <td>{{ .Country }}</td>
-                        <td>{{ .Continent }}</td>
-                        <td>{{ .Proxy }}</td>
-                        <td>{{ .FilesUploaded }}</td>
-                        <td>{{ .BytesUploadedReadable }}</td>
-                        <td class="table-light">{{ .Requests }}</td>
-                        <td sorttable_customkey="{{ .LastActiveAt }}">{{ .LastActiveAtRelative }} <!-- {{ .LastActiveAt.Format "2006-01-02 15:04:05 UTC" }} --></td>
-                        <td sorttable_customkey="{{ .FirstActiveAt }}">{{ .FirstActiveAtRelative }} <!-- {{ .FirstActiveAt.Format "2006-01-02 15:04:05 UTC" }} --></td>
-                        <td sorttable_customkey="{{ .BannedAt }}">
-                            {{ if isBanned . }}
-                                {{ .BannedAtRelative }} <!-- {{ .BannedAt.Time.Format "2006-01-02 15:04:05 UTC" }} -->
-                                by <a href="/admin/log/ip/{{ .BannedBy }}">{{ .BannedBy }}</a>
-                            {{ else }}
-                                No
-                            {{ end }}
-                        </td>
-                    </tr>
-                {{ end }}
-            </table>
-        {{ end }}
-
-        <a id="banned"></a>
-        <div class="text-end"><small><a href="#top">Top</a></small></div>
-        <h2>By last banned</h2>
-
-        {{ $numBanned := .Clients.ByBannedAt | len }}
-        {{ if eq $numBanned 0 }}
-            <p>No clients are currently banned.</p>
-        {{ else }}
-            <table class="table sortable">
-                <tr>
-                    <th>IP</th>
-                    <th>Network</th>
-                    <th>ASN</th>
-                    <th>City</th>
-                    <th>Country</th>
-                    <th>Continent</th>
-                    <th>Proxy</th>
-                    <th>Files uploaded</th>
-                    <th>Bytes uploaded</th>
-                    <th>Requests</th>
-                    <th>Last active</th>
-                    <th>First active</th>
-                    <th>Banned</th>
-                </tr>
-                {{ range $index, $value := .Clients.ByBannedAt }}
-                    <tr>
-                        <td><a href="/admin/log/ip/{{ .IP }}">{{ .IP }}</a></td>
-                        <td>{{ .Network }}</td>
-                        <td>{{ if ne .ASN 0 }}{{ .ASN }}{{ end }}</td>
-                        <td>{{ .City }}</td>
-                        <td>{{ .Country }}</td>
-                        <td>{{ .Continent }}</td>
-                        <td>{{ .Proxy }}</td>
-                        <td>{{ .FilesUploaded }}</td>
-                        <td>{{ .BytesUploadedReadable }}</td>
-                        <td>{{ .Requests }}</td>
-                        <td sorttable_customkey="{{ .LastActiveAt }}">{{ .LastActiveAtRelative }} <!-- {{ .LastActiveAt.Format "2006-01-02 15:04:05 UTC" }} --></td>
-                        <td sorttable_customkey="{{ .FirstActiveAt }}">{{ .FirstActiveAtRelative }} <!-- {{ .FirstActiveAt.Format "2006-01-02 15:04:05 UTC" }} --></td>
-                        <td sorttable_customkey="{{ .BannedAt }}" class="table-light">
-                            {{ if isBanned . }}
-                                {{ .BannedAtRelative }} <!-- {{ .BannedAt.Time.Format "2006-01-02 15:04:05 UTC" }} -->
-                                by <a href="/admin/log/ip/{{ .BannedBy }}">{{ .BannedBy }}</a>
-                            {{ else }}
-                                No
-                            {{ end }}
-                        </td>
-                    </tr>
-                {{ end }}
-            </table>
-        {{ end }}
-
-        <a id="filesuploaded"></a>
-        <div class="text-end"><small><a href="#top">Top</a></small></div>
-        <h2>By files uploaded</h2>
-
-        {{ $numFilesUploaded := .Clients.ByFilesUploaded | len }}
-        {{ if eq $numFilesUploaded 0 }}
-            <p>No clients have uploaded files yet.</p>
-        {{ else }}
-            <table class="table sortable">
-                <tr>
-                    <th>IP</th>
-                    <th>Network</th>
-                    <th>ASN</th>
-                    <th>City</th>
-                    <th>Country</th>
-                    <th>Continent</th>
-                    <th>Proxy</th>
-                    <th>Files uploaded</th>
-                    <th>Bytes uploaded</th>
-                    <th>Requests</th>
-                    <th>Last active</th>
-                    <th>First active</th>
-                    <th>Banned</th>
-                </tr>
-                {{ range $index, $value := .Clients.ByFilesUploaded }}
-                    <tr>
-                        <td><a href="/admin/log/ip/{{ .IP }}">{{ .IP }}</a></td>
-                        <td>{{ .Network }}</td>
-                        <td>{{ if ne .ASN 0 }}{{ .ASN }}{{ end }}</td>
-                        <td>{{ .City }}</td>
-                        <td>{{ .Country }}</td>
-                        <td>{{ .Continent }}</td>
-                        <td>{{ .Proxy }}</td>
-                        <td class="table-light">{{ .FilesUploaded }}</td>
-                        <td>{{ .BytesUploadedReadable }}</td>
-                        <td>{{ .Requests }}</td>
-                        <td sorttable_customkey="{{ .LastActiveAt }}">{{ .LastActiveAtRelative }}</td>
-                        <td sorttable_customkey="{{ .FirstActiveAt }}">{{ .FirstActiveAtRelative }}</td>
-                        <td sorttable_customkey="{{ .BannedAt }}">
-                            {{ if isBanned . }}
-                                {{ .BannedAtRelative }}
-                                by <a href="/admin/log/ip/{{ .BannedBy }}">{{ .BannedBy }}</a>
-                            {{ else }}
-                                No
-                            {{ end }}
-                        </td>
-                    </tr>
-                {{ end }}
-            </table>
-        {{ end }}
-
-        <a id="bytesuploaded"></a>
-        <div class="text-end"><small><a href="#top">Top</a></small></div>
-        <h2>By bytes uploaded</h2>
-
-        {{ $numBytesUploaded := .Clients.ByBytesUploaded | len }}
-        {{ if eq $numBytesUploaded 0 }}
-            <p>No clients have uploaded files yet.</p>
-        {{ else }}
-            <table class="table sortable">
-                <tr>
-                    <th>IP</th>
-                    <th>Network</th>
-                    <th>ASN</th>
-                    <th>City</th>
-                    <th>Country</th>
-                    <th>Continent</th>
-                    <th>Proxy</th>
-                    <th>Files uploaded</th>
-                    <th>Bytes uploaded</th>
-                    <th>Requests</th>
-                    <th>Last active</th>
-                    <th>First active</th>
-                    <th>Banned</th>
-                </tr>
-                {{ range $index, $value := .Clients.ByBytesUploaded }}
-                    <tr>
-                        <td><a href="/admin/log/ip/{{ .IP }}">{{ .IP }}</a></td>
-                        <td>{{ .Network }}</td>
-                        <td>{{ if ne .ASN 0 }}{{ .ASN }}{{ end }}</td>
-                        <td>{{ .City }}</td>
-                        <td>{{ .Country }}</td>
-                        <td>{{ .Continent }}</td>
-                        <td>{{ .Proxy }}</td>
-                        <td>{{ .FilesUploaded }}</td>
-                        <td class="table-light">{{ .BytesUploadedReadable }}</td>
-                        <td>{{ .Requests }}</td>
-                        <td sorttable_customkey="{{ .LastActiveAt }}">{{ .LastActiveAtRelative }}</td>
-                        <td sorttable_customkey="{{ .FirstActiveAt }}">{{ .FirstActiveAtRelative }}</td>
-                        <td sorttable_customkey="{{ .BannedAt }}">
-                            {{ if isBanned . }}
-                                {{ .BannedAtRelative }}
-                                by <a href="/admin/log/ip/{{ .BannedBy }}">{{ .BannedBy }}</a>
-                            {{ else }}
-                                No
-                            {{ end }}
-                        </td>
-                    </tr>
-                {{ end }}
-            </table>
-        {{ end }}
-
-        <a id="country"></a>
-        <div class="text-end"><small><a href="#top">Top</a></small></div>
-        <h2>By country</h2>
-
-        {{ $numCountry := .Clients.ByCountry | len }}
-        {{ if eq $numCountry 0 }}
-            <p>No countries recorded yet.</p>
-        {{ else }}
+        {{ if not .Items }}
+            <p>{{ .Empty }}</p>
+        {{ else if eq .Sort "country" }}
             <table class="table sortable">
                 <tr>
                     <th>Country</th>
@@ -320,7 +29,7 @@
                     <th>Last active</th>
                     <th>First active</th>
                 </tr>
-                {{ range $index, $value := .Clients.ByCountry }}
+                {{ range .Items }}
                     <tr>
                         <td class="table-light">{{ .Country }}</td>
                         <td>{{ .ClientCount }}</td>
@@ -332,16 +41,7 @@
                     </tr>
                 {{ end }}
             </table>
-        {{ end }}
-
-        <a id="network"></a>
-        <div class="text-end"><small><a href="#top">Top</a></small></div>
-        <h2>By network</h2>
-
-        {{ $numNetwork := .Clients.ByNetwork | len }}
-        {{ if eq $numNetwork 0 }}
-            <p>No networks recorded yet.</p>
-        {{ else }}
+        {{ else if eq .Sort "network" }}
             <table class="table sortable">
                 <tr>
                     <th>Network</th>
@@ -352,7 +52,7 @@
                     <th>Last active</th>
                     <th>First active</th>
                 </tr>
-                {{ range $index, $value := .Clients.ByNetwork }}
+                {{ range .Items }}
                     <tr>
                         <td class="table-light">{{ .Network }}</td>
                         <td>{{ .ClientCount }}</td>
@@ -364,16 +64,7 @@
                     </tr>
                 {{ end }}
             </table>
-        {{ end }}
-
-        <a id="asn"></a>
-        <div class="text-end"><small><a href="#top">Top</a></small></div>
-        <h2>By ASN</h2>
-
-        {{ $numASN := .Clients.ByASN | len }}
-        {{ if eq $numASN 0 }}
-            <p>No ASNs recorded yet.</p>
-        {{ else }}
+        {{ else if eq .Sort "asn" }}
             <table class="table sortable">
                 <tr>
                     <th>ASN</th>
@@ -386,7 +77,7 @@
                     <th>First active</th>
                     <th>Banned</th>
                 </tr>
-                {{ range $index, $value := .Clients.ByASN }}
+                {{ range .Items }}
                     <tr>
                         <td class="table-light">{{ .ASN }}</td>
                         <td>{{ .Organization }}</td>
@@ -399,6 +90,48 @@
                         <td sorttable_customkey="{{ .BannedAt }}">
                             {{ if .IsBanned }}
                                 {{ .BannedAtRelative }}
+                            {{ else }}
+                                No
+                            {{ end }}
+                        </td>
+                    </tr>
+                {{ end }}
+            </table>
+        {{ else }}
+            <table class="table sortable">
+                <tr>
+                    <th>IP</th>
+                    <th>Network</th>
+                    <th>ASN</th>
+                    <th>City</th>
+                    <th>Country</th>
+                    <th>Continent</th>
+                    <th>Proxy</th>
+                    <th>Files uploaded</th>
+                    <th>Bytes uploaded</th>
+                    <th>Requests</th>
+                    <th>Last active</th>
+                    <th>First active</th>
+                    <th>Banned</th>
+                </tr>
+                {{ range .Items }}
+                    <tr>
+                        <td><a href="/admin/log/ip/{{ .IP }}">{{ .IP }}</a></td>
+                        <td>{{ .Network }}</td>
+                        <td>{{ if ne .ASN 0 }}{{ .ASN }}{{ end }}</td>
+                        <td>{{ .City }}</td>
+                        <td>{{ .Country }}</td>
+                        <td>{{ .Continent }}</td>
+                        <td>{{ .Proxy }}</td>
+                        <td{{ if eq $.Sort "files-uploaded" }} class="table-light fw-bold"{{ end }}>{{ .FilesUploaded }}</td>
+                        <td{{ if eq $.Sort "bytes-uploaded" }} class="table-light fw-bold"{{ end }}>{{ .BytesUploadedReadable }}</td>
+                        <td{{ if eq $.Sort "requests" }} class="table-light fw-bold"{{ end }}>{{ .Requests }}</td>
+                        <td sorttable_customkey="{{ .LastActiveAt }}"{{ if eq $.Sort "last-active" }} class="table-light"{{ end }}>{{ .LastActiveAtRelative }} <!-- {{ .LastActiveAt.Format "2006-01-02 15:04:05 UTC" }} --></td>
+                        <td sorttable_customkey="{{ .FirstActiveAt }}">{{ .FirstActiveAtRelative }} <!-- {{ .FirstActiveAt.Format "2006-01-02 15:04:05 UTC" }} --></td>
+                        <td sorttable_customkey="{{ .BannedAt }}"{{ if eq $.Sort "banned" }} class="table-light"{{ end }}>
+                            {{ if isBanned . }}
+                                {{ .BannedAtRelative }} <!-- {{ .BannedAt.Time.Format "2006-01-02 15:04:05 UTC" }} -->
+                                by <a href="/admin/log/ip/{{ .BannedBy }}">{{ .BannedBy }}</a>
                             {{ else }}
                                 No
                             {{ end }}
