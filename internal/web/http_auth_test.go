@@ -26,12 +26,13 @@ func TestAdminEndpointsAuthentication(t *testing.T) {
 		method string
 	}{
 		{"/admin", http.MethodGet},
-		{"/admin/bins", http.MethodGet},
-		{"/admin/bins?limit=10", http.MethodGet},
-		{"/admin/clients", http.MethodGet},
-		{"/admin/clients?limit=10", http.MethodGet},
-		{"/admin/files", http.MethodGet},
-		{"/admin/files?limit=10", http.MethodGet},
+		{"/admin/bins/updated", http.MethodGet},
+		{"/admin/bins/updated?limit=10", http.MethodGet},
+		{"/admin/clients/last-active", http.MethodGet},
+		{"/admin/clients/asn?limit=10", http.MethodGet},
+		{"/admin/files/created", http.MethodGet},
+		{"/admin/files/created?limit=10", http.MethodGet},
+		{"/admin/filecontent/references", http.MethodGet},
 	}
 
 	tests := []struct {
