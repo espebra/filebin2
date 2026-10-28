@@ -66,7 +66,10 @@ type DBConfig struct {
 
 func Init(cfg DBConfig) (DAO, error) {
 	var dao DAO
-	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", cfg.Host, cfg.Port, cfg.Username, cfg.Password, cfg.Name)
+	// binary_parameters makes the driver send a query with parameters in a
+	// single round trip, instead of preparing it in one round trip and
+	// executing it in another.
+	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable binary_parameters=yes", cfg.Host, cfg.Port, cfg.Username, cfg.Password, cfg.Name)
 
 	// Retry logic for database connection with 30 second timeout
 	retryTimeout := 30 * time.Second
