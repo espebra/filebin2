@@ -134,7 +134,7 @@
                                 <td>{{ .Mime }}</td>
                                 <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
                                 <td sorttable_customkey="{{ .CreatedAt }}">{{ .CreatedAtRelative }}</td>
-                                <td><a href="/admin/log/ip/{{ .IP }}">{{ .IP }}</a></td>
+                                <td><a href="/admin/ip/{{ .IP }}">{{ .IP }}</a></td>
                                 <td sorttable_customkey="{{ .DeletedAt }}">{{ .DeletedAtRelative }}</td>
                                 <td><a href="/admin/file/{{ .SHA256 }}"><code>{{ .SHA256 }}</code></a></td>
                             </tr>

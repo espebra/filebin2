@@ -17,6 +17,8 @@
 
         <nav aria-label="Related pages">
             <span class="text-muted">See also:</span>
+            <a href="/admin/ip/{{ .ClientIP }}">IP address details</a>
+            &middot;
             <a href="/admin/clients/last-active">Clients</a>
         </nav>
 
@@ -54,7 +56,7 @@
                             {{ .Timestamp.Format "2006-01-02 15:04:05 UTC" }}
                         </div>
                     </td>
-                    <td><a href="/admin/log/ip/{{ .IP }}">{{ .IP }}</a></td>
+                    <td><a href="/admin/ip/{{ .IP }}">{{ .IP }}</a></td>
                     <td><a href="/admin/log/bin/{{ .BinId }}">{{ .BinId }}</a> (<a href="/admin/bin/{{ .BinId }}">admin</a>)</td>
                     <td>
                         <code>{{ .Method }} <a href="{{ .Path }}">{{ .Path }}</a></code>

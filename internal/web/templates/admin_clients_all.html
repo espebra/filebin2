@@ -34,7 +34,7 @@
             </tr>
             {{ range $index, $value := .Clients }}
                 <tr>
-                    <td><a href="/admin/log/ip/{{ .IP }}">{{ .IP }}</a></td>
+                    <td><a href="/admin/ip/{{ .IP }}">{{ .IP }}</a></td>
                     <td>
                         {{ if eq .Network "" }}
                             N/A
@@ -77,7 +77,7 @@
                     <td sorttable_customkey="{{ .BannedAt }}">
                         {{ if isBanned . }}
                             {{ .BannedAtRelative }} <!-- {{ .BannedAt.Time.Format "2006-01-02 15:04:05 UTC" }} -->
-                            by <a href="/admin/log/ip/{{ .BannedBy }}">{{ .BannedBy }}</a>
+                            by <a href="/admin/ip/{{ .BannedBy }}">{{ .BannedBy }}</a>
                         {{ else }}
                             No
                         {{ end }}

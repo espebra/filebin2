@@ -41,7 +41,7 @@
                 {{ range .Successes }}
                     <tr>
                         <td sorttable_customkey="{{ .Event.Timestamp.Unix }}">{{ .TimestampReadable }}</td>
-                        <td><a href="/admin/log/ip/{{ .Event.IP }}">{{ .Event.IP }}</a></td>
+                        <td><a href="/admin/ip/{{ .Event.IP }}">{{ .Event.IP }}</a></td>
                         <td>
                             {{ if .Event.UploadHost }}
                                 {{ if .Event.UploadProtocol }}<small class="text-muted">{{ .Event.UploadProtocol }}://</small>{{ end }}{{ .Event.UploadHost }}

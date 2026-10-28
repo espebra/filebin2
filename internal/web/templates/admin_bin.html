@@ -163,7 +163,7 @@
                             <td sorttable_customkey="{{ .Bytes }}">{{ .BytesReadable }}</td>
                             <td sorttable_customkey="{{ .CreatedAt }}">{{ .CreatedAtRelative }}</td>
                             <td sorttable_customkey="{{ .UpdatedAt }}">{{ .UpdatedAtRelative }}</td>
-                            <td><a href="/admin/log/ip/{{ .IP }}">{{ .IP }}</a></td>
+                            <td><a href="/admin/ip/{{ .IP }}">{{ .IP }}</a></td>
                             <td>{{ .Downloads }}</td>
                             <td>{{ .Updates }}</td>
                             <td sorttable_customkey="{{ if .IsDeleted }}1 {{ .DeletedAt }}{{ else }}0{{ end }}">
