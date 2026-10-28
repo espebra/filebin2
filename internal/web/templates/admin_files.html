@@ -31,8 +31,8 @@
             </tr>
             {{ range .Items }}
                 <tr>
-                    <td><a href="/{{ .Bin }}/{{ .Filename }}">{{ .Filename }}</a></td>
-                    <td><a href="/{{ .Bin }}">{{ .Bin }}</a> (<a href="/admin/bin/{{ .Bin }}">admin</a>)</td>
+                    <td><a href="{{ publicURL .Bin .Filename }}">{{ .Filename }}</a></td>
+                    <td><a href="{{ publicURL .Bin }}">{{ .Bin }}</a> (<a href="/admin/bin/{{ .Bin }}">admin</a>)</td>
                     <td>{{ .Mime }}</td>
                     <td sorttable_customkey="{{ .Bytes }}"{{ if eq $.Sort "bytes" }} class="table-light fw-bold"{{ end }}>{{ .BytesReadable }}</td>
                     <td><code><a href="/admin/file/{{ .SHA256 }}">{{ slice .SHA256 0 7 }}</a></code></td>

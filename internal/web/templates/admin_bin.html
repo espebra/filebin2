@@ -15,7 +15,7 @@
 
         {{template "admin_bar" .}}
 
-        <h1>Bin admin for <a href="/{{ .Bin.Id }}">{{ .Bin.Id }}</a>
+        <h1>Bin admin for <a href="{{ publicURL .Bin.Id }}">{{ .Bin.Id }}</a>
             {{ if .Bin.IsDeleted }}
                 <span class="badge bg-danger">Deleted</span>
             {{ else if .Bin.IsExpired }}
@@ -29,14 +29,14 @@
             <span class="text-muted">See also:</span>
             <a href="/admin/log/bin/{{ .Bin.Id }}">Transaction log</a>
             &middot;
-            <a href="/{{ .Bin.Id }}">View bin</a>
+            <a href="{{ publicURL .Bin.Id }}">View bin</a>
         </nav>
 
         <div class="row mt-4">
             <div class="col-md-6">
                 <dl class="row">
                     <dt class="col-sm-4">Bin ID</dt>
-                    <dd class="col-sm-8"><code><a href="/{{ .Bin.Id }}">{{ .Bin.Id }}</a></code></dd>
+                    <dd class="col-sm-8"><code><a href="{{ publicURL .Bin.Id }}">{{ .Bin.Id }}</a></code></dd>
 
                     <dt class="col-sm-4">Created</dt>
                     <dd class="col-sm-8">{{ .Bin.CreatedAtRelative }} ({{ .Bin.CreatedAt.Format "2006-01-02 15:04:05 UTC" }})</dd>
@@ -156,7 +156,7 @@
                                 {{ if .IsDeleted }}
                                     {{ .Filename }}
                                 {{ else }}
-                                    <a class="link-primary link-custom" href="{{ .URL }}">{{ .Filename }}</a>
+                                    <a class="link-primary link-custom" href="{{ publicURL .URL }}">{{ .Filename }}</a>
                                 {{ end }}
                             </td>
                             <td>{{ .Mime }}</td>

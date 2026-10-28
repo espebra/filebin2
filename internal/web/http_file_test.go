@@ -729,7 +729,7 @@ func TestBinSha256(t *testing.T) {
 }
 
 func httpAdminRequest(method, path string) (statuscode int, body string, err error) {
-	u, err := url.Parse(testServerURL)
+	u, err := url.Parse(testAdminServerURL)
 	if err != nil {
 		log.Fatal(err)
 	}

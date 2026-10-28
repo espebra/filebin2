@@ -13,6 +13,7 @@ Filebin2 is a web application that facilitates convenient file sharing over the 
   * [With Docker Compose](#with-docker-compose)
   * [With the container image](#with-the-container-image)
   * [From the binary](#from-the-binary)
+* [Upgrading](#upgrading)
 * [Development environment](#development-environment)
 * [Usage](#usage)
   * [Configuration](#configuration)
@@ -34,7 +35,7 @@ The quickest way to get a fully working setup is to use the included `docker-com
 docker compose up --build
 ```
 
-This makes Filebin available at [http://localhost:8080/](http://localhost:8080/) with an admin interface at [http://admin:changeme@localhost:8080/admin](http://admin:changeme@localhost:8080/admin).
+This makes Filebin available at [http://localhost:8080/](http://localhost:8080/) with an admin interface at [http://admin:changeme@localhost:8081/admin](http://admin:changeme@localhost:8081/admin).
 
 Review and adjust the environment variables in `docker-compose.yml` to suit your needs. See the [Configuration](#configuration) section for all available options.
 
@@ -150,7 +151,7 @@ Workspace capacity threshold multiplier. A workspace must have at least this mul
 - Command Line Argument: `--manual-approval`
 - Default: `false`
 
-If enabled, the administrator needs to manually approve new bins before files and archives can be downloaded. Bin and file operations except downloading are accepted while a bin is pending approval. This is a mechanism added to limit abuse. The API request used to approve a bin is an authenticated `PUT /admin/approve/{bin}`.
+If enabled, the administrator needs to manually approve new bins before files and archives can be downloaded. Bin and file operations except downloading are accepted while a bin is pending approval. This is a mechanism added to limit abuse. The API request used to approve a bin is an authenticated `PUT /admin/approve/{bin}` to the [admin listener](#admin-listener).
 
 ---
 
@@ -284,6 +285,13 @@ A whitespace separated list of file extensions that will be rejected. Example: "
 
 #### HTTP Server
 
+Filebin serves HTTP on two listeners:
+
+* The **public listener** (`--listen-host` and `--listen-port`) serves the web interface, the API, uploads and downloads. None of its endpoints require authentication, so it is safe to expose to the internet.
+* The <a name="admin-listener"></a>**admin listener** (`--admin-listen-host` and `--admin-listen-port`) serves the admin interface (`/admin`), the Prometheus metrics (`/metrics`) and the Go profiling endpoints (`/debug/pprof/`). These endpoints are not available on the public listener. The admin listener is not meant to be exposed to the internet, but to be reached from the host itself, a private network or through a tunnel such as `ssh -L 8081:127.0.0.1:8081` or `kubectl port-forward`. The admin interface and the profiling endpoints still require the [admin credentials](#admin-authentication). Links from the admin interface to bins and files point to the public listener using the [base URL](#general), so make sure it is set correctly.
+
+Both listeners serve `/filebin-status`, `/storage-status` and the static files, so that health checks can be pointed at either of them.
+
 **Listen Host**
 - Environment Variable: `FILEBIN_LISTEN_HOST`
 - Command Line Argument: `--listen-host`
@@ -302,12 +310,30 @@ Which port Filebin will listen to. The default of 8080 does not require privileg
 
 ---
 
+**Admin Listen Host**
+- Environment Variable: `FILEBIN_ADMIN_LISTEN_HOST`
+- Command Line Argument: `--admin-listen-host`
+- Default: `127.0.0.1`
+
+Which IP address the [admin listener](#admin-listener) will bind to. The default value of 127.0.0.1 only allows access from the host itself.
+
+---
+
+**Admin Listen Port**
+- Environment Variable: `FILEBIN_ADMIN_LISTEN_PORT`
+- Command Line Argument: `--admin-listen-port`
+- Default: `8081`
+
+Which port the [admin listener](#admin-listener) will listen to. It must be different from `--listen-port`. Set to `0` to disable the admin listener.
+
+---
+
 **Access Log**
 - Environment Variable: `FILEBIN_ACCESS_LOG`
 - Command Line Argument: `--access-log`
 - Default: not set
 
-Path to a filename for the access log output, in the combined log format. The access log is disabled if this is not set. A typical value is `/var/log/filebin/access.log`.
+Path to a filename for the access log output, in the combined log format. Requests to both the public and the admin listener are logged. The access log is disabled if this is not set. A typical value is `/var/log/filebin/access.log`.
 
 ---
 
@@ -334,7 +360,7 @@ The number of days to keep audit log files. The lurker removes the files of days
 - Command Line Argument: `--proxy-headers`
 - Default: `false`
 
-If enabled, the client IP will be read from the proxy headers provided in the incoming HTTP requests. This should only be enabled if there is an HTTP proxy running in front of Filebin that uses proxy headers to tell Filebin the original client IP address.
+If enabled, the client IP will be read from the proxy headers provided in the incoming HTTP requests. This should only be enabled if there is an HTTP proxy running in front of Filebin that uses proxy headers to tell Filebin the original client IP address. Proxy headers are only read on the public listener, never on the admin listener.
 
 ---
 
@@ -578,7 +604,7 @@ The number of days to keep transaction log entries in the PostgreSQL database be
 - Command Line Argument: `--admin-username`
 - Default: (not set)
 
-Username to require for access to the /admin endpoint. If the username is not set, then the admin endpoint will not be available.
+Username to require for access to the `/admin` and `/debug/pprof/` endpoints on the [admin listener](#admin-listener). If the username is not set, then these endpoints will not be available.
 
 ---
 
@@ -587,7 +613,7 @@ Username to require for access to the /admin endpoint. If the username is not se
 - Command Line Argument: `--admin-password`
 - Default: (not set)
 
-Password to require for access to the /admin endpoint. If the password is not set, then the admin endpoint will not be available. Make sure to keep this password a secret.
+Password to require for access to the `/admin` and `/debug/pprof/` endpoints on the [admin listener](#admin-listener). If the password is not set, then these endpoints will not be available. Make sure to keep this password a secret.
 
 ---
 
@@ -598,7 +624,7 @@ Password to require for access to the /admin endpoint. If the password is not se
 - Command Line Argument: `--metrics`
 - Default: `false`
 
-Enables the `/metrics` endpoint. If this is not set, the endpoint will not return any metrics.
+Enables the `/metrics` endpoint on the [admin listener](#admin-listener). If this is not set, the endpoint will not return any metrics.
 
 ---
 
@@ -625,7 +651,7 @@ The password used for authentication to the `/metrics` endpoint for Prometheus m
 - Command Line Argument: `--metrics-auth`
 - Default: (not set)
 
-Enables authentication. Currently only basic auth is supported. If set to `basic`, basic auth will be required. If not set, the endpoint is open to the world.
+Enables authentication. Currently only basic auth is supported. If set to `basic`, basic auth will be required. If not set, the endpoint is open to anyone who can reach the admin listener.
 
 ---
 
@@ -674,6 +700,21 @@ Limits which Slack domain is allowed to access the http api. Other domains will 
 
 If Filebin is set to require manual approval of new bins, then this approval can be given using the user interface, the http api directly or via Slack (using the http api). The http endpoint `/integration/slack` can be accessed using a webhook from Slack. This parameter limits which Slack channel is allowed to access the http api. Requests from other channels will be rejected.
 
+## Upgrading
+
+### Admin endpoints moved to a separate listener
+
+The admin interface (`/admin`), the Prometheus metrics (`/metrics`) and the profiling endpoints (`/debug/pprof/`) are no longer served on the public listener. They are only served on the new [admin listener](#admin-listener), which listens on `127.0.0.1:8081` by default. On the public listener, these paths are now handled like any other bin or file path, and no longer give an authentication challenge.
+
+When upgrading:
+
+* Update Prometheus scrape targets to point at the admin listener, for example `http://127.0.0.1:8081/metrics`.
+* Update API clients that approve bins with `PUT /admin/approve/{bin}` to use the admin listener. The Slack integration is unaffected, as it is served on the public listener.
+* Remove any proxy or load balancer rules that forward or restrict `/admin`, `/metrics` and `/debug/pprof/` on the public listener.
+* If the admin listener must be reached from another host, set `--admin-listen-host` to an address on a private network and restrict access to it with a firewall. Avoid exposing it to the internet.
+* Make sure `--baseurl` is set correctly, as the admin interface uses it to link to bins and files on the public listener.
+* If you run Filebin in a container, publish port 8081 in addition to 8080 if you need to reach the admin listener from outside of the container, and set `--admin-listen-host 0.0.0.0` (or `FILEBIN_ADMIN_LISTEN_HOST=0.0.0.0`).
+
 ## Development
 
 ### Local development environment
@@ -691,7 +732,8 @@ podman compose up --build
 This will make:
 
 * Filebin2 available on [http://localhost:8080/](http://localhost:8080/).
-* Filebin2 admin available on [http://admin:changeme@localhost:8080/admin](http://admin:changeme@localhost:8080/admin).
+* Filebin2 admin available on [http://admin:changeme@localhost:8081/admin](http://admin:changeme@localhost:8081/admin).
+* Prometheus metrics available on [http://metrics:changeme@localhost:8081/metrics](http://metrics:changeme@localhost:8081/metrics).
 * Stupid Simple S3 available on [http://localhost:5553/](http://localhost:5553/).
 * PostgreSQL available on `localhost:5432`.
 
@@ -764,7 +806,7 @@ If the GitHub release was already created before the failure, delete it on the [
 
 ### Grafana and Prometheus
 
-Filebin2 comes with a `/metrics` endpoint that is compatible with Prometheus. There is an [example dashboard](integrations/grafana/filebin.json) that visualizes this data.
+Filebin2 comes with a `/metrics` endpoint on the [admin listener](#admin-listener) that is compatible with Prometheus. There is an [example dashboard](integrations/grafana/filebin.json) that visualizes this data.
 
 ![Dashboard](integrations/grafana/screenshot.png)
 

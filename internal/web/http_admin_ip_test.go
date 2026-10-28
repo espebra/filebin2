@@ -13,7 +13,7 @@ func adminPost(h *HTTP, path string) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(http.MethodPost, path, nil)
 	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
 	rr := httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 	return rr
 }
 
@@ -98,7 +98,7 @@ func TestAdminIPBanUnban(t *testing.T) {
 		}
 		req := httptest.NewRequest(method, path, nil)
 		rr := httptest.NewRecorder()
-		h.router.ServeHTTP(rr, req)
+		h.adminRouter.ServeHTTP(rr, req)
 		if rr.Code != http.StatusUnauthorized {
 			t.Errorf("Expected unauthenticated %s %s to give %d, got %d", method, path, http.StatusUnauthorized, rr.Code)
 		}

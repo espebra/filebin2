@@ -53,7 +53,9 @@ services:
       - FILEBIN_S3_SECRET_KEY=s3secretkey
       - FILEBIN_S3_SECURE=false
       ## HTTP
+      - FILEBIN_BASEURL=http://localhost:8080
       - FILEBIN_LISTEN_HOST=0.0.0.0
+      - FILEBIN_ADMIN_LISTEN_HOST=0.0.0.0
       #- FILEBIN_ACCESS_LOG=access.log
       ## Admin
       - FILEBIN_ADMIN_USERNAME=admin
@@ -74,8 +76,10 @@ services:
       - FILEBIN_CONTACT=changeme@filebin.net
     expose:
       - "8080"
+      - "8081"
     ports:
       - "8080:8080"
+      - "127.0.0.1:8081:8081"
     volumes:
       - .:/app:delegated
     depends_on:

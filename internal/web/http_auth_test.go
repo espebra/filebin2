@@ -136,7 +136,7 @@ func TestAdminEndpointsAuthentication(t *testing.T) {
 				rr := httptest.NewRecorder()
 
 				// Call handler
-				h.router.ServeHTTP(rr, req)
+				h.adminRouter.ServeHTTP(rr, req)
 
 				// Check status code
 				if rr.Code != tt.expectedStatus {
@@ -270,7 +270,7 @@ func TestDebugEndpointsAuthentication(t *testing.T) {
 				rr := httptest.NewRecorder()
 
 				// Call handler
-				h.router.ServeHTTP(rr, req)
+				h.adminRouter.ServeHTTP(rr, req)
 
 				// Check status code
 				if rr.Code != tt.expectedStatus {
@@ -332,7 +332,7 @@ func TestAuthenticationDelayOnFailure(t *testing.T) {
 
 	// Measure time taken
 	start := time.Now()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 	duration := time.Since(start)
 
 	// Verify 401 status
