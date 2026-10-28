@@ -20,6 +20,7 @@ type File struct {
 	Downloads              uint64        `json:"-"`
 	Updates                uint64        `json:"-"`
 	InStorage              bool          `json:"-"`
+	Blocked                bool          `json:"-"`
 	IP                     string        `json:"-"`
 	Headers                string        `json:"-"`
 	UpdatedAt              time.Time     `json:"updated_at"`

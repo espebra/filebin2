@@ -597,7 +597,21 @@ func TestGetFilesByBin(t *testing.T) {
 	}
 }
 
-func TestIsAvailableForDownload(t *testing.T) {
+// availableForDownload looks up the file the way a download does and reports
+// whether it is available for download.
+func availableForDownload(t *testing.T, dao DAO, file *ds.File) bool {
+	t.Helper()
+	got, found, err := dao.File().GetByName(file.Bin, file.Filename)
+	if err != nil {
+		t.Fatalf("Failed to select file: %s", err)
+	}
+	if !found {
+		t.Fatalf("File %s/%s not found", file.Bin, file.Filename)
+	}
+	return got.AvailableForDownload
+}
+
+func TestAvailableForDownload(t *testing.T) {
 	dao, err := tearUp()
 	if err != nil {
 		t.Error(err)
@@ -630,11 +644,7 @@ func TestIsAvailableForDownload(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	available, err := dao.File().IsAvailableForDownload(file1.Id)
-	if err != nil {
-		t.Errorf("Failed to check availability: %s", err)
-	}
-	if !available {
+	if !availableForDownload(t, dao, file1) {
 		t.Error("File should be available when all conditions are met")
 	}
 
@@ -655,11 +665,7 @@ func TestIsAvailableForDownload(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	available, err = dao.File().IsAvailableForDownload(file2.Id)
-	if err != nil {
-		t.Errorf("Failed to check availability: %s", err)
-	}
-	if available {
+	if availableForDownload(t, dao, file2) {
 		t.Error("File should not be available when file is deleted")
 	}
 
@@ -674,11 +680,7 @@ func TestIsAvailableForDownload(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	available, err = dao.File().IsAvailableForDownload(file3.Id)
-	if err != nil {
-		t.Errorf("Failed to check availability: %s", err)
-	}
-	if available {
+	if availableForDownload(t, dao, file3) {
 		t.Error("File should not be available when bin is expired")
 	}
 
@@ -696,11 +698,7 @@ func TestIsAvailableForDownload(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	available, err = dao.File().IsAvailableForDownload(file4.Id)
-	if err != nil {
-		t.Errorf("Failed to check availability: %s", err)
-	}
-	if available {
+	if availableForDownload(t, dao, file4) {
 		t.Error("File should not be available when bin is deleted")
 	}
 
@@ -727,21 +725,28 @@ func TestIsAvailableForDownload(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	available, err = dao.File().IsAvailableForDownload(file5.Id)
-	if err != nil {
-		t.Errorf("Failed to check availability: %s", err)
-	}
-	if available {
+	if availableForDownload(t, dao, file5) {
 		t.Error("File should not be available when content is not in storage")
 	}
 
-	// Test 6: Non-existent file ID should return false
-	available, err = dao.File().IsAvailableForDownload(999999)
-	if err != nil {
-		t.Errorf("Failed to check availability: %s", err)
+	// Test 6: File not available when content is blocked. Blocking deletes
+	// the existing references, so this is a reference created afterwards,
+	// for instance by an upload that raced with the block.
+	if err := dao.FileContent().BlockContent(sha256); err != nil {
+		t.Error(err)
 	}
-	if available {
-		t.Error("Non-existent file should not be available")
+	bin6 := &ds.Bin{Id: "availablebin6", ExpiredAt: time.Now().UTC().Add(time.Hour * 24)}
+	_, err = dao.Bin().Insert(bin6)
+	if err != nil {
+		t.Error(err)
+	}
+	file6 := &ds.File{Filename: "test6.txt", Bin: bin6.Id, Bytes: 100, SHA256: sha256}
+	_, err = dao.File().Insert(file6)
+	if err != nil {
+		t.Error(err)
+	}
+	if availableForDownload(t, dao, file6) {
+		t.Error("File should not be available when content is blocked")
 	}
 }
 

@@ -53,6 +53,54 @@ func TestGetBinById(t *testing.T) {
 	}
 }
 
+// GetByIDWithoutTotals returns the same bin as GetByID, without the totals
+// of its files.
+func TestGetBinByIdWithoutTotals(t *testing.T) {
+	dao, err := tearUp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tearDown(dao) }()
+
+	bin := &ds.Bin{Id: "withouttotals", ExpiredAt: time.Now().UTC().Add(time.Hour)}
+	if _, err := dao.Bin().Insert(bin); err != nil {
+		t.Fatal(err)
+	}
+	content := &ds.FileContent{SHA256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", Bytes: 100, MD5: "d41d8cd98f00b204e9800998ecf8427e", Mime: "text/plain", InStorage: true}
+	if err := dao.FileContent().InsertOrIncrement(content); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := dao.File().Insert(&ds.File{Filename: "a.txt", Bin: bin.Id, Bytes: 100, SHA256: content.SHA256}); err != nil {
+		t.Fatal(err)
+	}
+
+	withTotals, found, err := dao.Bin().GetByID(bin.Id)
+	if err != nil || !found {
+		t.Fatalf("GetByID: found=%t err=%v", found, err)
+	}
+	if withTotals.Files != 1 || withTotals.Bytes != 100 {
+		t.Fatalf("GetByID: expected 1 file of 100 bytes, got %d files of %d bytes", withTotals.Files, withTotals.Bytes)
+	}
+
+	got, found, err := dao.Bin().GetByIDWithoutTotals(bin.Id)
+	if err != nil || !found {
+		t.Fatalf("GetByIDWithoutTotals: found=%t err=%v", found, err)
+	}
+	want := withTotals
+	want.Files, want.Bytes, want.BytesReadable, want.FileDownloads = 0, 0, "0 B", 0
+	// The relative times depend on when the bin was read.
+	for _, b := range []*ds.Bin{&got, &want} {
+		b.UpdatedAtRelative, b.CreatedAtRelative, b.ApprovedAtRelative, b.ExpiredAtRelative, b.DeletedAtRelative = "", "", "", "", ""
+	}
+	if got != want {
+		t.Errorf("GetByIDWithoutTotals returned\n%+v\nexpected\n%+v", got, want)
+	}
+
+	if _, found, err := dao.Bin().GetByIDWithoutTotals("doesnotexist"); err != nil || found {
+		t.Errorf("Expected a bin that does not exist not to be found: found=%t err=%v", found, err)
+	}
+}
+
 func TestInsertDuplicatedBin(t *testing.T) {
 	dao, err := tearUp()
 	if err != nil {

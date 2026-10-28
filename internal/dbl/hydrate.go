@@ -54,10 +54,10 @@ func hydrateFile(file *ds.File) {
 	file.UploadDurationReadable = file.UploadDuration.String()
 	file.URL = path.Join("/", file.Bin, file.Filename)
 
-	// Compute availability: file not deleted, bin not deleted, bin not expired, content in storage
+	// Compute availability: file not deleted, bin not deleted, bin not expired, content in storage and not blocked
 	binDeleted := file.BinDeletedAt.Valid && !file.BinDeletedAt.Time.IsZero()
 	binExpired := !file.BinExpiredAt.IsZero() && file.BinExpiredAt.Before(time.Now())
-	file.AvailableForDownload = !file.IsDeleted() && !binDeleted && !binExpired && file.InStorage
+	file.AvailableForDownload = !file.IsDeleted() && !binDeleted && !binExpired && file.InStorage && !file.Blocked
 
 	setCategory(file)
 }

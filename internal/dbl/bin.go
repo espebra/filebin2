@@ -113,6 +113,25 @@ func (d *BinDao) GetByID(id string) (bin ds.Bin, found bool, err error) {
 	return bin, true, nil
 }
 
+// GetByIDWithoutTotals returns the bin like GetByID, except for the totals
+// of its files (Files, Bytes and FileDownloads), which are left at zero.
+// Calculating the totals reads every file in the bin, so use this where
+// only the bin itself is needed, such as on every file download.
+func (d *BinDao) GetByIDWithoutTotals(id string) (bin ds.Bin, found bool, err error) {
+	sqlStatement := "SELECT id, readonly, downloads, updated_at, created_at, approved_at, expired_at, deleted_at FROM bin WHERE id = $1"
+	t0 := time.Now()
+	err = d.db.QueryRow(sqlStatement, id).Scan(&bin.Id, &bin.Readonly, &bin.Downloads, &bin.UpdatedAt, &bin.CreatedAt, &bin.ApprovedAt, &bin.ExpiredAt, &bin.DeletedAt)
+	observeQuery(d.metrics, "bin_get_by_id_without_totals", t0, err)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return bin, false, nil
+		}
+		return bin, false, err
+	}
+	hydrateBin(&bin)
+	return bin, true, nil
+}
+
 func (d *BinDao) Insert(bin *ds.Bin) (inserted bool, err error) {
 	if err := d.ValidateInput(bin); err != nil {
 		return false, err

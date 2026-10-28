@@ -37,7 +37,7 @@ func (h *HTTP) getFile(w http.ResponseWriter, r *http.Request) {
 	inputFilename := params["filename"]
 	// TODO: Input validation (inputFilename)
 
-	bin, found, err := h.dao.Bin().GetByID(inputBin)
+	bin, found, err := h.dao.Bin().GetByIDWithoutTotals(inputBin)
 	if err != nil {
 		h.Error(w, r, fmt.Sprintf("Failed to select bin by id %q: %s", inputBin, err.Error()), "Database error", 112, http.StatusInternalServerError)
 		return
@@ -72,12 +72,7 @@ func (h *HTTP) getFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if file is available for download (checks file deletion, bin deletion, bin expiry, and content availability)
-	available, err := h.dao.File().IsAvailableForDownload(file.Id)
-	if err != nil {
-		h.Error(w, r, fmt.Sprintf("Failed to check file availability: %s", err.Error()), "Database error", 117, http.StatusInternalServerError)
-		return
-	}
-	if !available {
+	if !file.AvailableForDownload {
 		h.Error(w, r, "", "The file is not available for download.", 118, http.StatusNotFound)
 		return
 	}
