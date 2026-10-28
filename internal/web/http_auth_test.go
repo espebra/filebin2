@@ -35,6 +35,7 @@ func TestAdminEndpointsAuthentication(t *testing.T) {
 		{"/admin/filecontent/references", http.MethodGet},
 		{"/admin/search/bins?q=x", http.MethodGet},
 		{"/admin/search/files?q=x", http.MethodGet},
+		{"/admin/ip/192.0.2.10", http.MethodGet},
 	}
 
 	tests := []struct {

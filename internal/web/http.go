@@ -263,6 +263,9 @@ func (h *HTTP) Init() error {
 	h.router.HandleFunc("/api/telemetry/success", h.telemetrySuccess).Methods(http.MethodPost)
 	h.router.HandleFunc("/admin/log/bin/{bin:[A-Za-z0-9_-]+}", h.auth(h.viewAdminLogBin)).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/admin/log/ip/{ip:[A-Za-z0-9.:_-]+}", h.auth(h.viewAdminLogIP)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin/ip/{ip:[A-Za-z0-9.:_-]+}", h.auth(h.viewAdminIP)).Methods(http.MethodHead, http.MethodGet)
+	h.router.HandleFunc("/admin/ip/{ip:[A-Za-z0-9.:_-]+}/ban", h.log(h.auth(h.banIP))).Methods("POST")
+	h.router.HandleFunc("/admin/ip/{ip:[A-Za-z0-9.:_-]+}/unban", h.log(h.auth(h.unbanIP))).Methods("POST")
 	// Each top list has its own page. The sort keys are part of the route
 	// pattern, so they cannot clash with /admin/bins/all and /admin/clients/all.
 	for _, section := range h.adminTopListSections() {
