@@ -14,7 +14,7 @@ import (
 )
 
 type TransactionDao struct {
-	db      *sql.DB
+	db      *sql.DB // the async commit pool, see Init
 	metrics DBMetricsObserver
 }
 

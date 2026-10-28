@@ -1,6 +1,7 @@
 package dbl
 
 import (
+	"database/sql"
 	"testing"
 )
 
@@ -69,5 +70,32 @@ func TestPing(t *testing.T) {
 	err = tearDown(dao)
 	if err != nil {
 		t.Error(err)
+	}
+}
+
+// Only the async commit pool skips waiting for commits to be flushed.
+func TestSynchronousCommit(t *testing.T) {
+	dao, err := tearUp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tearDown(dao) }()
+
+	for _, tc := range []struct {
+		name string
+		db   *sql.DB
+		want string
+	}{
+		{"main pool", dao.db, "on"},
+		{"lock pool", dao.lockDB, "on"},
+		{"async commit pool", dao.asyncDB, "off"},
+	} {
+		var got string
+		if err := tc.db.QueryRow("SHOW synchronous_commit").Scan(&got); err != nil {
+			t.Fatalf("%s: %s", tc.name, err)
+		}
+		if got != tc.want {
+			t.Errorf("%s: synchronous_commit is %q, expected %q", tc.name, got, tc.want)
+		}
 	}
 }

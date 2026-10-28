@@ -15,6 +15,7 @@ import (
 
 type FileDao struct {
 	db      *sql.DB
+	asyncDB *sql.DB // for the download counters, see Init
 	metrics DBMetricsObserver
 }
 
@@ -266,7 +267,7 @@ func (d *FileDao) MarkDeletedInDeletedBins(fromID int64, toID int64) (count int6
 func (d *FileDao) RegisterDownload(file *ds.File) (err error) {
 	sqlStatement := "UPDATE file SET downloads = downloads + 1 WHERE id = $1 RETURNING downloads"
 	t0 := time.Now()
-	err = d.db.QueryRow(sqlStatement, file.Id).Scan(&file.Downloads)
+	err = d.asyncDB.QueryRow(sqlStatement, file.Id).Scan(&file.Downloads)
 	observeQuery(d.metrics, "file_register_download", t0, err)
 	if err != nil {
 		return err
@@ -283,7 +284,7 @@ func (d *FileDao) RegisterDownloadIfUnderLimit(file *ds.File, limit uint64) (all
 	}
 	sqlStatement := "UPDATE file SET downloads = downloads + 1 WHERE id = $1 AND downloads < $2 RETURNING downloads"
 	t0 := time.Now()
-	err = d.db.QueryRow(sqlStatement, file.Id, limit).Scan(&file.Downloads)
+	err = d.asyncDB.QueryRow(sqlStatement, file.Id, limit).Scan(&file.Downloads)
 	observeQuery(d.metrics, "file_register_download", t0, err)
 	if err == sql.ErrNoRows {
 		return false, nil

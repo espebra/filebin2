@@ -3,6 +3,7 @@ package dbl
 import (
 	"database/sql"
 	_ "embed"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -43,6 +44,7 @@ var schemaSQL string
 type DAO struct {
 	db             *sql.DB
 	lockDB         *sql.DB
+	asyncDB        *sql.DB
 	metrics        DBMetricsObserver
 	binDao         *BinDao
 	fileDao        *FileDao
@@ -133,13 +135,32 @@ func Init(cfg DBConfig) (DAO, error) {
 	lockDB.SetConnMaxLifetime(cfg.ConnMaxLifetime)
 	lockDB.SetConnMaxIdleTime(cfg.ConnMaxIdleTime)
 
-	dao = DAO{db: db, lockDB: lockDB}
+	// Dedicated pool for the bookkeeping writes that happen on every
+	// request: the transaction log, the client activity and the download
+	// counters. Its sessions commit without waiting for the commit to be
+	// flushed to disk, which lets PostgreSQL flush many of these commits
+	// at once instead of one by one. The writes are visible immediately,
+	// but a crash of the database server can lose the ones from the last
+	// fraction of a second. Writes that must not be lost, such as uploads,
+	// use the main pool.
+	asyncDB, err := sql.Open("postgres", connStr+" synchronous_commit=off")
+	if err != nil {
+		_ = db.Close()
+		_ = lockDB.Close()
+		return dao, fmt.Errorf("unable to open async commit connection pool: %w", err)
+	}
+	asyncDB.SetMaxOpenConns(cfg.MaxOpenConns)
+	asyncDB.SetMaxIdleConns(cfg.MaxIdleConns)
+	asyncDB.SetConnMaxLifetime(cfg.ConnMaxLifetime)
+	asyncDB.SetConnMaxIdleTime(cfg.ConnMaxIdleTime)
+
+	dao = DAO{db: db, lockDB: lockDB, asyncDB: asyncDB}
 	dao.binDao = &BinDao{db: db}
-	dao.fileDao = &FileDao{db: db}
+	dao.fileDao = &FileDao{db: db, asyncDB: asyncDB}
 	dao.fileContentDao = &FileContentDao{db: db, lockDB: lockDB}
 	dao.metricsDao = &MetricsDao{db: db}
-	dao.transactionDao = &TransactionDao{db: db}
-	dao.clientDao = &ClientDao{db: db}
+	dao.transactionDao = &TransactionDao{db: asyncDB}
+	dao.clientDao = &ClientDao{db: db, asyncDB: asyncDB}
 
 	// Create schema if it doesn't exist
 	if err := dao.CreateSchema(); err != nil {
@@ -150,14 +171,17 @@ func Init(cfg DBConfig) (DAO, error) {
 }
 
 func (dao DAO) Close() error {
-	var lockErr error
+	var lockErr, asyncErr error
 	if dao.lockDB != nil {
 		lockErr = dao.lockDB.Close()
+	}
+	if dao.asyncDB != nil {
+		asyncErr = dao.asyncDB.Close()
 	}
 	if err := dao.db.Close(); err != nil {
 		return err
 	}
-	return lockErr
+	return errors.Join(lockErr, asyncErr)
 }
 
 func (dao DAO) CreateSchema() error {

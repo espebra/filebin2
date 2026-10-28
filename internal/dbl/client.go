@@ -13,6 +13,7 @@ import (
 
 type ClientDao struct {
 	db      *sql.DB
+	asyncDB *sql.DB // for the activity updates, see Init
 	metrics DBMetricsObserver
 }
 
@@ -62,7 +63,7 @@ func (c *ClientDao) Update(client *ds.Client) (err error) {
 	now := time.Now().UTC()
 	sqlStatement := "INSERT INTO client (ip, asn, asn_organization, network, city, country, continent, proxy, requests, first_active_at, last_active_at, banned_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, '') ON CONFLICT(ip) DO UPDATE SET asn=$12, asn_organization=$13, network=$14, city=$15, country=$16, continent=$17, proxy=$18, requests=client.requests+1, last_active_at=$19 RETURNING ip, requests"
 	t0 := time.Now()
-	err = c.db.QueryRow(sqlStatement, client.IP, client.ASN, client.ASNOrganization, client.Network, client.City, client.Country, client.Continent, client.Proxy, 1, now, now, client.ASN, client.ASNOrganization, client.Network, client.City, client.Country, client.Continent, client.Proxy, now).Scan(&client.IP, &client.Requests)
+	err = c.asyncDB.QueryRow(sqlStatement, client.IP, client.ASN, client.ASNOrganization, client.Network, client.City, client.Country, client.Continent, client.Proxy, 1, now, now, client.ASN, client.ASNOrganization, client.Network, client.City, client.Country, client.Continent, client.Proxy, now).Scan(&client.IP, &client.Requests)
 	observeQuery(c.metrics, "client_update", t0, err)
 	if err != nil {
 		return err
