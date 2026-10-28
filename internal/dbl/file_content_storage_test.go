@@ -1,6 +1,8 @@
 package dbl
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -16,6 +18,12 @@ const (
 	testS3AccessKey = "s3accesskey"
 	testS3SecretKey = "s3secretkey"
 )
+
+// contentSHA256 returns the hex encoded SHA256 of content, which is the key
+// of the content in S3.
+func contentSHA256(content string) string {
+	return fmt.Sprintf("%x", sha256.Sum256([]byte(content)))
+}
 
 func setupS3() (s3.S3AO, error) {
 	s3ao, err := s3.Init(s3.Config{
@@ -55,8 +63,8 @@ func TestFileContentInStorageReflectsS3State(t *testing.T) {
 	}
 	defer func() { _ = teardownS3(s3ao) }()
 
-	sha256 := "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	content := "test content"
+	sha256 := contentSHA256(content)
 
 	// Step 1: Upload content to S3 and set in_storage=true
 	err = s3ao.PutObjectByHash(sha256, strings.NewReader(content), int64(len(content)))
@@ -137,8 +145,8 @@ func TestFileInStorageReflectsS3State(t *testing.T) {
 	}
 	defer func() { _ = teardownS3(s3ao) }()
 
-	sha256 := "6ae8a75555209fd6c44157c0aed8016e763ff435a19cf186f76863140143ff72"
 	content := "test file content"
+	sha256 := contentSHA256(content)
 
 	// Create bin
 	bin := &ds.Bin{
@@ -234,8 +242,8 @@ func TestDeduplicationWithS3Storage(t *testing.T) {
 	}
 	defer func() { _ = teardownS3(s3ao) }()
 
-	sha256 := "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
 	content := "duplicate content"
+	sha256 := contentSHA256(content)
 
 	// Create bin
 	bin := &ds.Bin{
@@ -430,8 +438,8 @@ func TestReuploadAfterDeletion(t *testing.T) {
 	}
 	defer func() { _ = teardownS3(s3ao) }()
 
-	sha256 := "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
 	content := "test content for reupload"
+	sha256 := contentSHA256(content)
 
 	t.Run("delete_files_then_reupload", func(t *testing.T) {
 		// Create two bins
@@ -590,8 +598,8 @@ func TestReuploadAfterDeletion(t *testing.T) {
 	})
 
 	t.Run("delete_bins_then_reupload", func(t *testing.T) {
-		sha256_v2 := "60303ae22b998861bce3b28f33eec1be758a213c86c93c076dbe9f558c11c752"
 		content_v2 := "test content for bin deletion"
+		sha256_v2 := contentSHA256(content_v2)
 
 		// Create two bins
 		bin4 := &ds.Bin{

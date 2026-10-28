@@ -138,6 +138,25 @@ func TestGetObject(t *testing.T) {
 	}
 }
 
+// The content hash is used as the signed payload hash, so the storage
+// rejects content that does not match its key.
+func TestPutObjectByHashMismatch(t *testing.T) {
+	s3ao, err := tearUp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tearDown(s3ao) }()
+
+	wrongSHA256 := fmt.Sprintf("%x", sha256.Sum256([]byte("other content")))
+	content := "content"
+	if err := s3ao.PutObjectByHash(wrongSHA256, strings.NewReader(content), int64(len(content))); err == nil {
+		t.Fatal("Expected the upload of content that does not match its hash to fail")
+	}
+	if _, err := s3ao.StatObject(wrongSHA256); err == nil {
+		t.Fatal("Expected no object to be stored for content that does not match its hash")
+	}
+}
+
 func TestPresignedGetObjectWithRequestID(t *testing.T) {
 	s3ao, err := tearUp()
 	if err != nil {

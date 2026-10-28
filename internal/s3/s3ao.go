@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
@@ -118,6 +119,10 @@ func Init(cfg Config) (S3AO, error) {
 		// that doesn't implement AWS checksum headers (avoids warning:
 		// "Response has no supported checksum. Not validating response payload.")
 		o.ResponseChecksumValidation = aws.ResponseChecksumValidationWhenRequired
+		// Do not calculate a CRC32 of every upload. The SigV4 payload hash
+		// already covers the content, and the extra checksum would cost a
+		// full read of the content.
+		o.RequestChecksumCalculation = aws.RequestChecksumCalculationWhenRequired
 	})
 
 	s3ao.client = client
@@ -197,7 +202,12 @@ func (s S3AO) Status() bool {
 // The deadline scales with the number of multipart parts, so every part gets
 // the same time budget as a single small upload while large uploads are still
 // guaranteed to terminate.
-func (s S3AO) upload(key string, data io.Reader, size int64) error {
+//
+// payloadSHA256 is the hex encoded SHA256 of data, or empty if it is not
+// known. When known, a single part upload is signed with it instead of the
+// SDK reading the content an extra time to calculate it. The storage
+// verifies the content against the signed hash.
+func (s S3AO) upload(key string, data io.Reader, size int64, payloadSHA256 string) error {
 	parts := int64(1)
 	if s.partSize > 0 {
 		parts += size / s.partSize
@@ -205,13 +215,18 @@ func (s S3AO) upload(key string, data io.Reader, size int64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(parts)*s.transferTimeout)
 	defer cancel()
 
+	var opts []func(*manager.Uploader)
+	if payloadSHA256 != "" && size <= s.partSize {
+		opts = append(opts, manager.WithUploaderRequestOptions(withPayloadHash(payloadSHA256)))
+	}
+
 	t0 := time.Now()
 	_, err := s.uploader.Upload(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(s.bucket),
 		Key:         aws.String(key),
 		Body:        data,
 		ContentType: aws.String("application/octet-stream"),
-	})
+	}, opts...)
 	if s.metrics != nil {
 		s.metrics.ObserveS3Operation("put", time.Since(t0))
 		if err != nil {
@@ -225,7 +240,7 @@ func (s S3AO) PutObject(bin string, filename string, data io.Reader, size int64)
 	// Hash the path in S3
 	objectKey := s.GetObjectKey(bin, filename)
 
-	if err := s.upload(objectKey, data, size); err != nil {
+	if err := s.upload(objectKey, data, size, ""); err != nil {
 		slog.Error("unable to put object", "key", objectKey, "error", err)
 		return err
 	}
@@ -399,6 +414,18 @@ func (s S3AO) PresignedGetObject(contentSHA256 string, filename string, mime str
 	return presignedURL, nil
 }
 
+// withPayloadHash sets the SigV4 payload hash of a request to a known value,
+// which keeps the SDK from reading the request body to calculate it.
+func withPayloadHash(sha256Hex string) func(*s3.Options) {
+	return func(o *s3.Options) {
+		o.APIOptions = append(o.APIOptions, func(stack *middleware.Stack) error {
+			return stack.Initialize.Add(middleware.InitializeMiddlewareFunc("SetPayloadHash", func(ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (middleware.InitializeOutput, middleware.Metadata, error) {
+				return next.HandleInitialize(v4.SetPayloadHash(ctx, sha256Hex), in)
+			}), middleware.Before)
+		})
+	}
+}
+
 // addQueryParam adds a query parameter to the request before it is signed, so
 // that the parameter is covered by the signature of a presigned URL.
 func addQueryParam(key string, value string) func(*middleware.Stack) error {
@@ -465,9 +492,11 @@ func (s S3AO) GetObjectKey(bin string, filename string) (key string) {
 	return key
 }
 
-// PutObjectByHash uploads an object using content-addressable storage (SHA256 as key)
+// PutObjectByHash uploads an object using content-addressable storage (SHA256 as key).
+// contentSHA256 must be the hex encoded SHA256 of data, as the storage
+// rejects content that does not match it.
 func (s S3AO) PutObjectByHash(contentSHA256 string, data io.Reader, size int64) (err error) {
-	if err := s.upload(contentSHA256, data, size); err != nil {
+	if err := s.upload(contentSHA256, data, size, contentSHA256); err != nil {
 		slog.Error("unable to put object", "sha256", contentSHA256, "error", err)
 		return err
 	}

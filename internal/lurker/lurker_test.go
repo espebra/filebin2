@@ -2,8 +2,10 @@ package lurker
 
 import (
 	"bufio"
+	sha256pkg "crypto/sha256"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -80,9 +82,11 @@ func newTestLurker(dao *dbl.DAO, s3ao *s3.S3AO) *Lurker {
 }
 
 // seedContent stores an object in S3 and creates the corresponding
-// file_content record with in_storage=true and no file references.
-func seedContent(t *testing.T, dao dbl.DAO, s3ao s3.S3AO, sha256 string, content string) {
+// file_content record with in_storage=true and no file references. It
+// returns the SHA256 of the content, which is its key.
+func seedContent(t *testing.T, dao dbl.DAO, s3ao s3.S3AO, content string) string {
 	t.Helper()
+	sha256 := fmt.Sprintf("%x", sha256pkg.Sum256([]byte(content)))
 	if err := s3ao.PutObjectByHash(sha256, strings.NewReader(content), int64(len(content))); err != nil {
 		t.Fatalf("Failed to upload to S3: %s", err)
 	}
@@ -96,6 +100,7 @@ func seedContent(t *testing.T, dao dbl.DAO, s3ao s3.S3AO, sha256 string, content
 	if err := dao.FileContent().InsertOrIncrement(fileContent); err != nil {
 		t.Fatalf("Failed to insert file_content: %s", err)
 	}
+	return sha256
 }
 
 // TestDeletePendingContentDeletesOrphans verifies that content without any
@@ -107,8 +112,7 @@ func TestDeletePendingContentDeletesOrphans(t *testing.T) {
 	}
 	defer tearDown(dao, s3ao)
 
-	sha256 := "1111111111111111111111111111111111111111111111111111111111111111"
-	seedContent(t, dao, s3ao, sha256, "orphaned content")
+	sha256 := seedContent(t, dao, s3ao, "orphaned content")
 
 	l := newTestLurker(&dao, &s3ao)
 	l.DeletePendingContent()
@@ -138,8 +142,7 @@ func TestAuditEvents(t *testing.T) {
 	if _, err := dao.Bin().Insert(bin); err != nil {
 		t.Fatalf("Failed to insert bin: %s", err)
 	}
-	sha256 := "2222222222222222222222222222222222222222222222222222222222222222"
-	seedContent(t, dao, s3ao, sha256, "orphaned audit content")
+	sha256 := seedContent(t, dao, s3ao, "orphaned audit content")
 
 	dir := t.TempDir()
 	auditLog, err := audit.New(dir)
@@ -190,9 +193,8 @@ func TestDeletePendingContentKeepsReferencedContent(t *testing.T) {
 	}
 	defer tearDown(dao, s3ao)
 
-	sha256 := "2222222222222222222222222222222222222222222222222222222222222222"
 	content := "referenced content"
-	seedContent(t, dao, s3ao, sha256, content)
+	sha256 := seedContent(t, dao, s3ao, content)
 
 	bin := &ds.Bin{
 		Id:        "lurkertestbin",
@@ -237,8 +239,7 @@ func TestDeletePendingContentSkipsLockedContent(t *testing.T) {
 	}
 	defer tearDown(dao, s3ao)
 
-	sha256 := "3333333333333333333333333333333333333333333333333333333333333333"
-	seedContent(t, dao, s3ao, sha256, "content locked by an upload")
+	sha256 := seedContent(t, dao, s3ao, "content locked by an upload")
 
 	// Simulate an in-flight upload of the same content holding the lock.
 	unlock, err := dao.FileContent().LockContent(sha256)
@@ -290,8 +291,7 @@ func TestBackfillDeletedFiles(t *testing.T) {
 	}
 	defer tearDown(dao, s3ao)
 
-	sha256 := "4444444444444444444444444444444444444444444444444444444444444444"
-	seedContent(t, dao, s3ao, sha256, "backfill content")
+	sha256 := seedContent(t, dao, s3ao, "backfill content")
 
 	insertFile := func(binID string) *ds.File {
 		t.Helper()
