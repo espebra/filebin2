@@ -59,16 +59,25 @@ func (c *ClientDao) GetByRemoteAddr(remoteAddr string) (client ds.Client, found 
 	return client, found, err
 }
 
-func (c *ClientDao) Update(client *ds.Client) (err error) {
+// RecordActivity counts a request from the client and stores its location
+// details, creating the client if it is new. Requests from banned clients
+// are not counted. It reports whether the client is banned, so that a
+// request can be checked and counted in a single query.
+func (c *ClientDao) RecordActivity(client *ds.Client) (banned bool, err error) {
 	now := time.Now().UTC()
-	sqlStatement := "INSERT INTO client (ip, asn, asn_organization, network, city, country, continent, proxy, requests, first_active_at, last_active_at, banned_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, '') ON CONFLICT(ip) DO UPDATE SET asn=$12, asn_organization=$13, network=$14, city=$15, country=$16, continent=$17, proxy=$18, requests=client.requests+1, last_active_at=$19 RETURNING ip, requests"
+	sqlStatement := "INSERT INTO client (ip, asn, asn_organization, network, city, country, continent, proxy, requests, first_active_at, last_active_at, banned_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 1, $9, $9, '') ON CONFLICT(ip) DO UPDATE SET asn=EXCLUDED.asn, asn_organization=EXCLUDED.asn_organization, network=EXCLUDED.network, city=EXCLUDED.city, country=EXCLUDED.country, continent=EXCLUDED.continent, proxy=EXCLUDED.proxy, requests=client.requests+1, last_active_at=EXCLUDED.last_active_at WHERE client.banned_at IS NULL RETURNING ip, requests"
 	t0 := time.Now()
-	err = c.asyncDB.QueryRow(sqlStatement, client.IP, client.ASN, client.ASNOrganization, client.Network, client.City, client.Country, client.Continent, client.Proxy, 1, now, now, client.ASN, client.ASNOrganization, client.Network, client.City, client.Country, client.Continent, client.Proxy, now).Scan(&client.IP, &client.Requests)
-	observeQuery(c.metrics, "client_update", t0, err)
-	if err != nil {
-		return err
+	err = c.asyncDB.QueryRow(sqlStatement, client.IP, client.ASN, client.ASNOrganization, client.Network, client.City, client.Country, client.Continent, client.Proxy, now).Scan(&client.IP, &client.Requests)
+	observeQuery(c.metrics, "client_record_activity", t0, err)
+	if err == sql.ErrNoRows {
+		// The client exists and the update was skipped, which only
+		// happens when it is banned.
+		return true, nil
 	}
-	return nil
+	if err != nil {
+		return false, err
+	}
+	return false, nil
 }
 
 func (c *ClientDao) GetAll() (clients []ds.Client, err error) {

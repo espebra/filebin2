@@ -18,7 +18,7 @@ func TestGetClientByIP(t *testing.T) {
 	ip := "1.2.3.4"
 	client := &ds.Client{}
 	client.IP = ip
-	err = dao.Client().Update(client)
+	_, err = dao.Client().RecordActivity(client)
 	if err != nil {
 		t.Error(err)
 	}
@@ -40,7 +40,7 @@ func TestGetClientByIP(t *testing.T) {
 		t.Errorf("Was expecting number of requests to be 1, got %d\n", dbClient.Requests)
 	}
 
-	err = dao.Client().Update(&dbClient)
+	_, err = dao.Client().RecordActivity(&dbClient)
 	if err != nil {
 		t.Error(err)
 	}
@@ -52,7 +52,7 @@ func TestGetClientByIP(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	err = dao.Client().Update(&dbClient2)
+	_, err = dao.Client().RecordActivity(&dbClient2)
 	if err != nil {
 		t.Error(err)
 	}
@@ -72,7 +72,7 @@ func TestClientsGetAll(t *testing.T) {
 	for _, ip := range ips {
 		client := &ds.Client{}
 		client.IP = ip
-		err = dao.Client().Update(client)
+		_, err = dao.Client().RecordActivity(client)
 		if err != nil {
 			t.Error(err)
 		}
@@ -97,7 +97,7 @@ func TestClientBanUnban(t *testing.T) {
 	ip := "5.6.7.8"
 	client := &ds.Client{}
 	client.IP = ip
-	err = dao.Client().Update(client)
+	_, err = dao.Client().RecordActivity(client)
 	if err != nil {
 		t.Error(err)
 	}
@@ -142,7 +142,7 @@ func TestClientBanWithoutRecord(t *testing.T) {
 
 	// An existing client keeps its details when banned
 	known := &ds.Client{IP: "10.0.0.1", ASN: 64500, Country: "Norway", City: "Oslo"}
-	if err := dao.Client().Update(known); err != nil {
+	if _, err := dao.Client().RecordActivity(known); err != nil {
 		t.Fatal(err)
 	}
 
@@ -195,5 +195,45 @@ func TestClientBanWithoutRecord(t *testing.T) {
 	// Banning the same IP address twice in one call works
 	if err := dao.Client().Ban([]string{"10.0.0.3", "10.0.0.3"}, "192.0.2.1"); err != nil {
 		t.Errorf("Was expecting a ban with duplicate IP addresses to succeed, got %s", err)
+	}
+}
+
+// Requests from banned clients are reported and not counted.
+func TestRecordActivityOfBannedClient(t *testing.T) {
+	dao, err := tearUp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tearDown(dao) }()
+
+	ip := "10.0.0.3"
+	client := &ds.Client{IP: ip}
+	if banned, err := dao.Client().RecordActivity(client); err != nil || banned {
+		t.Fatalf("Was expecting a new client not to be banned: banned=%t err=%v", banned, err)
+	}
+	if err := dao.Client().Ban([]string{ip}, "192.0.2.1"); err != nil {
+		t.Fatal(err)
+	}
+
+	banned, err := dao.Client().RecordActivity(&ds.Client{IP: ip})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !banned {
+		t.Error("Was expecting the client to be reported as banned")
+	}
+	dbClient, _, err := dao.Client().GetByIP(net.ParseIP(ip))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dbClient.Requests != 1 {
+		t.Errorf("Was expecting the request from the banned client not to be counted, got %d requests", dbClient.Requests)
+	}
+
+	if err := dao.Client().Unban(ip); err != nil {
+		t.Fatal(err)
+	}
+	if banned, err := dao.Client().RecordActivity(&ds.Client{IP: ip}); err != nil || banned {
+		t.Fatalf("Was expecting an unbanned client not to be banned: banned=%t err=%v", banned, err)
 	}
 }

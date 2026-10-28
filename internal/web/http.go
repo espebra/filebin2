@@ -347,26 +347,33 @@ func CacheControl(h http.Handler) http.Handler {
 
 func (h *HTTP) clientLookup(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		client, _, err := h.dao.Client().GetByRemoteAddr(r.RemoteAddr)
+		ip, err := extractIP(r.RemoteAddr)
 		if err != nil {
-			h.Error(w, r, fmt.Sprintf("Failed to select client with remote addr %s: %s", r.RemoteAddr, err.Error()), "Database error", 991, http.StatusInternalServerError)
+			h.Error(w, r, fmt.Sprintf("Failed to parse remote addr %s: %s", r.RemoteAddr, err.Error()), "Unable to identify the client", 991, http.StatusInternalServerError)
 			return
 		}
-
-		if client.IsBanned() {
-			slog.Warn("rejecting request from banned client", "ip", client.IP, "banned_at", client.BannedAt.Time.Format("2006-01-02 15:04:05 UTC"), "banned_by", client.BannedBy)
-			http.Error(w, "This client IP address has been banned.", http.StatusForbidden)
-			return
-		}
-
+		client := ds.Client{IP: ip}
 		if err := h.geodb.Lookup(r.RemoteAddr, &client); err != nil {
 			slog.Debug("unable to look up geoip details", "remote_addr", r.RemoteAddr, "error", err)
 		}
 
-		// Check the client details against the ban filter here
-		fn(w, r)
+		// Check for a ban and count the request in one query.
+		banned, err := h.dao.Client().RecordActivity(&client)
+		if err != nil {
+			h.Error(w, r, fmt.Sprintf("Failed to record activity of client %s: %s", ip, err.Error()), "Database error", 991, http.StatusInternalServerError)
+			return
+		}
+		if banned {
+			// Look up the ban details for the log. Bans are rare, so the
+			// extra query does not matter.
+			if client, _, err := h.dao.Client().GetByRemoteAddr(r.RemoteAddr); err == nil {
+				slog.Warn("rejecting request from banned client", "ip", client.IP, "banned_at", client.BannedAt.Time.Format("2006-01-02 15:04:05 UTC"), "banned_by", client.BannedBy)
+			}
+			http.Error(w, "This client IP address has been banned.", http.StatusForbidden)
+			return
+		}
 
-		_ = h.dao.Client().Update(&client)
+		fn(w, r)
 	})
 }
 
