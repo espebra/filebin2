@@ -664,15 +664,6 @@ The string used as the identification of the filebin instance in the Prometheus 
 
 ---
 
-**Metrics Proxy URL**
-- Environment Variable: `FILEBIN_METRICS_PROXY_URL`
-- Command Line Argument: `--metrics-proxy-url`
-- Default: (not set)
-
-When set, Filebin will fetch the content from the URL specified and merge it with its own output on the `/metrics` endpoint. This can be useful when running another Prometheus exporter in the same operating system instance, for example to capture system metrics.
-
----
-
 #### Slack Integration
 
 **Slack Secret**

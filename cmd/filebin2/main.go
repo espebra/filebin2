@@ -115,7 +115,6 @@ var (
 	metricsFlag         = flag.Bool("metrics", false, "Enable the metrics endpoint")
 	metricsAuthFlag     = flag.String("metrics-auth", "", "Set the auth type for the metrics endpoint")
 	metricsIdFlag       = flag.String("metrics-id", "", "Metrics instance identification")
-	metricsProxyURLFlag = flag.String("metrics-proxy-url", "", "URL to another Prometheus exporter that we should proxy")
 
 	// Slack integration
 	slackSecretFlag  = flag.String("slack-secret", "", "Slack secret (currently used to approve new bins via Slack if manual approval is enabled)")
@@ -403,9 +402,6 @@ func main() {
 	if *metricsIdFlag == "" {
 		*metricsIdFlag = os.Getenv("HOSTNAME")
 	}
-	if *metricsProxyURLFlag == "" {
-		*metricsProxyURLFlag = os.Getenv("FILEBIN_METRICS_PROXY_URL")
-	}
 
 	// Slack integration
 	if *slackSecretFlag == "" {
@@ -416,15 +412,6 @@ func main() {
 	}
 	if *slackChannelFlag == "" {
 		*slackChannelFlag = os.Getenv("FILEBIN_SLACK_CHANNEL")
-	}
-
-	// Validate metrics proxy URL if set
-	if *metricsProxyURLFlag != "" {
-		_, err := url.Parse(*metricsProxyURLFlag)
-		if err != nil {
-			slog.Error("unable to parse --metrics-proxy-url", "error", err)
-			os.Exit(2)
-		}
 	}
 
 	// The admin endpoints must not be served on the public listener
@@ -547,7 +534,6 @@ func main() {
 		MetricsUsername:          *metricsUsernameFlag,
 		Metrics:                  *metricsFlag,
 		MetricsAuth:              *metricsAuthFlag,
-		MetricsProxyURL:          *metricsProxyURLFlag,
 		AllowRobots:              *allowRobotsFlag,
 		BaseUrl:                  *u,
 		Expiration:               *expirationFlag,
