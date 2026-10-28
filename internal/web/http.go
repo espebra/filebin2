@@ -2,6 +2,7 @@ package web
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"crypto/rand"
 	"crypto/subtle"
@@ -841,8 +842,11 @@ func (h *HTTP) Run() {
 func (h *HTTP) newServer(name string, host string, port int, router *mux.Router, accessLog io.Writer, proxyHeaders bool) *http.Server {
 	slog.Info("starting HTTP server", "listener", name, "host", host, "port", port)
 
-	// Add gzip compression, but exclude /archive endpoints (they're already compressed)
-	compressedRouter := handlers.CompressHandler(router)
+	// Add gzip compression, but exclude /archive endpoints (they're already
+	// compressed). The responses are small HTML and JSON documents, for
+	// which the fastest compression level costs a fraction of the CPU time
+	// of the default level for a slightly larger response.
+	compressedRouter := handlers.CompressHandlerLevel(router, gzip.BestSpeed)
 	var handler http.Handler
 	handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/archive/") {
