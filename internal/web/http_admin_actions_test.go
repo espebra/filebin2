@@ -89,7 +89,7 @@ func TestAdminDeleteFileContent(t *testing.T) {
 	// Deleting file content requires admin credentials
 	req := httptest.NewRequest(http.MethodPost, "/admin/file/"+sha+"/delete", nil)
 	rr := httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 	if rr.Code != http.StatusUnauthorized {
 		t.Errorf("Expected unauthenticated delete to give %d, got %d", http.StatusUnauthorized, rr.Code)
 	}
@@ -106,7 +106,7 @@ func TestAdminDeleteFileContent(t *testing.T) {
 	req = httptest.NewRequest(http.MethodPost, "/admin/file/"+sha+"/delete", nil)
 	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
 	rr = httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 	if rr.Code != http.StatusSeeOther {
 		t.Fatalf("Expected delete to give %d, got %d. Body: %s", http.StatusSeeOther, rr.Code, rr.Body.String())
 	}
@@ -123,7 +123,7 @@ func TestAdminDeleteFileContent(t *testing.T) {
 	req = httptest.NewRequest(http.MethodPost, "/admin/file/"+sha+"/delete", nil)
 	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
 	rr = httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 	if rr.Code != http.StatusInternalServerError {
 		t.Errorf("Expected repeated delete to give %d, got %d", http.StatusInternalServerError, rr.Code)
 	}
@@ -138,7 +138,7 @@ func TestAdminBanBinUploaders(t *testing.T) {
 	// Banning requires admin credentials
 	req := httptest.NewRequest(http.MethodPost, "/admin/bin/"+bin+"/ban-uploaders", nil)
 	rr := httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 	if rr.Code != http.StatusUnauthorized {
 		t.Errorf("Expected unauthenticated ban to give %d, got %d", http.StatusUnauthorized, rr.Code)
 	}
@@ -147,7 +147,7 @@ func TestAdminBanBinUploaders(t *testing.T) {
 	req = httptest.NewRequest(http.MethodPost, "/admin/bin/"+bin+"/ban-uploaders", nil)
 	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
 	rr = httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 	if rr.Code != http.StatusSeeOther {
 		t.Fatalf("Expected ban to give %d, got %d. Body: %s", http.StatusSeeOther, rr.Code, rr.Body.String())
 	}
@@ -206,7 +206,7 @@ func TestAdminBanBinDownloaders(t *testing.T) {
 	req = httptest.NewRequest(http.MethodPost, "/admin/bin/"+bin+"/ban-downloaders", nil)
 	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
 	rr = httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 	if rr.Code != http.StatusSeeOther {
 		t.Fatalf("Expected ban to give %d, got %d. Body: %s", http.StatusSeeOther, rr.Code, rr.Body.String())
 	}
@@ -396,7 +396,7 @@ func TestAdminReviveBin(t *testing.T) {
 	// Reviving requires admin credentials
 	req = httptest.NewRequest(http.MethodPost, "/admin/bin/"+binID+"/revive", nil)
 	rr = httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 	if rr.Code != http.StatusUnauthorized {
 		t.Errorf("Expected unauthenticated revive to give %d, got %d", http.StatusUnauthorized, rr.Code)
 	}
@@ -405,7 +405,7 @@ func TestAdminReviveBin(t *testing.T) {
 	req = httptest.NewRequest(http.MethodPost, "/admin/bin/"+binID+"/revive", nil)
 	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
 	rr = httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 	if rr.Code != http.StatusSeeOther {
 		t.Fatalf("Expected revive to give %d, got %d. Body: %s", http.StatusSeeOther, rr.Code, rr.Body.String())
 	}
@@ -430,7 +430,7 @@ func TestAdminReviveBin(t *testing.T) {
 	req = httptest.NewRequest(http.MethodPost, "/admin/bin/nosuchbin/revive", nil)
 	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
 	rr = httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 	if rr.Code != http.StatusNotFound {
 		t.Errorf("Expected revive of missing bin to give %d, got %d", http.StatusNotFound, rr.Code)
 	}
@@ -445,7 +445,7 @@ func TestAdminSearch(t *testing.T) {
 	// Searching requires admin credentials
 	req := httptest.NewRequest(http.MethodGet, "/admin/search/bins?q=needle", nil)
 	rr := httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 	if rr.Code != http.StatusUnauthorized {
 		t.Errorf("Expected unauthenticated search to give %d, got %d", http.StatusUnauthorized, rr.Code)
 	}
@@ -454,7 +454,7 @@ func TestAdminSearch(t *testing.T) {
 	req = httptest.NewRequest(http.MethodGet, "/admin/search/bins?q=archadmin", nil)
 	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
 	rr = httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("Expected search to give %d, got %d. Body: %s", http.StatusOK, rr.Code, rr.Body.String())
 	}
@@ -469,7 +469,7 @@ func TestAdminSearch(t *testing.T) {
 	req = httptest.NewRequest(http.MethodGet, "/admin/search/files?q=eedlefile", nil)
 	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
 	rr = httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("Expected search to give %d, got %d. Body: %s", http.StatusOK, rr.Code, rr.Body.String())
 	}
@@ -495,7 +495,7 @@ func TestAdminSearch(t *testing.T) {
 	req = httptest.NewRequest(http.MethodGet, "/admin/search/bins?q=searchadminbin", nil)
 	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
 	rr = httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("Expected search to give %d, got %d. Body: %s", http.StatusOK, rr.Code, rr.Body.String())
 	}
@@ -506,7 +506,7 @@ func TestAdminSearch(t *testing.T) {
 	req = httptest.NewRequest(http.MethodGet, "/admin/search/files?q=needlefile", nil)
 	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
 	rr = httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 	if !strings.Contains(rr.Body.String(), "needlefile.txt") {
 		t.Errorf("Expected search result to contain the deleted filename needlefile.txt")
 	}
@@ -516,7 +516,7 @@ func TestAdminSearch(t *testing.T) {
 		req = httptest.NewRequest(http.MethodGet, path, nil)
 		req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
 		rr = httptest.NewRecorder()
-		h.router.ServeHTTP(rr, req)
+		h.adminRouter.ServeHTTP(rr, req)
 		if rr.Code != http.StatusOK {
 			t.Errorf("Expected %s without query to give %d, got %d", path, http.StatusOK, rr.Code)
 		}
@@ -527,7 +527,7 @@ func TestAdminSearch(t *testing.T) {
 	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
 	req.Header.Set("Accept", "application/json")
 	rr = httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 	var out map[string]any
 	if err := json.Unmarshal(rr.Body.Bytes(), &out); err != nil {
 		t.Fatalf("Expected valid JSON from the filename search: %v", err)
@@ -543,7 +543,7 @@ func TestAdminSearch(t *testing.T) {
 	req = httptest.NewRequest(http.MethodGet, "/admin/search?q=needle&limit=50", nil)
 	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
 	rr = httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 	if rr.Code != http.StatusFound {
 		t.Errorf("Expected /admin/search to give %d, got %d", http.StatusFound, rr.Code)
 	}
@@ -578,7 +578,7 @@ func TestAdminViewBinFileIndicators(t *testing.T) {
 	req = httptest.NewRequest(http.MethodGet, "/admin/bin/"+binID, nil)
 	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
 	rr = httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("Expected admin bin page to give %d, got %d. Body: %s", http.StatusOK, rr.Code, rr.Body.String())
 	}

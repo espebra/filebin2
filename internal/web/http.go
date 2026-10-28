@@ -8,8 +8,10 @@ import (
 	"database/sql"
 	"embed"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"html/template"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -49,7 +51,12 @@ type AdminLogin struct {
 }
 
 type HTTP struct {
+	// router serves the public endpoints, none of which require
+	// authentication. adminRouter serves the admin pages, the profiling
+	// endpoints and the metrics, and is served on a separate listener that
+	// is not meant to be exposed publicly.
 	router           *mux.Router
+	adminRouter      *mux.Router
 	templateBox      *embed.FS
 	staticBox        *embed.FS
 	templates        *template.Template
@@ -83,9 +90,9 @@ type HTTP struct {
 	// Stop channel for graceful shutdown of background goroutines
 	stopChan chan struct{}
 
-	// The running HTTP server, used by Shutdown for graceful shutdown
-	httpServer      *http.Server
-	httpServerMutex sync.Mutex
+	// The running HTTP servers, used by Shutdown for graceful shutdown
+	httpServers      []*http.Server
+	httpServersMutex sync.Mutex
 }
 
 // New creates a new HTTP server instance
@@ -231,18 +238,72 @@ func (h *HTTP) Stop() {
 
 func (h *HTTP) Init() error {
 	h.router = mux.NewRouter()
+	h.adminRouter = mux.NewRouter()
 	h.templates = h.ParseTemplates()
 
-	h.router.HandleFunc("/debug/pprof/cmdline", h.auth(pprof.Cmdline)).Methods(http.MethodGet)
-	h.router.HandleFunc("/debug/pprof/profile", h.auth(pprof.Profile)).Methods(http.MethodGet)
-	h.router.HandleFunc("/debug/pprof/symbol", h.auth(pprof.Symbol)).Methods(http.MethodGet)
-	h.router.HandleFunc("/debug/pprof/trace", h.auth(pprof.Trace)).Methods(http.MethodGet)
-	h.router.PathPrefix("/debug/pprof/").HandlerFunc(h.auth(pprof.Index))
+	h.initAdminRoutes()
+	h.initPublicRoutes()
 
+	h.config.ExpirationDuration = time.Second * time.Duration(h.config.Expiration)
+
+	// Start background updater for the database-sourced metrics
+	h.startMetricsUpdater()
+
+	return nil
+}
+
+// initAdminRoutes registers the routes of the admin listener. Nothing
+// registered here is reachable from the public listener.
+func (h *HTTP) initAdminRoutes() {
+	h.adminRouter.HandleFunc("/debug/pprof/cmdline", h.auth(pprof.Cmdline)).Methods(http.MethodGet)
+	h.adminRouter.HandleFunc("/debug/pprof/profile", h.auth(pprof.Profile)).Methods(http.MethodGet)
+	h.adminRouter.HandleFunc("/debug/pprof/symbol", h.auth(pprof.Symbol)).Methods(http.MethodGet)
+	h.adminRouter.HandleFunc("/debug/pprof/trace", h.auth(pprof.Trace)).Methods(http.MethodGet)
+	h.adminRouter.PathPrefix("/debug/pprof/").HandlerFunc(h.auth(pprof.Index))
+	h.adminRouter.HandleFunc("/metrics", h.viewMetrics).Methods(http.MethodHead, http.MethodGet)
+	h.adminRouter.HandleFunc("/admin/log/bin/{bin:[A-Za-z0-9_-]+}", h.auth(h.viewAdminLogBin)).Methods(http.MethodHead, http.MethodGet)
+	h.adminRouter.HandleFunc("/admin/log/ip/{ip:[A-Za-z0-9.:_-]+}", h.auth(h.viewAdminLogIP)).Methods(http.MethodHead, http.MethodGet)
+	h.adminRouter.HandleFunc("/admin/ip/{ip:[A-Za-z0-9.:_-]+}", h.auth(h.viewAdminIP)).Methods(http.MethodHead, http.MethodGet)
+	h.adminRouter.HandleFunc("/admin/ip/{ip:[A-Za-z0-9.:_-]+}/ban", h.log(h.auth(h.banIP))).Methods("POST")
+	h.adminRouter.HandleFunc("/admin/ip/{ip:[A-Za-z0-9.:_-]+}/unban", h.log(h.auth(h.unbanIP))).Methods("POST")
+	// Each top list has its own page. The sort keys are part of the route
+	// pattern, so they cannot clash with /admin/bins/all and /admin/clients/all.
+	for _, section := range h.adminTopListSections() {
+		h.adminRouter.HandleFunc(section.path, h.auth(h.redirectAdminTopList(section))).Methods(http.MethodHead, http.MethodGet)
+		h.adminRouter.HandleFunc(section.path+"/{sort:"+section.sortPattern()+"}", h.auth(h.viewAdminTopList(section))).Methods(http.MethodHead, http.MethodGet)
+	}
+	h.adminRouter.HandleFunc("/admin/bins/all", h.auth(h.viewAdminBinsAll)).Methods(http.MethodHead, http.MethodGet)
+	h.adminRouter.HandleFunc("/admin/clients/all", h.auth(h.viewAdminClientsAll)).Methods(http.MethodHead, http.MethodGet)
+	h.adminRouter.HandleFunc("/admin/bin/{bin:[A-Za-z0-9_-]+}", h.auth(h.viewAdminBin)).Methods(http.MethodHead, http.MethodGet)
+	h.adminRouter.HandleFunc("/admin/bin/{bin:[A-Za-z0-9_-]+}/revive", h.log(h.auth(h.reviveBin))).Methods("POST")
+	h.adminRouter.HandleFunc("/admin/bin/{bin:[A-Za-z0-9_-]+}/ban-uploaders", h.log(h.auth(h.banBinUploaders))).Methods("POST")
+	h.adminRouter.HandleFunc("/admin/bin/{bin:[A-Za-z0-9_-]+}/ban-downloaders", h.log(h.auth(h.banBinDownloaders))).Methods("POST")
+	h.adminRouter.HandleFunc("/admin/file/{sha256:[0-9a-z]+}", h.auth(h.viewAdminFile)).Methods(http.MethodHead, http.MethodGet)
+	h.adminRouter.HandleFunc("/admin/file/{sha256:[0-9a-z]+}/block", h.log(h.auth(h.blockFileContent))).Methods("POST")
+	h.adminRouter.HandleFunc("/admin/file/{sha256:[0-9a-z]+}/unblock", h.log(h.auth(h.unblockFileContent))).Methods("POST")
+	h.adminRouter.HandleFunc("/admin/file/{sha256:[0-9a-z]+}/delete", h.log(h.auth(h.deleteFileContent))).Methods("POST")
+	h.adminRouter.HandleFunc("/admin/recent/uploads.txt", h.auth(h.viewAdminRecentUploadsText)).Methods(http.MethodHead, http.MethodGet)
+	h.adminRouter.HandleFunc("/admin/recent/uploads", h.auth(h.viewAdminRecentUploads)).Methods(http.MethodHead, http.MethodGet)
+	h.adminRouter.HandleFunc("/admin/telemetry/upload-failures", h.auth(h.viewAdminClientUploadFailures)).Methods(http.MethodHead, http.MethodGet)
+	h.adminRouter.HandleFunc("/admin/telemetry/upload-successes", h.auth(h.viewAdminClientUploadSuccesses)).Methods(http.MethodHead, http.MethodGet)
+	h.adminRouter.HandleFunc("/admin/search", h.auth(h.redirectAdminSearch)).Methods(http.MethodHead, http.MethodGet)
+	h.adminRouter.HandleFunc("/admin/search/{kind:bins|files}", h.auth(h.viewAdminSearch)).Methods(http.MethodHead, http.MethodGet)
+	h.adminRouter.HandleFunc("/admin/message", h.auth(h.viewAdminSiteMessage)).Methods(http.MethodHead, http.MethodGet)
+	h.adminRouter.HandleFunc("/admin/message", h.log(h.auth(h.updateSiteMessage))).Methods("POST")
+	h.adminRouter.HandleFunc("/admin", h.auth(h.viewAdminDashboard)).Methods(http.MethodHead, http.MethodGet)
+	h.adminRouter.HandleFunc("/admin/approve/{bin:[A-Za-z0-9_-]+}", h.log(h.auth(h.approveBin))).Methods("PUT")
+	h.adminRouter.HandleFunc("/filebin-status", h.filebinStatus).Methods(http.MethodHead, http.MethodGet)
+	h.adminRouter.HandleFunc("/storage-status", h.storageStatus).Methods(http.MethodHead, http.MethodGet)
+	h.adminRouter.Handle("/static/{path:.*}", CacheControl(http.FileServer(http.FS(h.staticBox)))).Methods(http.MethodHead, http.MethodGet)
+}
+
+// initPublicRoutes registers the routes of the public listener. None of
+// them require authentication, so the public listener is safe to expose.
+func (h *HTTP) initPublicRoutes() {
 	// Routes are matched in registration order and the first match wins, so
 	// the fixed paths must be registered before the /{bin} and
 	// /{bin}/{filename} catch-alls below. The fixed first path segments
-	// (admin, archive, md5, qr, sha1, sha256, static, and so on) can never
+	// (archive, md5, qr, sha1, sha256, static, and so on) can never
 	// clash with a bin name, since bin ids must be at least 8 characters
 	// long (see BinDao.ValidateInput) and every reserved segment is shorter.
 	// Keep it that way when adding routes or changing the minimum length.
@@ -250,7 +311,6 @@ func (h *HTTP) Init() error {
 	h.router.HandleFunc("/", h.log(h.clientLookup(h.handle(h.uploadFile)))).Methods(http.MethodPost)
 	h.router.HandleFunc("/filebin-status", h.filebinStatus).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/storage-status", h.storageStatus).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/metrics", h.viewMetrics).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/robots.txt", h.robots).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/about", h.about).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/api", h.api).Methods(http.MethodHead, http.MethodGet)
@@ -261,37 +321,6 @@ func (h *HTTP) Init() error {
 	h.router.HandleFunc("/integration/slack", h.integrationSlack).Methods(http.MethodPost)
 	h.router.HandleFunc("/api/telemetry/failure", h.telemetryFailure).Methods(http.MethodPost)
 	h.router.HandleFunc("/api/telemetry/success", h.telemetrySuccess).Methods(http.MethodPost)
-	h.router.HandleFunc("/admin/log/bin/{bin:[A-Za-z0-9_-]+}", h.auth(h.viewAdminLogBin)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/admin/log/ip/{ip:[A-Za-z0-9.:_-]+}", h.auth(h.viewAdminLogIP)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/admin/ip/{ip:[A-Za-z0-9.:_-]+}", h.auth(h.viewAdminIP)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/admin/ip/{ip:[A-Za-z0-9.:_-]+}/ban", h.log(h.auth(h.banIP))).Methods("POST")
-	h.router.HandleFunc("/admin/ip/{ip:[A-Za-z0-9.:_-]+}/unban", h.log(h.auth(h.unbanIP))).Methods("POST")
-	// Each top list has its own page. The sort keys are part of the route
-	// pattern, so they cannot clash with /admin/bins/all and /admin/clients/all.
-	for _, section := range h.adminTopListSections() {
-		h.router.HandleFunc(section.path, h.auth(h.redirectAdminTopList(section))).Methods(http.MethodHead, http.MethodGet)
-		h.router.HandleFunc(section.path+"/{sort:"+section.sortPattern()+"}", h.auth(h.viewAdminTopList(section))).Methods(http.MethodHead, http.MethodGet)
-	}
-	h.router.HandleFunc("/admin/bins/all", h.auth(h.viewAdminBinsAll)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/admin/clients/all", h.auth(h.viewAdminClientsAll)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/admin/bin/{bin:[A-Za-z0-9_-]+}", h.auth(h.viewAdminBin)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/admin/bin/{bin:[A-Za-z0-9_-]+}/revive", h.log(h.auth(h.reviveBin))).Methods("POST")
-	h.router.HandleFunc("/admin/bin/{bin:[A-Za-z0-9_-]+}/ban-uploaders", h.log(h.auth(h.banBinUploaders))).Methods("POST")
-	h.router.HandleFunc("/admin/bin/{bin:[A-Za-z0-9_-]+}/ban-downloaders", h.log(h.auth(h.banBinDownloaders))).Methods("POST")
-	h.router.HandleFunc("/admin/file/{sha256:[0-9a-z]+}", h.auth(h.viewAdminFile)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/admin/file/{sha256:[0-9a-z]+}/block", h.log(h.auth(h.blockFileContent))).Methods("POST")
-	h.router.HandleFunc("/admin/file/{sha256:[0-9a-z]+}/unblock", h.log(h.auth(h.unblockFileContent))).Methods("POST")
-	h.router.HandleFunc("/admin/file/{sha256:[0-9a-z]+}/delete", h.log(h.auth(h.deleteFileContent))).Methods("POST")
-	h.router.HandleFunc("/admin/recent/uploads.txt", h.auth(h.viewAdminRecentUploadsText)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/admin/recent/uploads", h.auth(h.viewAdminRecentUploads)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/admin/telemetry/upload-failures", h.auth(h.viewAdminClientUploadFailures)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/admin/telemetry/upload-successes", h.auth(h.viewAdminClientUploadSuccesses)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/admin/search", h.auth(h.redirectAdminSearch)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/admin/search/{kind:bins|files}", h.auth(h.viewAdminSearch)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/admin/message", h.auth(h.viewAdminSiteMessage)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/admin/message", h.log(h.auth(h.updateSiteMessage))).Methods("POST")
-	h.router.HandleFunc("/admin", h.auth(h.viewAdminDashboard)).Methods(http.MethodHead, http.MethodGet)
-	h.router.HandleFunc("/admin/approve/{bin:[A-Za-z0-9_-]+}", h.log(h.auth(h.approveBin))).Methods("PUT")
 	h.router.Handle("/static/{path:.*}", CacheControl(http.FileServer(http.FS(h.staticBox)))).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/archive/{bin:[A-Za-z0-9_-]+}/{format:[a-z]+}", h.log(h.clientLookup(h.archive))).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/sha256/{bin:[A-Za-z0-9_-]+}", h.handle(h.viewBinChecksums(func(f ds.File) string { return f.SHA256 }))).Methods(http.MethodHead, http.MethodGet)
@@ -307,13 +336,6 @@ func (h *HTTP) Init() error {
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.log(h.clientLookup(h.getFile))).Methods(http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.log(h.clientLookup(h.deleteFile))).Methods(http.MethodDelete)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.log(h.clientLookup(h.handle(h.uploadFile)))).Methods(http.MethodPost, http.MethodPut)
-
-	h.config.ExpirationDuration = time.Second * time.Duration(h.config.Expiration)
-
-	// Start background updater for the database-sourced metrics
-	h.startMetricsUpdater()
-
-	return nil
 }
 
 func CacheControl(h http.Handler) http.Handler {
@@ -750,40 +772,88 @@ func (h *HTTP) resolveAdminLoginHostname(ip string) {
 	}
 }
 
+// Run starts the public listener and, unless it is disabled, the admin
+// listener. It returns as soon as a shutdown is initiated.
 func (h *HTTP) Run() {
-	slog.Info("starting HTTP server", "host", h.config.HttpHost, "port", h.config.HttpPort)
+	// Open the access log if enabled. It is shared by both listeners. The
+	// file is deliberately not closed when Run returns: during a graceful
+	// shutdown, Run returns as soon as the shutdown is initiated while
+	// draining request handlers still write to the access log. The file
+	// stays open for the lifetime of the process.
+	var accessLog io.Writer
+	if h.config.HttpAccessLog != "" {
+		f, err := os.OpenFile(h.config.HttpAccessLog, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			slog.Error("unable to open log file", "path", h.config.HttpAccessLog, "error", err)
+			os.Exit(2)
+		}
+		accessLog = f
+		slog.Info("access log enabled", "path", h.config.HttpAccessLog)
+	} else {
+		slog.Info("access log disabled")
+	}
+
+	slog.Info("HTTP server timeouts configured",
+		"read_timeout_seconds", h.config.ReadTimeout.Seconds(),
+		"read_header_timeout_seconds", h.config.ReadHeaderTimeout.Seconds(),
+		"idle_timeout_seconds", h.config.IdleTimeout.Seconds(),
+		"write_timeout_seconds", h.config.WriteTimeout.Seconds())
+
+	// The proxy headers are only trusted on the public listener, which is
+	// the one expected to run behind a proxy. Trusting them on the admin
+	// listener would let anyone reaching it spoof the client IP address.
+	servers := []*http.Server{
+		h.newServer("public", h.config.HttpHost, h.config.HttpPort, h.router, accessLog, h.config.HttpProxyHeaders),
+	}
+	if h.config.AdminHttpPort > 0 {
+		servers = append(servers, h.newServer("admin", h.config.AdminHttpHost, h.config.AdminHttpPort, h.adminRouter, accessLog, false))
+	} else {
+		slog.Info("admin HTTP listener disabled")
+	}
+	h.httpServersMutex.Lock()
+	h.httpServers = servers
+	h.httpServersMutex.Unlock()
+
+	// Start the servers. ListenAndServe blocks until Shutdown is called (in
+	// which case it returns ErrServerClosed) or the server fails.
+	var wg sync.WaitGroup
+	for _, srv := range servers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				slog.Error("failed to start HTTP server", "addr", srv.Addr, "error", err)
+				os.Exit(2)
+			}
+		}()
+	}
+	wg.Wait()
+}
+
+// newServer sets up an HTTP server for one of the listeners
+func (h *HTTP) newServer(name string, host string, port int, router *mux.Router, accessLog io.Writer, proxyHeaders bool) *http.Server {
+	slog.Info("starting HTTP server", "listener", name, "host", host, "port", port)
 
 	// Add gzip compression, but exclude /archive endpoints (they're already compressed)
-	compressedRouter := handlers.CompressHandler(h.router)
+	compressedRouter := handlers.CompressHandler(router)
 	var handler http.Handler
 	handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/archive/") {
 			// Skip compression for archive endpoints
-			h.router.ServeHTTP(w, r)
+			router.ServeHTTP(w, r)
 		} else {
 			// Apply compression for all other endpoints
 			compressedRouter.ServeHTTP(w, r)
 		}
 	})
 
-	// Add access logging if enabled. The file is deliberately not closed
-	// when Run returns: during a graceful shutdown, Run returns as soon as
-	// the shutdown is initiated while draining request handlers still write
-	// to the access log. The file stays open for the lifetime of the process.
-	if h.config.HttpAccessLog != "" {
-		accessLog, err := os.OpenFile(h.config.HttpAccessLog, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			slog.Error("unable to open log file", "path", h.config.HttpAccessLog, "error", err)
-			os.Exit(2)
-		}
+	// Add access logging if enabled
+	if accessLog != nil {
 		handler = handlers.CombinedLoggingHandler(accessLog, handler)
-		slog.Info("access log enabled", "path", h.config.HttpAccessLog)
-	} else {
-		slog.Info("access log disabled")
 	}
 
 	// Add proxy header handling
-	if h.config.HttpProxyHeaders {
+	if proxyHeaders {
 		next := handler
 		handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if ip := r.Header.Get("X-Real-IP"); ip != "" {
@@ -795,46 +865,37 @@ func (h *HTTP) Run() {
 		})
 	}
 
-	slog.Info("HTTP server timeouts configured",
-		"read_timeout_seconds", h.config.ReadTimeout.Seconds(),
-		"read_header_timeout_seconds", h.config.ReadHeaderTimeout.Seconds(),
-		"idle_timeout_seconds", h.config.IdleTimeout.Seconds(),
-		"write_timeout_seconds", h.config.WriteTimeout.Seconds())
-
-	// Set up the server
-	srv := &http.Server{
-		Addr:              fmt.Sprintf("%s:%d", h.config.HttpHost, h.config.HttpPort),
+	return &http.Server{
+		Addr:              fmt.Sprintf("%s:%d", host, port),
 		Handler:           handler,
 		ReadTimeout:       h.config.ReadTimeout,
 		WriteTimeout:      h.config.WriteTimeout,
 		IdleTimeout:       h.config.IdleTimeout,
 		ReadHeaderTimeout: h.config.ReadHeaderTimeout,
 	}
-	h.httpServerMutex.Lock()
-	h.httpServer = srv
-	h.httpServerMutex.Unlock()
-
-	// Start the server. ListenAndServe blocks until Shutdown is called (in
-	// which case it returns ErrServerClosed) or the server fails.
-	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		slog.Error("failed to start HTTP server", "error", err)
-		os.Exit(2)
-	}
 }
 
-// Shutdown gracefully shuts down the HTTP server: it stops accepting new
-// connections and waits for in-flight requests to complete until the context
+// Shutdown gracefully shuts down the HTTP servers: they stop accepting new
+// connections and wait for in-flight requests to complete until the context
 // is cancelled, at which point the remaining connections are closed. Draining
 // in-flight uploads matters in particular, as killing an upload between its
 // S3 write and its database insert would leak the S3 object.
 func (h *HTTP) Shutdown(ctx context.Context) error {
-	h.httpServerMutex.Lock()
-	srv := h.httpServer
-	h.httpServerMutex.Unlock()
-	if srv == nil {
-		return nil
+	h.httpServersMutex.Lock()
+	servers := h.httpServers
+	h.httpServersMutex.Unlock()
+
+	errs := make([]error, len(servers))
+	var wg sync.WaitGroup
+	for i, srv := range servers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			errs[i] = srv.Shutdown(ctx)
+		}()
 	}
-	return srv.Shutdown(ctx)
+	wg.Wait()
+	return errors.Join(errs...)
 }
 
 // Error reports a request failure to the client. It is the pre-handlerFunc
@@ -858,6 +919,15 @@ func (h *HTTP) renderTemplate(w http.ResponseWriter, name string, data interface
 	}
 	_, _ = buf.WriteTo(w)
 	return nil
+}
+
+// publicURL builds the URL of a page on the public listener from the base
+// URL. The admin pages use it to link to bins and files, as they are served
+// from a separate listener.
+func (h *HTTP) publicURL(elem ...string) string {
+	u := h.config.BaseUrl
+	u.Path = path.Join(append([]string{"/", u.Path}, elem...)...)
+	return u.String()
 }
 
 // Parse all templates
@@ -884,6 +954,7 @@ func (h *HTTP) ParseTemplates() *template.Template {
 		"join": func(s ...string) string {
 			return path.Join(s...)
 		},
+		"publicURL": h.publicURL,
 		"plus": func(a uint64, b uint64) uint64 {
 			return a + b
 		},

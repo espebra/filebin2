@@ -116,7 +116,7 @@ func TestManualApprovalGatesDownloads(t *testing.T) {
 	// Approval requires admin credentials
 	req = httptest.NewRequest(http.MethodPut, "/admin/approve/"+bin, nil)
 	rr = httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 	if rr.Code != http.StatusUnauthorized {
 		t.Errorf("Expected unauthenticated approval to give %d, got %d", http.StatusUnauthorized, rr.Code)
 	}
@@ -125,7 +125,7 @@ func TestManualApprovalGatesDownloads(t *testing.T) {
 	req = httptest.NewRequest(http.MethodPut, "/admin/approve/"+bin, nil)
 	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
 	rr = httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("Expected approval to give %d, got %d. Body: %s", http.StatusOK, rr.Code, rr.Body.String())
 	}
@@ -259,7 +259,7 @@ func TestApprovalAndCookieGatesCombined(t *testing.T) {
 	req = httptest.NewRequest(http.MethodPut, "/admin/approve/"+bin, nil)
 	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
 	rr = httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("Expected approval to give %d, got %d", http.StatusOK, rr.Code)
 	}

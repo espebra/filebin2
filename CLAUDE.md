@@ -38,7 +38,8 @@ podman compose up --build   # Start PostgreSQL, Stupid Simple S3, and filebin2
 
 # Services available at:
 # - Filebin2: http://localhost:8080/
-# - Admin: http://admin:changeme@localhost:8080/admin
+# - Admin: http://admin:changeme@localhost:8081/admin
+# - Metrics: http://metrics:changeme@localhost:8081/metrics
 # - Stupid Simple S3: http://localhost:5553/
 # - PostgreSQL: localhost:5432
 ```
@@ -102,7 +103,7 @@ filebin2/
 
 **`internal/web/` - HTTP Server**
 - `HTTP` struct with `New()` constructor and `Init()`/`Run()` methods
-- Router setup using gorilla/mux
+- Router setup using gorilla/mux, with two routers served on separate listeners: the public router (`--listen-port`, no authenticated endpoints) and the admin router (`--admin-listen-port`, serving `/admin`, `/metrics` and `/debug/pprof/`)
 - Handlers organized by functionality (bin, file, admin, metrics, integration)
 - Embeds static files and templates
 
@@ -164,7 +165,8 @@ HTTP handlers use middleware wrappers:
 ## Important Behaviors
 
 - **Vendored dependencies**: Build commands use `-mod=vendor`
-- **Manual approval**: If enabled, bins must be approved via `/admin/approve/{bin}` before downloads are allowed
+- **Admin listener**: Protected endpoints must be registered on `adminRouter`, never on the public `router`. `TestPublicRouterHasNoProtectedRoutes` enforces this
+- **Manual approval**: If enabled, bins must be approved via `/admin/approve/{bin}` on the admin listener before downloads are allowed
 - **Lurker process**: Runs in background on an interval to clean up expired data
 - **Presigned URLs**: File downloads use time-limited presigned S3 URLs (default: 1 minute TTL)
 - **Bin expiration**: Bins expire after inactivity period (default: 7 days)

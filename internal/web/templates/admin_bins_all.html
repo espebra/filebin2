@@ -31,7 +31,7 @@
             </tr>
             {{ range $index, $value := .Bins.Available }}
                 <tr>
-                    <td><code><a href="{{ .URL }}">{{ .Id }}</a></code></td>
+                    <td><code><a href="{{ publicURL .URL }}">{{ .Id }}</a></code></td>
                     <td>
                         {{ if isApproved . }}
                             <i class="fas fa-fw fa-check-circle text-success"></i>

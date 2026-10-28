@@ -125,7 +125,7 @@
                             <tr{{ if .IsDeleted }} class="table-secondary"{{ end }}>
                                 <td sorttable_customkey="{{ lowercase .Filename }}">
                                     {{ if .AvailableForDownload }}
-                                        <a class="link-primary link-custom" href="{{ .URL }}">{{ .Filename }}</a>
+                                        <a class="link-primary link-custom" href="{{ publicURL .URL }}">{{ .Filename }}</a>
                                     {{ else }}
                                         {{ .Filename }}
                                     {{ end }}

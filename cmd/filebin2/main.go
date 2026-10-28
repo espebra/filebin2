@@ -62,12 +62,14 @@ var (
 	clientUploadSuccessesCapFlag = flag.Int("client-upload-successes-cap", 200, "Maximum number of recent client-reported upload successes retained in memory for /admin/telemetry/upload-successes. 0 disables in-memory retention; Prometheus metrics are unaffected.")
 
 	// HTTP
-	listenHostFlag     = flag.String("listen-host", "127.0.0.1", "Listen host")
-	listenPortFlag     = flag.Int("listen-port", 8080, "Listen port")
-	accessLogFlag      = flag.String("access-log", "", "Path for access.log output. The access log is disabled if not set.")
-	auditRetentionFlag = flag.Uint64("audit-retention", 14, "The number of days to keep audit log files before they are removed by the lurker. 0 keeps them forever.")
-	auditLogDirFlag    = flag.String("audit-log-dir", "", "Directory for the audit log of transfers and lifecycle events of bins and files, written as one JSON lines file per day. The audit log is disabled if not set.")
-	proxyHeadersFlag   = flag.Bool("proxy-headers", false, "Read client request information from proxy headers")
+	listenHostFlag      = flag.String("listen-host", "127.0.0.1", "Listen host")
+	listenPortFlag      = flag.Int("listen-port", 8080, "Listen port")
+	adminListenHostFlag = flag.String("admin-listen-host", "127.0.0.1", "Listen host for the admin endpoints, the metrics and the profiling endpoints")
+	adminListenPortFlag = flag.Int("admin-listen-port", 8081, "Listen port for the admin endpoints, the metrics and the profiling endpoints. 0 disables the admin listener.")
+	accessLogFlag       = flag.String("access-log", "", "Path for access.log output. The access log is disabled if not set.")
+	auditRetentionFlag  = flag.Uint64("audit-retention", 14, "The number of days to keep audit log files before they are removed by the lurker. 0 keeps them forever.")
+	auditLogDirFlag     = flag.String("audit-log-dir", "", "Directory for the audit log of transfers and lifecycle events of bins and files, written as one JSON lines file per day. The audit log is disabled if not set.")
+	proxyHeadersFlag    = flag.Bool("proxy-headers", false, "Read client request information from proxy headers")
 
 	// Timeouts
 	readTimeoutFlag       = flag.Duration("read-timeout", 1*time.Hour, "Read timeout for the HTTP server")
@@ -233,6 +235,14 @@ func main() {
 	if v := os.Getenv("FILEBIN_LISTEN_PORT"); v != "" && *listenPortFlag == 8080 {
 		if i, err := strconv.Atoi(v); err == nil {
 			*listenPortFlag = i
+		}
+	}
+	if v := os.Getenv("FILEBIN_ADMIN_LISTEN_HOST"); v != "" && *adminListenHostFlag == "127.0.0.1" {
+		*adminListenHostFlag = v
+	}
+	if v := os.Getenv("FILEBIN_ADMIN_LISTEN_PORT"); v != "" && *adminListenPortFlag == 8081 {
+		if i, err := strconv.Atoi(v); err == nil {
+			*adminListenPortFlag = i
 		}
 	}
 	if v := os.Getenv("FILEBIN_ACCESS_LOG"); v != "" && *accessLogFlag == "" {
@@ -417,6 +427,12 @@ func main() {
 		}
 	}
 
+	// The admin endpoints must not be served on the public listener
+	if *adminListenPortFlag == *listenPortFlag {
+		slog.Error("the admin listener must use a different port than the public listener", "listen_port", *listenPortFlag, "admin_listen_port", *adminListenPortFlag)
+		os.Exit(2)
+	}
+
 	// Contact information is required
 	if *contactFlag == "" {
 		slog.Error("contact information must be specified using --contact or FILEBIN_CONTACT")
@@ -539,6 +555,8 @@ func main() {
 		HttpAccessLog:            *accessLogFlag,
 		HttpPort:                 *listenPortFlag,
 		HttpProxyHeaders:         *proxyHeadersFlag,
+		AdminHttpHost:            *adminListenHostFlag,
+		AdminHttpPort:            *adminListenPortFlag,
 		IdleTimeout:              *idleTimeoutFlag,
 		LimitFileDownloads:       *limitFileDownloadsFlag,
 		ClientUploadFailuresCap:  *clientUploadFailuresCapFlag,

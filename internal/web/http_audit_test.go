@@ -72,11 +72,13 @@ func TestAuditLog(t *testing.T) {
 		for i := 0; i+1 < len(headers); i += 2 {
 			req.Header.Add(headers[i], headers[i+1])
 		}
+		rr := httptest.NewRecorder()
 		if admin {
 			req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
+			h.adminRouter.ServeHTTP(rr, req)
+		} else {
+			h.router.ServeHTTP(rr, req)
 		}
-		rr := httptest.NewRecorder()
-		h.router.ServeHTTP(rr, req)
 		return rr
 	}
 

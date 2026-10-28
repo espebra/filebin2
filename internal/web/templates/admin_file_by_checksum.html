@@ -112,8 +112,8 @@
                 {{ else }}
                         <tr class="table-danger">
                 {{ end }}
-                    <td><a href="/{{ .Bin }}/{{ .Filename }}">{{ .Filename }}</a></td>
-                    <td><a href="/{{ .Bin }}">{{ .Bin }}</a></td>
+                    <td><a href="{{ publicURL .Bin .Filename }}">{{ .Filename }}</a></td>
+                    <td><a href="{{ publicURL .Bin }}">{{ .Bin }}</a></td>
                     <td sorttable_customkey="{{ .UpdatedAt }}">{{ .UpdatedAtRelative }}</td>
                     <td sorttable_customkey="{{ .DeletedAt }}">{{ .DeletedAtRelative }}</td>
                     <td sorttable_customkey="{{ .BinDeletedAt }}">{{ .BinDeletedAtRelative }}</td>

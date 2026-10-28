@@ -47,7 +47,7 @@ func TestAdminMessageEndpointAuthentication(t *testing.T) {
 	// Test GET without auth
 	req := httptest.NewRequest(http.MethodGet, "/admin/message", nil)
 	rr := httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusUnauthorized {
 		t.Errorf("GET /admin/message without auth: got status %v, want %v", rr.Code, http.StatusUnauthorized)
@@ -58,7 +58,7 @@ func TestAdminMessageEndpointAuthentication(t *testing.T) {
 	auth := base64.StdEncoding.EncodeToString([]byte("admin:secret123"))
 	req.Header.Set("Authorization", fmt.Sprintf("Basic %s", auth))
 	rr = httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
 		t.Errorf("GET /admin/message with auth: got status %v, want %v", rr.Code, http.StatusOK)
@@ -101,7 +101,7 @@ func TestAdminMessageGetJSON(t *testing.T) {
 	req.Header.Set("Authorization", fmt.Sprintf("Basic %s", auth))
 
 	rr := httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
 		t.Errorf("GET /admin/message JSON: got status %v, want %v", rr.Code, http.StatusOK)
@@ -171,7 +171,7 @@ func TestAdminMessageUpdate(t *testing.T) {
 	req.Header.Set("Authorization", fmt.Sprintf("Basic %s", auth))
 
 	rr := httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 
 	// Should redirect to /admin/message
 	if rr.Code != http.StatusSeeOther {
@@ -253,7 +253,7 @@ func TestAdminMessageUpdateUnpublish(t *testing.T) {
 	req.Header.Set("Authorization", fmt.Sprintf("Basic %s", auth))
 
 	rr := httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusSeeOther {
 		t.Errorf("POST /admin/message: got status %v, want %v", rr.Code, http.StatusSeeOther)
@@ -316,7 +316,7 @@ func TestAdminMessageValidationError(t *testing.T) {
 	req.Header.Set("Authorization", fmt.Sprintf("Basic %s", auth))
 
 	rr := httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 
 	// Should return 400 due to validation error
 	if rr.Code != http.StatusBadRequest {
@@ -375,7 +375,7 @@ func TestAdminMessagePartialPublish(t *testing.T) {
 	req.Header.Set("Authorization", fmt.Sprintf("Basic %s", auth))
 
 	rr := httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusSeeOther {
 		t.Errorf("POST /admin/message: got status %v, want %v", rr.Code, http.StatusSeeOther)
@@ -436,7 +436,7 @@ func TestAdminMessageColor(t *testing.T) {
 	req.Header.Set("Authorization", fmt.Sprintf("Basic %s", auth))
 
 	rr := httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusSeeOther {
 		t.Errorf("POST /admin/message: got status %v, want %v", rr.Code, http.StatusSeeOther)
@@ -496,7 +496,7 @@ func TestAdminMessageColorInvalid(t *testing.T) {
 	req.Header.Set("Authorization", fmt.Sprintf("Basic %s", auth))
 
 	rr := httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusSeeOther {
 		t.Errorf("POST /admin/message: got status %v, want %v", rr.Code, http.StatusSeeOther)

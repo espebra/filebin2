@@ -17,6 +17,6 @@ FROM gcr.io/distroless/static:nonroot
 
 COPY --from=builder /app/filebin2 /filebin2
 
-EXPOSE 8080
+EXPOSE 8080 8081
 
 ENTRYPOINT ["/filebin2"]

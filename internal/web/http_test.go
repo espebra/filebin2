@@ -39,10 +39,12 @@ const (
 var (
 	waitForServer sync.WaitGroup
 
-	// testServerURL is the base URL of the test server. The port is
-	// allocated by the kernel in TestMain to avoid colliding with anything
-	// else listening on the host, such as a development instance.
-	testServerURL string
+	// testServerURL and testAdminServerURL are the base URLs of the public
+	// and admin listeners of the test server. The ports are allocated by
+	// the kernel in TestMain to avoid colliding with anything else
+	// listening on the host, such as a development instance.
+	testServerURL      string
+	testAdminServerURL string
 )
 
 func tearUp() (dao dbl.DAO, s3ao s3.S3AO, err error) {
@@ -106,12 +108,19 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 	testServerURL = fmt.Sprintf("http://%s", tcpListener.Addr().String())
+	adminTcpListener, err := net.Listen("tcp", fmt.Sprintf("%s:0", testHTTPHost))
+	if err != nil {
+		log.Fatal(err)
+	}
+	testAdminServerURL = fmt.Sprintf("http://%s", adminTcpListener.Addr().String())
 	c := ds.Config{
 		LimitFileDownloads:   testLimitFileDownloads,
 		LimitStorageBytes:    testLimitStorage,
 		Expiration:           testExpiredAt,
 		HttpHost:             testHTTPHost,
 		HttpPort:             tcpListener.Addr().(*net.TCPAddr).Port,
+		AdminHttpHost:        testHTTPHost,
+		AdminHttpPort:        adminTcpListener.Addr().(*net.TCPAddr).Port,
 		RejectFileExtensions: []string{"illegal1", "illegal2"},
 		AdminUsername:        "admin",
 		AdminPassword:        "changeme",
@@ -148,10 +157,12 @@ func TestMain(m *testing.M) {
 		fmt.Printf("Unable to start the HTTP server: %s\n", err.Error())
 		os.Exit(2)
 	}
-	waitForServer.Add(1)
+	waitForServer.Add(2)
 	go startHTTPServer(tcpListener, &waitForServer, h.router)
+	go startHTTPServer(adminTcpListener, &waitForServer, h.adminRouter)
 	retCode := m.Run()
 	_ = tcpListener.Close()
+	_ = adminTcpListener.Close()
 	h.Stop()
 	_ = tearDown(dao)
 	os.Exit(retCode)

@@ -15,7 +15,7 @@ func adminGet(h *HTTP, path string, accept string) *httptest.ResponseRecorder {
 		req.Header.Set("Accept", accept)
 	}
 	rr := httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 	return rr
 }
 
@@ -107,7 +107,7 @@ func TestAdminTopListRedirects(t *testing.T) {
 	// The redirect requires admin credentials
 	req := httptest.NewRequest(http.MethodGet, "/admin/bins", nil)
 	rr := httptest.NewRecorder()
-	h.router.ServeHTTP(rr, req)
+	h.adminRouter.ServeHTTP(rr, req)
 	if rr.Code != http.StatusUnauthorized {
 		t.Errorf("Expected unauthenticated redirect to give %d, got %d", http.StatusUnauthorized, rr.Code)
 	}

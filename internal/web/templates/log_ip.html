@@ -59,7 +59,7 @@
                     <td><a href="/admin/ip/{{ .IP }}">{{ .IP }}</a></td>
                     <td><a href="/admin/log/bin/{{ .BinId }}">{{ .BinId }}</a> (<a href="/admin/bin/{{ .BinId }}">admin</a>)</td>
                     <td>
-                        <code>{{ .Method }} <a href="{{ .Path }}">{{ .Path }}</a></code>
+                        <code>{{ .Method }} <a href="{{ publicURL .Path }}">{{ .Path }}</a></code>
                     </td>
                     <td>
                         {{ .ReqBytesReadable }}
