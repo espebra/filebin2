@@ -22,6 +22,7 @@ type Config struct {
 	HttpAccessLog            string
 	AdminHttpPort            int
 	AdminHttpHost            string
+	AdminHttpProxyHeaders    bool
 	AdminUsername            string
 	AdminPassword            string
 	MetricsUsername          string

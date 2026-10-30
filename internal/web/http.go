@@ -382,15 +382,21 @@ type transactionChecksumsKey struct{}
 
 type requestIDKey struct{}
 
+// proxyHeadersKey marks requests received on a listener that trusts the
+// proxy headers, so that handlers shared by the listeners can tell them
+// apart.
+type proxyHeadersKey struct{}
+
 // requestIDHeader carries the request id. Varnish sets it on requests to the
 // backend and the upload client reads it from the response.
 const requestIDHeader = "X-Request-Id"
 
 // newRequestID returns the id of the request. The id set by the proxy is
-// used if proxy headers are trusted and the id is well formed, so that the
-// proxy and filebin log the same id. Otherwise a random id is generated.
+// used if the listener trusts proxy headers and the id is well formed, so
+// that the proxy and filebin log the same id. Otherwise a random id is
+// generated.
 func (h *HTTP) newRequestID(r *http.Request) string {
-	if h.config.HttpProxyHeaders {
+	if proxyHeadersTrusted(r) {
 		if id := r.Header.Get(requestIDHeader); validRequestID(id) {
 			return id
 		}
@@ -398,6 +404,13 @@ func (h *HTTP) newRequestID(r *http.Request) string {
 	b := make([]byte, 16)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
+}
+
+// proxyHeadersTrusted reports whether the request was received on a
+// listener that trusts the proxy headers.
+func proxyHeadersTrusted(r *http.Request) bool {
+	trusted, _ := r.Context().Value(proxyHeadersKey{}).(bool)
+	return trusted
 }
 
 // validRequestID accepts ids of up to 128 characters from a limited
@@ -807,14 +820,15 @@ func (h *HTTP) Run() {
 		"idle_timeout_seconds", h.config.IdleTimeout.Seconds(),
 		"write_timeout_seconds", h.config.WriteTimeout.Seconds())
 
-	// The proxy headers are only trusted on the public listener, which is
-	// the one expected to run behind a proxy. Trusting them on the admin
-	// listener would let anyone reaching it spoof the client IP address.
+	// The proxy headers are trusted per listener, since the public and the
+	// admin listeners do not necessarily run behind the same proxy, or
+	// behind a proxy at all. Trusting them on a listener that is reachable
+	// without a proxy would let the clients spoof their IP address.
 	servers := []*http.Server{
 		h.newServer("public", h.config.HttpHost, h.config.HttpPort, h.router, accessLog, h.config.HttpProxyHeaders),
 	}
 	if h.config.AdminHttpPort > 0 {
-		servers = append(servers, h.newServer("admin", h.config.AdminHttpHost, h.config.AdminHttpPort, h.adminRouter, accessLog, false))
+		servers = append(servers, h.newServer("admin", h.config.AdminHttpHost, h.config.AdminHttpPort, h.adminRouter, accessLog, h.config.AdminHttpProxyHeaders))
 	} else {
 		slog.Info("admin HTTP listener disabled")
 	}
@@ -865,6 +879,7 @@ func (h *HTTP) newServer(name string, host string, port int, router *mux.Router,
 
 	// Add proxy header handling
 	if proxyHeaders {
+		slog.Info("trusting proxy headers", "listener", name)
 		next := handler
 		handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if ip := r.Header.Get("X-Real-IP"); ip != "" {
@@ -872,6 +887,7 @@ func (h *HTTP) newServer(name string, host string, port int, router *mux.Router,
 					r.RemoteAddr = ip
 				}
 			}
+			r = r.WithContext(context.WithValue(r.Context(), proxyHeadersKey{}, true))
 			next.ServeHTTP(w, r)
 		})
 	}

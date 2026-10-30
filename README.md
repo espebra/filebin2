@@ -360,7 +360,16 @@ The number of days to keep audit log files. The lurker removes the files of days
 - Command Line Argument: `--proxy-headers`
 - Default: `false`
 
-If enabled, the client IP will be read from the proxy headers provided in the incoming HTTP requests. This should only be enabled if there is an HTTP proxy running in front of Filebin that uses proxy headers to tell Filebin the original client IP address. Proxy headers are only read on the public listener, never on the admin listener.
+If enabled, the client IP will be read from the proxy headers provided in the incoming HTTP requests on the public listener. This should only be enabled if there is an HTTP proxy running in front of Filebin that uses proxy headers to tell Filebin the original client IP address. This setting does not affect the admin listener, see `--admin-proxy-headers`.
+
+---
+
+**Admin Proxy Headers**
+- Environment Variable: `FILEBIN_ADMIN_PROXY_HEADERS`
+- Command Line Argument: `--admin-proxy-headers`
+- Default: `false`
+
+If enabled, the client IP will be read from the proxy headers provided in the incoming HTTP requests on the admin listener. This should only be enabled if the admin listener is reachable exclusively through an HTTP proxy that uses proxy headers to tell Filebin the original client IP address. Otherwise, clients can spoof their IP address in the admin login tracking and the logs.
 
 ---
 

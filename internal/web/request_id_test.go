@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -23,8 +24,11 @@ func TestNewRequestID(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := &HTTP{config: &ds.Config{HttpProxyHeaders: tt.proxyHeaders}}
+			h := &HTTP{config: &ds.Config{}}
 			r := httptest.NewRequest("GET", "/", nil)
+			if tt.proxyHeaders {
+				r = r.WithContext(context.WithValue(r.Context(), proxyHeadersKey{}, true))
+			}
 			if tt.header != "" {
 				r.Header.Set("X-Request-Id", tt.header)
 			}
