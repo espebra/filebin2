@@ -205,7 +205,7 @@ github.com/munnerz/goautoneg
 # github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 ## explicit
 github.com/nfnt/resize
-# github.com/oschwald/maxminddb-golang/v2 v2.8.0
+# github.com/oschwald/maxminddb-golang/v2 v2.9.0
 ## explicit; go 1.26.0
 github.com/oschwald/maxminddb-golang/v2
 github.com/oschwald/maxminddb-golang/v2/internal/decoder
