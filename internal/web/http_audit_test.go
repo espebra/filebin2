@@ -466,6 +466,8 @@ func TestAuditEventName(t *testing.T) {
 		{http.MethodDelete, "/{bin:[A-Za-z0-9_-]+}", "bin_delete"},
 		{http.MethodPut, "/{bin:[A-Za-z0-9_-]+}", "bin_lock"},
 		{"BAN", "/{bin:[A-Za-z0-9_-]+}", "bin_ban"},
+		{http.MethodPost, "/admin/bin/{bin:[A-Za-z0-9_-]+}/ban", "admin_bin_ban"},
+		{http.MethodPost, "/admin/bin/{bin:[A-Za-z0-9_-]+}/delete", "admin_bin_delete"},
 		{http.MethodPost, "/admin/bin/{bin:[A-Za-z0-9_-]+}/ban-uploaders", "admin_bin_ban_uploaders"},
 		{http.MethodPost, "/admin/file/{sha256:[0-9a-z]+}/block", "admin_file_block"},
 		{http.MethodPut, "/admin/approve/{bin:[A-Za-z0-9_-]+}", "admin_approve"},

@@ -222,7 +222,7 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-danger" data-bs-dismiss="modal" onclick="deleteURL('/{{ .Bin.Id }}','adminBinDeleteStatus')"><i class="fas fa-fw fa-trash-alt"></i> Delete bin</button>
+                        <button type="button" class="btn btn-danger" data-bs-dismiss="modal" onclick="deleteURL('/admin/bin/{{ .Bin.Id }}/delete','adminBinDeleteStatus','POST')"><i class="fas fa-fw fa-trash-alt"></i> Delete bin</button>
                     </div>
                 </div>
             </div>

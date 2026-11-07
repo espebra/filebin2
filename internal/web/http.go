@@ -277,6 +277,8 @@ func (h *HTTP) initAdminRoutes() {
 	h.adminRouter.HandleFunc("/admin/clients/all", h.auth(h.viewAdminClientsAll)).Methods(http.MethodHead, http.MethodGet)
 	h.adminRouter.HandleFunc("/admin/bin/{bin:[A-Za-z0-9_-]+}", h.auth(h.viewAdminBin)).Methods(http.MethodHead, http.MethodGet)
 	h.adminRouter.HandleFunc("/admin/bin/{bin:[A-Za-z0-9_-]+}/revive", h.log(h.auth(h.reviveBin))).Methods("POST")
+	h.adminRouter.HandleFunc("/admin/bin/{bin:[A-Za-z0-9_-]+}/delete", h.log(h.auth(h.deleteBin))).Methods("POST")
+	h.adminRouter.HandleFunc("/admin/bin/{bin:[A-Za-z0-9_-]+}/ban", h.log(h.auth(h.banBin))).Methods("POST")
 	h.adminRouter.HandleFunc("/admin/bin/{bin:[A-Za-z0-9_-]+}/ban-uploaders", h.log(h.auth(h.banBinUploaders))).Methods("POST")
 	h.adminRouter.HandleFunc("/admin/bin/{bin:[A-Za-z0-9_-]+}/ban-downloaders", h.log(h.auth(h.banBinDownloaders))).Methods("POST")
 	h.adminRouter.HandleFunc("/admin/file/{sha256:[0-9a-z]+}", h.auth(h.viewAdminFile)).Methods(http.MethodHead, http.MethodGet)
@@ -333,6 +335,8 @@ func (h *HTTP) initPublicRoutes() {
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.viewBin).Methods(http.MethodHead, http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.log(h.clientLookup(h.deleteBin))).Methods(http.MethodDelete)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.log(h.clientLookup(h.lockBin))).Methods("PUT")
+	// Kept for existing integrations. The admin pages use POST
+	// /admin/bin/{bin}/ban on the admin listener.
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}", h.log(h.clientLookup(h.banBin))).Methods("BAN")
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.log(h.clientLookup(h.getFile))).Methods(http.MethodGet)
 	h.router.HandleFunc("/{bin:[A-Za-z0-9_-]+}/{filename:.+}", h.log(h.clientLookup(h.deleteFile))).Methods(http.MethodDelete)

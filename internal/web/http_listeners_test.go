@@ -72,6 +72,8 @@ func TestPublicRouterRejectsProtectedRequests(t *testing.T) {
 		{http.MethodGet, "/admin/bins/updated"},
 		{http.MethodGet, "/admin/search/bins?q=x"},
 		{http.MethodPut, "/admin/approve/somebin1"},
+		{http.MethodPost, "/admin/bin/somebin1/ban"},
+		{http.MethodPost, "/admin/bin/somebin1/delete"},
 		{http.MethodPost, "/admin/message"},
 		{http.MethodGet, "/debug/pprof/"},
 		{http.MethodGet, "/debug/pprof/cmdline"},
