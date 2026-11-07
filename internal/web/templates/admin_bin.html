@@ -118,6 +118,10 @@
                     <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmBanDownloaders"><i class="fas fa-fw fa-user-slash"></i> Ban downloaders</button>
                     <small class="text-muted d-block mt-1">Ban all IP addresses that downloaded files from this bin, without deleting the bin.</small>
                 </div>
+                <div class="mb-3">
+                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmBlockFiles"><i class="fas fa-fw fa-shield-alt"></i> Delete and block files</button>
+                    <small class="text-muted d-block mt-1">Delete the files in this bin and block their content by checksum. Files with the same content in other bins are deleted too, and the content cannot be uploaded again. Does not delete the bin or ban any IP addresses.</small>
+                </div>
             </div>
         </div>
 
@@ -280,6 +284,26 @@
                         <form method="POST" action="/admin/bin/{{ .Bin.Id }}/ban-downloaders">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                             <button type="submit" class="btn btn-danger"><i class="fas fa-fw fa-user-slash"></i> Ban downloaders</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="confirmBlockFiles" tabindex="-1" aria-labelledby="confirmBlockFilesLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="confirmBlockFilesLabel">Delete and block files</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        Are you sure you want to delete the files in bin <code>{{ .Bin.Id }}</code> and block their content? Files with the same content in other bins are deleted too, and the content cannot be uploaded again until it is unblocked.
+                    </div>
+                    <div class="modal-footer">
+                        <form method="POST" action="/admin/bin/{{ .Bin.Id }}/block-files">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-danger"><i class="fas fa-fw fa-shield-alt"></i> Delete and block files</button>
                         </form>
                     </div>
                 </div>
