@@ -628,7 +628,9 @@ function getReadableFileSizeString(fileSizeInBytes) {
     return Math.max(fileSizeInBytes, 0.1).toFixed(1) + byteUnits[i];
 };
 
-function deleteURL (url, messageBoxID) {
+// deleteURL sends a DELETE request to url, or a request with the given method,
+// such as POST for the delete endpoints on the admin listener.
+function deleteURL (url, messageBoxID, method) {
     console.log("Delete url: " + url);
     var xhr = new XMLHttpRequest();
     var box = document.getElementById(messageBoxID);
@@ -656,7 +658,7 @@ function deleteURL (url, messageBoxID) {
     };
 
     xhr.open(
-        "DELETE",
+        method || "DELETE",
         url
     );
 
@@ -723,8 +725,8 @@ function banBin (bin, messageBoxID) {
     };
 
     xhr.open(
-        "BAN",
-        "/" + bin
+        "POST",
+        "/admin/bin/" + bin + "/ban"
     );
 
     xhr.send();

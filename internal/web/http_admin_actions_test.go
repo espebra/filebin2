@@ -669,3 +669,121 @@ func TestAdminDashboardShowsVersionAndCommit(t *testing.T) {
 		t.Errorf("Expected the dashboard JSON to contain the commit abc1234, got %v", out["commit"])
 	}
 }
+
+func TestAdminBanBin(t *testing.T) {
+	h := setupActionsHandler(t, nil)
+
+	bin := "adminbanbin"
+	gatedUpload(t, h, bin, "aaa", "content a")
+
+	// Banning a bin requires admin credentials
+	req := httptest.NewRequest(http.MethodPost, "/admin/bin/"+bin+"/ban", nil)
+	rr := httptest.NewRecorder()
+	h.adminRouter.ServeHTTP(rr, req)
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("Expected unauthenticated ban to give %d, got %d", http.StatusUnauthorized, rr.Code)
+	}
+
+	// The bin is still available
+	req = httptest.NewRequest(http.MethodGet, "/"+bin+"/aaa", nil)
+	rr = httptest.NewRecorder()
+	h.router.ServeHTTP(rr, req)
+	if rr.Code != http.StatusFound {
+		t.Fatalf("Expected the file to be downloadable before the ban, got %d. Body: %s", rr.Code, rr.Body.String())
+	}
+
+	req = httptest.NewRequest(http.MethodPost, "/admin/bin/"+bin+"/ban", nil)
+	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
+	rr = httptest.NewRecorder()
+	h.adminRouter.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("Expected ban to give %d, got %d. Body: %s", http.StatusOK, rr.Code, rr.Body.String())
+	}
+
+	// The bin is deleted
+	req = httptest.NewRequest(http.MethodGet, "/"+bin, nil)
+	rr = httptest.NewRecorder()
+	h.router.ServeHTTP(rr, req)
+	if rr.Code != http.StatusNotFound {
+		t.Errorf("Expected the banned bin to give %d, got %d", http.StatusNotFound, rr.Code)
+	}
+
+	// The uploader is banned, so further uploads are rejected
+	req = uploadRequest("/anotheradminbanbin/aaa", "content b")
+	rr = httptest.NewRecorder()
+	h.router.ServeHTTP(rr, req)
+	if rr.Code != http.StatusForbidden {
+		t.Errorf("Expected upload from the banned uploader to give %d, got %d", http.StatusForbidden, rr.Code)
+	}
+
+	// Banning a bin that does not exist
+	req = httptest.NewRequest(http.MethodPost, "/admin/bin/nosuchadminbanbin/ban", nil)
+	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
+	rr = httptest.NewRecorder()
+	h.adminRouter.ServeHTTP(rr, req)
+	if rr.Code != http.StatusNotFound {
+		t.Errorf("Expected ban of a bin that does not exist to give %d, got %d", http.StatusNotFound, rr.Code)
+	}
+}
+
+func TestAdminDeleteBin(t *testing.T) {
+	h := setupActionsHandler(t, nil)
+
+	bin := "admindeletebin"
+	gatedUpload(t, h, bin, "aaa", "content a")
+
+	// Deleting a bin requires admin credentials
+	req := httptest.NewRequest(http.MethodPost, "/admin/bin/"+bin+"/delete", nil)
+	rr := httptest.NewRecorder()
+	h.adminRouter.ServeHTTP(rr, req)
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("Expected unauthenticated delete to give %d, got %d", http.StatusUnauthorized, rr.Code)
+	}
+
+	// The bin is still available
+	req = httptest.NewRequest(http.MethodGet, "/"+bin+"/aaa", nil)
+	rr = httptest.NewRecorder()
+	h.router.ServeHTTP(rr, req)
+	if rr.Code != http.StatusFound {
+		t.Fatalf("Expected the file to be downloadable before the delete, got %d. Body: %s", rr.Code, rr.Body.String())
+	}
+
+	req = httptest.NewRequest(http.MethodPost, "/admin/bin/"+bin+"/delete", nil)
+	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
+	rr = httptest.NewRecorder()
+	h.adminRouter.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("Expected delete to give %d, got %d. Body: %s", http.StatusOK, rr.Code, rr.Body.String())
+	}
+
+	// The bin is deleted
+	req = httptest.NewRequest(http.MethodGet, "/"+bin, nil)
+	rr = httptest.NewRecorder()
+	h.router.ServeHTTP(rr, req)
+	if rr.Code != http.StatusNotFound {
+		t.Errorf("Expected the deleted bin to give %d, got %d", http.StatusNotFound, rr.Code)
+	}
+
+	// Unlike a ban, the uploader can still upload
+	gatedUpload(t, h, "anotheradmindeletebin", "aaa", "content b")
+
+	// Deleting it again, and deleting a bin that does not exist
+	for _, b := range []string{bin, "nosuchadmindeletebin"} {
+		req = httptest.NewRequest(http.MethodPost, "/admin/bin/"+b+"/delete", nil)
+		req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
+		rr = httptest.NewRecorder()
+		h.adminRouter.ServeHTTP(rr, req)
+		if rr.Code != http.StatusNotFound {
+			t.Errorf("Expected delete of %s to give %d, got %d", b, http.StatusNotFound, rr.Code)
+		}
+	}
+
+	// The bin admin page uses the admin endpoint
+	req = httptest.NewRequest(http.MethodGet, "/admin/bin/anotheradmindeletebin", nil)
+	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
+	rr = httptest.NewRecorder()
+	h.adminRouter.ServeHTTP(rr, req)
+	if !strings.Contains(rr.Body.String(), "/admin/bin/anotheradmindeletebin/delete") {
+		t.Errorf("Expected the bin admin page to delete the bin with the admin endpoint")
+	}
+}
