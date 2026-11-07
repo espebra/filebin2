@@ -34,6 +34,8 @@ func (h *HTTP) viewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	type Data struct {
 		BucketMetrics  s3.BucketMetrics   `json:"bucketmetrics"`
 		Page           string             `json:"page"`
+		Version        string             `json:"version"`
+		Commit         string             `json:"commit"`
 		DBMetrics      ds.Metrics         `json:"db_metrics"`
 		DBStats        sql.DBStats        `json:"db_stats"`
 		Config         ds.Config          `json:"-"`
@@ -46,6 +48,8 @@ func (h *HTTP) viewAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	var data Data
 	data.Config = *h.config
 	data.Page = "dashboard"
+	data.Version = h.config.Version
+	data.Commit = h.config.Commit
 	data.StartedAt = h.startedAt
 	data.UptimeReadable = time.Since(h.startedAt).Round(time.Second).String()
 
