@@ -184,17 +184,25 @@ func (c *ClientDao) Cleanup(days uint64) (count int64, err error) {
 	return count, nil
 }
 
+// clientUploads sums up the active files uploaded from each IP address, and
+// the bytes of the files whose content is still in storage.
+const clientUploads = `SELECT f.ip, COUNT(*) AS files, COALESCE(SUM(fc.bytes), 0) AS bytes
+		FROM file f
+		LEFT JOIN file_content fc ON fc.sha256 = f.sha256 AND fc.in_storage = true
+		WHERE f.deleted_at IS NULL
+		GROUP BY f.ip`
+
 func (c *ClientDao) GetByFilesUploaded(limit int) (clients []ds.Client, err error) {
+	// Sum up the uploads of each IP address before joining the client
+	// rows, rather than joining every client to its files.
 	sqlStatement := `
 		SELECT
 			c.ip, c.asn, c.asn_organization, c.network, c.city, c.country, c.continent, c.proxy,
 			c.requests, c.first_active_at, c.last_active_at, c.banned_at, c.banned_by,
-			COALESCE(COUNT(f.id), 0) as files_uploaded,
-			COALESCE(SUM(fc.bytes), 0) as bytes_uploaded
-		FROM client c
-		LEFT JOIN file f ON f.ip = c.ip AND f.deleted_at IS NULL
-		LEFT JOIN file_content fc ON fc.sha256 = f.sha256
-		GROUP BY c.ip
+			u.files as files_uploaded,
+			u.bytes as bytes_uploaded
+		FROM (` + clientUploads + `) u
+		JOIN client c ON c.ip = u.ip
 		ORDER BY files_uploaded DESC, bytes_uploaded DESC
 		LIMIT $1`
 	t0 := time.Now()
@@ -233,16 +241,16 @@ func (c *ClientDao) GetByFilesUploaded(limit int) (clients []ds.Client, err erro
 }
 
 func (c *ClientDao) GetByBytesUploaded(limit int) (clients []ds.Client, err error) {
+	// Sum up the uploads of each IP address before joining the client
+	// rows, rather than joining every client to its files.
 	sqlStatement := `
 		SELECT
 			c.ip, c.asn, c.asn_organization, c.network, c.city, c.country, c.continent, c.proxy,
 			c.requests, c.first_active_at, c.last_active_at, c.banned_at, c.banned_by,
-			COALESCE(COUNT(f.id), 0) as files_uploaded,
-			COALESCE(SUM(fc.bytes), 0) as bytes_uploaded
-		FROM client c
-		LEFT JOIN file f ON f.ip = c.ip AND f.deleted_at IS NULL
-		LEFT JOIN file_content fc ON fc.sha256 = f.sha256
-		GROUP BY c.ip
+			u.files as files_uploaded,
+			u.bytes as bytes_uploaded
+		FROM (` + clientUploads + `) u
+		JOIN client c ON c.ip = u.ip
 		ORDER BY bytes_uploaded DESC, files_uploaded DESC
 		LIMIT $1`
 	t0 := time.Now()
@@ -285,7 +293,7 @@ func (c *ClientDao) GetByCountry(limit int) (countries []ds.ClientByCountry, err
 		WITH client_stats AS (
 			SELECT
 				country,
-				COUNT(DISTINCT ip) as client_count,
+				COUNT(*) as client_count,
 				SUM(requests) as requests,
 				MIN(first_active_at) as first_active_at,
 				MAX(last_active_at) as last_active_at
@@ -300,7 +308,7 @@ func (c *ClientDao) GetByCountry(limit int) (countries []ds.ClientByCountry, err
 				COALESCE(SUM(fc.bytes), 0) as bytes_uploaded
 			FROM client c
 			JOIN file f ON f.ip = c.ip AND f.deleted_at IS NULL
-			JOIN file_content fc ON fc.sha256 = f.sha256
+			LEFT JOIN file_content fc ON fc.sha256 = f.sha256 AND fc.in_storage = true
 			WHERE c.country != ''
 			GROUP BY c.country
 		)
@@ -351,7 +359,7 @@ func (c *ClientDao) GetByNetwork(limit int) (networks []ds.ClientByNetwork, err 
 		WITH client_stats AS (
 			SELECT
 				network,
-				COUNT(DISTINCT ip) as client_count,
+				COUNT(*) as client_count,
 				SUM(requests) as requests,
 				MIN(first_active_at) as first_active_at,
 				MAX(last_active_at) as last_active_at
@@ -366,7 +374,7 @@ func (c *ClientDao) GetByNetwork(limit int) (networks []ds.ClientByNetwork, err 
 				COALESCE(SUM(fc.bytes), 0) as bytes_uploaded
 			FROM client c
 			JOIN file f ON f.ip = c.ip AND f.deleted_at IS NULL
-			JOIN file_content fc ON fc.sha256 = f.sha256
+			LEFT JOIN file_content fc ON fc.sha256 = f.sha256 AND fc.in_storage = true
 			WHERE c.network != ''
 			GROUP BY c.network
 		)
@@ -418,7 +426,7 @@ func (c *ClientDao) GetASNWithStats(limit int) (asns []ds.AutonomousSystem, err 
 			SELECT
 				asn,
 				MAX(asn_organization) as asn_organization,
-				COUNT(DISTINCT ip) as client_count,
+				COUNT(*) as client_count,
 				SUM(requests) as requests,
 				MIN(first_active_at) as first_active_at,
 				MAX(last_active_at) as last_active_at
@@ -433,7 +441,7 @@ func (c *ClientDao) GetASNWithStats(limit int) (asns []ds.AutonomousSystem, err 
 				COALESCE(SUM(fc.bytes), 0) as bytes_uploaded
 			FROM client c
 			JOIN file f ON f.ip = c.ip AND f.deleted_at IS NULL
-			JOIN file_content fc ON fc.sha256 = f.sha256
+			LEFT JOIN file_content fc ON fc.sha256 = f.sha256 AND fc.in_storage = true
 			WHERE c.asn > 0
 			GROUP BY c.asn
 		)

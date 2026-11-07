@@ -1079,6 +1079,15 @@ func TestSearchFilesByFilename(t *testing.T) {
 		t.Error(err)
 	}
 
+	secondFile := &ds.File{}
+	secondFile.Bin = bin.Id
+	secondFile.Filename = "searchable-summary.txt"
+	secondFile.Bytes = 1
+	secondFile.SHA256 = file.SHA256
+	if _, err := dao.File().Insert(secondFile); err != nil {
+		t.Error(err)
+	}
+
 	otherFile := &ds.File{}
 	otherFile.Bin = bin.Id
 	otherFile.Filename = "unrelated.txt"
@@ -1088,26 +1097,64 @@ func TestSearchFilesByFilename(t *testing.T) {
 		t.Error(err)
 	}
 
-	// Substring search includes deleted files
-	files, err := dao.File().SearchByFilename("earchable", 100)
+	deletedBin := &ds.Bin{}
+	deletedBin.Id = "searchfilesdeletedbin"
+	if _, err := dao.Bin().Insert(deletedBin); err != nil {
+		t.Error(err)
+	}
+	fileInDeletedBin := &ds.File{}
+	fileInDeletedBin.Bin = deletedBin.Id
+	fileInDeletedBin.Filename = "searchable-in-deleted-bin.txt"
+	fileInDeletedBin.Bytes = 1
+	fileInDeletedBin.SHA256 = file.SHA256
+	if _, err := dao.File().Insert(fileInDeletedBin); err != nil {
+		t.Error(err)
+	}
+	if _, err := dao.Bin().MarkDeleted(deletedBin); err != nil {
+		t.Error(err)
+	}
+
+	// Substring search does not include deleted files or files in deleted bins
+	files, err := dao.File().SearchByFilename("earchable", 100, false)
 	if err != nil {
 		t.Error(err)
 	}
 	if len(files) != 2 {
 		t.Errorf("Was expecting 2 files, got %d", len(files))
 	}
-	foundDeleted := false
 	for _, f := range files {
-		if f.Filename == "searchable-deleted.txt" && f.IsDeleted() {
+		if f.Filename == deletedFile.Filename || f.Filename == fileInDeletedBin.Filename {
+			t.Errorf("Was not expecting %s to be included in the search results", f.Filename)
+		}
+	}
+
+	// Deleted files and files in deleted bins are included when asked for
+	files, err = dao.File().SearchByFilename("earchable", 100, true)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(files) != 4 {
+		t.Errorf("Was expecting 4 files, got %d", len(files))
+	}
+	foundDeleted := false
+	foundInDeletedBin := false
+	for _, f := range files {
+		if f.Filename == deletedFile.Filename && f.IsDeleted() {
 			foundDeleted = true
+		}
+		if f.Filename == fileInDeletedBin.Filename {
+			foundInDeletedBin = true
 		}
 	}
 	if !foundDeleted {
 		t.Errorf("Was expecting the deleted file to be included in the search results")
 	}
+	if !foundInDeletedBin {
+		t.Errorf("Was expecting the file in the deleted bin to be included in the search results")
+	}
 
 	// Case insensitive search
-	files, err = dao.File().SearchByFilename("SEARCHABLE", 100)
+	files, err = dao.File().SearchByFilename("SEARCHABLE", 100, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1116,7 +1163,7 @@ func TestSearchFilesByFilename(t *testing.T) {
 	}
 
 	// The limit is respected
-	files, err = dao.File().SearchByFilename("earchable", 1)
+	files, err = dao.File().SearchByFilename("earchable", 1, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1125,7 +1172,7 @@ func TestSearchFilesByFilename(t *testing.T) {
 	}
 
 	// Wildcard characters are matched literally, not as wildcards
-	files, err = dao.File().SearchByFilename("%", 100)
+	files, err = dao.File().SearchByFilename("%", 100, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1133,7 +1180,7 @@ func TestSearchFilesByFilename(t *testing.T) {
 		t.Errorf("Was expecting 0 files when searching for a literal %%, got %d", len(files))
 	}
 
-	files, err = dao.File().SearchByFilename("searchable_", 100)
+	files, err = dao.File().SearchByFilename("searchable_", 100, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1142,7 +1189,7 @@ func TestSearchFilesByFilename(t *testing.T) {
 	}
 
 	// No match
-	files, err = dao.File().SearchByFilename("nosuchfile", 100)
+	files, err = dao.File().SearchByFilename("nosuchfile", 100, false)
 	if err != nil {
 		t.Error(err)
 	}

@@ -538,28 +538,32 @@ func (h *HTTP) redirectAdminSearch(w http.ResponseWriter, r *http.Request) {
 
 // viewAdminSearch searches bin IDs (/admin/search/bins) or filenames
 // (/admin/search/files). The searches are on separate pages so that a bin
-// lookup does not wait for the slower filename search.
+// lookup does not wait for the slower filename search. Deleted bins and files
+// are only searched with ?deleted=1, as that search is slower.
 func (h *HTTP) viewAdminSearch(w http.ResponseWriter, r *http.Request) {
 	kind := mux.Vars(r)["kind"]
 	query := strings.TrimSpace(r.URL.Query().Get("q"))
 	limit := parseLimit(r, 100)
+	includeDeleted := r.URL.Query().Get("deleted") == "1"
 
 	type Data struct {
-		Kind  string
-		Query string
-		Limit int
-		Bins  []ds.Bin
-		Files []ds.File
+		Kind           string
+		Query          string
+		Limit          int
+		IncludeDeleted bool
+		Bins           []ds.Bin
+		Files          []ds.File
 	}
 	var data Data
 	data.Kind = kind
 	data.Query = query
 	data.Limit = limit
+	data.IncludeDeleted = includeDeleted
 
 	if query != "" {
 		switch kind {
 		case "bins":
-			bins, err := h.dao.Bin().SearchByID(query, limit)
+			bins, err := h.dao.Bin().SearchByID(query, limit, includeDeleted)
 			if err != nil {
 				slog.Error("unable to search bins", "query", query, "error", err)
 				http.Error(w, "Errno 273", http.StatusInternalServerError)
@@ -567,7 +571,7 @@ func (h *HTTP) viewAdminSearch(w http.ResponseWriter, r *http.Request) {
 			}
 			data.Bins = bins
 		case "files":
-			files, err := h.dao.File().SearchByFilename(query, limit)
+			files, err := h.dao.File().SearchByFilename(query, limit, includeDeleted)
 			if err != nil {
 				slog.Error("unable to search files", "query", query, "error", err)
 				http.Error(w, "Errno 274", http.StatusInternalServerError)
@@ -584,9 +588,10 @@ func (h *HTTP) viewAdminSearch(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		out, err := json.MarshalIndent(map[string]any{
-			"query": data.Query,
-			"limit": data.Limit,
-			kind:    results,
+			"query":           data.Query,
+			"limit":           data.Limit,
+			"include_deleted": data.IncludeDeleted,
+			kind:              results,
 		}, "", "    ")
 		if err != nil {
 			slog.Error("failed to parse json", "error", err)
