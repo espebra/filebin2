@@ -531,6 +531,7 @@ func main() {
 
 	config := &ds.Config{
 		Version:                  version,
+		Commit:                   commit,
 		AdminPassword:            *adminPasswordFlag,
 		AdminUsername:            *adminUsernameFlag,
 		Contact:                  *contactFlag,

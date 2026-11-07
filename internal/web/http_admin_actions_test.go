@@ -632,3 +632,40 @@ func TestAdminViewBinFileIndicators(t *testing.T) {
 		t.Errorf("Expected the admin bin page to flag content that is no longer in storage")
 	}
 }
+
+func TestAdminDashboardShowsVersionAndCommit(t *testing.T) {
+	h := setupActionsHandler(t, func(c *ds.Config) {
+		c.Version = "1.2.3-test"
+		c.Commit = "abc1234"
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
+	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
+	rr := httptest.NewRecorder()
+	h.adminRouter.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("Expected the dashboard to give %d, got %d. Body: %s", http.StatusOK, rr.Code, rr.Body.String())
+	}
+	if !strings.Contains(rr.Body.String(), "1.2.3-test") {
+		t.Errorf("Expected the dashboard to show the version 1.2.3-test")
+	}
+	if !strings.Contains(rr.Body.String(), "abc1234") {
+		t.Errorf("Expected the dashboard to show the commit abc1234")
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/admin", nil)
+	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
+	req.Header.Set("Accept", "application/json")
+	rr = httptest.NewRecorder()
+	h.adminRouter.ServeHTTP(rr, req)
+	var out map[string]any
+	if err := json.Unmarshal(rr.Body.Bytes(), &out); err != nil {
+		t.Fatalf("Expected valid JSON from the dashboard: %v", err)
+	}
+	if out["version"] != "1.2.3-test" {
+		t.Errorf("Expected the dashboard JSON to contain the version 1.2.3-test, got %v", out["version"])
+	}
+	if out["commit"] != "abc1234" {
+		t.Errorf("Expected the dashboard JSON to contain the commit abc1234, got %v", out["commit"])
+	}
+}

@@ -7,6 +7,7 @@ import (
 
 type Config struct {
 	Version                  string
+	Commit                   string
 	Contact                  string
 	CookieLifetime           int
 	Expiration               int

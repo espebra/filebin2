@@ -23,6 +23,14 @@
         <h2>Uptime</h2>
         <table class="table table-sm">
             <tr>
+                <th>Version</th>
+                <td>{{ .Version }}</td>
+            </tr>
+            <tr>
+                <th>Commit</th>
+                <td><code>{{ .Commit }}</code></td>
+            </tr>
+            <tr>
                 <th>Started at</th>
                 <td>{{ .StartedAt.Format "2006-01-02 15:04:05 UTC" }}</td>
             </tr>
