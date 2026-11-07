@@ -661,6 +661,37 @@ func (h *HTTP) banBinDownloaders(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/admin/bin/"+binID, http.StatusSeeOther)
 }
 
+// blockBinFiles blocks the content of the files in the given bin by checksum.
+// Blocking deletes every file with the same content, also in other bins, and
+// rejects later uploads of it. The bin itself is not deleted.
+func (h *HTTP) blockBinFiles(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	binID := params["bin"]
+
+	files, err := h.dao.File().GetByBinAll(binID)
+	if err != nil {
+		slog.Error("unable to get files by bin", "bin", binID, "error", err)
+		http.Error(w, "Failed to get the files of the bin", http.StatusInternalServerError)
+		return
+	}
+
+	blocked := map[string]bool{}
+	for _, file := range files {
+		if file.IsDeleted() || blocked[file.SHA256] {
+			continue
+		}
+		if err := h.dao.FileContent().BlockContent(file.SHA256); err != nil {
+			slog.Error("unable to block content", "bin", binID, "sha256", file.SHA256, "error", err)
+			http.Error(w, "Failed to block content", http.StatusInternalServerError)
+			return
+		}
+		blocked[file.SHA256] = true
+		slog.Info("blocked content", "bin", binID, "filename", file.Filename, "sha256", file.SHA256)
+	}
+
+	http.Redirect(w, r, "/admin/bin/"+binID, http.StatusSeeOther)
+}
+
 func (h *HTTP) viewAdminBinsAll(w http.ResponseWriter, r *http.Request) {
 	type Bins struct {
 		Available []ds.Bin `json:"available"`

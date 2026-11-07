@@ -787,3 +787,104 @@ func TestAdminDeleteBin(t *testing.T) {
 		t.Errorf("Expected the bin admin page to delete the bin with the admin endpoint")
 	}
 }
+
+func TestAdminBlockBinFiles(t *testing.T) {
+	h := setupActionsHandler(t, nil)
+
+	bin := "adminblockfilesbin"
+	otherBin := "adminblockfilesother"
+	gatedUpload(t, h, bin, "a.txt", "content to block a")
+	gatedUpload(t, h, bin, "b.txt", "content to block b")
+	gatedUpload(t, h, bin, "copy-of-a.txt", "content to block a")
+	gatedUpload(t, h, otherBin, "same-as-a.txt", "content to block a")
+	gatedUpload(t, h, otherBin, "unrelated.txt", "unrelated content")
+
+	// Blocking the files requires admin credentials
+	req := httptest.NewRequest(http.MethodPost, "/admin/bin/"+bin+"/block-files", nil)
+	rr := httptest.NewRecorder()
+	h.adminRouter.ServeHTTP(rr, req)
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("Expected unauthenticated block to give %d, got %d", http.StatusUnauthorized, rr.Code)
+	}
+	files, err := h.dao.File().GetByBin(bin, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) != 3 {
+		t.Fatalf("Expected 3 files in the bin before the block, got %d", len(files))
+	}
+
+	req = httptest.NewRequest(http.MethodPost, "/admin/bin/"+bin+"/block-files", nil)
+	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
+	rr = httptest.NewRecorder()
+	h.adminRouter.ServeHTTP(rr, req)
+	if rr.Code != http.StatusSeeOther || rr.Header().Get("Location") != "/admin/bin/"+bin {
+		t.Fatalf("Expected a redirect to the bin admin page, got %d to %q. Body: %s", rr.Code, rr.Header().Get("Location"), rr.Body.String())
+	}
+
+	// The files in the bin are deleted and their content is blocked
+	files, err = h.dao.File().GetByBinAll(bin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range files {
+		if !f.IsDeleted() {
+			t.Errorf("Expected %s to be deleted", f.Filename)
+		}
+		if !f.Blocked {
+			t.Errorf("Expected the content of %s to be blocked", f.Filename)
+		}
+	}
+
+	// The bin itself is not deleted
+	b, found, err := h.dao.Bin().GetByID(bin)
+	if err != nil || !found {
+		t.Fatalf("Expected to find the bin: %v", err)
+	}
+	if b.IsDeleted() {
+		t.Errorf("Expected the bin to not be deleted")
+	}
+
+	// The same content in another bin is deleted, other content is not
+	files, err = h.dao.File().GetByBinAll(otherBin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range files {
+		switch f.Filename {
+		case "same-as-a.txt":
+			if !f.IsDeleted() {
+				t.Errorf("Expected %s with blocked content to be deleted", f.Filename)
+			}
+		case "unrelated.txt":
+			if f.IsDeleted() || f.Blocked {
+				t.Errorf("Expected %s to not be deleted or blocked", f.Filename)
+			}
+		}
+	}
+
+	// The blocked content cannot be uploaded again
+	req = uploadRequest("/adminblockfilesnew/again.txt", "content to block b")
+	rr = httptest.NewRecorder()
+	h.router.ServeHTTP(rr, req)
+	if rr.Code != http.StatusForbidden {
+		t.Errorf("Expected upload of blocked content to give %d, got %d", http.StatusForbidden, rr.Code)
+	}
+
+	// The bin admin page has the button, and blocking an empty bin works
+	req = httptest.NewRequest(http.MethodGet, "/admin/bin/"+bin, nil)
+	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
+	rr = httptest.NewRecorder()
+	h.adminRouter.ServeHTTP(rr, req)
+	if !strings.Contains(rr.Body.String(), `action="/admin/bin/`+bin+`/block-files"`) {
+		t.Errorf("Expected the bin admin page to have the delete and block files form")
+	}
+
+	req = httptest.NewRequest(http.MethodPost, "/admin/bin/"+bin+"/block-files", nil)
+	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
+	rr = httptest.NewRecorder()
+	h.adminRouter.ServeHTTP(rr, req)
+	if rr.Code != http.StatusSeeOther {
+		t.Errorf("Expected blocking a bin without files to redirect, got %d. Body: %s", rr.Code, rr.Body.String())
+	}
+}

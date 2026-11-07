@@ -281,6 +281,7 @@ func (h *HTTP) initAdminRoutes() {
 	h.adminRouter.HandleFunc("/admin/bin/{bin:[A-Za-z0-9_-]+}/ban", h.log(h.auth(h.banBin))).Methods("POST")
 	h.adminRouter.HandleFunc("/admin/bin/{bin:[A-Za-z0-9_-]+}/ban-uploaders", h.log(h.auth(h.banBinUploaders))).Methods("POST")
 	h.adminRouter.HandleFunc("/admin/bin/{bin:[A-Za-z0-9_-]+}/ban-downloaders", h.log(h.auth(h.banBinDownloaders))).Methods("POST")
+	h.adminRouter.HandleFunc("/admin/bin/{bin:[A-Za-z0-9_-]+}/block-files", h.log(h.auth(h.blockBinFiles))).Methods("POST")
 	h.adminRouter.HandleFunc("/admin/file/{sha256:[0-9a-z]+}", h.auth(h.viewAdminFile)).Methods(http.MethodHead, http.MethodGet)
 	h.adminRouter.HandleFunc("/admin/file/{sha256:[0-9a-z]+}/block", h.log(h.auth(h.blockFileContent))).Methods("POST")
 	h.adminRouter.HandleFunc("/admin/file/{sha256:[0-9a-z]+}/unblock", h.log(h.auth(h.unblockFileContent))).Methods("POST")
