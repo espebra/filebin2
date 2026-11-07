@@ -790,26 +790,40 @@ func TestSearchBinsByID(t *testing.T) {
 		t.Error(err)
 	}
 
-	// Substring search includes deleted and expired bins
-	bins, err := dao.Bin().SearchByID("earchbin", 100)
+	// Substring search includes expired bins, but not deleted bins
+	bins, err := dao.Bin().SearchByID("earchbin", 100, false)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(bins) != 2 {
+		t.Errorf("Was expecting 2 bins, got %d", len(bins))
+	}
+	for _, b := range bins {
+		if b.Id == deletedBin.Id {
+			t.Errorf("Was not expecting the deleted bin to be included in the search results")
+		}
+	}
+
+	// Deleted bins are included when asked for
+	bins, err = dao.Bin().SearchByID("earchbin", 100, true)
 	if err != nil {
 		t.Error(err)
 	}
 	if len(bins) != 3 {
 		t.Errorf("Was expecting 3 bins, got %d", len(bins))
+	}
+	foundDeleted := false
+	for _, b := range bins {
+		if b.Id == deletedBin.Id && b.IsDeleted() {
+			foundDeleted = true
+		}
+	}
+	if !foundDeleted {
+		t.Errorf("Was expecting the deleted bin to be included in the search results")
 	}
 
 	// Case insensitive search
-	bins, err = dao.Bin().SearchByID("SEARCHBIN", 100)
-	if err != nil {
-		t.Error(err)
-	}
-	if len(bins) != 3 {
-		t.Errorf("Was expecting 3 bins, got %d", len(bins))
-	}
-
-	// The limit is respected
-	bins, err = dao.Bin().SearchByID("earchbin", 2)
+	bins, err = dao.Bin().SearchByID("SEARCHBIN", 100, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -817,8 +831,17 @@ func TestSearchBinsByID(t *testing.T) {
 		t.Errorf("Was expecting 2 bins, got %d", len(bins))
 	}
 
+	// The limit is respected
+	bins, err = dao.Bin().SearchByID("earchbin", 1, false)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(bins) != 1 {
+		t.Errorf("Was expecting 1 bin, got %d", len(bins))
+	}
+
 	// Wildcard characters are matched literally, not as wildcards
-	bins, err = dao.Bin().SearchByID("%", 100)
+	bins, err = dao.Bin().SearchByID("%", 100, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -826,7 +849,7 @@ func TestSearchBinsByID(t *testing.T) {
 		t.Errorf("Was expecting 0 bins when searching for a literal %%, got %d", len(bins))
 	}
 
-	bins, err = dao.Bin().SearchByID("searchbin_", 100)
+	bins, err = dao.Bin().SearchByID("searchbin_", 100, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -835,7 +858,7 @@ func TestSearchBinsByID(t *testing.T) {
 	}
 
 	// No match
-	bins, err = dao.Bin().SearchByID("nosuchbin", 100)
+	bins, err = dao.Bin().SearchByID("nosuchbin", 100, false)
 	if err != nil {
 		t.Error(err)
 	}

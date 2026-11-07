@@ -305,16 +305,22 @@ func (d *FileDao) GetUploaderIPsByBin(id string) (ips []string, err error) {
 	return ips, nil
 }
 
-// SearchByFilename returns files whose filename contains the given substring,
-// case-insensitively. Deleted files and files in deleted or expired bins are
-// included so admins can find files that are no longer publicly available.
-func (d *FileDao) SearchByFilename(query string, limit int) (files []ds.File, err error) {
+// SearchByFilename returns the files whose filename contains the given
+// substring, case-insensitively. Files in expired bins that are not deleted
+// yet are included. Deleted files and files in deleted bins are only included
+// if includeDeleted is set, which makes the search read the deleted files as
+// well and is slower.
+func (d *FileDao) SearchByFilename(query string, limit int, includeDeleted bool) (files []ds.File, err error) {
 	pattern := "%" + escapeLikePattern(query) + "%"
+	where := "f.filename ILIKE $1 AND f.deleted_at IS NULL AND b.deleted_at IS NULL"
+	if includeDeleted {
+		where = "f.filename ILIKE $1"
+	}
 	sqlStatement := `SELECT f.id, f.bin_id, f.filename, fc.mime, fc.bytes, fc.md5, fc.sha1, COALESCE(fc.phash, ''), f.sha256, f.downloads, f.updates, fc.in_storage, fc.blocked, f.ip, f.headers, f.updated_at, f.created_at, f.deleted_at, b.deleted_at, b.expired_at, f.upload_duration_ms
 		FROM file f
 		JOIN file_content fc ON f.sha256 = fc.sha256
-		LEFT JOIN bin b ON f.bin_id = b.id
-		WHERE f.filename ILIKE $1
+		JOIN bin b ON f.bin_id = b.id
+		WHERE ` + where + `
 		ORDER BY f.created_at DESC LIMIT $2`
 	files, err = d.fileQuery(sqlStatement, pattern, limit)
 	return files, err
@@ -468,12 +474,7 @@ func (d *FileDao) fileQuery(sqlStatement string, params ...interface{}) (files [
 
 func (d *FileDao) FilesByChecksum(limit int) (files []ds.FileByChecksum, err error) {
 	// Join with file_content to only count files whose content is still in storage
-	sqlStatement := `SELECT f.sha256, COUNT(f.sha256) as c, fc.mime, fc.bytes, COUNT(f.sha256) * fc.bytes AS bytes_total, SUM(f.downloads), SUM(f.updates), fc.blocked
-		FROM file f
-		JOIN file_content fc ON f.sha256 = fc.sha256
-		WHERE fc.in_storage = true AND f.deleted_at IS NULL
-		GROUP BY f.sha256, fc.mime, fc.bytes, fc.blocked
-		ORDER BY c DESC LIMIT $1`
+	sqlStatement := fileContentList(`SELECT f.sha256, COUNT(*) AS rank FROM file f JOIN file_content fc ON f.sha256 = fc.sha256 AND fc.in_storage = true WHERE f.deleted_at IS NULL GROUP BY f.sha256 ORDER BY rank DESC LIMIT $1`)
 
 	t0 := time.Now()
 	rows, err := d.db.Query(sqlStatement, limit)
@@ -500,12 +501,7 @@ func (d *FileDao) FilesByChecksum(limit int) (files []ds.FileByChecksum, err err
 
 func (d *FileDao) FilesByBytes(limit int) (files []ds.FileByChecksum, err error) {
 	// Same as FilesByChecksum but sorted by bytes instead of count
-	sqlStatement := `SELECT f.sha256, COUNT(f.sha256) as c, fc.mime, fc.bytes, COUNT(f.sha256) * fc.bytes AS bytes_total, SUM(f.downloads), SUM(f.updates), fc.blocked
-		FROM file f
-		JOIN file_content fc ON f.sha256 = fc.sha256
-		WHERE fc.in_storage = true AND f.deleted_at IS NULL
-		GROUP BY f.sha256, fc.mime, fc.bytes, fc.blocked
-		ORDER BY fc.bytes DESC LIMIT $1`
+	sqlStatement := fileContentList(`SELECT fc.sha256, fc.bytes AS rank FROM file_content fc WHERE fc.in_storage = true AND EXISTS (SELECT 1 FROM file f WHERE f.sha256 = fc.sha256 AND f.deleted_at IS NULL) ORDER BY rank DESC LIMIT $1`)
 
 	t0 := time.Now()
 	rows, err := d.db.Query(sqlStatement, limit)
@@ -532,12 +528,7 @@ func (d *FileDao) FilesByBytes(limit int) (files []ds.FileByChecksum, err error)
 
 func (d *FileDao) FilesByBytesTotal(limit int) (files []ds.FileByChecksum, err error) {
 	// Same as FilesByChecksum but sorted by total bytes (bytes * count)
-	sqlStatement := `SELECT f.sha256, COUNT(f.sha256) as c, fc.mime, fc.bytes, COUNT(f.sha256) * fc.bytes AS bytes_total, SUM(f.downloads), SUM(f.updates), fc.blocked
-		FROM file f
-		JOIN file_content fc ON f.sha256 = fc.sha256
-		WHERE fc.in_storage = true AND f.deleted_at IS NULL
-		GROUP BY f.sha256, fc.mime, fc.bytes, fc.blocked
-		ORDER BY bytes_total DESC LIMIT $1`
+	sqlStatement := fileContentList(`SELECT f.sha256, COUNT(*) * MIN(fc.bytes) AS rank FROM file f JOIN file_content fc ON f.sha256 = fc.sha256 AND fc.in_storage = true WHERE f.deleted_at IS NULL GROUP BY f.sha256 ORDER BY rank DESC LIMIT $1`)
 
 	t0 := time.Now()
 	rows, err := d.db.Query(sqlStatement, limit)
@@ -560,6 +551,19 @@ func (d *FileDao) FilesByBytesTotal(limit int) (files []ds.FileByChecksum, err e
 		return files, err
 	}
 	return files, nil
+}
+
+// fileContentList returns a statement that sums up the active files of the
+// content picked by pick, a query that returns the sha256 and rank of the
+// content in rank order, limited. Picking the content before summing up its
+// files keeps the top lists from summing up the downloads and updates of
+// every file only to show a few of them.
+func fileContentList(pick string) string {
+	return `SELECT fc.sha256, totals.c, fc.mime, fc.bytes, totals.c * fc.bytes AS bytes_total, totals.downloads, totals.updates, fc.blocked
+		FROM (` + pick + `) ranked
+		JOIN file_content fc ON fc.sha256 = ranked.sha256
+		CROSS JOIN LATERAL (SELECT COUNT(*) AS c, COALESCE(SUM(f.downloads), 0) AS downloads, COALESCE(SUM(f.updates), 0) AS updates FROM file f WHERE f.sha256 = fc.sha256 AND f.deleted_at IS NULL) totals
+		ORDER BY ranked.rank DESC`
 }
 
 func (d *FileDao) FileByChecksum(sha256 string) (files []ds.File, err error) {

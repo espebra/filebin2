@@ -87,6 +87,22 @@ CREATE INDEX IF NOT EXISTS idx_file_content_blocked ON file_content(blocked) WHE
 CREATE INDEX IF NOT EXISTS idx_file_sha256_deleted ON file(sha256, deleted_at);
 CREATE INDEX IF NOT EXISTS idx_file_active ON file(bin_id, sha256) WHERE deleted_at IS NULL;
 
+-- Indexes for the admin top lists, recent uploads and search. Deleted files
+-- and content that is no longer in storage are kept as history, so the
+-- partial indexes keep the lists from reading the history. file.downloads
+-- and bin.downloads are left unindexed so that the download counter updates
+-- stay HOT updates.
+CREATE INDEX IF NOT EXISTS idx_bin_active_updated_at ON bin(updated_at) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_bin_active_created_at ON bin(created_at) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_file_created_at ON file(created_at);
+CREATE INDEX IF NOT EXISTS idx_file_active_created_at ON file(created_at) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_file_active_updated_at ON file(updated_at) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_file_active_updates ON file(updates) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_file_active_sha256 ON file(sha256) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_file_content_in_storage_sha256 ON file_content(sha256) INCLUDE (bytes) WHERE in_storage;
+CREATE INDEX IF NOT EXISTS idx_file_content_in_storage_bytes ON file_content(bytes) WHERE in_storage;
+CREATE INDEX IF NOT EXISTS idx_file_content_in_storage_created_at ON file_content(created_at) WHERE in_storage;
+
 ALTER TABLE file_content ADD COLUMN IF NOT EXISTS phash VARCHAR(16);
 -- sha1 is empty for content uploaded before it was calculated. It is filled in
 -- the next time the same content is uploaded.

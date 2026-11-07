@@ -399,47 +399,61 @@ func (d *BinDao) GetPendingDelete() (bins []ds.Bin, err error) {
 
 func (d *BinDao) GetLastUpdated(limit int) (bins []ds.Bin, err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "SELECT bin.id, bin.readonly, bin.downloads, COALESCE(SUM(file.downloads), 0), COALESCE(SUM(file_content.bytes), 0), COUNT(file.filename), bin.updates, bin.updated_at, bin.created_at, bin.approved_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id=file.bin_id AND file.deleted_at IS NULL LEFT JOIN file_content ON file.sha256 = file_content.sha256 AND file_content.in_storage = true WHERE bin.expired_at > $1 AND bin.deleted_at IS NULL GROUP BY bin.id ORDER BY bin.updated_at DESC LIMIT $2"
+	sqlStatement := binList("SELECT bin.id, bin.readonly, bin.downloads, bin.updates, bin.updated_at, bin.created_at, bin.approved_at, bin.expired_at, bin.deleted_at FROM bin WHERE bin.expired_at > $1 AND bin.deleted_at IS NULL ORDER BY bin.updated_at DESC LIMIT $2", "bin.updated_at DESC")
 	bins, err = d.binQuery(sqlStatement, now, limit)
 	return bins, err
 }
 
 func (d *BinDao) GetByBytes(limit int) (bins []ds.Bin, err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "SELECT bin.id, bin.readonly, bin.downloads, COALESCE(SUM(file.downloads), 0), COALESCE(SUM(file_content.bytes), 0), COUNT(file.filename), bin.updates, bin.updated_at, bin.created_at, bin.approved_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id=file.bin_id AND file.deleted_at IS NULL LEFT JOIN file_content ON file.sha256 = file_content.sha256 AND file_content.in_storage = true WHERE bin.expired_at > $1 AND bin.deleted_at IS NULL GROUP BY bin.id ORDER BY COALESCE(SUM(file_content.bytes), 0) DESC LIMIT $2"
+	sqlStatement := binList("SELECT bin.id, bin.readonly, bin.downloads, bin.updates, bin.updated_at, bin.created_at, bin.approved_at, bin.expired_at, bin.deleted_at, COALESCE(ranked.bytes, 0) AS rank FROM bin LEFT JOIN (SELECT file.bin_id, SUM(file_content.bytes) AS bytes FROM file JOIN file_content ON file.sha256 = file_content.sha256 AND file_content.in_storage = true WHERE file.deleted_at IS NULL GROUP BY file.bin_id) ranked ON ranked.bin_id = bin.id WHERE bin.expired_at > $1 AND bin.deleted_at IS NULL ORDER BY rank DESC LIMIT $2", "bin.rank DESC")
 	bins, err = d.binQuery(sqlStatement, now, limit)
 	return bins, err
 }
 
 func (d *BinDao) GetByDownloads(limit int) (bins []ds.Bin, err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "SELECT bin.id, bin.readonly, bin.downloads, COALESCE(SUM(file.downloads), 0), COALESCE(SUM(file_content.bytes), 0), COUNT(file.filename), bin.updates, bin.updated_at, bin.created_at, bin.approved_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id=file.bin_id AND file.deleted_at IS NULL LEFT JOIN file_content ON file.sha256 = file_content.sha256 AND file_content.in_storage = true WHERE bin.expired_at > $1 AND bin.deleted_at IS NULL GROUP BY bin.id ORDER BY bin.downloads + COALESCE(SUM(file.downloads), 0) DESC LIMIT $2"
+	sqlStatement := binList("SELECT bin.id, bin.readonly, bin.downloads, bin.updates, bin.updated_at, bin.created_at, bin.approved_at, bin.expired_at, bin.deleted_at, bin.downloads + COALESCE(ranked.downloads, 0) AS rank FROM bin LEFT JOIN (SELECT file.bin_id, SUM(file.downloads) AS downloads FROM file WHERE file.deleted_at IS NULL GROUP BY file.bin_id) ranked ON ranked.bin_id = bin.id WHERE bin.expired_at > $1 AND bin.deleted_at IS NULL ORDER BY rank DESC LIMIT $2", "bin.rank DESC")
 	bins, err = d.binQuery(sqlStatement, now, limit)
 	return bins, err
 }
 
 func (d *BinDao) GetByFiles(limit int) (bins []ds.Bin, err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "SELECT bin.id, bin.readonly, bin.downloads, COALESCE(SUM(file.downloads), 0), COALESCE(SUM(file_content.bytes), 0), COUNT(file.filename), bin.updates, bin.updated_at, bin.created_at, bin.approved_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id=file.bin_id AND file.deleted_at IS NULL LEFT JOIN file_content ON file.sha256 = file_content.sha256 AND file_content.in_storage = true WHERE bin.expired_at > $1 AND bin.deleted_at IS NULL GROUP BY bin.id ORDER BY COUNT(file.filename) DESC LIMIT $2"
+	sqlStatement := binList("SELECT bin.id, bin.readonly, bin.downloads, bin.updates, bin.updated_at, bin.created_at, bin.approved_at, bin.expired_at, bin.deleted_at, COALESCE(ranked.files, 0) AS rank FROM bin LEFT JOIN (SELECT file.bin_id, COUNT(*) AS files FROM file WHERE file.deleted_at IS NULL GROUP BY file.bin_id) ranked ON ranked.bin_id = bin.id WHERE bin.expired_at > $1 AND bin.deleted_at IS NULL ORDER BY rank DESC LIMIT $2", "bin.rank DESC")
 	bins, err = d.binQuery(sqlStatement, now, limit)
 	return bins, err
 }
 
 func (d *BinDao) GetByCreated(limit int) (bins []ds.Bin, err error) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	sqlStatement := "SELECT bin.id, bin.readonly, bin.downloads, COALESCE(SUM(file.downloads), 0), COALESCE(SUM(file_content.bytes), 0), COUNT(file.filename), bin.updates, bin.updated_at, bin.created_at, bin.approved_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id=file.bin_id AND file.deleted_at IS NULL LEFT JOIN file_content ON file.sha256 = file_content.sha256 AND file_content.in_storage = true WHERE bin.expired_at > $1 AND bin.deleted_at IS NULL GROUP BY bin.id ORDER BY bin.created_at ASC LIMIT $2"
+	sqlStatement := binList("SELECT bin.id, bin.readonly, bin.downloads, bin.updates, bin.updated_at, bin.created_at, bin.approved_at, bin.expired_at, bin.deleted_at FROM bin WHERE bin.expired_at > $1 AND bin.deleted_at IS NULL ORDER BY bin.created_at ASC LIMIT $2", "bin.created_at ASC")
 	bins, err = d.binQuery(sqlStatement, now, limit)
 	return bins, err
 }
 
-// SearchByID returns bins whose ID contains the given substring,
-// case-insensitively. Deleted and expired bins are included so admins can
-// find bins that are no longer publicly available.
-func (d *BinDao) SearchByID(query string, limit int) (bins []ds.Bin, err error) {
+// SearchByID returns the bins whose ID contains the given substring,
+// case-insensitively. Expired bins that are not deleted yet are included.
+// Deleted bins are only included if includeDeleted is set, which makes the
+// search read the deleted bins as well and is slower.
+func (d *BinDao) SearchByID(query string, limit int, includeDeleted bool) (bins []ds.Bin, err error) {
 	pattern := "%" + escapeLikePattern(query) + "%"
-	sqlStatement := "SELECT bin.id, bin.readonly, bin.downloads, COALESCE(SUM(file.downloads), 0), COALESCE(SUM(file_content.bytes), 0), COUNT(file.filename), bin.updates, bin.updated_at, bin.created_at, bin.approved_at, bin.expired_at, bin.deleted_at FROM bin LEFT JOIN file ON bin.id=file.bin_id AND file.deleted_at IS NULL LEFT JOIN file_content ON file.sha256 = file_content.sha256 AND file_content.in_storage = true WHERE bin.id ILIKE $1 GROUP BY bin.id ORDER BY bin.updated_at DESC LIMIT $2"
+	where := "bin.id ILIKE $1 AND bin.deleted_at IS NULL"
+	if includeDeleted {
+		where = "bin.id ILIKE $1"
+	}
+	sqlStatement := binList("SELECT bin.id, bin.readonly, bin.downloads, bin.updates, bin.updated_at, bin.created_at, bin.approved_at, bin.expired_at, bin.deleted_at FROM bin WHERE "+where+" ORDER BY bin.updated_at DESC LIMIT $2", "bin.updated_at DESC")
 	bins, err = d.binQuery(sqlStatement, pattern, limit)
 	return bins, err
+}
+
+// binList returns a statement that sums up the files of the bins picked by
+// pick, a query on the bin table that orders and limits the bins, and returns
+// them in the given order. Picking the bins before summing up their files
+// keeps the top lists from summing up the files of every bin only to show a
+// few of them.
+func binList(pick string, order string) string {
+	return "SELECT bin.id, bin.readonly, bin.downloads, totals.file_downloads, totals.bytes, totals.files, bin.updates, bin.updated_at, bin.created_at, bin.approved_at, bin.expired_at, bin.deleted_at FROM (" + pick + ") bin CROSS JOIN LATERAL (SELECT COALESCE(SUM(file.downloads), 0) AS file_downloads, COALESCE(SUM(file_content.bytes), 0) AS bytes, COUNT(file.filename) AS files FROM file LEFT JOIN file_content ON file.sha256 = file_content.sha256 AND file_content.in_storage = true WHERE file.bin_id = bin.id AND file.deleted_at IS NULL) totals ORDER BY " + order
 }
 
 func (d *BinDao) binQuery(sqlStatement string, params ...interface{}) (bins []ds.Bin, err error) {

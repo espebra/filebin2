@@ -19,8 +19,8 @@
         <nav class="navbar navbar-expand-lg bg-light mb-3">
           <div class="container-fluid">
             <div class="navbar-nav">
-              <a class="nav-link" href="/admin/search/bins?q={{ .Query }}&limit={{ .Limit }}"><span class="btn {{ if eq .Kind "bins" }}btn-primary{{ else }}btn-outline-primary{{ end }}">Bin IDs</span></a>
-              <a class="nav-link" href="/admin/search/files?q={{ .Query }}&limit={{ .Limit }}"><span class="btn {{ if eq .Kind "files" }}btn-primary{{ else }}btn-outline-primary{{ end }}">Filenames</span></a>
+              <a class="nav-link" href="/admin/search/bins?q={{ .Query }}&limit={{ .Limit }}{{ if .IncludeDeleted }}&deleted=1{{ end }}"><span class="btn {{ if eq .Kind "bins" }}btn-primary{{ else }}btn-outline-primary{{ end }}">Bin IDs</span></a>
+              <a class="nav-link" href="/admin/search/files?q={{ .Query }}&limit={{ .Limit }}{{ if .IncludeDeleted }}&deleted=1{{ end }}"><span class="btn {{ if eq .Kind "files" }}btn-primary{{ else }}btn-outline-primary{{ end }}">Filenames</span></a>
             </div>
           </div>
         </nav>
@@ -44,12 +44,18 @@
                     <option value="5000" {{ if eq .Limit 5000 }}selected{{ end }}>5000</option>
                 </select>
             </div>
+            <div class="col-auto d-flex align-items-center">
+                <div class="form-check mb-0">
+                    <input class="form-check-input" type="checkbox" id="includeDeleted" name="deleted" value="1" {{ if .IncludeDeleted }}checked{{ end }} onchange="this.form.submit()">
+                    <label class="form-check-label" for="includeDeleted">Include deleted</label>
+                </div>
+            </div>
         </form>
 
         {{ if eq .Kind "bins" }}
-            <p class="text-muted">Substring search in bin IDs. Deleted and expired bins are included in the results.</p>
+            <p class="text-muted">Substring search in bin IDs. Expired bins are included until they are deleted. Deleted bins are only included with <em>Include deleted</em>, which makes the search slower.</p>
         {{ else }}
-            <p class="text-muted">Substring search in filenames. Deleted files and files in deleted and expired bins are included in the results.</p>
+            <p class="text-muted">Substring search in filenames. Files in expired bins are included until the bins are deleted. Deleted files and files in deleted bins are only included with <em>Include deleted</em>, which makes the search slower.</p>
         {{ end }}
 
         {{ if and .Query (eq .Kind "bins") }}

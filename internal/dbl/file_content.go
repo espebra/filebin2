@@ -470,19 +470,18 @@ func (d *FileContentDao) DeleteFileReferences(sha256 string) error {
 }
 
 func (d *FileContentDao) GetByCreated(limit int) (contents []ds.FileByChecksum, err error) {
-	sqlStatement := `SELECT fc.sha256, COUNT(f.sha256) as c, fc.mime, fc.bytes,
-		COUNT(f.sha256) * fc.bytes AS bytes_total,
-		COALESCE(SUM(f.downloads), 0),
-		COALESCE(SUM(f.updates), 0),
+	// Pick the content first and only then sum up the files of the picked
+	// content, rather than summing up the files of all content in storage.
+	sqlStatement := `SELECT fc.sha256, totals.c, fc.mime, fc.bytes,
+		totals.c * fc.bytes AS bytes_total,
+		totals.downloads,
+		totals.updates,
 		fc.blocked,
 		fc.created_at,
 		fc.last_referenced_at
-		FROM file_content fc
-		LEFT JOIN file f ON fc.sha256 = f.sha256 AND f.deleted_at IS NULL
-		WHERE fc.in_storage = true
-		GROUP BY fc.sha256, fc.mime, fc.bytes, fc.blocked, fc.created_at, fc.last_referenced_at
-		ORDER BY fc.created_at DESC
-		LIMIT $1`
+		FROM (SELECT sha256, mime, bytes, blocked, created_at, last_referenced_at FROM file_content WHERE in_storage = true ORDER BY created_at DESC LIMIT $1) fc
+		CROSS JOIN LATERAL (SELECT COUNT(*) AS c, COALESCE(SUM(f.downloads), 0) AS downloads, COALESCE(SUM(f.updates), 0) AS updates FROM file f WHERE f.sha256 = fc.sha256 AND f.deleted_at IS NULL) totals
+		ORDER BY fc.created_at DESC`
 
 	t0 := time.Now()
 	rows, err := d.db.Query(sqlStatement, limit)

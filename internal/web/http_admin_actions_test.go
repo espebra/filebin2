@@ -476,8 +476,11 @@ func TestAdminSearch(t *testing.T) {
 	if !strings.Contains(rr.Body.String(), "needlefile.txt") {
 		t.Errorf("Expected search result to contain the filename needlefile.txt")
 	}
+	if strings.Contains(rr.Body.String(), `name="deleted" value="1" checked`) {
+		t.Errorf("Expected the include deleted option to not be checked by default")
+	}
 
-	// Delete the file and the bin: both must still be found by the search
+	// Delete the file and the bin: neither must be found by the search
 	req = httptest.NewRequest(http.MethodDelete, "/"+binID+"/needlefile.txt", nil)
 	rr = httptest.NewRecorder()
 	h.router.ServeHTTP(rr, req)
@@ -499,16 +502,46 @@ func TestAdminSearch(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("Expected search to give %d, got %d. Body: %s", http.StatusOK, rr.Code, rr.Body.String())
 	}
-	if !strings.Contains(rr.Body.String(), binID) {
-		t.Errorf("Expected search result to contain the deleted bin ID %s", binID)
+	// The query is shown on the page, so look for the no match message
+	if !strings.Contains(rr.Body.String(), "No bins matched") {
+		t.Errorf("Expected search result to not contain the deleted bin ID %s", binID)
 	}
 
 	req = httptest.NewRequest(http.MethodGet, "/admin/search/files?q=needlefile", nil)
 	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
 	rr = httptest.NewRecorder()
 	h.adminRouter.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("Expected search to give %d, got %d. Body: %s", http.StatusOK, rr.Code, rr.Body.String())
+	}
+	if strings.Contains(rr.Body.String(), "needlefile.txt") {
+		t.Errorf("Expected search result to not contain the deleted filename needlefile.txt")
+	}
+
+	// With the include deleted option, both are found
+	req = httptest.NewRequest(http.MethodGet, "/admin/search/bins?q=searchadminbin&deleted=1", nil)
+	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
+	rr = httptest.NewRecorder()
+	h.adminRouter.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("Expected search to give %d, got %d. Body: %s", http.StatusOK, rr.Code, rr.Body.String())
+	}
+	if strings.Contains(rr.Body.String(), "No bins matched") || !strings.Contains(rr.Body.String(), "/admin/bin/"+binID) {
+		t.Errorf("Expected search result with deleted=1 to contain the deleted bin ID %s", binID)
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/admin/search/files?q=needlefile&deleted=1", nil)
+	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
+	rr = httptest.NewRecorder()
+	h.adminRouter.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("Expected search to give %d, got %d. Body: %s", http.StatusOK, rr.Code, rr.Body.String())
+	}
 	if !strings.Contains(rr.Body.String(), "needlefile.txt") {
-		t.Errorf("Expected search result to contain the deleted filename needlefile.txt")
+		t.Errorf("Expected search result with deleted=1 to contain the deleted filename needlefile.txt")
+	}
+	if !strings.Contains(rr.Body.String(), `name="deleted" value="1" checked`) {
+		t.Errorf("Expected the include deleted option to be checked with deleted=1")
 	}
 
 	// The search pages render without a query
