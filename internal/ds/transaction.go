@@ -40,3 +40,12 @@ type TransactionChecksums struct {
 	Filename    string
 	ContentType string
 }
+
+// TransactionTransfer is a transaction that transferred a file in a bin, an
+// upload, a download or an archive download, with what is known about the
+// client that made it.
+type TransactionTransfer struct {
+	Transaction
+	Type   string
+	Client Client
+}
