@@ -262,6 +262,7 @@ func (h *HTTP) initAdminRoutes() {
 	h.adminRouter.HandleFunc("/debug/pprof/trace", h.auth(pprof.Trace)).Methods(http.MethodGet)
 	h.adminRouter.PathPrefix("/debug/pprof/").HandlerFunc(h.auth(pprof.Index))
 	h.adminRouter.HandleFunc("/metrics", h.viewMetrics).Methods(http.MethodHead, http.MethodGet)
+	h.adminRouter.HandleFunc("/admin/log/bin/{bin:[A-Za-z0-9_-]+}.tsv", h.auth(h.viewAdminLogBinTSV)).Methods(http.MethodHead, http.MethodGet)
 	h.adminRouter.HandleFunc("/admin/log/bin/{bin:[A-Za-z0-9_-]+}", h.auth(h.viewAdminLogBin)).Methods(http.MethodHead, http.MethodGet)
 	h.adminRouter.HandleFunc("/admin/log/ip/{ip:[A-Za-z0-9.:_-]+}", h.auth(h.viewAdminLogIP)).Methods(http.MethodHead, http.MethodGet)
 	h.adminRouter.HandleFunc("/admin/ip/{ip:[A-Za-z0-9.:_-]+}", h.auth(h.viewAdminIP)).Methods(http.MethodHead, http.MethodGet)

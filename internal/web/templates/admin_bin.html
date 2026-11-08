@@ -29,6 +29,8 @@
             <span class="text-muted">See also:</span>
             <a href="/admin/log/bin/{{ .Bin.Id }}">Transaction log</a>
             &middot;
+            <a href="/admin/log/bin/{{ .Bin.Id }}.tsv">Transfer log (TSV)</a>
+            &middot;
             <a href="{{ publicURL .Bin.Id }}">View bin</a>
         </nav>
 
@@ -81,7 +83,7 @@
                     <dd class="col-sm-8">{{ .Bin.Updates }}</dd>
 
                     <dt class="col-sm-4">Log</dt>
-                    <dd class="col-sm-8"><a href="/admin/log/bin/{{ .Bin.Id }}">View transaction log</a></dd>
+                    <dd class="col-sm-8"><a href="/admin/log/bin/{{ .Bin.Id }}">View transaction log</a> &middot; <a href="/admin/log/bin/{{ .Bin.Id }}.tsv">Download uploads and downloads (TSV)</a></dd>
                 </dl>
             </div>
 

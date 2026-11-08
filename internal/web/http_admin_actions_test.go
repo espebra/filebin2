@@ -888,3 +888,103 @@ func TestAdminBlockBinFiles(t *testing.T) {
 		t.Errorf("Expected blocking a bin without files to redirect, got %d. Body: %s", rr.Code, rr.Body.String())
 	}
 }
+
+func TestAdminLogBinTSV(t *testing.T) {
+	h := setupActionsHandler(t, nil)
+
+	bin := "adminlogtsvbin"
+	gatedUpload(t, h, bin, "file.txt", "content for the transfer log")
+
+	req := httptest.NewRequest(http.MethodGet, "/"+bin+"/file.txt", nil)
+	req.Header.Set("User-Agent", "tsv-test-agent")
+	req.Header.Set("Referer", "https://example.com/page")
+	rr := httptest.NewRecorder()
+	h.router.ServeHTTP(rr, req)
+	if rr.Code >= 400 {
+		t.Fatalf("Expected the download to succeed, got %d. Body: %s", rr.Code, rr.Body.String())
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/archive/"+bin+"/zip", nil)
+	rr = httptest.NewRecorder()
+	h.router.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("Expected the archive download to succeed, got %d. Body: %s", rr.Code, rr.Body.String())
+	}
+
+	// Locking the bin is logged, but is not a transfer
+	req = httptest.NewRequest(http.MethodPut, "/"+bin, nil)
+	rr = httptest.NewRecorder()
+	h.router.ServeHTTP(rr, req)
+	if rr.Code >= 400 {
+		t.Fatalf("Expected the lock to succeed, got %d. Body: %s", rr.Code, rr.Body.String())
+	}
+
+	// The log requires admin credentials
+	req = httptest.NewRequest(http.MethodGet, "/admin/log/bin/"+bin+".tsv", nil)
+	rr = httptest.NewRecorder()
+	h.adminRouter.ServeHTTP(rr, req)
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("Expected unauthenticated log to give %d, got %d", http.StatusUnauthorized, rr.Code)
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/admin/log/bin/"+bin+".tsv", nil)
+	req.Header.Set("Authorization", basicAuth(testAdminUser, testAdminPass))
+	rr = httptest.NewRecorder()
+	h.adminRouter.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("Expected the log to give %d, got %d. Body: %s", http.StatusOK, rr.Code, rr.Body.String())
+	}
+	if ct := rr.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/tab-separated-values") {
+		t.Errorf("Expected a tab separated values content type, got %q", ct)
+	}
+
+	lines := strings.Split(strings.TrimSuffix(rr.Body.String(), "\n"), "\n")
+	if len(lines) != 4 {
+		t.Fatalf("Expected a header and 3 transfers, got %d lines:\n%s", len(lines), rr.Body.String())
+	}
+	header := strings.Split(lines[0], "\t")
+	rows := make([]map[string]string, 0, 3)
+	for _, line := range lines[1:] {
+		fields := strings.Split(line, "\t")
+		if len(fields) != len(header) {
+			t.Fatalf("Expected %d fields, got %d in %q", len(header), len(fields), line)
+		}
+		row := map[string]string{}
+		for i, name := range header {
+			row[name] = fields[i]
+		}
+		rows = append(rows, row)
+	}
+
+	for i, want := range []string{"upload", "download", "archive"} {
+		if rows[i]["type"] != want {
+			t.Errorf("Expected transfer %d to be a %s, got %q", i, want, rows[i]["type"])
+		}
+		if rows[i]["bin"] != bin {
+			t.Errorf("Expected transfer %d to be in %s, got %q", i, bin, rows[i]["bin"])
+		}
+		if rows[i]["ip"] != "192.0.2.1" {
+			t.Errorf("Expected transfer %d to be from 192.0.2.1, got %q", i, rows[i]["ip"])
+		}
+	}
+	if rows[0]["method"] != http.MethodPost || rows[0]["request_bytes"] != "28" {
+		t.Errorf("Unexpected upload: %v", rows[0])
+	}
+	if rows[1]["filename"] != "file.txt" || rows[1]["method"] != http.MethodGet {
+		t.Errorf("Unexpected download: %v", rows[1])
+	}
+	if rows[1]["user_agent"] != "tsv-test-agent" || rows[1]["referer"] != "https://example.com/page" {
+		t.Errorf("Unexpected request headers in the download: %v", rows[1])
+	}
+	if rows[2]["path"] != "/archive/"+bin+"/zip" {
+		t.Errorf("Unexpected archive path: %q", rows[2]["path"])
+	}
+}
+
+func TestWriteTSVRow(t *testing.T) {
+	var b strings.Builder
+	writeTSVRow(&b, "a\tb", "c\r\nd", "e")
+	if want := "a b\tc  d\te\n"; b.String() != want {
+		t.Errorf("Expected %q, got %q", want, b.String())
+	}
+}

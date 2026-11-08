@@ -124,6 +124,43 @@ func (d *TransactionDao) GetByBin(bin string) (transactions []ds.Transaction, er
 	return transactions, nil
 }
 
+// GetTransfersByBin returns the uploads, downloads and archive downloads of a
+// bin, oldest first. The client information is left empty for clients that
+// the lurker has removed.
+func (d *TransactionDao) GetTransfersByBin(bin string) (transfers []ds.TransactionTransfer, err error) {
+	sqlStatement := `SELECT t.id, t.bin_id, COALESCE(t.filename, ''), t.method, t.path, t.ip, t.headers, t.timestamp, t.completed, t.req_bytes, t.resp_bytes, t.status,
+		CASE WHEN t.method IN ('POST', 'PUT') THEN 'upload' WHEN t.path LIKE '/archive/%' THEN 'archive' ELSE 'download' END,
+		COALESCE(c.asn, 0), COALESCE(c.asn_organization, ''), COALESCE(c.network, ''), COALESCE(c.city, ''), COALESCE(c.country, ''), COALESCE(c.continent, ''), COALESCE(c.proxy, false)
+	FROM transaction t
+	LEFT JOIN client c ON c.ip = t.ip
+	WHERE t.bin_id = $1 AND (
+		(t.method IN ('GET', 'POST', 'PUT') AND t.filename <> '')
+		OR (t.method = 'GET' AND t.path LIKE '/archive/%'))
+	ORDER BY t.timestamp, t.id`
+	t0 := time.Now()
+	rows, err := d.db.Query(sqlStatement, bin)
+	observeQuery(d.metrics, "transaction_get_transfers_by_bin", t0, err)
+	if err != nil {
+		return transfers, err
+	}
+	defer func() { _ = rows.Close() }()
+	for rows.Next() {
+		var t ds.TransactionTransfer
+		err = rows.Scan(&t.Id, &t.BinId, &t.Filename, &t.Method, &t.Path, &t.IP, &t.Headers, &t.Timestamp, &t.CompletedAt, &t.ReqBytes, &t.RespBytes, &t.Status, &t.Type,
+			&t.Client.ASN, &t.Client.ASNOrganization, &t.Client.Network, &t.Client.City, &t.Client.Country, &t.Client.Continent, &t.Client.Proxy)
+		if err != nil {
+			return transfers, err
+		}
+		t.Client.IP = t.IP
+		t.Duration = t.CompletedAt.Sub(t.Timestamp)
+		transfers = append(transfers, t)
+	}
+	if err = rows.Err(); err != nil {
+		return transfers, err
+	}
+	return transfers, nil
+}
+
 func (d *TransactionDao) GetDownloaderIPsByBin(bin string) (ips []string, err error) {
 	sqlStatement := `SELECT DISTINCT ip FROM transaction WHERE bin_id = $1 AND method = 'GET' AND ip != ''`
 	t0 := time.Now()

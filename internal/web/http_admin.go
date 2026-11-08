@@ -1,9 +1,11 @@
 package web
 
 import (
+	"bufio"
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -759,6 +761,75 @@ func (h *HTTP) viewAdminLogBin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Errno 247", http.StatusInternalServerError)
 		return
 	}
+}
+
+// viewAdminLogBinTSV returns the uploads, downloads and archive downloads of
+// a bin from the transaction log as tab separated values.
+func (h *HTTP) viewAdminLogBinTSV(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	binID := params["bin"]
+
+	transfers, err := h.dao.Transaction().GetTransfersByBin(binID)
+	if err != nil {
+		slog.Error("unable to get transfers by bin", "bin", binID, "error", err)
+		http.Error(w, "Errno 363", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/tab-separated-values; charset=utf-8")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s-transactions.tsv\"", binID))
+	w.WriteHeader(http.StatusOK)
+
+	writeTSVRow(w, "timestamp", "completed", "duration_ms", "type", "bin", "filename", "method", "path", "status", "request_bytes", "response_bytes", "ip", "user_agent", "referer", "asn", "asn_organization", "network", "city", "country", "continent", "proxy")
+	for _, t := range transfers {
+		userAgent, referer := transactionRequestHeaders(t.Headers)
+		writeTSVRow(w,
+			t.Timestamp.UTC().Format(tsvTimeFormat),
+			t.CompletedAt.UTC().Format(tsvTimeFormat),
+			strconv.FormatInt(t.Duration.Milliseconds(), 10),
+			t.Type,
+			t.BinId,
+			t.Filename,
+			t.Method,
+			t.Path,
+			strconv.Itoa(t.Status),
+			strconv.FormatInt(t.ReqBytes, 10),
+			strconv.FormatInt(t.RespBytes, 10),
+			t.IP,
+			userAgent,
+			referer,
+			strconv.Itoa(t.Client.ASN),
+			t.Client.ASNOrganization,
+			t.Client.Network,
+			t.Client.City,
+			t.Client.Country,
+			t.Client.Continent,
+			strconv.FormatBool(t.Client.Proxy),
+		)
+	}
+}
+
+const tsvTimeFormat = "2006-01-02T15:04:05.000Z07:00"
+
+// tsvFieldReplacer replaces the characters that would break a row or a
+// column in tab separated values, which have no way to escape them.
+var tsvFieldReplacer = strings.NewReplacer("\t", " ", "\r", " ", "\n", " ")
+
+func writeTSVRow(w io.Writer, fields ...string) {
+	for i, f := range fields {
+		fields[i] = tsvFieldReplacer.Replace(f)
+	}
+	_, _ = io.WriteString(w, strings.Join(fields, "\t")+"\n")
+}
+
+// transactionRequestHeaders returns the user agent and referer from the
+// request dump stored in the transaction log.
+func transactionRequestHeaders(dump string) (userAgent string, referer string) {
+	req, err := http.ReadRequest(bufio.NewReader(strings.NewReader(dump)))
+	if err != nil {
+		return "", ""
+	}
+	return req.UserAgent(), req.Referer()
 }
 
 func (h *HTTP) viewAdminLogIP(w http.ResponseWriter, r *http.Request) {
