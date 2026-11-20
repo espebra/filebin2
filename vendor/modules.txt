@@ -245,7 +245,7 @@ github.com/prometheus/procfs/internal/parsers
 github.com/skip2/go-qrcode
 github.com/skip2/go-qrcode/bitset
 github.com/skip2/go-qrcode/reedsolomon
-# golang.org/x/image v0.47.0
+# golang.org/x/image v0.48.0
 ## explicit; go 1.26.0
 golang.org/x/image/bmp
 golang.org/x/image/ccitt
