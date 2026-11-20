@@ -99,6 +99,8 @@ chmod +x filebin2-linux-amd64
 
 Filebin can be configured using command line arguments or environment variables. Environment variables use the `FILEBIN_` prefix with uppercase letters and underscores instead of hyphens. Command line flags take precedence over environment variables.
 
+Environment variables accept the same values as the command line arguments. Boolean settings accept `true`, `false`, `1`, `0`, `yes` and `no`, in any letter case. Filebin refuses to start if an environment variable has a value it cannot parse. The database settings are the exception to the naming rule: `--db-host` is set with `FILEBIN_DATABASE_HOST`, and so on.
+
 #### General
 
 **Base URL**
@@ -283,6 +285,24 @@ A whitespace separated list of file extensions that will be rejected. Example: "
 
 ---
 
+**Client Upload Failures Cap**
+- Environment Variable: `FILEBIN_CLIENT_UPLOAD_FAILURES_CAP`
+- Command Line Argument: `--client-upload-failures-cap`
+- Default: `500`
+
+Maximum number of recent client-reported upload failures retained in memory for `/admin/telemetry/upload-failures`. 0 disables in-memory retention. Prometheus metrics are unaffected.
+
+---
+
+**Client Upload Successes Cap**
+- Environment Variable: `FILEBIN_CLIENT_UPLOAD_SUCCESSES_CAP`
+- Command Line Argument: `--client-upload-successes-cap`
+- Default: `200`
+
+Maximum number of recent client-reported upload successes retained in memory for `/admin/telemetry/upload-successes`. 0 disables in-memory retention. Prometheus metrics are unaffected.
+
+---
+
 #### HTTP Server
 
 Filebin serves HTTP on two listeners:
@@ -408,6 +428,15 @@ Write timeout for the HTTP server.
 - Default: `30s`
 
 Idle timeout for the HTTP server.
+
+---
+
+**Shutdown Timeout**
+- Environment Variable: `FILEBIN_SHUTDOWN_TIMEOUT`
+- Command Line Argument: `--shutdown-timeout`
+- Default: `30s`
+
+Grace period to wait for in-flight requests to complete when shutting down.
 
 ---
 
@@ -577,6 +606,24 @@ Timeout for S3 data transfers (put, get, copy).
 
 ---
 
+**S3 Multipart Part Size**
+- Environment Variable: `FILEBIN_S3_MULTIPART_PART_SIZE`
+- Command Line Argument: `--s3-multipart-part-size`
+- Default: `64MB`
+
+Multipart upload part size, for example 5MB, 64MB or 128MB. Files larger than this are uploaded in multiple parts.
+
+---
+
+**S3 Multipart Concurrency**
+- Environment Variable: `FILEBIN_S3_MULTIPART_CONCURRENCY`
+- Command Line Argument: `--s3-multipart-concurrency`
+- Default: `3`
+
+Number of parts uploaded concurrently in a multipart upload.
+
+---
+
 #### Lurker (Background Jobs)
 
 **Lurker Interval**
@@ -699,6 +746,24 @@ Limits which Slack domain is allowed to access the http api. Other domains will 
 - Default: (not set)
 
 If Filebin is set to require manual approval of new bins, then this approval can be given using the user interface, the http api directly or via Slack (using the http api). The http endpoint `/integration/slack` can be accessed using a webhook from Slack. This parameter limits which Slack channel is allowed to access the http api. Requests from other channels will be rejected.
+
+#### Logging
+
+**Log Format**
+- Environment Variable: `FILEBIN_LOG_FORMAT`
+- Command Line Argument: `--log-format`
+- Default: `text`
+
+Log output format: `text` or `json`.
+
+---
+
+**Log Level**
+- Environment Variable: `FILEBIN_LOG_LEVEL`
+- Command Line Argument: `--log-level`
+- Default: `info`
+
+Log level: `debug`, `info`, `warn` or `error`.
 
 ## Upgrading
 
