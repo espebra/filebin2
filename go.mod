@@ -3,7 +3,7 @@ module github.com/espebra/filebin2
 go 1.27.4
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.47.8
+	github.com/aws/aws-sdk-go-v2 v1.48.0
 	github.com/aws/aws-sdk-go-v2/config v1.33.16
 	github.com/aws/aws-sdk-go-v2/credentials v1.20.16
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.23.22
